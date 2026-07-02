@@ -9,11 +9,11 @@ const validRegisterPayload = {
   apellido: 'Aldao',
   email: 'ignacio.owner@petcare.test',
   password: 'ClaveSegura123',
-  rol: 'OWNER',
+  rol: 'dueño_mascota',
 };
 
 type RegisterResponse = {
-  id?: unknown;
+  idUsuario?: unknown;
   nombre?: unknown;
   apellido?: unknown;
   email?: unknown;
@@ -52,7 +52,7 @@ describe.skip('POST /auth/register (contract)', () => {
       email: validRegisterPayload.email,
       rol: validRegisterPayload.rol,
     });
-    expect(body.id).toBeDefined();
+    expect(body.idUsuario).toBeDefined();
   });
 
   it('REG-02 rejects duplicated email', async () => {
@@ -91,7 +91,7 @@ describe.skip('POST /auth/register (contract)', () => {
   it('REG-06 rejects invalid role', async () => {
     await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ ...validRegisterPayload, rol: 'INVALID_ROLE' })
+      .send({ ...validRegisterPayload, rol: 'rol_invalido' })
       .expect(400);
   });
 

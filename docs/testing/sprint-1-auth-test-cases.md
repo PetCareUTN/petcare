@@ -22,9 +22,9 @@ Hasta que esas historias esten implementadas, los casos quedan definidos como co
 | REG-04 | Contrasena vacia | Sin contrasena | 400 |
 | REG-05 | Nombre vacio | Sin nombre | 400 |
 | REG-06 | Rol invalido | Rol no permitido | 400 |
-| REG-07 | Respuesta segura | Registro valido | No devuelve password ni passwordHash |
+| REG-07 | Respuesta segura | Registro valido | No devuelve password |
 | REG-08 | Persistencia | Registro valido | Usuario guardado en PostgreSQL |
-| REG-09 | Contrasena protegida | Registro valido | Contrasena almacenada como hash |
+| REG-09 | Contrasena protegida | Registro valido | Contrasena almacenada como hash en el campo interno password |
 
 ## Contrato esperado
 
@@ -40,33 +40,33 @@ Hasta que esas historias esten implementadas, los casos quedan definidos como co
   "apellido": "Aldao",
   "email": "usuario@petcare.com",
   "password": "ClaveSegura123",
-  "rol": "OWNER"
+  "rol": "dueño_mascota"
 }
 ```
 
 ### Roles permitidos
 
-- `OWNER`
-- `VETERINARIAN`
-- `ADMIN`
+- `dueño_mascota`
+- `veterinario`
+- `administrador`
 
 ### Response esperado - 201
 
 ```json
 {
-  "id": "uuid-o-id-generado",
+  "idUsuario": 1,
   "nombre": "Ignacio",
   "apellido": "Aldao",
   "email": "usuario@petcare.com",
-  "rol": "OWNER"
+  "rol": "dueño_mascota"
 }
 ```
 
-La respuesta no debe incluir `password` ni `passwordHash`.
+La respuesta no debe incluir `password`. Aunque la base de datos usa el campo interno `password`, ese valor debe guardarse hasheado y no exponerse en respuestas publicas.
 
 ## Estado actual
 
-Al inicio de P1-27 el backend solo tiene scaffold de `AuthModule` y `UsersModule`. El endpoint `POST /auth/register`, la persistencia y las validaciones todavia no estan implementados.
+P1-21 ya define la persistencia con TypeORM, las tablas `usuarios` y `roles`, y los roles base del sprint. El endpoint `POST /auth/register` y las validaciones todavia dependen de P1-2.
 
 Por ese motivo, la suite e2e de registro queda marcada como pendiente hasta que esten integradas P1-21 y P1-2.
 
@@ -76,11 +76,11 @@ Antes de cambiar `describe.skip` por `describe` en `backend/test/auth-register.e
 
 - Existe `POST /auth/register`.
 - La aplicacion tiene validacion global o equivalente para rechazar payloads invalidos con 400.
-- El modelo `User` incluye `id`, `nombre`, `apellido`, `email`, `passwordHash`, `rol`, `createdAt` y `updatedAt`, o el equipo acordo nombres equivalentes.
+- El modelo `User` usa los campos acordados en P1-21: `idUsuario`, `nombre`, `apellido`, `email`, `telefono`, `password`, `fechaRegistro`, `estado`, `rol` y `updatedAt`.
 - El email es unico en base de datos.
 - La contrasena se guarda hasheada y no en texto plano.
-- Los roles aceptados son `OWNER`, `VETERINARIAN` y `ADMIN`.
-- La respuesta publica de registro no expone `password` ni `passwordHash`.
+- Los roles aceptados para registro son `dueño_mascota`, `veterinario` y `administrador`.
+- La respuesta publica de registro no expone `password`.
 - La base de datos de e2e puede limpiarse entre casos para evitar dependencia de orden.
 
 ## Checklist de revision del PR de registro
