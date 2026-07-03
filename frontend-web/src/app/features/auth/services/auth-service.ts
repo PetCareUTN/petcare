@@ -1,14 +1,26 @@
 import { Injectable } from '@angular/core';
 import { Observable, of, throwError } from 'rxjs';
 import { delay } from 'rxjs/operators';
-import { ApiError, LoginRequest, LoginResponse, RegisterRequest, RegisterResponse } from '../models/user';
+import {
+  ApiError,
+  LoginRequest,
+  LoginResponse,
+  RegisterRequest,
+  RegisterResponse,
+} from '../models/user';
+
+// id_rol por defecto al registrarse (dueño_mascota), fijado server-side en
+// backend/src/auth/auth.service.ts de la rama feature/registro-usuario.
+const DEFAULT_ID_ROL = 1;
 
 /**
- * TODO(auth-integration): esta implementación es un mock en memoria mientras se confirma
- * con Simon si el endpoint real es POST /auth/register o POST /auth/registro (ver
- * backend/test/auth-register.e2e-spec.ts, alineado a la entidad Usuario). Reemplazar el
- * cuerpo de register()/login() por HttpClient.post(`${environment.apiUrl}/auth/register`, ...)
- * respetando la misma forma de RegisterRequest/RegisterResponse una vez esté disponible.
+ * TODO(auth-integration): esta implementación es un mock en memoria. El contrato de register()
+ * ya está alineado con la implementación real de Simon (backend/src/auth/dto/register.dto.ts y
+ * register-response.dto.ts en feature/registro-usuario): POST /auth/register, sin `rol` en el
+ * request, response en snake_case. login() sigue siendo provisorio porque todavía no existe un
+ * endpoint ni DTO real para /auth/login — confirmar con Mauricio antes de integrar.
+ * Reemplazar el cuerpo de register()/login() por HttpClient.post(`${environment.apiUrl}/auth/...`, ...)
+ * una vez el backend esté desplegado.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -25,11 +37,13 @@ export class AuthService {
     }
 
     const created: RegisterResponse & { password: string } = {
-      idUsuario: this.nextId++,
+      id_usuario: this.nextId++,
       nombre: data.nombre,
       apellido: data.apellido,
       email: data.email,
-      rol: data.rol,
+      id_rol: DEFAULT_ID_ROL,
+      estado: 'activo',
+      fecha_registro: new Date().toISOString(),
       password: data.password,
     };
     this.registeredUsers.push(created);
@@ -48,7 +62,7 @@ export class AuthService {
 
     const { password, ...usuario } = user;
     const response: LoginResponse = {
-      token: `mock-token-${usuario.idUsuario}`,
+      token: `mock-token-${usuario.id_usuario}`,
       usuario,
     };
     return of(response).pipe(delay(300));

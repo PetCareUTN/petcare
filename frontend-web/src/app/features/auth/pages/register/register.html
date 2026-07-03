@@ -44,7 +44,12 @@
     }
 
     <label for="confirmPassword">Confirmar contraseña</label>
-    <input id="confirmPassword" type="password" formControlName="confirmPassword" autocomplete="new-password" />
+    <input
+      id="confirmPassword"
+      type="password"
+      formControlName="confirmPassword"
+      autocomplete="new-password"
+    />
     @if (form.errors?.['passwordsMismatch'] && form.controls.confirmPassword.touched) {
       <p class="field-error">Las contraseñas no coinciden.</p>
     }

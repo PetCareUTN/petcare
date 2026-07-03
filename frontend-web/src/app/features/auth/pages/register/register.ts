@@ -1,13 +1,21 @@
 import { Component, inject, signal } from '@angular/core';
-import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth-service';
-import { ApiError, RoleName } from '../../models/user';
+import { ApiError } from '../../models/user';
 
 function passwordsMatchValidator(control: AbstractControl): ValidationErrors | null {
   const password = control.get('password')?.value;
   const confirmPassword = control.get('confirmPassword')?.value;
-  return password && confirmPassword && password !== confirmPassword ? { passwordsMismatch: true } : null;
+  return password && confirmPassword && password !== confirmPassword
+    ? { passwordsMismatch: true }
+    : null;
 }
 
 @Component({
@@ -19,8 +27,6 @@ function passwordsMatchValidator(control: AbstractControl): ValidationErrors | n
 export class RegisterPage {
   private readonly formBuilder = inject(FormBuilder);
   private readonly authService = inject(AuthService);
-
-  private readonly defaultRole: RoleName = 'dueño_mascota';
 
   protected readonly isSubmitting = signal(false);
   protected readonly successMessage = signal<string | null>(null);
@@ -55,7 +61,6 @@ export class RegisterPage {
         apellido: apellido!,
         email: email!,
         password: password!,
-        rol: this.defaultRole,
       })
       .subscribe({
         next: () => {
