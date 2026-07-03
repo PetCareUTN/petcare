@@ -28,37 +28,48 @@ Hasta que esas historias esten implementadas, los casos quedan definidos como co
 
 ## Contrato esperado
 
+> Actualizado para reflejar el contrato de API acordado por el equipo en
+> Sprint 1 (documento de definiciones de modelo de usuario) e implementado
+> en el PR de `feature/registro-usuario`. Reemplaza la version inicial de
+> este contrato, que usaba `rol` como campo de entrada y roles en ingles.
+
 ### Endpoint
 
 `POST /auth/register`
 
 ### Request
 
+El `rol` **no** se envia en el request: se asigna automaticamente
+(`dueño_mascota`) al registrarse. Enviar un campo `rol` u otro campo no
+declarado hace que el request sea rechazado con 400.
+
 ```json
 {
   "nombre": "Ignacio",
   "apellido": "Aldao",
   "email": "usuario@petcare.com",
-  "password": "ClaveSegura123",
-  "rol": "OWNER"
+  "password": "ClaveSegura123"
 }
 ```
 
-### Roles permitidos
+### Roles existentes (seed inicial)
 
-- `OWNER`
-- `VETERINARIAN`
-- `ADMIN`
+- `dueño_mascota` (rol asignado por defecto al registrarse)
+- `veterinario`
+- `administrador`
+- `prestador`
 
 ### Response esperado - 201
 
 ```json
 {
-  "id": "uuid-o-id-generado",
+  "id_usuario": 1,
   "nombre": "Ignacio",
   "apellido": "Aldao",
   "email": "usuario@petcare.com",
-  "rol": "OWNER"
+  "id_rol": 1,
+  "estado": "activo",
+  "fecha_registro": "2026-07-02T00:00:00.000Z"
 }
 ```
 
@@ -66,22 +77,33 @@ La respuesta no debe incluir `password` ni `passwordHash`.
 
 ## Estado actual
 
-Al inicio de P1-27 el backend solo tiene scaffold de `AuthModule` y `UsersModule`. El endpoint `POST /auth/register`, la persistencia y las validaciones todavia no estan implementados.
+El endpoint `POST /auth/register` esta implementado (`AuthController`,
+`AuthService`, `UsersService`), con persistencia en PostgreSQL, hash de
+contrasena con bcrypt y `ValidationPipe` global para rechazar payloads
+invalidos o con campos no declarados.
 
-Por ese motivo, la suite e2e de registro queda marcada como pendiente hasta que esten integradas P1-21 y P1-2.
+La suite e2e de registro (`backend/test/auth-register.e2e-spec.ts`) ya esta
+activa (sin `describe.skip`) y fue corrida contra PostgreSQL real:
+10/10 tests en verde.
 
 ## Checklist de integracion para activar la suite
 
-Antes de cambiar `describe.skip` por `describe` en `backend/test/auth-register.e2e-spec.ts`, verificar:
+Verificado contra la implementacion real:
 
-- Existe `POST /auth/register`.
-- La aplicacion tiene validacion global o equivalente para rechazar payloads invalidos con 400.
-- El modelo `User` incluye `id`, `nombre`, `apellido`, `email`, `passwordHash`, `rol`, `createdAt` y `updatedAt`, o el equipo acordo nombres equivalentes.
-- El email es unico en base de datos.
-- La contrasena se guarda hasheada y no en texto plano.
-- Los roles aceptados son `OWNER`, `VETERINARIAN` y `ADMIN`.
-- La respuesta publica de registro no expone `password` ni `passwordHash`.
-- La base de datos de e2e puede limpiarse entre casos para evitar dependencia de orden.
+- [x] Existe `POST /auth/register`.
+- [x] La aplicacion tiene validacion global (`ValidationPipe` con
+      `whitelist`/`forbidNonWhitelisted`) para rechazar payloads invalidos
+      con 400.
+- [x] El modelo `User` incluye `idUsuario`, `nombre`, `apellido`, `email`,
+      `password` (hash), `rol`, `fechaRegistro`, `estado` y `updatedAt`.
+- [x] El email es unico en base de datos.
+- [x] La contrasena se guarda hasheada (bcrypt) y no en texto plano.
+- [x] El rol se asigna automaticamente (`dueño_mascota`); no es un campo
+      de entrada.
+- [x] La respuesta publica de registro no expone `password` ni
+      `passwordHash`.
+- [x] La base de datos de e2e se limpia entre casos (`usersRepository.clear()`
+      en `afterEach`).
 
 ## Checklist de revision del PR de registro
 
