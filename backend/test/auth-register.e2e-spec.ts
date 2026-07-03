@@ -1,30 +1,40 @@
-import { INestApplication } from '@nestjs/common';
+import {
+  BadRequestException,
+  INestApplication,
+  ValidationPipe,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import * as bcrypt from 'bcrypt';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { DataSource, Repository } from 'typeorm';
 import { AppModule } from './../src/app.module';
+import { User } from './../src/users/entities/user.entity';
 
 const validRegisterPayload = {
   nombre: 'Ignacio',
   apellido: 'Aldao',
   email: 'ignacio.owner@petcare.test',
   password: 'ClaveSegura123',
-  rol: 'OWNER',
 };
 
 type RegisterResponse = {
-  id?: unknown;
+  id_usuario?: unknown;
   nombre?: unknown;
   apellido?: unknown;
   email?: unknown;
-  rol?: unknown;
+  id_rol?: unknown;
+  estado?: unknown;
+  fecha_registro?: unknown;
   password?: unknown;
   passwordHash?: unknown;
 };
 
-// Pending until P1-21 (database/model) and P1-2 (register endpoint) are integrated.
-describe.skip('POST /auth/register (contract)', () => {
+// Requires PostgreSQL running (docker compose up -d) with migrations and role seed applied.
+describe('POST /auth/register (contract)', () => {
   let app: INestApplication<App>;
+  let usersRepository: Repository<User>;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -32,10 +42,30 @@ describe.skip('POST /auth/register (contract)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        exceptionFactory: () =>
+          new BadRequestException({
+            codigoEstado: 400,
+            mensaje: 'Campos obligatorios faltantes o inválidos',
+          }),
+      }),
+    );
     await app.init();
+
+    usersRepository = moduleFixture.get(getRepositoryToken(User));
+  });
+
+  afterEach(async () => {
+    await usersRepository.clear();
   });
 
   afterAll(async () => {
+    const dataSource = app.get(DataSource);
+    await dataSource.destroy();
     await app.close();
   });
 
@@ -50,9 +80,10 @@ describe.skip('POST /auth/register (contract)', () => {
       nombre: validRegisterPayload.nombre,
       apellido: validRegisterPayload.apellido,
       email: validRegisterPayload.email,
-      rol: validRegisterPayload.rol,
+      estado: 'activo',
     });
-    expect(body.id).toBeDefined();
+    expect(body.id_usuario).toBeDefined();
+    expect(body.id_rol).toBeDefined();
   });
 
   it('REG-02 rejects duplicated email', async () => {
@@ -74,10 +105,10 @@ describe.skip('POST /auth/register (contract)', () => {
       .expect(400);
   });
 
-  it('REG-04 rejects empty password', async () => {
+  it('REG-04 rejects short password', async () => {
     await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ ...validRegisterPayload, password: '' })
+      .send({ ...validRegisterPayload, password: '1234567' })
       .expect(400);
   });
 
@@ -88,10 +119,10 @@ describe.skip('POST /auth/register (contract)', () => {
       .expect(400);
   });
 
-  it('REG-06 rejects invalid role', async () => {
+  it('REG-06 rejects unknown fields such as rol', async () => {
     await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ ...validRegisterPayload, rol: 'INVALID_ROLE' })
+      .send({ ...validRegisterPayload, rol: 'ADMIN' })
       .expect(400);
   });
 
@@ -106,7 +137,35 @@ describe.skip('POST /auth/register (contract)', () => {
     expect(body.passwordHash).toBeUndefined();
   });
 
-  it.todo('REG-08 persists the created user in PostgreSQL');
+  it('REG-08 persists the created user in PostgreSQL', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send(validRegisterPayload)
+      .expect(201);
+    const body = response.body as RegisterResponse;
 
-  it.todo('REG-09 stores password as a hash');
+    const persisted = await usersRepository.findOne({
+      where: { email: validRegisterPayload.email },
+    });
+
+    expect(persisted).not.toBeNull();
+    expect(persisted?.idUsuario).toBe(body.id_usuario);
+  });
+
+  it('REG-09 stores password as a hash', async () => {
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send(validRegisterPayload)
+      .expect(201);
+
+    const persisted = await usersRepository.findOne({
+      where: { email: validRegisterPayload.email },
+    });
+
+    expect(persisted?.password).toBeDefined();
+    expect(persisted?.password).not.toBe(validRegisterPayload.password);
+    expect(
+      await bcrypt.compare(validRegisterPayload.password, persisted!.password),
+    ).toBe(true);
+  });
 });
