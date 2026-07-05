@@ -14,6 +14,10 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { email } });
   }
 
+  findById(idUsuario: number): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { idUsuario } });
+  }
+
   async create(data: {
     nombre: string;
     apellido: string;
