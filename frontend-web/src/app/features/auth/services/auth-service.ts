@@ -1,6 +1,7 @@
-import { Injectable } from '@angular/core';
-import { Observable, of, throwError } from 'rxjs';
-import { delay } from 'rxjs/operators';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { Observable, catchError, throwError } from 'rxjs';
+import { environment } from '../../../../environments/environment';
 import {
   ApiError,
   LoginRequest,
@@ -9,63 +10,22 @@ import {
   RegisterResponse,
 } from '../models/user';
 
-// id_rol por defecto al registrarse (dueño_mascota), fijado server-side en
-// backend/src/auth/auth.service.ts de la rama feature/registro-usuario.
-const DEFAULT_ID_ROL = 1;
-
-/**
- * TODO(auth-integration): esta implementación es un mock en memoria. El contrato de register()
- * ya está alineado con la implementación real de Simon (backend/src/auth/dto/register.dto.ts y
- * register-response.dto.ts en feature/registro-usuario): POST /auth/register, sin `rol` en el
- * request, response en snake_case. login() sigue siendo provisorio porque todavía no existe un
- * endpoint ni DTO real para /auth/login — confirmar con Mauricio antes de integrar.
- * Reemplazar el cuerpo de register()/login() por HttpClient.post(`${environment.apiUrl}/auth/...`, ...)
- * una vez el backend esté desplegado.
- */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+  private readonly http = inject(HttpClient);
+  private readonly baseUrl = `${environment.apiUrl}/auth`;
   private readonly tokenStorageKey = 'petcare_token';
-  private nextId = 1;
-  private readonly registeredUsers: (RegisterResponse & { password: string })[] = [];
 
   register(data: RegisterRequest): Observable<RegisterResponse> {
-    const emailExists = this.registeredUsers.some(
-      (user) => user.email.toLowerCase() === data.email.toLowerCase(),
-    );
-    if (emailExists) {
-      return this.mockError(409, 'El email ya se encuentra registrado');
-    }
-
-    const created: RegisterResponse & { password: string } = {
-      id_usuario: this.nextId++,
-      nombre: data.nombre,
-      apellido: data.apellido,
-      email: data.email,
-      id_rol: DEFAULT_ID_ROL,
-      estado: 'activo',
-      fecha_registro: new Date().toISOString(),
-      password: data.password,
-    };
-    this.registeredUsers.push(created);
-
-    const { password, ...response } = created;
-    return of(response).pipe(delay(300));
+    return this.http
+      .post<RegisterResponse>(`${this.baseUrl}/register`, data)
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
   }
 
   login(data: LoginRequest): Observable<LoginResponse> {
-    const user = this.registeredUsers.find(
-      (candidate) => candidate.email.toLowerCase() === data.email.toLowerCase(),
-    );
-    if (!user || user.password !== data.password) {
-      return this.mockError(401, 'Email o contraseña incorrectos');
-    }
-
-    const { password, ...usuario } = user;
-    const response: LoginResponse = {
-      token: `mock-token-${usuario.id_usuario}`,
-      usuario,
-    };
-    return of(response).pipe(delay(300));
+    return this.http
+      .post<LoginResponse>(`${this.baseUrl}/login`, data)
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
   }
 
   saveToken(token: string): void {
@@ -84,8 +44,20 @@ export class AuthService {
     return this.getToken() !== null;
   }
 
-  private mockError(codigoEstado: number, mensaje: string): Observable<never> {
-    const error: ApiError = { codigoEstado, mensaje };
-    return throwError(() => error).pipe(delay(300));
+  /**
+   * Normaliza el error HTTP al contrato { codigoEstado, mensaje } que usa el
+   * backend. Si no hay respuesta del servidor (p. ej. está caído), devuelve un
+   * mensaje de conexión genérico.
+   */
+  private mapError(error: HttpErrorResponse): Observable<never> {
+    const body = error.error as Partial<ApiError> | null;
+    const apiError: ApiError =
+      body && typeof body === 'object' && typeof body.mensaje === 'string'
+        ? { codigoEstado: body.codigoEstado ?? error.status, mensaje: body.mensaje }
+        : {
+            codigoEstado: error.status || 0,
+            mensaje: 'No se pudo conectar con el servidor. Intentá de nuevo.',
+          };
+    return throwError(() => apiError);
   }
 }
