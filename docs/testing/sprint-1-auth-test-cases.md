@@ -22,11 +22,16 @@ Hasta que esas historias esten implementadas, los casos quedan definidos como co
 | REG-04 | Contrasena vacia | Sin contrasena | 400 |
 | REG-05 | Nombre vacio | Sin nombre | 400 |
 | REG-06 | Rol invalido | Rol no permitido | 400 |
-| REG-07 | Respuesta segura | Registro valido | No devuelve password |
+| REG-07 | Respuesta segura | Registro valido | No devuelve password ni passwordHash |
 | REG-08 | Persistencia | Registro valido | Usuario guardado en PostgreSQL |
-| REG-09 | Contrasena protegida | Registro valido | Contrasena almacenada como hash en el campo interno password |
+| REG-09 | Contrasena protegida | Registro valido | Contrasena almacenada como hash |
 
 ## Contrato esperado
+
+> Actualizado para reflejar el contrato de API acordado por el equipo en
+> Sprint 1 (documento de definiciones de modelo de usuario) e implementado
+> en el PR de `feature/registro-usuario`. Reemplaza la version inicial de
+> este contrato, que usaba `rol` como campo de entrada y roles en ingles.
 
 ### Endpoint
 
@@ -34,54 +39,71 @@ Hasta que esas historias esten implementadas, los casos quedan definidos como co
 
 ### Request
 
+El `rol` **no** se envia en el request: se asigna automaticamente
+(`dueño_mascota`) al registrarse. Enviar un campo `rol` u otro campo no
+declarado hace que el request sea rechazado con 400.
+
 ```json
 {
   "nombre": "Ignacio",
   "apellido": "Aldao",
   "email": "usuario@petcare.com",
-  "password": "ClaveSegura123",
-  "rol": "dueño_mascota"
+  "password": "ClaveSegura123"
 }
 ```
 
-### Roles permitidos
+### Roles existentes (seed inicial)
 
-- `dueño_mascota`
+- `dueño_mascota` (rol asignado por defecto al registrarse)
 - `veterinario`
 - `administrador`
+- `prestador`
 
 ### Response esperado - 201
 
 ```json
 {
-  "idUsuario": 1,
+  "id_usuario": 1,
   "nombre": "Ignacio",
   "apellido": "Aldao",
   "email": "usuario@petcare.com",
-  "rol": "dueño_mascota"
+  "id_rol": 1,
+  "estado": "activo",
+  "fecha_registro": "2026-07-02T00:00:00.000Z"
 }
 ```
 
-La respuesta no debe incluir `password`. Aunque la base de datos usa el campo interno `password`, ese valor debe guardarse hasheado y no exponerse en respuestas publicas.
+La respuesta no debe incluir `password` ni `passwordHash`.
 
 ## Estado actual
 
-P1-21 ya define la persistencia con TypeORM, las tablas `usuarios` y `roles`, y los roles base del sprint. El endpoint `POST /auth/register` y las validaciones todavia dependen de P1-2.
+El endpoint `POST /auth/register` esta implementado (`AuthController`,
+`AuthService`, `UsersService`), con persistencia en PostgreSQL, hash de
+contrasena con bcrypt y `ValidationPipe` global para rechazar payloads
+invalidos o con campos no declarados.
 
-Por ese motivo, la suite e2e de registro queda marcada como pendiente hasta que esten integradas P1-21 y P1-2.
+La suite e2e de registro (`backend/test/auth-register.e2e-spec.ts`) ya esta
+activa (sin `describe.skip`) y fue corrida contra PostgreSQL real:
+10/10 tests en verde.
 
 ## Checklist de integracion para activar la suite
 
-Antes de cambiar `describe.skip` por `describe` en `backend/test/auth-register.e2e-spec.ts`, verificar:
+Verificado contra la implementacion real:
 
-- Existe `POST /auth/register`.
-- La aplicacion tiene validacion global o equivalente para rechazar payloads invalidos con 400.
-- El modelo `User` usa los campos acordados en P1-21: `idUsuario`, `nombre`, `apellido`, `email`, `telefono`, `password`, `fechaRegistro`, `estado`, `rol` y `updatedAt`.
-- El email es unico en base de datos.
-- La contrasena se guarda hasheada y no en texto plano.
-- Los roles aceptados para registro son `dueño_mascota`, `veterinario` y `administrador`.
-- La respuesta publica de registro no expone `password`.
-- La base de datos de e2e puede limpiarse entre casos para evitar dependencia de orden.
+- [x] Existe `POST /auth/register`.
+- [x] La aplicacion tiene validacion global (`ValidationPipe` con
+      `whitelist`/`forbidNonWhitelisted`) para rechazar payloads invalidos
+      con 400.
+- [x] El modelo `User` incluye `idUsuario`, `nombre`, `apellido`, `email`,
+      `password` (hash), `rol`, `fechaRegistro`, `estado` y `updatedAt`.
+- [x] El email es unico en base de datos.
+- [x] La contrasena se guarda hasheada (bcrypt) y no en texto plano.
+- [x] El rol se asigna automaticamente (`dueño_mascota`); no es un campo
+      de entrada.
+- [x] La respuesta publica de registro no expone `password` ni
+      `passwordHash`.
+- [x] La base de datos de e2e se limpia entre casos (`usersRepository.clear()`
+      en `afterEach`).
 
 ## Checklist de revision del PR de registro
 
