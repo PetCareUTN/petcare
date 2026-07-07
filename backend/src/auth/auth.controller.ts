@@ -7,13 +7,16 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { RoleName } from '../common/enums/role-name.enum';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
+import { Roles } from './decorators/roles.decorator';
 import { LoginDto } from './dto/login.dto';
 import { LoginResponseDto } from './dto/login-response.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RegisterResponseDto } from './dto/register-response.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { RolesGuard } from './guards/roles.guard';
 import type { JwtPayload } from './interfaces/jwt-payload.interface';
 import { UserPublicDto } from '../users/dto/user-public.dto';
 
@@ -38,5 +41,13 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   me(@CurrentUser() user: JwtPayload): Promise<UserPublicDto> {
     return this.authService.getProfile(user.sub);
+  }
+
+  /** Ruta protegida de prueba: requiere JWT válido y rol administrador. */
+  @Get('admin-test')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleName.ADMINISTRADOR)
+  adminTest(): { mensaje: string } {
+    return { mensaje: 'Acceso autorizado para administrador' };
   }
 }
