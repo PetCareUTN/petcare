@@ -125,3 +125,69 @@ Cuando P1-27 quede activada contra la implementacion real, registrar:
 - Captura o log de email duplicado con 409.
 - Evidencia de que el usuario queda persistido en PostgreSQL.
 - Evidencia de que la contrasena no queda almacenada en texto plano.
+
+## P1-30 - Login de usuario
+
+### Contrato esperado
+
+Endpoint: `POST /auth/login`
+
+### Request
+
+```json
+{
+  "email": "usuario@petcare.com",
+  "password": "ClaveSegura123"
+}
+```
+
+### Response esperado - 200
+
+```json
+{
+  "token": "jwt-generado",
+  "usuario": {
+    "id_usuario": 1,
+    "nombre": "Ignacio",
+    "apellido": "Aldao",
+    "email": "usuario@petcare.com",
+    "id_rol": 1,
+    "estado": "activo",
+    "fecha_registro": "2026-07-05T00:00:00.000Z"
+  }
+}
+```
+
+La respuesta no debe incluir `password` ni `passwordHash`.
+
+### Ruta protegida relacionada
+
+Endpoint: `GET /auth/me`
+
+Requiere header:
+
+```text
+Authorization: Bearer <token>
+```
+
+### Casos de prueba
+
+| ID | Caso | Datos de entrada | Resultado esperado |
+|---|---|---|---|
+| LOGIN-01 | Login valido | Email y contrasena correctos | 200, token JWT y usuario publico |
+| LOGIN-02 | Respuesta segura | Login valido | No devuelve password ni passwordHash |
+| LOGIN-03 | Email inexistente | Email no registrado | 401 |
+| LOGIN-04 | Contrasena incorrecta | Password incorrecto | 401 |
+| LOGIN-05 | Email invalido | Formato incorrecto | 400 |
+| LOGIN-06 | Contrasena vacia | Password vacio | 400 |
+| LOGIN-07 | Ruta protegida con token | Token valido en `/auth/me` | 200 y usuario publico |
+| LOGIN-08 | Ruta protegida sin token | Sin Authorization header | 401 |
+
+### Evidencia esperada para P1-30
+
+- Salida de `npm test`.
+- Salida de `npm run test:e2e`.
+- Login valido con token JWT.
+- Login rechazado con credenciales incorrectas.
+- Acceso exitoso a `/auth/me` con token valido.
+- Rechazo de `/auth/me` sin token.
