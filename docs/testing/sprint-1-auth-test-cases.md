@@ -191,3 +191,51 @@ Authorization: Bearer <token>
 - Login rechazado con credenciales incorrectas.
 - Acceso exitoso a `/auth/me` con token valido.
 - Rechazo de `/auth/me` sin token.
+
+## P1-33 - Autorizacion por roles
+
+### Contrato esperado
+
+Endpoint protegido de prueba: `GET /auth/admin-test`
+
+Requiere:
+
+```text
+Authorization: Bearer <token>
+```
+
+Roles autorizados:
+
+- `administrador`
+
+Roles no autorizados:
+
+- `dueño_mascota`
+- `veterinario`
+- cualquier rol invalido o ausente en el JWT
+
+### Response esperado - 200
+
+```json
+{
+  "mensaje": "Acceso autorizado para administrador"
+}
+```
+
+### Casos de prueba
+
+| ID | Caso | Datos de entrada | Resultado esperado |
+|---|---|---|---|
+| ROLE-01 | Ruta admin sin token | Sin Authorization header | 401 |
+| ROLE-02 | Ruta admin con dueño_mascota | JWT valido de dueño_mascota | 403 |
+| ROLE-03 | Ruta admin con administrador | JWT valido de administrador | 200 |
+| ROLE-04 | Ruta admin con token invalido | Authorization con token invalido | 401 |
+| ROLE-05 | Ruta de perfil con usuario autenticado | JWT valido de dueño_mascota en `/auth/me` | 200 |
+
+### Evidencia esperada para P1-33
+
+- Salida de `npm test`.
+- Salida de `npm run test:e2e` o `npx jest --config ./test/jest-e2e.json --runInBand`.
+- Rechazo de `/auth/admin-test` sin token.
+- Rechazo de `/auth/admin-test` con usuario sin rol administrador.
+- Acceso exitoso a `/auth/admin-test` con usuario administrador.
