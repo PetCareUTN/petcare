@@ -41,6 +41,7 @@ describe('Role-based authorization (contract)', () => {
   let app: INestApplication<App>;
   let usersRepository: Repository<User>;
   let rolesRepository: Repository<Role>;
+  let dataSource: DataSource;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -64,9 +65,14 @@ describe('Role-based authorization (contract)', () => {
 
     usersRepository = moduleFixture.get(getRepositoryToken(User));
     rolesRepository = moduleFixture.get(getRepositoryToken(Role));
+    dataSource = app.get(DataSource);
   });
 
   beforeEach(async () => {
+    await dataSource.query('DELETE FROM "usuarios_mascotas"');
+    await dataSource.query('DELETE FROM "mascotas"');
+    await dataSource.query('DELETE FROM "usuarios"');
+
     await request(app.getHttpServer())
       .post('/auth/register')
       .send(ownerPayload)
@@ -88,11 +94,12 @@ describe('Role-based authorization (contract)', () => {
   });
 
   afterEach(async () => {
-    await usersRepository.clear();
+    await dataSource.query('DELETE FROM "usuarios_mascotas"');
+    await dataSource.query('DELETE FROM "mascotas"');
+    await dataSource.query('DELETE FROM "usuarios"');
   });
 
   afterAll(async () => {
-    const dataSource = app.get(DataSource);
     await dataSource.destroy();
     await app.close();
   });

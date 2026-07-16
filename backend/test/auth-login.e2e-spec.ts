@@ -4,12 +4,10 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { AppModule } from './../src/app.module';
-import { User } from './../src/users/entities/user.entity';
 
 const validRegisterPayload = {
   nombre: 'Ignacio',
@@ -45,7 +43,7 @@ type ProfileResponse = NonNullable<LoginResponse['usuario']>;
 // Requires PostgreSQL running (docker compose up -d) with migrations and role seed applied.
 describe('POST /auth/login and GET /auth/me (contract)', () => {
   let app: INestApplication<App>;
-  let usersRepository: Repository<User>;
+  let dataSource: DataSource;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -67,10 +65,14 @@ describe('POST /auth/login and GET /auth/me (contract)', () => {
     );
     await app.init();
 
-    usersRepository = moduleFixture.get(getRepositoryToken(User));
+    dataSource = app.get(DataSource);
   });
 
   beforeEach(async () => {
+    await dataSource.query('DELETE FROM "usuarios_mascotas"');
+    await dataSource.query('DELETE FROM "mascotas"');
+    await dataSource.query('DELETE FROM "usuarios"');
+
     await request(app.getHttpServer())
       .post('/auth/register')
       .send(validRegisterPayload)
@@ -78,11 +80,12 @@ describe('POST /auth/login and GET /auth/me (contract)', () => {
   });
 
   afterEach(async () => {
-    await usersRepository.clear();
+    await dataSource.query('DELETE FROM "usuarios_mascotas"');
+    await dataSource.query('DELETE FROM "mascotas"');
+    await dataSource.query('DELETE FROM "usuarios"');
   });
 
   afterAll(async () => {
-    const dataSource = app.get(DataSource);
     await dataSource.destroy();
     await app.close();
   });

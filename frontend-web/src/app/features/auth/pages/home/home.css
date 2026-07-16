@@ -8,12 +8,23 @@
   text-align: center;
 }
 
+.home-page a,
 .home-page button {
   padding: 0.6rem 1.2rem;
   border: none;
   border-radius: 6px;
+  font-size: 1rem;
+}
+
+.home-page a {
+  background: #e8def8;
+  color: #4f378b;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.home-page button {
   background: #6750a4;
   color: #ffffff;
-  font-size: 1rem;
   cursor: pointer;
 }

@@ -3,10 +3,12 @@ import {
   CreateDateColumn,
   Entity,
   JoinColumn,
+  ManyToMany,
   ManyToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Mascota } from '../../mascotas/entities/mascota.entity';
 import { Role } from '../../roles/entities/role.entity';
 
 @Entity('usuarios')
@@ -38,6 +40,9 @@ export class User {
   @ManyToOne(() => Role, { eager: true, nullable: false })
   @JoinColumn({ name: 'id_rol' })
   rol: Role;
+
+  @ManyToMany(() => Mascota, (mascota) => mascota.usuarios)
+  mascotas: Mascota[];
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
