@@ -35,6 +35,7 @@ type RegisterResponse = {
 describe('POST /auth/register (contract)', () => {
   let app: INestApplication<App>;
   let usersRepository: Repository<User>;
+  let dataSource: DataSource;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -57,14 +58,20 @@ describe('POST /auth/register (contract)', () => {
     await app.init();
 
     usersRepository = moduleFixture.get(getRepositoryToken(User));
+    dataSource = app.get(DataSource);
+
+    await dataSource.query('DELETE FROM "usuarios_mascotas"');
+    await dataSource.query('DELETE FROM "mascotas"');
+    await dataSource.query('DELETE FROM "usuarios"');
   });
 
   afterEach(async () => {
-    await usersRepository.clear();
+    await dataSource.query('DELETE FROM "usuarios_mascotas"');
+    await dataSource.query('DELETE FROM "mascotas"');
+    await dataSource.query('DELETE FROM "usuarios"');
   });
 
   afterAll(async () => {
-    const dataSource = app.get(DataSource);
     await dataSource.destroy();
     await app.close();
   });

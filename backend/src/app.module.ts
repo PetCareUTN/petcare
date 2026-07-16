@@ -8,6 +8,8 @@ import { UsersModule } from './users/users.module';
 import { RolesModule } from './roles/roles.module';
 import { User } from './users/entities/user.entity';
 import { Role } from './roles/entities/role.entity';
+import { MascotasModule } from './mascotas/mascotas.module';
+import { Mascota } from './mascotas/entities/mascota.entity';
 
 dotenv.config();
 
@@ -20,12 +22,13 @@ dotenv.config();
       username: process.env.DATABASE_USER,
       password: process.env.DATABASE_PASSWORD,
       database: process.env.DATABASE_NAME,
-      entities: [User, Role],
+      entities: [User, Role, Mascota],
       synchronize: false,
     }),
     AuthModule,
     UsersModule,
     RolesModule,
+    MascotasModule,
   ],
   controllers: [AppController],
   providers: [AppService],
