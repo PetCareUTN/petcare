@@ -106,6 +106,12 @@
   color: #b3261e;
 }
 
+.file-name {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #555866;
+}
+
 .banner {
   margin: 0;
   padding: 0.7rem 0.8rem;
