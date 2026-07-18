@@ -1,8 +1,11 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
+  Param,
+  ParseIntPipe,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -25,5 +28,14 @@ export class MascotasController {
     @Body() dto: CreateMascotaDto,
   ): Promise<MascotaResponseDto> {
     return this.mascotasService.create(user.sub, dto);
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  findOne(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<MascotaResponseDto> {
+    return this.mascotasService.findOne(id, user.sub);
   }
 }

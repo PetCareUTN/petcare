@@ -202,3 +202,140 @@ describe('POST /mascotas (contract)', () => {
       .expect(400);
   });
 });
+
+const otherOwnerPayload = {
+  nombre: 'Sofia',
+  apellido: 'Munoz',
+  email: 'sofia.mascotas@petcare.test',
+  password: 'ClaveSegura123',
+};
+
+// Requires PostgreSQL running (docker compose up -d) with migrations and role seed applied.
+describe('GET /mascotas/:id (contract)', () => {
+  let app: INestApplication<App>;
+  let dataSource: DataSource;
+
+  beforeAll(async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+        exceptionFactory: () =>
+          new BadRequestException({
+            codigoEstado: 400,
+            mensaje: 'Campos obligatorios faltantes o invÃ¡lidos',
+          }),
+      }),
+    );
+    await app.init();
+
+    dataSource = app.get(DataSource);
+  });
+
+  beforeEach(async () => {
+    await dataSource.query('DELETE FROM "usuarios_mascotas"');
+    await dataSource.query('DELETE FROM "mascotas"');
+    await dataSource.query('DELETE FROM "usuarios"');
+
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send(ownerPayload)
+      .expect(201);
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send(otherOwnerPayload)
+      .expect(201);
+  });
+
+  afterEach(async () => {
+    await dataSource.query('DELETE FROM "usuarios_mascotas"');
+    await dataSource.query('DELETE FROM "mascotas"');
+    await dataSource.query('DELETE FROM "usuarios"');
+  });
+
+  afterAll(async () => {
+    await dataSource.destroy();
+    await app.close();
+  });
+
+  const loginAs = async (email: string, password: string): Promise<string> => {
+    const response = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email, password })
+      .expect(200);
+    const body = response.body as LoginResponse;
+
+    expect(typeof body.token).toBe('string');
+    return String(body.token);
+  };
+
+  const createPet = async (token: string): Promise<number> => {
+    const response = await request(app.getHttpServer())
+      .post('/mascotas')
+      .set('Authorization', `Bearer ${token}`)
+      .send(mascotaPayload)
+      .expect(201);
+    const body = response.body as MascotaResponse;
+    return Number(body.idMascota);
+  };
+
+  it('PET-06 rejects fetching a pet profile without token with 401', async () => {
+    const ownerToken = await loginAs(ownerPayload.email, ownerPayload.password);
+    const petId = await createPet(ownerToken);
+
+    await request(app.getHttpServer()).get(`/mascotas/${petId}`).expect(401);
+  });
+
+  it('PET-07 returns the full profile for the owner', async () => {
+    const ownerToken = await loginAs(ownerPayload.email, ownerPayload.password);
+    const petId = await createPet(ownerToken);
+
+    const response = await request(app.getHttpServer())
+      .get(`/mascotas/${petId}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    const body = response.body as MascotaResponse;
+
+    expect(body).toMatchObject({
+      idMascota: petId,
+      nombre: mascotaPayload.nombre,
+      especie: mascotaPayload.especie,
+      raza: mascotaPayload.raza,
+      sexo: mascotaPayload.sexo,
+      fechaNacimiento: mascotaPayload.fechaNacimiento,
+      peso: mascotaPayload.peso,
+      esterilizado: mascotaPayload.esterilizado,
+      foto: mascotaPayload.foto,
+      observaciones: mascotaPayload.observaciones,
+    });
+  });
+
+  it('PET-08 rejects fetching another owner pet profile with 403', async () => {
+    const ownerToken = await loginAs(ownerPayload.email, ownerPayload.password);
+    const petId = await createPet(ownerToken);
+    const otherToken = await loginAs(
+      otherOwnerPayload.email,
+      otherOwnerPayload.password,
+    );
+
+    await request(app.getHttpServer())
+      .get(`/mascotas/${petId}`)
+      .set('Authorization', `Bearer ${otherToken}`)
+      .expect(403);
+  });
+
+  it('PET-09 returns 404 for a pet that does not exist', async () => {
+    const ownerToken = await loginAs(ownerPayload.email, ownerPayload.password);
+
+    await request(app.getHttpServer())
+      .get('/mascotas/999999')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(404);
+  });
+});

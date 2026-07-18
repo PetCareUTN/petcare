@@ -17,9 +17,12 @@ export const routes: Routes = [
   {
     path: 'mascotas/nueva',
     loadComponent: () =>
-      import('./features/mascotas/pages/create/create-mascota').then(
-        (m) => m.CreateMascotaPage,
-      ),
+      import('./features/mascotas/pages/create/create-mascota').then((m) => m.CreateMascotaPage),
+  },
+  {
+    path: 'mascotas/:id',
+    loadComponent: () =>
+      import('./features/mascotas/pages/profile/mascota-profile').then((m) => m.MascotaProfilePage),
   },
   {
     path: '**',

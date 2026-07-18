@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity';
@@ -45,5 +50,29 @@ export class MascotasService {
 
     const savedMascota = await this.mascotasRepository.save(mascota);
     return MascotaResponseDto.fromEntity(savedMascota);
+  }
+
+  async findOne(id: number, userId: number): Promise<MascotaResponseDto> {
+    const mascota = await this.mascotasRepository.findOne({
+      where: { idMascota: id },
+      relations: ['usuarios'],
+    });
+
+    if (!mascota) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Mascota no encontrada',
+      });
+    }
+
+    const esDuenio = mascota.usuarios.some((user) => user.idUsuario === userId);
+    if (!esDuenio) {
+      throw new ForbiddenException({
+        codigoEstado: 403,
+        mensaje: 'No tiene permisos para acceder a este recurso',
+      });
+    }
+
+    return MascotaResponseDto.fromEntity(mascota);
   }
 }
