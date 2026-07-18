@@ -13,14 +13,10 @@ export class MascotasService {
   private readonly baseUrl = `${environment.apiUrl}/mascotas`;
 
   create(data: CreateMascotaRequest, foto?: File): Observable<MascotaResponse> {
-    const token = this.authService.getToken();
-    const headers = token
-      ? new HttpHeaders({ Authorization: `Bearer ${token}` })
-      : undefined;
     const formData = this.buildFormData(data, foto);
 
     return this.http
-      .post<MascotaResponse>(this.baseUrl, formData, { headers })
+      .post<MascotaResponse>(this.baseUrl, formData, { headers: this.authHeaders() })
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
   }
 
@@ -48,6 +44,17 @@ export class MascotasService {
     }
 
     return formData;
+  }
+
+  getById(id: number): Observable<MascotaResponse> {
+    return this.http
+      .get<MascotaResponse>(`${this.baseUrl}/${id}`, { headers: this.authHeaders() })
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
+  private authHeaders(): HttpHeaders | undefined {
+    const token = this.authService.getToken();
+    return token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;
   }
 
   private mapError(error: HttpErrorResponse): Observable<never> {

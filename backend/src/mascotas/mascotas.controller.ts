@@ -2,8 +2,11 @@ import {
   Body,
   BadRequestException,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
+  Param,
+  ParseIntPipe,
   Post,
   UploadedFile,
   UseGuards,
@@ -59,5 +62,14 @@ export class MascotasController {
     @UploadedFile() foto?: UploadedImageFile,
   ): Promise<MascotaResponseDto> {
     return this.mascotasService.create(user.sub, dto, foto);
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  findOne(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<MascotaResponseDto> {
+    return this.mascotasService.findOne(id, user.sub);
   }
 }

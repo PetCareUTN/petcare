@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { mkdir, writeFile } from 'fs/promises';
 import { extname, join } from 'path';
@@ -63,5 +68,29 @@ export class MascotasService {
     await writeFile(join(uploadPath, filename), foto.buffer);
 
     return `/uploads/mascotas/${filename}`;
+  }
+
+  async findOne(id: number, userId: number): Promise<MascotaResponseDto> {
+    const mascota = await this.mascotasRepository.findOne({
+      where: { idMascota: id },
+      relations: ['usuarios'],
+    });
+
+    if (!mascota) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Mascota no encontrada',
+      });
+    }
+
+    const esDuenio = mascota.usuarios.some((user) => user.idUsuario === userId);
+    if (!esDuenio) {
+      throw new ForbiddenException({
+        codigoEstado: 403,
+        mensaje: 'No tiene permisos para acceder a este recurso',
+      });
+    }
+
+    return MascotaResponseDto.fromEntity(mascota);
   }
 }

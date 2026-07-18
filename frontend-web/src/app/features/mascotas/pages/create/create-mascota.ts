@@ -22,6 +22,7 @@ export class CreateMascotaPage {
   protected readonly successMessage = signal<string | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly selectedFile = signal<File | null>(null);
+  protected readonly createdPetId = signal<number | null>(null);
 
   protected readonly form = this.formBuilder.group({
     nombre: ['', [Validators.required, Validators.maxLength(100)]],
@@ -52,6 +53,7 @@ export class CreateMascotaPage {
 
     this.successMessage.set(null);
     this.errorMessage.set(null);
+    this.createdPetId.set(null);
     this.isSubmitting.set(true);
 
     const value = this.form.getRawValue();
@@ -71,6 +73,7 @@ export class CreateMascotaPage {
         this.isSubmitting.set(false);
         this.successMessage.set(`Mascota ${mascota.nombre} registrada con exito.`);
         this.selectedFile.set(null);
+        this.createdPetId.set(mascota.idMascota);
         this.form.reset({
           nombre: '',
           especie: '',
