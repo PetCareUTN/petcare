@@ -24,9 +24,13 @@ const mascotaPayload = {
   fechaNacimiento: '2021-05-10',
   peso: 12.5,
   esterilizado: true,
-  foto: 'https://example.com/milo.jpg',
   observaciones: 'Sin observaciones relevantes',
 };
+
+const pngImageBuffer = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMB/6X+XioAAAAASUVORK5CYII=',
+  'base64',
+);
 
 type LoginResponse = {
   token?: unknown;
@@ -128,7 +132,14 @@ describe('POST /mascotas (contract)', () => {
   it('PET-01 rejects pet registration without token with 401', async () => {
     await request(app.getHttpServer())
       .post('/mascotas')
-      .send(mascotaPayload)
+      .field('nombre', mascotaPayload.nombre)
+      .field('especie', mascotaPayload.especie)
+      .field('raza', mascotaPayload.raza)
+      .field('sexo', mascotaPayload.sexo)
+      .field('fechaNacimiento', mascotaPayload.fechaNacimiento)
+      .field('peso', String(mascotaPayload.peso))
+      .field('esterilizado', String(mascotaPayload.esterilizado))
+      .field('observaciones', mascotaPayload.observaciones)
       .expect(401);
   });
 
@@ -138,7 +149,18 @@ describe('POST /mascotas (contract)', () => {
     const response = await request(app.getHttpServer())
       .post('/mascotas')
       .set('Authorization', `Bearer ${token}`)
-      .send(mascotaPayload)
+      .field('nombre', mascotaPayload.nombre)
+      .field('especie', mascotaPayload.especie)
+      .field('raza', mascotaPayload.raza)
+      .field('sexo', mascotaPayload.sexo)
+      .field('fechaNacimiento', mascotaPayload.fechaNacimiento)
+      .field('peso', String(mascotaPayload.peso))
+      .field('esterilizado', String(mascotaPayload.esterilizado))
+      .field('observaciones', mascotaPayload.observaciones)
+      .attach('foto', pngImageBuffer, {
+        filename: 'milo.png',
+        contentType: 'image/png',
+      })
       .expect(201);
     const body = response.body as MascotaResponse;
 
@@ -150,10 +172,10 @@ describe('POST /mascotas (contract)', () => {
       fechaNacimiento: mascotaPayload.fechaNacimiento,
       peso: mascotaPayload.peso,
       esterilizado: mascotaPayload.esterilizado,
-      foto: mascotaPayload.foto,
       observaciones: mascotaPayload.observaciones,
     });
     expect(body.idMascota).toBeDefined();
+    expect(String(body.foto)).toMatch(/^\/uploads\/mascotas\/mascota-.+\.png$/);
     expect(Array.isArray(body.idUsuarios)).toBe(true);
     expect((body.idUsuarios as unknown[]).length).toBe(1);
   });
@@ -164,7 +186,18 @@ describe('POST /mascotas (contract)', () => {
     const response = await request(app.getHttpServer())
       .post('/mascotas')
       .set('Authorization', `Bearer ${token}`)
-      .send(mascotaPayload)
+      .field('nombre', mascotaPayload.nombre)
+      .field('especie', mascotaPayload.especie)
+      .field('raza', mascotaPayload.raza)
+      .field('sexo', mascotaPayload.sexo)
+      .field('fechaNacimiento', mascotaPayload.fechaNacimiento)
+      .field('peso', String(mascotaPayload.peso))
+      .field('esterilizado', String(mascotaPayload.esterilizado))
+      .field('observaciones', mascotaPayload.observaciones)
+      .attach('foto', pngImageBuffer, {
+        filename: 'milo.png',
+        contentType: 'image/png',
+      })
       .expect(201);
     const body = response.body as MascotaResponse;
 
@@ -188,7 +221,9 @@ describe('POST /mascotas (contract)', () => {
     await request(app.getHttpServer())
       .post('/mascotas')
       .set('Authorization', `Bearer ${token}`)
-      .send({ ...mascotaPayload, nombre: '' })
+      .field('nombre', '')
+      .field('especie', mascotaPayload.especie)
+      .field('sexo', mascotaPayload.sexo)
       .expect(400);
   });
 
@@ -198,7 +233,26 @@ describe('POST /mascotas (contract)', () => {
     await request(app.getHttpServer())
       .post('/mascotas')
       .set('Authorization', `Bearer ${token}`)
-      .send({ ...mascotaPayload, idUsuario: 999 })
+      .field('nombre', mascotaPayload.nombre)
+      .field('especie', mascotaPayload.especie)
+      .field('sexo', mascotaPayload.sexo)
+      .field('idUsuario', '999')
+      .expect(400);
+  });
+
+  it('PET-06 rejects unsupported image types with 400', async () => {
+    const token = await login();
+
+    await request(app.getHttpServer())
+      .post('/mascotas')
+      .set('Authorization', `Bearer ${token}`)
+      .field('nombre', mascotaPayload.nombre)
+      .field('especie', mascotaPayload.especie)
+      .field('sexo', mascotaPayload.sexo)
+      .attach('foto', Buffer.from('not an image'), {
+        filename: 'milo.txt',
+        contentType: 'text/plain',
+      })
       .expect(400);
   });
 });
@@ -279,7 +333,18 @@ describe('GET /mascotas/:id (contract)', () => {
     const response = await request(app.getHttpServer())
       .post('/mascotas')
       .set('Authorization', `Bearer ${token}`)
-      .send(mascotaPayload)
+      .field('nombre', mascotaPayload.nombre)
+      .field('especie', mascotaPayload.especie)
+      .field('raza', mascotaPayload.raza)
+      .field('sexo', mascotaPayload.sexo)
+      .field('fechaNacimiento', mascotaPayload.fechaNacimiento)
+      .field('peso', String(mascotaPayload.peso))
+      .field('esterilizado', String(mascotaPayload.esterilizado))
+      .field('observaciones', mascotaPayload.observaciones)
+      .attach('foto', pngImageBuffer, {
+        filename: 'milo.png',
+        contentType: 'image/png',
+      })
       .expect(201);
     const body = response.body as MascotaResponse;
     return Number(body.idMascota);
@@ -311,9 +376,9 @@ describe('GET /mascotas/:id (contract)', () => {
       fechaNacimiento: mascotaPayload.fechaNacimiento,
       peso: mascotaPayload.peso,
       esterilizado: mascotaPayload.esterilizado,
-      foto: mascotaPayload.foto,
       observaciones: mascotaPayload.observaciones,
     });
+    expect(String(body.foto)).toMatch(/^\/uploads\/mascotas\/mascota-.+\.png$/);
   });
 
   it('PET-08 rejects fetching another owner pet profile with 403', async () => {

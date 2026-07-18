@@ -8,7 +8,6 @@ export interface CreateMascotaRequest {
   fechaNacimiento?: string;
   peso?: number;
   esterilizado?: boolean;
-  foto?: string;
   observaciones?: string;
 }
 

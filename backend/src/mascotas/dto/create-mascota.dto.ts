@@ -9,6 +9,7 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { PetSex } from '../../common/enums/pet-sex.enum';
 
 export class CreateMascotaDto {
@@ -34,18 +35,18 @@ export class CreateMascotaDto {
   @IsOptional()
   fechaNacimiento?: string;
 
+  @Transform(({ value }) =>
+    value === '' || value === undefined ? undefined : Number(value),
+  )
   @IsNumber()
   @Min(0)
   @IsOptional()
   peso?: number;
 
+  @Transform(({ value }) => value === true || value === 'true')
   @IsBoolean()
   @IsOptional()
   esterilizado?: boolean;
-
-  @IsString()
-  @IsOptional()
-  foto?: string;
 
   @IsString()
   @IsOptional()
