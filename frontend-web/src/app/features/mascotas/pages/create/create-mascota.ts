@@ -21,6 +21,7 @@ export class CreateMascotaPage {
   protected readonly isSubmitting = signal(false);
   protected readonly successMessage = signal<string | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
+  protected readonly createdPetId = signal<number | null>(null);
 
   protected readonly form = this.formBuilder.group({
     nombre: ['', [Validators.required, Validators.maxLength(100)]],
@@ -66,6 +67,7 @@ export class CreateMascotaPage {
       next: (mascota) => {
         this.isSubmitting.set(false);
         this.successMessage.set(`Mascota ${mascota.nombre} registrada con exito.`);
+        this.createdPetId.set(mascota.idMascota);
         this.form.reset({
           nombre: '',
           especie: '',

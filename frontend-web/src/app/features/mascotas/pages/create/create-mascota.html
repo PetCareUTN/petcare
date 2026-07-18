@@ -9,7 +9,12 @@
     </header>
 
     @if (successMessage()) {
-      <p class="banner banner-success">{{ successMessage() }}</p>
+      <p class="banner banner-success">
+        {{ successMessage() }}
+        @if (createdPetId(); as petId) {
+          <a [routerLink]="['/mascotas', petId]">Ver perfil</a>
+        }
+      </p>
     }
 
     @if (errorMessage()) {

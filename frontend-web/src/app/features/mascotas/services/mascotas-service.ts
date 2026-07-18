@@ -13,14 +13,20 @@ export class MascotasService {
   private readonly baseUrl = `${environment.apiUrl}/mascotas`;
 
   create(data: CreateMascotaRequest): Observable<MascotaResponse> {
-    const token = this.authService.getToken();
-    const headers = token
-      ? new HttpHeaders({ Authorization: `Bearer ${token}` })
-      : undefined;
-
     return this.http
-      .post<MascotaResponse>(this.baseUrl, data, { headers })
+      .post<MascotaResponse>(this.baseUrl, data, { headers: this.authHeaders() })
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
+  getById(id: number): Observable<MascotaResponse> {
+    return this.http
+      .get<MascotaResponse>(`${this.baseUrl}/${id}`, { headers: this.authHeaders() })
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
+  private authHeaders(): HttpHeaders | undefined {
+    const token = this.authService.getToken();
+    return token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;
   }
 
   private mapError(error: HttpErrorResponse): Observable<never> {

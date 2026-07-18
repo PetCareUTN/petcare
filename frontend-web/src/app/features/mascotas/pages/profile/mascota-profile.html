@@ -1,0 +1,58 @@
+<main class="pet-page">
+  <section class="pet-card">
+    <header class="pet-header">
+      <div>
+        <h1>Perfil de mascota</h1>
+        <p>Información general y médica básica.</p>
+      </div>
+      <a routerLink="/">Volver</a>
+    </header>
+
+    @if (isLoading()) {
+      <p>Cargando perfil...</p>
+    }
+
+    @if (errorMessage()) {
+      <p class="banner banner-error">{{ errorMessage() }}</p>
+    }
+
+    @if (mascota(); as pet) {
+      @if (pet.foto) {
+        <img class="pet-photo" [src]="pet.foto" alt="Foto de {{ pet.nombre }}" />
+      }
+
+      <h2>{{ pet.nombre }}</h2>
+
+      <dl class="detail-grid">
+        <div class="detail-item">
+          <dt>Especie</dt>
+          <dd>{{ pet.especie }}</dd>
+        </div>
+        <div class="detail-item">
+          <dt>Raza</dt>
+          <dd>{{ pet.raza || 'Sin especificar' }}</dd>
+        </div>
+        <div class="detail-item">
+          <dt>Sexo</dt>
+          <dd>{{ pet.sexo === 'macho' ? 'Macho' : 'Hembra' }}</dd>
+        </div>
+        <div class="detail-item">
+          <dt>Fecha de nacimiento</dt>
+          <dd>{{ pet.fechaNacimiento || 'Sin especificar' }}</dd>
+        </div>
+        <div class="detail-item">
+          <dt>Peso</dt>
+          <dd>{{ pet.peso !== null ? pet.peso + ' kg' : 'Sin especificar' }}</dd>
+        </div>
+        <div class="detail-item">
+          <dt>Esterilizado</dt>
+          <dd>{{ pet.esterilizado ? 'Sí' : 'No' }}</dd>
+        </div>
+        <div class="detail-item detail-wide">
+          <dt>Observaciones</dt>
+          <dd>{{ pet.observaciones || 'Sin observaciones registradas' }}</dd>
+        </div>
+      </dl>
+    }
+  </section>
+</main>
