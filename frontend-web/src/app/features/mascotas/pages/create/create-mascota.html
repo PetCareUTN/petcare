@@ -66,7 +66,12 @@
 
       <div class="field field-wide">
         <label for="foto">Foto</label>
-        <input id="foto" type="file" accept="image/png,image/jpeg,image/webp" (change)="onFileSelected($event)" />
+        <input
+          id="foto"
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          (change)="onFileSelected($event)"
+        />
         @if (selectedFile()) {
           <p class="file-name">{{ selectedFile()?.name }}</p>
         }

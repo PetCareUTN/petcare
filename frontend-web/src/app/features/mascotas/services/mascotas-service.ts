@@ -52,6 +52,12 @@ export class MascotasService {
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
   }
 
+  getMine(): Observable<MascotaResponse[]> {
+    return this.http
+      .get<MascotaResponse[]>(this.baseUrl, { headers: this.authHeaders() })
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
   private authHeaders(): HttpHeaders | undefined {
     const token = this.authService.getToken();
     return token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;

@@ -93,4 +93,17 @@ export class MascotasService {
 
     return MascotaResponseDto.fromEntity(mascota);
   }
+
+  async findAllByUser(userId: number): Promise<MascotaResponseDto[]> {
+    const mascotas = await this.mascotasRepository
+      .createQueryBuilder('mascota')
+      .innerJoin('mascota.usuarios', 'owner', 'owner.idUsuario = :userId', {
+        userId,
+      })
+      .leftJoinAndSelect('mascota.usuarios', 'usuarios')
+      .orderBy('mascota.idMascota', 'ASC')
+      .getMany();
+
+    return mascotas.map((mascota) => MascotaResponseDto.fromEntity(mascota));
+  }
 }

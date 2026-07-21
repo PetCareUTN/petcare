@@ -15,6 +15,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/pages/login/login').then((m) => m.LoginPage),
   },
   {
+    path: 'mascotas',
+    loadComponent: () =>
+      import('./features/mascotas/pages/list/mascotas-list').then((m) => m.MascotasListPage),
+  },
+  {
     path: 'mascotas/nueva',
     loadComponent: () =>
       import('./features/mascotas/pages/create/create-mascota').then((m) => m.CreateMascotaPage),

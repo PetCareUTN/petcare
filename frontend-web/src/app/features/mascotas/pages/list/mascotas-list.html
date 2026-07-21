@@ -1,0 +1,50 @@
+<main class="pet-page">
+  <section class="pet-card">
+    <header class="pet-header">
+      <div>
+        <h1>Mis mascotas</h1>
+        <p>Mascotas registradas con tu usuario.</p>
+      </div>
+      <a routerLink="/">Volver</a>
+    </header>
+
+    @if (isLoading()) {
+      <p>Cargando...</p>
+    }
+
+    @if (errorMessage()) {
+      <p class="banner banner-error">{{ errorMessage() }}</p>
+    }
+
+    @if (!isLoading() && !errorMessage()) {
+      @if (mascotas().length === 0) {
+        <p>Todavía no registraste ninguna mascota.</p>
+        <a class="cta" routerLink="/mascotas/nueva">Registrar mascota</a>
+      } @else {
+        <ul class="pet-list">
+          @for (pet of mascotas(); track pet.idMascota) {
+            <li>
+              <a class="pet-item" [routerLink]="['/mascotas', pet.idMascota]">
+                @if (pet.foto) {
+                  <img [src]="pet.foto" alt="Foto de {{ pet.nombre }}" />
+                } @else {
+                  <span class="pet-item-placeholder">{{ pet.nombre.charAt(0) }}</span>
+                }
+                <span class="pet-item-info">
+                  <strong>{{ pet.nombre }}</strong>
+                  <span
+                    >{{ pet.especie }}
+                    @if (pet.raza) {
+                      &middot; {{ pet.raza }}
+                    }
+                  </span>
+                </span>
+              </a>
+            </li>
+          }
+        </ul>
+        <a class="cta" routerLink="/mascotas/nueva">Registrar otra mascota</a>
+      }
+    }
+  </section>
+</main>
