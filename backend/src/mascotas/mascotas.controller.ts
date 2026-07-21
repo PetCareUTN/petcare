@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   UploadedFile,
   UseGuards,
@@ -18,6 +19,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { CreateMascotaDto } from './dto/create-mascota.dto';
 import { MascotaResponseDto } from './dto/mascota-response.dto';
+import { UpdateMascotaDto } from './dto/update-mascota.dto';
 import { MascotasService } from './mascotas.service';
 import type { UploadedImageFile } from './types/uploaded-image-file.type';
 
@@ -77,5 +79,22 @@ export class MascotasController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<MascotaResponseDto> {
     return this.mascotasService.findOne(id, user.sub);
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    FileInterceptor('foto', {
+      fileFilter: imageFileFilter,
+      limits: { fileSize: MAX_IMAGE_SIZE_IN_BYTES },
+    }),
+  )
+  update(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateMascotaDto,
+    @UploadedFile() foto?: UploadedImageFile,
+  ): Promise<MascotaResponseDto> {
+    return this.mascotasService.update(id, user.sub, dto, foto);
   }
 }

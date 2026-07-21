@@ -11,6 +11,7 @@ import { Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { CreateMascotaDto } from './dto/create-mascota.dto';
 import { MascotaResponseDto } from './dto/mascota-response.dto';
+import { UpdateMascotaDto } from './dto/update-mascota.dto';
 import { Mascota } from './entities/mascota.entity';
 import { UploadedImageFile } from './types/uploaded-image-file.type';
 
@@ -71,6 +72,54 @@ export class MascotasService {
   }
 
   async findOne(id: number, userId: number): Promise<MascotaResponseDto> {
+    const mascota = await this.findMascotaAndVerifyOwner(id, userId);
+    return MascotaResponseDto.fromEntity(mascota);
+  }
+
+  async update(
+    id: number,
+    userId: number,
+    dto: UpdateMascotaDto,
+    foto?: UploadedImageFile,
+  ): Promise<MascotaResponseDto> {
+    const mascota = await this.findMascotaAndVerifyOwner(id, userId);
+
+    if (dto.nombre !== undefined) {
+      mascota.nombre = dto.nombre;
+    }
+    if (dto.especie !== undefined) {
+      mascota.especie = dto.especie;
+    }
+    if (dto.raza !== undefined) {
+      mascota.raza = dto.raza;
+    }
+    if (dto.sexo !== undefined) {
+      mascota.sexo = dto.sexo;
+    }
+    if (dto.fechaNacimiento !== undefined) {
+      mascota.fechaNacimiento = dto.fechaNacimiento;
+    }
+    if (dto.peso !== undefined) {
+      mascota.peso = dto.peso.toFixed(2);
+    }
+    if (dto.esterilizado !== undefined) {
+      mascota.esterilizado = dto.esterilizado;
+    }
+    if (dto.observaciones !== undefined) {
+      mascota.observaciones = dto.observaciones;
+    }
+    if (foto) {
+      mascota.foto = await this.saveFoto(foto);
+    }
+
+    const savedMascota = await this.mascotasRepository.save(mascota);
+    return MascotaResponseDto.fromEntity(savedMascota);
+  }
+
+  private async findMascotaAndVerifyOwner(
+    id: number,
+    userId: number,
+  ): Promise<Mascota> {
     const mascota = await this.mascotasRepository.findOne({
       where: { idMascota: id },
       relations: ['usuarios'],
@@ -91,7 +140,7 @@ export class MascotasService {
       });
     }
 
-    return MascotaResponseDto.fromEntity(mascota);
+    return mascota;
   }
 
   async findAllByUser(userId: number): Promise<MascotaResponseDto[]> {
