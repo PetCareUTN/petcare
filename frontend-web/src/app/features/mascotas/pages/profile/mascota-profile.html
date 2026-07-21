@@ -1,15 +1,7 @@
 <main class="pet-page">
   <section class="pet-card">
-    <header class="pet-header">
-      <div>
-        <h1>Perfil de mascota</h1>
-        <p>Información general y médica básica.</p>
-      </div>
-      <a routerLink="/">Volver</a>
-    </header>
-
     @if (isLoading()) {
-      <p>Cargando perfil...</p>
+      <p class="status-text">Cargando perfil...</p>
     }
 
     @if (errorMessage()) {
@@ -17,11 +9,18 @@
     }
 
     @if (mascota(); as pet) {
-      @if (pet.foto) {
-        <img class="pet-photo" [src]="pet.foto" alt="Foto de {{ pet.nombre }}" />
-      }
-
-      <h2>{{ pet.nombre }}</h2>
+      <header class="profile-header">
+        @if (pet.foto) {
+          <img
+            class="pet-photo"
+            [src]="mascotasService.resolveFotoUrl(pet.foto)"
+            alt="Foto de {{ pet.nombre }}"
+          />
+        } @else {
+          <div class="pet-photo pet-photo-placeholder">{{ pet.nombre.charAt(0) }}</div>
+        }
+        <h1>{{ pet.nombre }}</h1>
+      </header>
 
       <dl class="detail-grid">
         <div class="detail-item">
@@ -53,6 +52,10 @@
           <dd>{{ pet.observaciones || 'Sin observaciones registradas' }}</dd>
         </div>
       </dl>
+
+      <div class="profile-actions">
+        <a class="btn-secondary" routerLink="/mascotas">Volver a mis mascotas</a>
+      </div>
     }
   </section>
 </main>

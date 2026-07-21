@@ -1,50 +1,57 @@
-<main class="pet-page">
-  <section class="pet-card">
-    <header class="pet-header">
-      <div>
-        <h1>Mis mascotas</h1>
-        <p>Mascotas registradas con tu usuario.</p>
-      </div>
-      <a routerLink="/">Volver</a>
-    </header>
+<div class="page">
+  <header class="list-header">
+    <h1>Mis mascotas</h1>
+    <a class="btn-primary" routerLink="/mascotas/nueva">+ Registrar mascota</a>
+  </header>
 
-    @if (isLoading()) {
-      <p>Cargando...</p>
-    }
+  @if (isLoading()) {
+    <p class="status-text">Cargando...</p>
+  }
 
-    @if (errorMessage()) {
-      <p class="banner banner-error">{{ errorMessage() }}</p>
-    }
+  @if (errorMessage()) {
+    <p class="banner banner-error">{{ errorMessage() }}</p>
+  }
 
-    @if (!isLoading() && !errorMessage()) {
-      @if (mascotas().length === 0) {
+  @if (!isLoading() && !errorMessage()) {
+    @if (mascotas().length === 0) {
+      <div class="empty-state">
         <p>Todavía no registraste ninguna mascota.</p>
-        <a class="cta" routerLink="/mascotas/nueva">Registrar mascota</a>
-      } @else {
-        <ul class="pet-list">
-          @for (pet of mascotas(); track pet.idMascota) {
-            <li>
-              <a class="pet-item" [routerLink]="['/mascotas', pet.idMascota]">
-                @if (pet.foto) {
-                  <img [src]="pet.foto" alt="Foto de {{ pet.nombre }}" />
-                } @else {
-                  <span class="pet-item-placeholder">{{ pet.nombre.charAt(0) }}</span>
+        <p>Registrá tu primera mascota para comenzar.</p>
+        <a class="btn-primary" routerLink="/mascotas/nueva">Registrar mascota</a>
+      </div>
+    } @else {
+      <div class="pet-grid">
+        @for (pet of mascotas(); track pet.idMascota) {
+          <article class="pet-card">
+            @if (pet.foto) {
+              <img
+                class="pet-card-photo"
+                [src]="mascotasService.resolveFotoUrl(pet.foto)"
+                alt="Foto de {{ pet.nombre }}"
+              />
+            } @else {
+              <div class="pet-card-photo pet-card-placeholder">{{ pet.nombre.charAt(0) }}</div>
+            }
+
+            <div class="pet-card-body">
+              <h2>{{ pet.nombre }}</h2>
+              <p class="pet-card-meta">
+                {{ pet.especie }}
+                @if (pet.raza) {
+                  &middot; {{ pet.raza }}
                 }
-                <span class="pet-item-info">
-                  <strong>{{ pet.nombre }}</strong>
-                  <span
-                    >{{ pet.especie }}
-                    @if (pet.raza) {
-                      &middot; {{ pet.raza }}
-                    }
-                  </span>
-                </span>
-              </a>
-            </li>
-          }
-        </ul>
-        <a class="cta" routerLink="/mascotas/nueva">Registrar otra mascota</a>
-      }
+              </p>
+              @if (pet.fechaNacimiento) {
+                <p class="pet-card-meta">Nació el {{ pet.fechaNacimiento | date: 'dd/MM/yyyy' }}</p>
+              }
+            </div>
+
+            <div class="pet-card-actions">
+              <a class="btn-secondary" [routerLink]="['/mascotas', pet.idMascota]">Ver perfil</a>
+            </div>
+          </article>
+        }
+      </div>
     }
-  </section>
-</main>
+  }
+</div>

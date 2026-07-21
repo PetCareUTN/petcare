@@ -1,6 +1,5 @@
-import { Component, inject } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
-import { AuthService } from '../../services/auth-service';
+import { Component } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-home',
@@ -8,12 +7,4 @@ import { AuthService } from '../../services/auth-service';
   templateUrl: './home.html',
   styleUrl: './home.css',
 })
-export class HomePage {
-  private readonly authService = inject(AuthService);
-  private readonly router = inject(Router);
-
-  logout(): void {
-    this.authService.clearToken();
-    this.router.navigateByUrl('/login');
-  }
-}
+export class HomePage {}

@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ApiError } from '../../../auth/models/user';
@@ -6,12 +7,12 @@ import { MascotasService } from '../../services/mascotas-service';
 
 @Component({
   selector: 'app-mascotas-list',
-  imports: [RouterLink],
+  imports: [RouterLink, DatePipe],
   templateUrl: './mascotas-list.html',
   styleUrl: './mascotas-list.css',
 })
 export class MascotasListPage implements OnInit {
-  private readonly mascotasService = inject(MascotasService);
+  protected readonly mascotasService = inject(MascotasService);
 
   protected readonly isLoading = signal(true);
   protected readonly errorMessage = signal<string | null>(null);

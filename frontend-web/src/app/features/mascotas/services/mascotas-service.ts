@@ -58,6 +58,18 @@ export class MascotasService {
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
   }
 
+  /**
+   * El backend guarda `foto` como ruta relativa (p. ej. `/uploads/mascotas/x.png`),
+   * servida desde su propio origen. El frontend corre en otro puerto, así que hay
+   * que anteponerle la URL de la API para que el navegador la resuelva bien.
+   */
+  resolveFotoUrl(foto: string | null): string | null {
+    if (!foto) {
+      return null;
+    }
+    return foto.startsWith('http') ? foto : `${environment.apiUrl}${foto}`;
+  }
+
   private authHeaders(): HttpHeaders | undefined {
     const token = this.authService.getToken();
     return token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;

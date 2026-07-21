@@ -1,7 +1,9 @@
 <main class="home-page">
-  <h1>Sesion iniciada</h1>
-  <p>Bienvenido/a a PetCare.</p>
-  <a routerLink="/mascotas">Mis mascotas</a>
-  <a routerLink="/mascotas/nueva">Registrar mascota</a>
-  <button type="button" (click)="logout()">Cerrar sesion</button>
+  <h1>Bienvenido/a a PetCare</h1>
+  <p>Gestioná la información de tus mascotas desde un solo lugar.</p>
+
+  <div class="home-actions">
+    <a class="btn-primary" routerLink="/mascotas/nueva">Registrar mascota</a>
+    <a class="btn-secondary" routerLink="/mascotas">Mis mascotas</a>
+  </div>
 </main>
