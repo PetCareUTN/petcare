@@ -12,7 +12,7 @@ import { MascotasService } from '../../services/mascotas-service';
 })
 export class MascotaProfilePage implements OnInit {
   private readonly route = inject(ActivatedRoute);
-  private readonly mascotasService = inject(MascotasService);
+  protected readonly mascotasService = inject(MascotasService);
 
   protected readonly isLoading = signal(true);
   protected readonly errorMessage = signal<string | null>(null);

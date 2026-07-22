@@ -66,6 +66,12 @@ export class MascotasController {
     return this.mascotasService.create(user.sub, dto, foto);
   }
 
+  @Get()
+  @UseGuards(JwtAuthGuard)
+  findAll(@CurrentUser() user: JwtPayload): Promise<MascotaResponseDto[]> {
+    return this.mascotasService.findAllByUser(user.sub);
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   findOne(

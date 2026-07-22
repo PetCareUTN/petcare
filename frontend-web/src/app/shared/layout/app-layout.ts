@@ -1,0 +1,19 @@
+import { Component, inject } from '@angular/core';
+import { Router, RouterOutlet } from '@angular/router';
+import { AuthService } from '../../features/auth/services/auth-service';
+
+@Component({
+  selector: 'app-layout',
+  imports: [RouterOutlet],
+  templateUrl: './app-layout.html',
+  styleUrl: './app-layout.css',
+})
+export class AppLayout {
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
+
+  logout(): void {
+    this.authService.clearToken();
+    this.router.navigateByUrl('/login');
+  }
+}
