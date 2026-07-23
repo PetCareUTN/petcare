@@ -174,6 +174,7 @@ describe('AuthService', () => {
         nombre: user.nombre,
         apellido: user.apellido,
         email: user.email,
+        telefono: null,
         id_rol: defaultRole.idRol,
         estado: user.estado,
         fecha_registro: user.fechaRegistro,
