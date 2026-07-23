@@ -1,0 +1,70 @@
+<main class="pet-page">
+  <form class="pet-form" [formGroup]="form" (ngSubmit)="submit()">
+    <header class="pet-header">
+      <div>
+        <h1>Solicitar validación</h1>
+        <p>Completá tu información profesional y adjuntá la matrícula habilitante.</p>
+      </div>
+      <div class="pet-header-actions">
+        <app-notification-bell />
+        <a routerLink="/veterinarios/estado">Ver estado</a>
+      </div>
+    </header>
+
+    @if (successMessage()) {
+      <p class="banner banner-success">{{ successMessage() }}</p>
+    }
+
+    @if (errorMessage()) {
+      <p class="banner banner-error">{{ errorMessage() }}</p>
+    }
+
+    <section class="form-grid">
+      <div class="field">
+        <label for="numeroDocumento">Número de documento</label>
+        <input id="numeroDocumento" type="text" formControlName="numeroDocumento" />
+        @if (form.controls.numeroDocumento.invalid && form.controls.numeroDocumento.touched) {
+          <p class="field-error">Ingresá un número de documento válido (7 u 8 dígitos numéricos).</p>
+        }
+      </div>
+
+      <div class="field">
+        <label for="numeroMatricula">Número de matrícula</label>
+        <input id="numeroMatricula" type="text" formControlName="numeroMatricula" />
+        @if (form.controls.numeroMatricula.invalid && form.controls.numeroMatricula.touched) {
+          <p class="field-error">El número de matrícula es obligatorio.</p>
+        }
+      </div>
+
+      <div class="field field-wide">
+        <label for="provinciaMatricula">Provincia de matrícula</label>
+        <select id="provinciaMatricula" formControlName="provinciaMatricula">
+          <option value="" disabled>Seleccioná una provincia</option>
+          @for (prov of provincias; track prov) {
+            <option [value]="prov">{{ prov }}</option>
+          }
+        </select>
+        @if (form.controls.provinciaMatricula.invalid && form.controls.provinciaMatricula.touched) {
+          <p class="field-error">La provincia es obligatoria.</p>
+        }
+      </div>
+
+      <div class="field field-wide">
+        <label for="matricula">Matrícula habilitante (imagen o PDF)</label>
+        <input
+          id="matricula"
+          type="file"
+          accept=".jpg,.jpeg,.png,.pdf"
+          (change)="onFileSelected($event)"
+        />
+        @if (selectedFile()) {
+          <p class="file-name">{{ selectedFile()!.name }}</p>
+        }
+      </div>
+    </section>
+
+    <button type="submit" [disabled]="isSubmitting()">
+      {{ isSubmitting() ? 'Enviando...' : 'Enviar solicitud' }}
+    </button>
+  </form>
+</main>

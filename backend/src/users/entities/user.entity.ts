@@ -5,11 +5,13 @@ import {
   JoinColumn,
   ManyToMany,
   ManyToOne,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { Mascota } from '../../mascotas/entities/mascota.entity';
 import { Role } from '../../roles/entities/role.entity';
+import { Veterinario } from '../../veterinarios/entities/veterinario.entity';
 
 @Entity('usuarios')
 export class User {
@@ -43,6 +45,9 @@ export class User {
 
   @ManyToMany(() => Mascota, (mascota) => mascota.usuarios)
   mascotas: Mascota[];
+
+  @OneToOne(() => Veterinario, (veterinario) => veterinario.usuario)
+  veterinario?: Veterinario;
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
