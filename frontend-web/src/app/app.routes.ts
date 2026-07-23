@@ -39,6 +39,11 @@ export const routes: Routes = [
             (m) => m.MascotaProfilePage,
           ),
       },
+      {
+        path: 'perfil',
+        loadComponent: () =>
+          import('./features/profile/pages/edit/profile-edit').then((m) => m.ProfileEditPage),
+      },
     ],
   },
   {
