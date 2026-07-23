@@ -7,17 +7,21 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
-import com.petcare.app.features.auth.data.remote.LoginRequest
+import com.petcare.app.features.auth.data.local.SessionManager
 import com.petcare.app.features.auth.data.remote.RetrofitClient
+import com.petcare.app.features.auth.domain.AuthSessionController
 import com.petcare.app.features.auth.ui.LoginScreen
 import com.petcare.app.ui.theme.PetCareTheme
 import java.io.IOException
@@ -32,8 +36,17 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             PetCareTheme {
+                val sessionController = remember {
+                    AuthSessionController(
+                        authApi = RetrofitClient.authApi,
+                        sessionStore = SessionManager(applicationContext)
+                    )
+                }
                 var isLoading by rememberSaveable {
                     mutableStateOf(false)
+                }
+                var isRestoringSession by rememberSaveable {
+                    mutableStateOf(true)
                 }
                 var serverError by rememberSaveable {
                     mutableStateOf<String?>(null)
@@ -42,7 +55,20 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf<String?>(null)
                 }
 
-                if (loggedUserName != null) {
+                LaunchedEffect(Unit) {
+                    loggedUserName = sessionController.restoreSession()?.userName
+                    isRestoringSession = false
+                }
+
+                if (isRestoringSession) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                } else if (loggedUserName != null) {
                     Column(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.Center,
@@ -63,14 +89,12 @@ class MainActivity : ComponentActivity() {
 
                             lifecycleScope.launch {
                                 try {
-                                    val response = RetrofitClient.authApi.login(
-                                        LoginRequest(
-                                            email = email,
-                                            password = password
-                                        )
+                                    val session = sessionController.login(
+                                        email = email,
+                                        password = password
                                     )
 
-                                    loggedUserName = response.usuario.nombre
+                                    loggedUserName = session.userName
                                 } catch (exception: HttpException) {
                                     serverError = when (exception.code()) {
                                         400, 401 -> "Correo o contraseña incorrectos"
