@@ -1,0 +1,68 @@
+<main class="pet-page">
+  <div class="pet-form">
+    <header class="pet-header">
+      <div>
+        <h1>Estado de validación</h1>
+        <p>Consultá el estado de tu solicitud de validación profesional.</p>
+      </div>
+      <div class="pet-header-actions">
+        <app-notification-bell />
+        <a routerLink="/veterinarios/solicitar">Nueva solicitud</a>
+      </div>
+    </header>
+
+    @if (isLoading()) {
+      <p class="estado-loading">Cargando...</p>
+    }
+
+    @if (errorMessage()) {
+      <p class="banner banner-error">{{ errorMessage() }}</p>
+    }
+
+    @if (solicitud(); as sol) {
+      <div class="estado-card">
+        <div class="estado-row">
+          <span class="estado-label">Estado:</span>
+          <span class="estado-badge" [class]="getEstadoClass(sol.estadoValidacion)">
+            {{ sol.estadoValidacion }}
+          </span>
+        </div>
+
+        <div class="estado-row">
+          <span class="estado-label">Fecha de solicitud:</span>
+          <span>{{ sol.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+        </div>
+
+        <div class="estado-row">
+          <span class="estado-label">Documento:</span>
+          <span>{{ sol.numeroDocumento }}</span>
+        </div>
+
+        <div class="estado-row">
+          <span class="estado-label">Matrícula:</span>
+          <span>{{ sol.numeroMatricula }}</span>
+        </div>
+
+        <div class="estado-row">
+          <span class="estado-label">Provincia:</span>
+          <span>{{ sol.provinciaMatricula }}</span>
+        </div>
+
+        @if (sol.motivoRechazo) {
+          <div class="estado-rechazo">
+            <span class="estado-label">Motivo de rechazo:</span>
+            <p>{{ sol.motivoRechazo }}</p>
+          </div>
+        }
+
+        @if (sol.matriculaUrl) {
+          <div class="estado-archivo">
+            <a [href]="sol.matriculaUrl" target="_blank" rel="noopener noreferrer">
+              Ver matrícula adjunta
+            </a>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</main>
