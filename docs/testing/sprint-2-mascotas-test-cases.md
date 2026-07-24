@@ -27,21 +27,22 @@ Authorization: Bearer <token>
 
 Body:
 
-```json
-{
-  "nombre": "Milo",
-  "especie": "Perro",
-  "raza": "Mestizo",
-  "sexo": "macho",
-  "fechaNacimiento": "2021-05-10",
-  "peso": 12.5,
-  "esterilizado": true,
-  "foto": "https://example.com/milo.jpg",
-  "observaciones": "Sin observaciones relevantes"
-}
+```text
+Content-Type: multipart/form-data
+
+nombre=Milo
+especie=Perro
+raza=Mestizo
+sexo=macho
+fechaNacimiento=2021-05-10
+peso=12.5
+esterilizado=true
+foto=<archivo de imagen>
+observaciones=Sin observaciones relevantes
 ```
 
 El usuario duenio no se envia en el body. El backend lo toma del JWT y crea la relacion en `usuarios_mascotas`.
+La foto se sube como archivo. Los formatos permitidos son JPG, PNG y WEBP, con tamanio maximo de 2 MB. El backend guarda el archivo en `uploads/mascotas` y persiste en DB una ruta publica bajo `/uploads/mascotas/...`.
 
 ### Response esperado - 201
 
@@ -56,7 +57,7 @@ El usuario duenio no se envia en el body. El backend lo toma del JWT y crea la r
   "fechaNacimiento": "2021-05-10",
   "peso": 12.5,
   "esterilizado": true,
-  "foto": "https://example.com/milo.jpg",
+  "foto": "/uploads/mascotas/mascota-1784210000000-123456789.png",
   "observaciones": "Sin observaciones relevantes",
   "idUsuarios": [1]
 }
@@ -71,6 +72,7 @@ El usuario duenio no se envia en el body. El backend lo toma del JWT y crea la r
 | PET-03 | Persistencia y asociacion | Body valido con JWT | Mascota en `mascotas` y relacion en `usuarios_mascotas` |
 | PET-04 | Campo obligatorio faltante | `nombre` vacio | 400 |
 | PET-05 | Campo no permitido | Body con `idUsuario` | 400 |
+| PET-06 | Archivo no soportado | Foto `.txt` | 400 |
 
 ### Evidencia esperada
 

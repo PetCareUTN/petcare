@@ -1,0 +1,14 @@
+<div class="page">
+  <header class="app-header">
+    <div class="app-header-brand">
+      <img class="app-header-logo" src="logo.jpg" alt="PetCare" />
+      <span class="app-header-title">PetCare</span>
+    </div>
+    <nav class="app-header-nav">
+      <a routerLink="/perfil">Mi perfil</a>
+    </nav>
+    <button type="button" class="app-header-logout" (click)="logout()">Cerrar sesión</button>
+  </header>
+
+  <router-outlet />
+</div>

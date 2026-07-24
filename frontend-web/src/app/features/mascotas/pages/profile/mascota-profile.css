@@ -1,0 +1,144 @@
+.pet-page {
+  flex: 1;
+  padding: var(--spacing-lg);
+  box-sizing: border-box;
+  background-color: var(--background);
+}
+
+.pet-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  width: min(100%, 640px);
+  margin: 0 auto;
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-lg);
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+}
+
+.status-text {
+  color: var(--text-secondary);
+}
+
+.banner {
+  margin: 0;
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+}
+
+.banner-error {
+  background-color: color-mix(in srgb, var(--danger) 14%, white);
+  color: var(--danger);
+}
+
+.profile-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+  text-align: center;
+}
+
+.pet-photo {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--primary-light);
+}
+
+.pet-photo-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--primary-light);
+  color: var(--primary);
+  font-size: 2.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.profile-header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-md);
+  margin: 0;
+  padding: var(--spacing-md);
+  background-color: var(--background);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.detail-wide {
+  grid-column: 1 / -1;
+}
+
+.detail-item dt {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.detail-item dd {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--spacing-sm);
+}
+
+.btn-secondary {
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--radius-md);
+  background-color: var(--surface);
+  color: var(--primary);
+  border: 1px solid var(--border);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.btn-secondary:hover {
+  background-color: var(--primary-light);
+}
+
+@media (max-width: 640px) {
+  .pet-page {
+    padding: var(--spacing-md);
+  }
+
+  .pet-card {
+    padding: var(--spacing-lg);
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-actions {
+    flex-direction: column;
+  }
+
+  .profile-actions a {
+    width: 100%;
+    text-align: center;
+  }
+}

@@ -9,7 +9,12 @@
     </header>
 
     @if (successMessage()) {
-      <p class="banner banner-success">{{ successMessage() }}</p>
+      <p class="banner banner-success">
+        {{ successMessage() }}
+        @if (createdPetId(); as petId) {
+          <a [routerLink]="['/mascotas', petId]">Ver perfil</a>
+        }
+      </p>
     }
 
     @if (errorMessage()) {
@@ -61,7 +66,15 @@
 
       <div class="field field-wide">
         <label for="foto">Foto</label>
-        <input id="foto" type="url" formControlName="foto" placeholder="https://..." />
+        <input
+          id="foto"
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          (change)="onFileSelected($event)"
+        />
+        @if (selectedFile()) {
+          <p class="file-name">{{ selectedFile()?.name }}</p>
+        }
       </div>
 
       <label class="checkbox-field field-wide">

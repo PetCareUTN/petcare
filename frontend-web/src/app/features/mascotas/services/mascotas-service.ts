@@ -12,15 +12,67 @@ export class MascotasService {
   private readonly authService = inject(AuthService);
   private readonly baseUrl = `${environment.apiUrl}/mascotas`;
 
-  create(data: CreateMascotaRequest): Observable<MascotaResponse> {
-    const token = this.authService.getToken();
-    const headers = token
-      ? new HttpHeaders({ Authorization: `Bearer ${token}` })
-      : undefined;
+  create(data: CreateMascotaRequest, foto?: File): Observable<MascotaResponse> {
+    const formData = this.buildFormData(data, foto);
 
     return this.http
-      .post<MascotaResponse>(this.baseUrl, data, { headers })
+      .post<MascotaResponse>(this.baseUrl, formData, { headers: this.authHeaders() })
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
+  private buildFormData(data: CreateMascotaRequest, foto?: File): FormData {
+    const formData = new FormData();
+    formData.append('nombre', data.nombre);
+    formData.append('especie', data.especie);
+    formData.append('sexo', data.sexo);
+    formData.append('esterilizado', String(data.esterilizado ?? false));
+
+    if (data.raza) {
+      formData.append('raza', data.raza);
+    }
+    if (data.fechaNacimiento) {
+      formData.append('fechaNacimiento', data.fechaNacimiento);
+    }
+    if (data.peso !== undefined) {
+      formData.append('peso', String(data.peso));
+    }
+    if (data.observaciones) {
+      formData.append('observaciones', data.observaciones);
+    }
+    if (foto) {
+      formData.append('foto', foto);
+    }
+
+    return formData;
+  }
+
+  getById(id: number): Observable<MascotaResponse> {
+    return this.http
+      .get<MascotaResponse>(`${this.baseUrl}/${id}`, { headers: this.authHeaders() })
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
+  getMine(): Observable<MascotaResponse[]> {
+    return this.http
+      .get<MascotaResponse[]>(this.baseUrl, { headers: this.authHeaders() })
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
+  /**
+   * El backend guarda `foto` como ruta relativa (p. ej. `/uploads/mascotas/x.png`),
+   * servida desde su propio origen. El frontend corre en otro puerto, así que hay
+   * que anteponerle la URL de la API para que el navegador la resuelva bien.
+   */
+  resolveFotoUrl(foto: string | null): string | null {
+    if (!foto) {
+      return null;
+    }
+    return foto.startsWith('http') ? foto : `${environment.apiUrl}${foto}`;
+  }
+
+  private authHeaders(): HttpHeaders | undefined {
+    const token = this.authService.getToken();
+    return token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;
   }
 
   private mapError(error: HttpErrorResponse): Observable<never> {

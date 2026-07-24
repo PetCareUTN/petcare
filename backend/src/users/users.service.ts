@@ -1,6 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 
 @Injectable()
@@ -32,6 +37,39 @@ export class UsersService {
       password: data.password,
       rol: { idRol: data.idRol },
     });
+
+    return this.usersRepository.save(user);
+  }
+
+  async update(idUsuario: number, dto: UpdateUserDto): Promise<User> {
+    const user = await this.findById(idUsuario);
+    if (!user) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Usuario no encontrado',
+      });
+    }
+
+    if (dto.email !== undefined && dto.email !== user.email) {
+      const existingUser = await this.findByEmail(dto.email);
+      if (existingUser) {
+        throw new ConflictException({
+          codigoEstado: 409,
+          mensaje: 'El email ya se encuentra registrado',
+        });
+      }
+      user.email = dto.email;
+    }
+
+    if (dto.nombre !== undefined) {
+      user.nombre = dto.nombre;
+    }
+    if (dto.apellido !== undefined) {
+      user.apellido = dto.apellido;
+    }
+    if (dto.telefono !== undefined) {
+      user.telefono = dto.telefono;
+    }
 
     return this.usersRepository.save(user);
   }

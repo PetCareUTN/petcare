@@ -21,6 +21,8 @@ export class CreateMascotaPage {
   protected readonly isSubmitting = signal(false);
   protected readonly successMessage = signal<string | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
+  protected readonly selectedFile = signal<File | null>(null);
+  protected readonly createdPetId = signal<number | null>(null);
 
   protected readonly form = this.formBuilder.group({
     nombre: ['', [Validators.required, Validators.maxLength(100)]],
@@ -30,9 +32,13 @@ export class CreateMascotaPage {
     fechaNacimiento: [''],
     peso: [null as number | null, [Validators.min(0)]],
     esterilizado: [false],
-    foto: [''],
     observaciones: [''],
   });
+
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.selectedFile.set(input.files?.[0] ?? null);
+  }
 
   submit(): void {
     if (!this.authService.isAuthenticated()) {
@@ -47,6 +53,7 @@ export class CreateMascotaPage {
 
     this.successMessage.set(null);
     this.errorMessage.set(null);
+    this.createdPetId.set(null);
     this.isSubmitting.set(true);
 
     const value = this.form.getRawValue();
@@ -58,14 +65,15 @@ export class CreateMascotaPage {
       fechaNacimiento: value.fechaNacimiento || undefined,
       peso: value.peso ?? undefined,
       esterilizado: value.esterilizado ?? false,
-      foto: value.foto || undefined,
       observaciones: value.observaciones || undefined,
     };
 
-    this.mascotasService.create(payload).subscribe({
+    this.mascotasService.create(payload, this.selectedFile() ?? undefined).subscribe({
       next: (mascota) => {
         this.isSubmitting.set(false);
         this.successMessage.set(`Mascota ${mascota.nombre} registrada con exito.`);
+        this.selectedFile.set(null);
+        this.createdPetId.set(mascota.idMascota);
         this.form.reset({
           nombre: '',
           especie: '',
@@ -74,7 +82,6 @@ export class CreateMascotaPage {
           fechaNacimiento: '',
           peso: null,
           esterilizado: false,
-          foto: '',
           observaciones: '',
         });
       },
