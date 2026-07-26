@@ -1,8 +1,11 @@
 package com.petcare.app.features.pets.domain
 
+import com.petcare.app.features.pets.data.remote.CreatePetRequest
 import com.petcare.app.features.pets.data.remote.PetResponse
 import com.petcare.app.features.pets.data.remote.PetsApi
 import kotlinx.coroutines.runBlocking
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -22,7 +25,34 @@ class PetsControllerTest {
             assertEquals("Luna", pets[1].nombre)
         }
 
+    @Test
+    fun `createPet registra una mascota y devuelve la respuesta del backend`() =
+        runBlocking {
+            val fakePetsApi = FakePetsApi()
+            val controller = PetsController(
+                petsApi = fakePetsApi
+            )
+            val request = CreatePetRequest(
+                nombre = "Nina",
+                especie = "Perro",
+                raza = "Mestiza",
+                sexo = "hembra",
+                birthDate = "2022-05-10",
+                peso = 12.5,
+                esterilizado = true,
+                observaciones = "Sin observaciones"
+            )
+
+            val pet = controller.createPet(request)
+
+            assertEquals(request, fakePetsApi.createdRequest)
+            assertEquals("Nina", pet.nombre)
+            assertEquals("Perro", pet.especie)
+        }
+
     private class FakePetsApi : PetsApi {
+        var createdRequest: CreatePetRequest? = null
+
         override suspend fun getMyPets(): List<PetResponse> =
             listOf(
                 PetResponse(
@@ -50,5 +80,34 @@ class PetsControllerTest {
                     observaciones = null
                 )
             )
+
+        override suspend fun createPet(request: CreatePetRequest): PetResponse {
+            createdRequest = request
+            return PetResponse(
+                id = 3,
+                nombre = request.nombre,
+                especie = request.especie,
+                raza = request.raza,
+                sexo = request.sexo,
+                birthDate = request.birthDate,
+                peso = request.peso,
+                esterilizado = request.esterilizado,
+                foto = null,
+                observaciones = request.observaciones
+            )
+        }
+
+        override suspend fun createPetWithPhoto(
+            nombre: RequestBody,
+            especie: RequestBody,
+            raza: RequestBody?,
+            sexo: RequestBody,
+            birthDate: RequestBody?,
+            peso: RequestBody?,
+            esterilizado: RequestBody,
+            observaciones: RequestBody?,
+            foto: MultipartBody.Part
+        ): PetResponse =
+            throw UnsupportedOperationException("No usado en este test")
     }
 }
