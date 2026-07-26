@@ -12,6 +12,10 @@ class AuthSessionController(
 
     fun restoreSession(): AuthSession? = sessionStore.getSession()
 
+    fun logout() {
+        sessionStore.clearSession()
+    }
+
     suspend fun login(email: String, password: String): AuthSession {
         val response = authApi.login(
             LoginRequest(
