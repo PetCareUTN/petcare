@@ -1,0 +1,103 @@
+<main class="pet-page">
+  <form class="pet-form" [formGroup]="form" (ngSubmit)="submit()">
+    <header class="pet-header">
+      <div>
+        <h1>Editar mascota</h1>
+        @if (nombreMascota()) {
+          <p>Modificá los datos de {{ nombreMascota() }}.</p>
+        }
+      </div>
+      @if (mascotaId(); as petId) {
+        <a [routerLink]="['/mascotas', petId]">Volver al perfil</a>
+      }
+    </header>
+
+    @if (isLoading()) {
+      <p class="status-text">Cargando datos...</p>
+    }
+
+    @if (errorMessage()) {
+      <p class="banner banner-error">{{ errorMessage() }}</p>
+    }
+
+    @if (!isLoading() && !errorMessage()) {
+      <section class="form-grid">
+        <div class="field">
+          <label for="nombre">Nombre</label>
+          <input id="nombre" type="text" formControlName="nombre" />
+          @if (form.controls.nombre.invalid && form.controls.nombre.touched) {
+            <p class="field-error">El nombre es obligatorio.</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="especie">Especie</label>
+          <input id="especie" type="text" formControlName="especie" />
+          @if (form.controls.especie.invalid && form.controls.especie.touched) {
+            <p class="field-error">La especie es obligatoria.</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="raza">Raza</label>
+          <input id="raza" type="text" formControlName="raza" />
+        </div>
+
+        <div class="field">
+          <label for="sexo">Sexo</label>
+          <select id="sexo" formControlName="sexo">
+            <option value="macho">Macho</option>
+            <option value="hembra">Hembra</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="fechaNacimiento">Fecha de nacimiento</label>
+          <input id="fechaNacimiento" type="date" formControlName="fechaNacimiento" />
+        </div>
+
+        <div class="field">
+          <label for="peso">Peso</label>
+          <input id="peso" type="number" min="0" step="0.01" formControlName="peso" />
+          @if (form.controls.peso.invalid && form.controls.peso.touched) {
+            <p class="field-error">El peso no puede ser negativo.</p>
+          }
+        </div>
+
+        <div class="field field-wide">
+          <label for="foto">Foto</label>
+          <input
+            id="foto"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            (change)="onFileSelected($event)"
+          />
+          @if (selectedFile()) {
+            <p class="file-name">{{ selectedFile()?.name }}</p>
+          }
+        </div>
+
+        <label class="checkbox-field field-wide">
+          <input type="checkbox" formControlName="esterilizado" />
+          Esterilizado
+        </label>
+
+        <h2 class="form-section-title field-wide">Información médica</h2>
+
+        <div class="field field-wide">
+          <label for="alergias">Alergias</label>
+          <textarea id="alergias" rows="3" formControlName="alergias"></textarea>
+        </div>
+
+        <div class="field field-wide">
+          <label for="observaciones">Observaciones</label>
+          <textarea id="observaciones" rows="4" formControlName="observaciones"></textarea>
+        </div>
+      </section>
+
+      <button type="submit" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Guardando...' : 'Guardar cambios' }}
+      </button>
+    }
+  </form>
+</main>
