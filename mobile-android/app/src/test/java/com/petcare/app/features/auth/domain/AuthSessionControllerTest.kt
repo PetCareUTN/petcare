@@ -56,6 +56,24 @@ class AuthSessionControllerTest {
         assertEquals(savedSession, controller.restoreSession())
     }
 
+    @Test
+    fun `logout elimina la sesion guardada`() {
+        val sessionStore = FakeSessionStore(
+            AuthSession(
+                token = "jwt-token",
+                userName = "Ignacio"
+            )
+        )
+        val controller = AuthSessionController(
+            authApi = FakeAuthApi(),
+            sessionStore = sessionStore
+        )
+
+        controller.logout()
+
+        assertNull(sessionStore.savedSession)
+    }
+
     private class FakeAuthApi : AuthApi {
         override suspend fun login(request: LoginRequest): LoginResponse =
             LoginResponse(
