@@ -33,6 +33,7 @@ export class CreateMascotaPage {
     peso: [null as number | null, [Validators.min(0)]],
     esterilizado: [false],
     observaciones: [''],
+    alergias: [''],
   });
 
   onFileSelected(event: Event): void {
@@ -66,6 +67,7 @@ export class CreateMascotaPage {
       peso: value.peso ?? undefined,
       esterilizado: value.esterilizado ?? false,
       observaciones: value.observaciones || undefined,
+      alergias: value.alergias || undefined,
     };
 
     this.mascotasService.create(payload, this.selectedFile() ?? undefined).subscribe({
@@ -83,6 +85,7 @@ export class CreateMascotaPage {
           peso: null,
           esterilizado: false,
           observaciones: '',
+          alergias: '',
         });
       },
       error: (error: ApiError) => {
