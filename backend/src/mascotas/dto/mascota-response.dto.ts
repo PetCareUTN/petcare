@@ -12,6 +12,7 @@ export class MascotaResponseDto {
   esterilizado: boolean;
   foto: string | null;
   observaciones: string | null;
+  alergias: string | null;
   idUsuarios: number[];
 
   static fromEntity(mascota: Mascota): MascotaResponseDto {
@@ -27,6 +28,7 @@ export class MascotaResponseDto {
       esterilizado: mascota.esterilizado,
       foto: mascota.foto,
       observaciones: mascota.observaciones,
+      alergias: mascota.alergias,
       idUsuarios: mascota.usuarios?.map((user) => user.idUsuario) ?? [],
     };
   }

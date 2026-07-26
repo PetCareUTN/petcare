@@ -45,6 +45,9 @@ export class Mascota {
   @Column({ type: 'text', nullable: true })
   observaciones: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  alergias: string | null;
+
   @ManyToMany(() => User, (user) => user.mascotas)
   @JoinTable({
     name: 'usuarios_mascotas',
