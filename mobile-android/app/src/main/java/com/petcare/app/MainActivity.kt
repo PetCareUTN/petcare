@@ -1,6 +1,8 @@
 package com.petcare.app
 
+import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -22,11 +24,16 @@ import com.petcare.app.features.auth.data.remote.RetrofitClient
 import com.petcare.app.features.auth.domain.AuthSessionController
 import com.petcare.app.features.auth.ui.AuthenticatedHomeScreen
 import com.petcare.app.features.auth.ui.LoginScreen
+import com.petcare.app.features.pets.data.remote.CreatePetRequest
 import com.petcare.app.features.pets.data.remote.PetResponse
 import com.petcare.app.features.pets.domain.PetsController
+import com.petcare.app.features.pets.ui.RegisterPetScreen
 import com.petcare.app.ui.theme.PetCareTheme
 import java.io.IOException
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.HttpException
 
 class MainActivity : ComponentActivity() {
@@ -57,6 +64,9 @@ class MainActivity : ComponentActivity() {
                 var isLoadingPets by rememberSaveable {
                     mutableStateOf(false)
                 }
+                var isSavingPet by rememberSaveable {
+                    mutableStateOf(false)
+                }
                 var isRestoringSession by rememberSaveable {
                     mutableStateOf(true)
                 }
@@ -66,8 +76,14 @@ class MainActivity : ComponentActivity() {
                 var petsError by rememberSaveable {
                     mutableStateOf<String?>(null)
                 }
+                var savePetError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
                 var loggedUserName by rememberSaveable {
                     mutableStateOf<String?>(null)
+                }
+                var isRegisteringPet by rememberSaveable {
+                    mutableStateOf(false)
                 }
                 var pets by remember {
                     mutableStateOf<List<PetResponse>>(emptyList())
@@ -79,6 +95,8 @@ class MainActivity : ComponentActivity() {
                     pets = emptyList()
                     serverError = null
                     petsError = null
+                    savePetError = null
+                    isRegisteringPet = false
                 }
 
                 fun loadPets() {
@@ -123,6 +141,45 @@ class MainActivity : ComponentActivity() {
                     ) {
                         CircularProgressIndicator()
                     }
+                } else if (loggedUserName != null && isRegisteringPet) {
+                    RegisterPetScreen(
+                        isSaving = isSavingPet,
+                        saveError = savePetError,
+                        onSave = { request, photoUri ->
+                            isSavingPet = true
+                            savePetError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    createPet(
+                                        petsController = petsController,
+                                        request = request,
+                                        photoUri = photoUri
+                                    )
+                                    isRegisteringPet = false
+                                    loadPets()
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError =
+                                            "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        savePetError = "No se pudo registrar la mascota"
+                                    }
+                                } catch (exception: IOException) {
+                                    savePetError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    savePetError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isSavingPet = false
+                                }
+                            }
+                        },
+                        onCancel = {
+                            savePetError = null
+                            isRegisteringPet = false
+                        }
+                    )
                 } else if (loggedUserName != null) {
                     AuthenticatedHomeScreen(
                         userName = loggedUserName.orEmpty(),
@@ -130,6 +187,10 @@ class MainActivity : ComponentActivity() {
                         isLoadingPets = isLoadingPets,
                         petsError = petsError,
                         onRetryPets = { loadPets() },
+                        onRegisterPet = {
+                            savePetError = null
+                            isRegisteringPet = true
+                        },
                         onLogout = { logout() }
                     )
                 } else {
@@ -169,6 +230,47 @@ class MainActivity : ComponentActivity() {
                         }
                     )
                 }
+            }
+        }
+    }
+
+    private suspend fun createPet(
+        petsController: PetsController,
+        request: CreatePetRequest,
+        photoUri: Uri?
+    ): PetResponse =
+        if (photoUri == null) {
+            petsController.createPet(request)
+        } else {
+            petsController.createPetWithPhoto(
+                request = request,
+                photo = buildPhotoPart(photoUri)
+            )
+        }
+
+    private fun buildPhotoPart(photoUri: Uri): MultipartBody.Part {
+        val contentResolver = applicationContext.contentResolver
+        val mimeType = contentResolver.getType(photoUri) ?: "image/jpeg"
+        val fileName = getDisplayName(photoUri) ?: "mascota.jpg"
+        val bytes = contentResolver.openInputStream(photoUri)?.use { input ->
+            input.readBytes()
+        } ?: throw IOException("No se pudo leer la foto seleccionada")
+
+        return MultipartBody.Part.createFormData(
+            name = "foto",
+            filename = fileName,
+            body = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
+        )
+    }
+
+    private fun getDisplayName(photoUri: Uri): String? {
+        val contentResolver = applicationContext.contentResolver
+        return contentResolver.query(photoUri, null, null, null, null)?.use { cursor ->
+            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (nameIndex >= 0 && cursor.moveToFirst()) {
+                cursor.getString(nameIndex)
+            } else {
+                null
             }
         }
     }
