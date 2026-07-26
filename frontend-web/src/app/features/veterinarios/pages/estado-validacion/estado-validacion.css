@@ -1,0 +1,124 @@
+.pet-page {
+  min-height: 100dvh;
+  padding: 1.5rem;
+  box-sizing: border-box;
+  background: #f5f5f7;
+}
+
+.pet-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: min(100%, 720px);
+  margin: 0 auto;
+  padding: 1.5rem;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.pet-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.pet-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.pet-header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.pet-header p {
+  margin: 0.35rem 0 0;
+  color: #555866;
+}
+
+.pet-header a {
+  color: #6750a4;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.estado-loading {
+  text-align: center;
+  color: #555866;
+}
+
+.estado-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.estado-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.estado-label {
+  font-weight: 600;
+}
+
+.estado-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.estado-pendiente {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.estado-aprobado {
+  background: #d4edda;
+  color: #155724;
+}
+
+.estado-rechazado {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.estado-rechazo {
+  padding: 0.75rem;
+  background: #f8d7da;
+  border-radius: 6px;
+}
+
+.estado-rechazo p {
+  margin: 0.5rem 0 0;
+}
+
+.estado-archivo {
+  padding-top: 0.5rem;
+}
+
+.estado-archivo a {
+  color: #6750a4;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.banner {
+  margin: 0;
+  padding: 0.7rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.banner-error {
+  background: #fdecea;
+  color: #b3261e;
+}

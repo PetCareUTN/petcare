@@ -10,6 +10,10 @@ import { User } from './users/entities/user.entity';
 import { Role } from './roles/entities/role.entity';
 import { MascotasModule } from './mascotas/mascotas.module';
 import { Mascota } from './mascotas/entities/mascota.entity';
+import { Veterinario } from './veterinarios/entities/veterinario.entity';
+import { VeterinariosModule } from './veterinarios/veterinarios.module';
+import { Notificacion } from './notificaciones/entities/notificacion.entity';
+import { NotificacionesModule } from './notificaciones/notificaciones.module';
 
 dotenv.config();
 
@@ -22,13 +26,15 @@ dotenv.config();
       username: process.env.DATABASE_USER,
       password: process.env.DATABASE_PASSWORD,
       database: process.env.DATABASE_NAME,
-      entities: [User, Role, Mascota],
+      entities: [User, Role, Mascota, Veterinario, Notificacion],
       synchronize: false,
     }),
     AuthModule,
     UsersModule,
     RolesModule,
     MascotasModule,
+    VeterinariosModule,
+    NotificacionesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

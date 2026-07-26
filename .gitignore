@@ -142,3 +142,6 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+# Archivos de matrículas subidos por los usuarios
+backend/uploads/matriculas/*
+!backend/uploads/matriculas/.gitkeep
