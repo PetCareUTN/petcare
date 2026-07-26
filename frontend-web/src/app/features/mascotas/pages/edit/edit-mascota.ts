@@ -1,28 +1,30 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiError } from '../../../auth/models/user';
 import { AuthService } from '../../../auth/services/auth-service';
-import { CreateMascotaRequest, PetSex } from '../../models/mascota';
+import { PetSex, UpdateMascotaRequest } from '../../models/mascota';
 import { MascotasService } from '../../services/mascotas-service';
 
 @Component({
-  selector: 'app-create-mascota',
+  selector: 'app-edit-mascota',
   imports: [ReactiveFormsModule, RouterLink],
-  templateUrl: './create-mascota.html',
-  styleUrl: './create-mascota.css',
+  templateUrl: './edit-mascota.html',
+  styleUrl: './edit-mascota.css',
 })
-export class CreateMascotaPage {
+export class EditMascotaPage implements OnInit {
   private readonly formBuilder = inject(FormBuilder);
   private readonly mascotasService = inject(MascotasService);
   private readonly authService = inject(AuthService);
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
+  protected readonly isLoading = signal(true);
   protected readonly isSubmitting = signal(false);
-  protected readonly successMessage = signal<string | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly selectedFile = signal<File | null>(null);
-  protected readonly createdPetId = signal<number | null>(null);
+  protected readonly mascotaId = signal<number | null>(null);
+  protected readonly nombreMascota = signal<string>('');
 
   protected readonly form = this.formBuilder.group({
     nombre: ['', [Validators.required, Validators.maxLength(100)]],
@@ -36,6 +38,33 @@ export class CreateMascotaPage {
     alergias: [''],
   });
 
+  ngOnInit(): void {
+    const id = Number(this.route.snapshot.paramMap.get('id'));
+    this.mascotaId.set(id);
+
+    this.mascotasService.getById(id).subscribe({
+      next: (mascota) => {
+        this.isLoading.set(false);
+        this.nombreMascota.set(mascota.nombre);
+        this.form.patchValue({
+          nombre: mascota.nombre,
+          especie: mascota.especie,
+          raza: mascota.raza ?? '',
+          sexo: mascota.sexo,
+          fechaNacimiento: mascota.fechaNacimiento ?? '',
+          peso: mascota.peso,
+          esterilizado: mascota.esterilizado,
+          observaciones: mascota.observaciones ?? '',
+          alergias: mascota.alergias ?? '',
+        });
+      },
+      error: (error: ApiError) => {
+        this.isLoading.set(false);
+        this.errorMessage.set(error.mensaje ?? 'No se pudo cargar la mascota.');
+      },
+    });
+  }
+
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     this.selectedFile.set(input.files?.[0] ?? null);
@@ -47,50 +76,36 @@ export class CreateMascotaPage {
       return;
     }
 
-    if (this.form.invalid) {
+    const id = this.mascotaId();
+    if (id === null || this.form.invalid) {
       this.form.markAllAsTouched();
       return;
     }
 
-    this.successMessage.set(null);
     this.errorMessage.set(null);
-    this.createdPetId.set(null);
     this.isSubmitting.set(true);
 
     const value = this.form.getRawValue();
-    const payload: CreateMascotaRequest = {
+    const payload: UpdateMascotaRequest = {
       nombre: value.nombre!,
       especie: value.especie!,
-      raza: value.raza || undefined,
+      raza: value.raza ?? '',
       sexo: value.sexo!,
       fechaNacimiento: value.fechaNacimiento || undefined,
       peso: value.peso ?? undefined,
       esterilizado: value.esterilizado ?? false,
-      observaciones: value.observaciones || undefined,
-      alergias: value.alergias || undefined,
+      observaciones: value.observaciones ?? '',
+      alergias: value.alergias ?? '',
     };
 
-    this.mascotasService.create(payload, this.selectedFile() ?? undefined).subscribe({
-      next: (mascota) => {
+    this.mascotasService.update(id, payload, this.selectedFile() ?? undefined).subscribe({
+      next: () => {
         this.isSubmitting.set(false);
-        this.successMessage.set(`Mascota ${mascota.nombre} registrada con exito.`);
-        this.selectedFile.set(null);
-        this.createdPetId.set(mascota.idMascota);
-        this.form.reset({
-          nombre: '',
-          especie: '',
-          raza: '',
-          sexo: 'macho',
-          fechaNacimiento: '',
-          peso: null,
-          esterilizado: false,
-          observaciones: '',
-          alergias: '',
-        });
+        this.router.navigate(['/mascotas', id]);
       },
       error: (error: ApiError) => {
         this.isSubmitting.set(false);
-        this.errorMessage.set(error.mensaje ?? 'Ocurrio un error al registrar la mascota.');
+        this.errorMessage.set(error.mensaje ?? 'Ocurrió un error al guardar los cambios.');
       },
     });
   }

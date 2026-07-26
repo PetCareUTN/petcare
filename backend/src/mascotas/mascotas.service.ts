@@ -52,6 +52,7 @@ export class MascotasService {
       esterilizado: dto.esterilizado ?? false,
       foto: fotoPath,
       observaciones: dto.observaciones ?? null,
+      alergias: dto.alergias ?? null,
       usuarios: [duenio],
     });
 
@@ -107,6 +108,9 @@ export class MascotasService {
     }
     if (dto.observaciones !== undefined) {
       mascota.observaciones = dto.observaciones;
+    }
+    if (dto.alergias !== undefined) {
+      mascota.alergias = dto.alergias;
     }
     if (foto) {
       mascota.foto = await this.saveFoto(foto);

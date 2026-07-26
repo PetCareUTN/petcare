@@ -47,6 +47,14 @@
           <dt>Esterilizado</dt>
           <dd>{{ pet.esterilizado ? 'Sí' : 'No' }}</dd>
         </div>
+      </dl>
+
+      <h2 class="section-title">Información médica</h2>
+      <dl class="detail-grid">
+        <div class="detail-item detail-wide">
+          <dt>Alergias</dt>
+          <dd>{{ pet.alergias || 'Sin alergias registradas' }}</dd>
+        </div>
         <div class="detail-item detail-wide">
           <dt>Observaciones</dt>
           <dd>{{ pet.observaciones || 'Sin observaciones registradas' }}</dd>
@@ -54,6 +62,7 @@
       </dl>
 
       <div class="profile-actions">
+        <a class="btn-primary" [routerLink]="['/mascotas', pet.idMascota, 'editar']">Editar</a>
         <a class="btn-secondary" routerLink="/mascotas">Volver a mis mascotas</a>
       </div>
     }

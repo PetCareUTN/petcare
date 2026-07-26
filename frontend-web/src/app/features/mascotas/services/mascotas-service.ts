@@ -4,7 +4,11 @@ import { Observable, catchError, throwError } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { ApiError } from '../../auth/models/user';
 import { AuthService } from '../../auth/services/auth-service';
-import { CreateMascotaRequest, MascotaResponse } from '../models/mascota';
+import {
+  CreateMascotaRequest,
+  MascotaResponse,
+  UpdateMascotaRequest,
+} from '../models/mascota';
 
 @Injectable({ providedIn: 'root' })
 export class MascotasService {
@@ -38,6 +42,60 @@ export class MascotasService {
     }
     if (data.observaciones) {
       formData.append('observaciones', data.observaciones);
+    }
+    if (data.alergias) {
+      formData.append('alergias', data.alergias);
+    }
+    if (foto) {
+      formData.append('foto', foto);
+    }
+
+    return formData;
+  }
+
+  update(id: number, data: UpdateMascotaRequest, foto?: File): Observable<MascotaResponse> {
+    const formData = this.buildUpdateFormData(data, foto);
+
+    return this.http
+      .patch<MascotaResponse>(`${this.baseUrl}/${id}`, formData, {
+        headers: this.authHeaders(),
+      })
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
+  /**
+   * A diferencia del alta, en la edición un string vacío es un valor válido
+   * (permite limpiar un campo), así que solo se omiten los `undefined`.
+   */
+  private buildUpdateFormData(data: UpdateMascotaRequest, foto?: File): FormData {
+    const formData = new FormData();
+
+    if (data.nombre !== undefined) {
+      formData.append('nombre', data.nombre);
+    }
+    if (data.especie !== undefined) {
+      formData.append('especie', data.especie);
+    }
+    if (data.raza !== undefined) {
+      formData.append('raza', data.raza);
+    }
+    if (data.sexo !== undefined) {
+      formData.append('sexo', data.sexo);
+    }
+    if (data.fechaNacimiento !== undefined) {
+      formData.append('fechaNacimiento', data.fechaNacimiento);
+    }
+    if (data.peso !== undefined) {
+      formData.append('peso', String(data.peso));
+    }
+    if (data.esterilizado !== undefined) {
+      formData.append('esterilizado', String(data.esterilizado));
+    }
+    if (data.observaciones !== undefined) {
+      formData.append('observaciones', data.observaciones);
+    }
+    if (data.alergias !== undefined) {
+      formData.append('alergias', data.alergias);
     }
     if (foto) {
       formData.append('foto', foto);
