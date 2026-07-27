@@ -3,6 +3,8 @@ package com.petcare.app.features.pets.ui
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,11 +17,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -34,6 +39,12 @@ import androidx.compose.ui.unit.dp
 import com.petcare.app.features.pets.data.remote.CreatePetRequest
 import com.petcare.app.features.pets.domain.PetRegistrationValidationResult
 import com.petcare.app.features.pets.domain.PetRegistrationValidator
+import com.petcare.app.ui.theme.PetCareLine
+import com.petcare.app.ui.theme.PetCareMint
+import com.petcare.app.ui.theme.PetCareMuted
+import com.petcare.app.ui.theme.PetCareSurfaceSoft
+import com.petcare.app.ui.theme.PetCareTealDark
+import com.petcare.app.ui.theme.PetCareTealSoft
 
 @Composable
 fun RegisterPetScreen(
@@ -64,149 +75,227 @@ fun RegisterPetScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .padding(20.dp),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.Start
     ) {
-        Text(
-            text = "Registrar mascota",
-            style = MaterialTheme.typography.headlineMedium
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Nombre") },
-            isError = validation.nameError != null,
-            supportingText = validation.nameError?.let { { Text(it) } },
-            singleLine = true
-        )
-
-        OutlinedTextField(
-            value = species,
-            onValueChange = { species = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Especie") },
-            isError = validation.speciesError != null,
-            supportingText = validation.speciesError?.let { { Text(it) } },
-            singleLine = true
-        )
-
-        OutlinedTextField(
-            value = breed,
-            onValueChange = { breed = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Raza") },
-            singleLine = true
-        )
-
-        Text(
-            text = "Sexo",
-            modifier = Modifier.padding(top = 8.dp),
-            style = MaterialTheme.typography.bodyMedium
-        )
-
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            FilterChip(
-                selected = sex == "macho",
-                onClick = { sex = "macho" },
-                label = { Text("Macho") }
-            )
-            FilterChip(
-                selected = sex == "hembra",
-                onClick = { sex = "hembra" },
-                label = { Text("Hembra") }
-            )
-        }
-
-        validation.sexError?.let {
-            Text(
-                text = it,
-                modifier = Modifier.padding(top = 4.dp),
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-
-        OutlinedTextField(
-            value = birthDate,
-            onValueChange = { birthDate = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Fecha de nacimiento") },
-            placeholder = { Text("AAAA-MM-DD") },
-            isError = validation.birthDateError != null,
-            supportingText = validation.birthDateError?.let { { Text(it) } },
-            singleLine = true
-        )
-
-        OutlinedTextField(
-            value = weight,
-            onValueChange = { weight = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Peso") },
-            isError = validation.weightError != null,
-            supportingText = validation.weightError?.let { { Text(it) } },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            singleLine = true
-        )
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Checkbox(
-                checked = isSterilized,
-                onCheckedChange = { isSterilized = it }
-            )
-            Text("Esterilizado")
+            Column {
+                Text(
+                    text = "Nueva mascota",
+                    style = MaterialTheme.typography.headlineMedium
+                )
+                Text(
+                    text = "Datos basicos del perfil",
+                    color = PetCareMuted,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            OutlinedButton(
+                onClick = onCancel,
+                enabled = !isSaving,
+                shape = MaterialTheme.shapes.large
+            ) {
+                Text("Cerrar")
+            }
         }
 
-        OutlinedTextField(
-            value = observations,
-            onValueChange = { observations = it },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(120.dp),
-            label = { Text("Observaciones") }
-        )
+        Spacer(modifier = Modifier.height(18.dp))
 
-        OutlinedButton(
-            onClick = { photoPicker.launch("image/*") },
-            enabled = !isSaving,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp)
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = PetCareTealSoft,
+            shape = MaterialTheme.shapes.extraLarge
         ) {
-            Text(if (photoUri == null) "Seleccionar foto" else "Cambiar foto")
-        }
-
-        photoUri?.let {
             Text(
-                text = "Foto seleccionada",
-                modifier = Modifier.padding(top = 4.dp),
-                style = MaterialTheme.typography.bodySmall
+                text = "La mascota queda asociada automaticamente a tu sesion.",
+                modifier = Modifier.padding(16.dp),
+                color = PetCareTealDark,
+                style = MaterialTheme.typography.bodyMedium
             )
         }
 
-        saveError?.let {
-            Text(
-                text = it,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp),
-                color = MaterialTheme.colorScheme.error
-            )
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.dp, PetCareLine),
+            shape = MaterialTheme.shapes.extraLarge
+        ) {
+            Column(
+                modifier = Modifier.padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Nombre") },
+                    isError = validation.nameError != null,
+                    supportingText = validation.nameError?.let { { Text(it) } },
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = species,
+                    onValueChange = { species = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Especie") },
+                    isError = validation.speciesError != null,
+                    supportingText = validation.speciesError?.let { { Text(it) } },
+                    singleLine = true
+                )
+
+                OutlinedTextField(
+                    value = breed,
+                    onValueChange = { breed = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Raza") },
+                    singleLine = true
+                )
+
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Sexo",
+                        style = MaterialTheme.typography.labelLarge
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = sex == "macho",
+                            onClick = { sex = "macho" },
+                            label = { Text("Macho") }
+                        )
+                        FilterChip(
+                            selected = sex == "hembra",
+                            onClick = { sex = "hembra" },
+                            label = { Text("Hembra") }
+                        )
+                    }
+
+                    validation.sexError?.let {
+                        Text(
+                            text = it,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = birthDate,
+                        onValueChange = { birthDate = it },
+                        modifier = Modifier.weight(1f),
+                        label = { Text("Nacimiento") },
+                        placeholder = { Text("AAAA-MM-DD") },
+                        isError = validation.birthDateError != null,
+                        supportingText = validation.birthDateError?.let { { Text(it) } },
+                        singleLine = true
+                    )
+
+                    OutlinedTextField(
+                        value = weight,
+                        onValueChange = { weight = it },
+                        modifier = Modifier.weight(1f),
+                        label = { Text("Peso") },
+                        isError = validation.weightError != null,
+                        supportingText = validation.weightError?.let { { Text(it) } },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true
+                    )
+                }
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = PetCareSurfaceSoft,
+                    shape = MaterialTheme.shapes.large
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = isSterilized,
+                            onCheckedChange = { isSterilized = it }
+                        )
+                        Text(
+                            text = "Esterilizado",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+
+                OutlinedTextField(
+                    value = observations,
+                    onValueChange = { observations = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    label = { Text("Observaciones") }
+                )
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = PetCareMint,
+                    shape = MaterialTheme.shapes.extraLarge,
+                    border = BorderStroke(1.dp, PetCareLine)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (photoUri == null) "Foto opcional" else "Foto seleccionada",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                text = if (photoUri == null) {
+                                    "JPG, PNG o WEBP hasta 2 MB"
+                                } else {
+                                    "Se enviara junto con el alta"
+                                },
+                                color = PetCareMuted,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = { photoPicker.launch("image/*") },
+                            enabled = !isSaving,
+                            shape = MaterialTheme.shapes.large
+                        ) {
+                            Text(if (photoUri == null) "Elegir" else "Cambiar")
+                        }
+                    }
+                }
+
+                saveError?.let {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = PetCareTealSoft,
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Text(
+                            text = it,
+                            modifier = Modifier.padding(12.dp),
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            }
         }
 
         Button(
@@ -239,19 +328,13 @@ fun RegisterPetScreen(
             enabled = !isSaving,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 16.dp)
+                .height(54.dp)
+                .padding(top = 14.dp),
+            shape = MaterialTheme.shapes.large
         ) {
             Text(if (isSaving) "Guardando..." else "Guardar mascota")
         }
 
-        OutlinedButton(
-            onClick = onCancel,
-            enabled = !isSaving,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp)
-        ) {
-            Text("Cancelar")
-        }
+        Spacer(modifier = Modifier.height(16.dp))
     }
 }
