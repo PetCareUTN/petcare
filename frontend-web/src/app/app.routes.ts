@@ -40,6 +40,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'eventos-clinicos/nuevo',
+        loadComponent: () =>
+          import('./features/eventos-clinicos/pages/create/create-evento-clinico').then(
+            (m) => m.CreateEventoClinicoPage,
+          ),
+      },
+      {
         path: 'perfil',
         loadComponent: () =>
           import('./features/profile/pages/edit/profile-edit').then((m) => m.ProfileEditPage),
