@@ -28,6 +28,7 @@ fun AuthenticatedHomeScreen(
     petsError: String?,
     onRetryPets: () -> Unit,
     onRegisterPet: () -> Unit,
+    onEditPet: (PetResponse) -> Unit,
     onLogout: () -> Unit
 ) {
     Column(
@@ -123,6 +124,12 @@ fun AuthenticatedHomeScreen(
                             .padding(vertical = 4.dp),
                         style = MaterialTheme.typography.bodyLarge
                     )
+                    OutlinedButton(
+                        onClick = { onEditPet(pet) },
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    ) {
+                        Text("Editar")
+                    }
                 }
             }
         }
