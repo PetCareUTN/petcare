@@ -25,6 +25,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,6 +49,7 @@ fun AuthenticatedHomeScreen(
     petsError: String?,
     onRetryPets: () -> Unit,
     onRegisterPet: () -> Unit,
+    onEditPet: (PetResponse) -> Unit,
     onLogout: () -> Unit
 ) {
     Scaffold(
@@ -92,7 +94,8 @@ fun AuthenticatedHomeScreen(
                 isLoadingPets = isLoadingPets,
                 petsError = petsError,
                 onRetryPets = onRetryPets,
-                onRegisterPet = onRegisterPet
+                onRegisterPet = onRegisterPet,
+                onEditPet = onEditPet
             )
 
             Spacer(modifier = Modifier.height(18.dp))
@@ -275,7 +278,8 @@ private fun PetsContent(
     isLoadingPets: Boolean,
     petsError: String?,
     onRetryPets: () -> Unit,
-    onRegisterPet: () -> Unit
+    onRegisterPet: () -> Unit,
+    onEditPet: (PetResponse) -> Unit
 ) {
     when {
         isLoadingPets -> {
@@ -350,7 +354,7 @@ private fun PetsContent(
         else -> {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 pets.forEach { pet ->
-                    PetRow(pet = pet)
+                    PetRow(pet = pet, onEdit = { onEditPet(pet) })
                 }
             }
         }
@@ -358,7 +362,7 @@ private fun PetsContent(
 }
 
 @Composable
-private fun PetRow(pet: PetResponse) {
+private fun PetRow(pet: PetResponse, onEdit: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -409,6 +413,9 @@ private fun PetRow(pet: PetResponse) {
                     color = PetCareTealDark,
                     style = MaterialTheme.typography.labelLarge
                 )
+            }
+            TextButton(onClick = onEdit) {
+                Text("Editar")
             }
         }
     }

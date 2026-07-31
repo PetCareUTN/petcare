@@ -40,13 +40,6 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'mascotas/:id/editar',
-        loadComponent: () =>
-          import('./features/mascotas/pages/edit/edit-mascota').then(
-            (m) => m.EditMascotaPage,
-          ),
-      },
-      {
         path: 'perfil',
         loadComponent: () =>
           import('./features/profile/pages/edit/profile-edit').then((m) => m.ProfileEditPage),
