@@ -26,7 +26,9 @@ import com.petcare.app.features.auth.ui.AuthenticatedHomeScreen
 import com.petcare.app.features.auth.ui.LoginScreen
 import com.petcare.app.features.pets.data.remote.CreatePetRequest
 import com.petcare.app.features.pets.data.remote.PetResponse
+import com.petcare.app.features.pets.data.remote.UpdatePetRequest
 import com.petcare.app.features.pets.domain.PetsController
+import com.petcare.app.features.pets.ui.EditPetScreen
 import com.petcare.app.features.pets.ui.RegisterPetScreen
 import com.petcare.app.ui.theme.PetCareTheme
 import java.io.IOException
@@ -85,6 +87,15 @@ class MainActivity : ComponentActivity() {
                 var isRegisteringPet by rememberSaveable {
                     mutableStateOf(false)
                 }
+                var isUpdatingPet by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var updatePetError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var editingPet by remember {
+                    mutableStateOf<PetResponse?>(null)
+                }
                 var pets by remember {
                     mutableStateOf<List<PetResponse>>(emptyList())
                 }
@@ -97,6 +108,8 @@ class MainActivity : ComponentActivity() {
                     petsError = null
                     savePetError = null
                     isRegisteringPet = false
+                    updatePetError = null
+                    editingPet = null
                 }
 
                 fun loadPets() {
@@ -180,6 +193,47 @@ class MainActivity : ComponentActivity() {
                             isRegisteringPet = false
                         }
                     )
+                } else if (loggedUserName != null && editingPet != null) {
+                    EditPetScreen(
+                        pet = editingPet!!,
+                        isSaving = isUpdatingPet,
+                        saveError = updatePetError,
+                        onSave = { request, photoUri ->
+                            isUpdatingPet = true
+                            updatePetError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    updatePet(
+                                        petsController = petsController,
+                                        id = editingPet!!.id,
+                                        request = request,
+                                        photoUri = photoUri
+                                    )
+                                    editingPet = null
+                                    loadPets()
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError =
+                                            "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        updatePetError = "No se pudo actualizar la mascota"
+                                    }
+                                } catch (exception: IOException) {
+                                    updatePetError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    updatePetError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isUpdatingPet = false
+                                }
+                            }
+                        },
+                        onCancel = {
+                            updatePetError = null
+                            editingPet = null
+                        }
+                    )
                 } else if (loggedUserName != null) {
                     AuthenticatedHomeScreen(
                         userName = loggedUserName.orEmpty(),
@@ -190,6 +244,10 @@ class MainActivity : ComponentActivity() {
                         onRegisterPet = {
                             savePetError = null
                             isRegisteringPet = true
+                        },
+                        onEditPet = { pet ->
+                            updatePetError = null
+                            editingPet = pet
                         },
                         onLogout = { logout() }
                     )
@@ -243,6 +301,22 @@ class MainActivity : ComponentActivity() {
             petsController.createPet(request)
         } else {
             petsController.createPetWithPhoto(
+                request = request,
+                photo = buildPhotoPart(photoUri)
+            )
+        }
+
+    private suspend fun updatePet(
+        petsController: PetsController,
+        id: Int,
+        request: UpdatePetRequest,
+        photoUri: Uri?
+    ): PetResponse =
+        if (photoUri == null) {
+            petsController.updatePet(id, request)
+        } else {
+            petsController.updatePetWithPhoto(
+                id = id,
                 request = request,
                 photo = buildPhotoPart(photoUri)
             )

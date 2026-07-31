@@ -3,6 +3,7 @@ package com.petcare.app.features.pets.domain
 import com.petcare.app.features.pets.data.remote.CreatePetRequest
 import com.petcare.app.features.pets.data.remote.PetResponse
 import com.petcare.app.features.pets.data.remote.PetsApi
+import com.petcare.app.features.pets.data.remote.UpdatePetRequest
 import kotlinx.coroutines.runBlocking
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -50,8 +51,37 @@ class PetsControllerTest {
             assertEquals("Perro", pet.especie)
         }
 
+    @Test
+    fun `updatePet actualiza una mascota y devuelve la respuesta del backend`() =
+        runBlocking {
+            val fakePetsApi = FakePetsApi()
+            val controller = PetsController(
+                petsApi = fakePetsApi
+            )
+            val request = UpdatePetRequest(
+                nombre = "Nina",
+                especie = "Perro",
+                raza = "Mestiza",
+                sexo = "hembra",
+                birthDate = "2022-05-10",
+                peso = 13.0,
+                esterilizado = true,
+                observaciones = "Peso actualizado"
+            )
+
+            val pet = controller.updatePet(7, request)
+
+            assertEquals(7, fakePetsApi.updatedId)
+            assertEquals(request, fakePetsApi.updatedRequest)
+            assertEquals("Nina", pet.nombre)
+            assertEquals(13.0, pet.peso)
+            assertEquals("Peso actualizado", pet.observaciones)
+        }
+
     private class FakePetsApi : PetsApi {
         var createdRequest: CreatePetRequest? = null
+        var updatedId: Int? = null
+        var updatedRequest: UpdatePetRequest? = null
 
         override suspend fun getMyPets(): List<PetResponse> =
             listOf(
@@ -98,6 +128,37 @@ class PetsControllerTest {
         }
 
         override suspend fun createPetWithPhoto(
+            nombre: RequestBody,
+            especie: RequestBody,
+            raza: RequestBody?,
+            sexo: RequestBody,
+            birthDate: RequestBody?,
+            peso: RequestBody?,
+            esterilizado: RequestBody,
+            observaciones: RequestBody?,
+            foto: MultipartBody.Part
+        ): PetResponse =
+            throw UnsupportedOperationException("No usado en este test")
+
+        override suspend fun updatePet(id: Int, request: UpdatePetRequest): PetResponse {
+            updatedId = id
+            updatedRequest = request
+            return PetResponse(
+                id = id,
+                nombre = request.nombre,
+                especie = request.especie,
+                raza = request.raza,
+                sexo = request.sexo,
+                birthDate = request.birthDate,
+                peso = request.peso,
+                esterilizado = request.esterilizado,
+                foto = null,
+                observaciones = request.observaciones
+            )
+        }
+
+        override suspend fun updatePetWithPhoto(
+            id: Int,
             nombre: RequestBody,
             especie: RequestBody,
             raza: RequestBody?,

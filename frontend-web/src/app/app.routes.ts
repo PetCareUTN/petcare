@@ -40,13 +40,6 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'mascotas/:id/editar',
-        loadComponent: () =>
-          import('./features/mascotas/pages/edit/edit-mascota').then(
-            (m) => m.EditMascotaPage,
-          ),
-      },
-      {
         path: 'eventos-clinicos/nuevo',
         loadComponent: () =>
           import('./features/eventos-clinicos/pages/create/create-evento-clinico').then(
