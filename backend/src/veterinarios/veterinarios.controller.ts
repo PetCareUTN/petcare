@@ -25,6 +25,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { RechazarSolicitudDto } from './dto/aprobar-rechazar.dto';
+import type { UploadedDocumentFile } from './types/uploaded-document-file.type';
 import { VeterinariosService } from './veterinarios.service';
 
 const MATRICULAS_DIR = join(process.cwd(), 'uploads', 'matriculas');
@@ -65,7 +66,7 @@ export class VeterinariosController {
   crearSolicitud(
     @CurrentUser() user: JwtPayload,
     @Body() body: Record<string, string>,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: UploadedDocumentFile,
   ) {
     return this.veterinariosService.crearSolicitud(user.sub, body, file);
   }

@@ -11,6 +11,7 @@ import { NotificationType } from '../common/enums/notification-type.enum';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { VeterinarioResponseDto } from './dto/veterinario-response.dto';
 import { Veterinario } from './entities/veterinario.entity';
+import type { UploadedDocumentFile } from './types/uploaded-document-file.type';
 
 @Injectable()
 export class VeterinariosService {
@@ -25,14 +26,14 @@ export class VeterinariosService {
     return `${baseUrl}/${relativePath}`;
   }
 
-  private getRelativeMatriculaUrl(file: Express.Multer.File): string {
+  private getRelativeMatriculaUrl(file: UploadedDocumentFile): string {
     return `uploads/matriculas/${file.filename}`;
   }
 
   async crearSolicitud(
     idUsuario: number,
     body: Record<string, string>,
-    file: Express.Multer.File,
+    file: UploadedDocumentFile,
   ): Promise<VeterinarioResponseDto> {
     if (!file) {
       throw new BadRequestException({
