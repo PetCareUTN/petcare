@@ -3,11 +3,13 @@ import {
   CreateDateColumn,
   Entity,
   JoinColumn,
+  OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { ValidationStatus } from '../../common/enums/validation-status.enum';
+import { EventoClinico } from '../../eventos-clinicos/entities/evento-clinico.entity';
 import { User } from '../../users/entities/user.entity';
 
 @Entity('veterinarios')
@@ -41,6 +43,9 @@ export class Veterinario {
 
   @Column({ type: 'text', name: 'motivo_rechazo', nullable: true })
   motivoRechazo: string | null;
+
+  @OneToMany(() => EventoClinico, (eventoClinico) => eventoClinico.veterinario)
+  eventosClinicos: EventoClinico[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
