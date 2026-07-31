@@ -2,6 +2,7 @@ package com.petcare.app.features.auth.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -50,7 +51,8 @@ fun AuthenticatedHomeScreen(
     onRetryPets: () -> Unit,
     onRegisterPet: () -> Unit,
     onEditPet: (PetResponse) -> Unit,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onPetClick: (PetResponse) -> Unit = {}
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -95,7 +97,8 @@ fun AuthenticatedHomeScreen(
                 petsError = petsError,
                 onRetryPets = onRetryPets,
                 onRegisterPet = onRegisterPet,
-                onEditPet = onEditPet
+                onEditPet = onEditPet,
+                onPetClick = onPetClick
             )
 
             Spacer(modifier = Modifier.height(18.dp))
@@ -279,7 +282,8 @@ private fun PetsContent(
     petsError: String?,
     onRetryPets: () -> Unit,
     onRegisterPet: () -> Unit,
-    onEditPet: (PetResponse) -> Unit
+    onEditPet: (PetResponse) -> Unit,
+    onPetClick: (PetResponse) -> Unit
 ) {
     when {
         isLoadingPets -> {
@@ -354,7 +358,11 @@ private fun PetsContent(
         else -> {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 pets.forEach { pet ->
-                    PetRow(pet = pet, onEdit = { onEditPet(pet) })
+                    PetRow(
+                        pet = pet,
+                        onClick = { onPetClick(pet) },
+                        onEdit = { onEditPet(pet) }
+                    )
                 }
             }
         }
@@ -362,9 +370,11 @@ private fun PetsContent(
 }
 
 @Composable
-private fun PetRow(pet: PetResponse, onEdit: () -> Unit) {
+private fun PetRow(pet: PetResponse, onClick: () -> Unit, onEdit: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge

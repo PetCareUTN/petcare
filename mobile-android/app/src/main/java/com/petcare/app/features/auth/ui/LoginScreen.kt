@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,7 +44,8 @@ import com.petcare.app.ui.theme.PetCareTealSoft
 fun LoginScreen(
     isLoading: Boolean = false,
     serverError: String? = null,
-    onLogin: (email: String, password: String) -> Unit
+    onLogin: (email: String, password: String) -> Unit,
+    onNavigateToRegister: () -> Unit = {}
 ) {
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
@@ -200,6 +202,20 @@ fun LoginScreen(
                             Text("Iniciar sesion")
                         }
                     }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "¿No tenes cuenta?",
+                    color = PetCareMuted,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                TextButton(onClick = onNavigateToRegister) {
+                    Text("Registrate")
                 }
             }
         }

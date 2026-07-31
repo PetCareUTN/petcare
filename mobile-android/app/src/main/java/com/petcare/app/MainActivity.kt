@@ -24,11 +24,13 @@ import com.petcare.app.features.auth.data.remote.RetrofitClient
 import com.petcare.app.features.auth.domain.AuthSessionController
 import com.petcare.app.features.auth.ui.AuthenticatedHomeScreen
 import com.petcare.app.features.auth.ui.LoginScreen
+import com.petcare.app.features.auth.ui.RegisterScreen
 import com.petcare.app.features.pets.data.remote.CreatePetRequest
 import com.petcare.app.features.pets.data.remote.PetResponse
 import com.petcare.app.features.pets.data.remote.UpdatePetRequest
 import com.petcare.app.features.pets.domain.PetsController
 import com.petcare.app.features.pets.ui.EditPetScreen
+import com.petcare.app.features.pets.ui.PetProfileScreen
 import com.petcare.app.features.pets.ui.RegisterPetScreen
 import com.petcare.app.ui.theme.PetCareTheme
 import java.io.IOException
@@ -99,6 +101,30 @@ class MainActivity : ComponentActivity() {
                 var pets by remember {
                     mutableStateOf<List<PetResponse>>(emptyList())
                 }
+                var isRegisteringUser by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isRegisterLoading by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var registerError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var registerSuccessMessage by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var selectedPetId by rememberSaveable {
+                    mutableStateOf<Int?>(null)
+                }
+                var selectedPet by remember {
+                    mutableStateOf<PetResponse?>(null)
+                }
+                var isLoadingPetProfile by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var petProfileError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
 
                 fun logout() {
                     sessionController.logout()
@@ -110,6 +136,9 @@ class MainActivity : ComponentActivity() {
                     isRegisteringPet = false
                     updatePetError = null
                     editingPet = null
+                    selectedPetId = null
+                    selectedPet = null
+                    petProfileError = null
                 }
 
                 fun loadPets() {
@@ -132,6 +161,30 @@ class MainActivity : ComponentActivity() {
                             petsError = "Ocurrio un error inesperado"
                         } finally {
                             isLoadingPets = false
+                        }
+                    }
+                }
+
+                fun loadPetProfile(id: Int) {
+                    isLoadingPetProfile = true
+                    petProfileError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            selectedPet = petsController.getPetById(id)
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                petProfileError = "No se pudo cargar el perfil de la mascota"
+                            }
+                        } catch (exception: IOException) {
+                            petProfileError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            petProfileError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingPetProfile = false
                         }
                     }
                 }
@@ -234,6 +287,18 @@ class MainActivity : ComponentActivity() {
                             editingPet = null
                         }
                     )
+                } else if (loggedUserName != null && selectedPetId != null) {
+                    PetProfileScreen(
+                        isLoading = isLoadingPetProfile,
+                        errorMessage = petProfileError,
+                        pet = selectedPet,
+                        onRetry = { selectedPetId?.let { loadPetProfile(it) } },
+                        onBack = {
+                            selectedPetId = null
+                            selectedPet = null
+                            petProfileError = null
+                        }
+                    )
                 } else if (loggedUserName != null) {
                     AuthenticatedHomeScreen(
                         userName = loggedUserName.orEmpty(),
@@ -249,7 +314,57 @@ class MainActivity : ComponentActivity() {
                             updatePetError = null
                             editingPet = pet
                         },
-                        onLogout = { logout() }
+                        onLogout = { logout() },
+                        onPetClick = { pet ->
+                            selectedPetId = pet.id
+                            selectedPet = null
+                            petProfileError = null
+                            loadPetProfile(pet.id)
+                        }
+                    )
+                } else if (isRegisteringUser) {
+                    RegisterScreen(
+                        isLoading = isRegisterLoading,
+                        serverError = registerError,
+                        successMessage = registerSuccessMessage,
+                        onRegister = { nombre, apellido, email, password ->
+                            isRegisterLoading = true
+                            registerError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    sessionController.register(
+                                        nombre = nombre,
+                                        apellido = apellido,
+                                        email = email,
+                                        password = password
+                                    )
+
+                                    registerSuccessMessage =
+                                        "Cuenta creada correctamente. Ya podes iniciar sesion."
+                                } catch (exception: HttpException) {
+                                    registerError = when (exception.code()) {
+                                        409 -> "Ese correo ya esta registrado"
+                                        400 -> "Revisa los datos ingresados"
+                                        500 -> "Ocurrio un error en el servidor"
+                                        else -> "No se pudo completar el registro"
+                                    }
+                                } catch (exception: IOException) {
+                                    registerError =
+                                        "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    registerError =
+                                        "Ocurrio un error inesperado"
+                                } finally {
+                                    isRegisterLoading = false
+                                }
+                            }
+                        },
+                        onNavigateToLogin = {
+                            isRegisteringUser = false
+                            registerError = null
+                            registerSuccessMessage = null
+                        }
                     )
                 } else {
                     LoginScreen(
@@ -285,6 +400,11 @@ class MainActivity : ComponentActivity() {
                                     isLoading = false
                                 }
                             }
+                        },
+                        onNavigateToRegister = {
+                            isRegisteringUser = true
+                            registerError = null
+                            registerSuccessMessage = null
                         }
                     )
                 }
