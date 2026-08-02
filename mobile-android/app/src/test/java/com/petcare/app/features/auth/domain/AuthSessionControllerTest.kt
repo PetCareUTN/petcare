@@ -5,6 +5,8 @@ import com.petcare.app.features.auth.data.local.SessionStore
 import com.petcare.app.features.auth.data.remote.AuthApi
 import com.petcare.app.features.auth.data.remote.LoginRequest
 import com.petcare.app.features.auth.data.remote.LoginResponse
+import com.petcare.app.features.auth.data.remote.RegisterRequest
+import com.petcare.app.features.auth.data.remote.RegisterResponse
 import com.petcare.app.features.auth.data.remote.UserResponse
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -12,6 +14,26 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class AuthSessionControllerTest {
+
+    @Test
+    fun `register exitoso devuelve el usuario creado y no abre sesion`() =
+        runBlocking {
+            val sessionStore = FakeSessionStore()
+            val controller = AuthSessionController(
+                authApi = FakeAuthApi(),
+                sessionStore = sessionStore
+            )
+
+            val response = controller.register(
+                nombre = "Sofia",
+                apellido = "Muñoz",
+                email = "sofia@petcare.com",
+                password = "ClaveSegura123"
+            )
+
+            assertEquals("sofia@petcare.com", response.email)
+            assertNull(sessionStore.savedSession)
+        }
 
     @Test
     fun `login exitoso guarda la sesion y devuelve el usuario autenticado`() =
@@ -75,6 +97,17 @@ class AuthSessionControllerTest {
     }
 
     private class FakeAuthApi : AuthApi {
+        override suspend fun register(request: RegisterRequest): RegisterResponse =
+            RegisterResponse(
+                id = 1,
+                nombre = request.nombre,
+                apellido = request.apellido,
+                email = request.email,
+                roleId = 1,
+                estado = "ACTIVO",
+                registrationDate = "2026-07-31"
+            )
+
         override suspend fun login(request: LoginRequest): LoginResponse =
             LoginResponse(
                 token = "jwt-token",

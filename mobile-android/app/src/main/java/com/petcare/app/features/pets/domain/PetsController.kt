@@ -15,6 +15,8 @@ class PetsController(
 
     suspend fun getMyPets(): List<PetResponse> = petsApi.getMyPets()
 
+    suspend fun getPetById(id: Int): PetResponse = petsApi.getPetById(id)
+
     suspend fun createPet(request: CreatePetRequest): PetResponse =
         petsApi.createPet(request)
 

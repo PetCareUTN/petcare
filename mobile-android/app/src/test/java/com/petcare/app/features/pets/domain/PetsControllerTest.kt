@@ -27,6 +27,20 @@ class PetsControllerTest {
         }
 
     @Test
+    fun `getPetById devuelve el detalle completo de la mascota`() =
+        runBlocking {
+            val controller = PetsController(
+                petsApi = FakePetsApi()
+            )
+
+            val pet = controller.getPetById(1)
+
+            assertEquals(1, pet.id)
+            assertEquals("Rocky", pet.nombre)
+            assertEquals("Labrador", pet.raza)
+        }
+
+    @Test
     fun `createPet registra una mascota y devuelve la respuesta del backend`() =
         runBlocking {
             val fakePetsApi = FakePetsApi()
@@ -110,6 +124,9 @@ class PetsControllerTest {
                     observaciones = null
                 )
             )
+
+        override suspend fun getPetById(id: Int): PetResponse =
+            getMyPets().first { it.id == id }
 
         override suspend fun createPet(request: CreatePetRequest): PetResponse {
             createdRequest = request
