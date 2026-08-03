@@ -1,7 +1,9 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { ClinicalEventType } from '../common/enums/clinical-event-type.enum';
+import { RoleName } from '../common/enums/role-name.enum';
 import { ValidationStatus } from '../common/enums/validation-status.enum';
 import { HistoriaClinica } from '../historias-clinicas/entities/historia-clinica.entity';
 import { Mascota } from '../mascotas/entities/mascota.entity';
@@ -15,6 +17,8 @@ describe('EventosClinicosService', () => {
   let eventosClinicosRepository: {
     create: jest.Mock;
     save: jest.Mock;
+    find: jest.Mock;
+    findOne: jest.Mock;
   };
   let historiasClinicasRepository: {
     create: jest.Mock;
@@ -46,6 +50,8 @@ describe('EventosClinicosService', () => {
     eventosClinicosRepository = {
       create: jest.fn(),
       save: jest.fn(),
+      find: jest.fn(),
+      findOne: jest.fn(),
     };
     historiasClinicasRepository = {
       create: jest.fn(),
@@ -117,7 +123,7 @@ describe('EventosClinicosService', () => {
     });
     expect(mascotasRepository.findOne).toHaveBeenCalledWith({
       where: { idMascota: 10 },
-      relations: ['historiaClinica'],
+      relations: ['historiaClinica', 'usuarios'],
     });
     expect(historiasClinicasRepository.save).not.toHaveBeenCalled();
     expect(eventosClinicosRepository.create).toHaveBeenCalledWith(
@@ -207,5 +213,160 @@ describe('EventosClinicosService', () => {
 
     await expect(service.create(7, dto)).rejects.toThrow(NotFoundException);
     expect(eventosClinicosRepository.save).not.toHaveBeenCalled();
+  });
+
+  describe('findHistoriaClinicaByMascota', () => {
+    const historia = { idHistoria: 20, fechaCreacion: new Date('2026-07-01') };
+    const eventoGuardado = {
+      idEvento: 30,
+      historia: { ...historia, mascota: { idMascota: 10 } },
+      veterinario,
+      tipo: ClinicalEventType.DIAGNOSTICO,
+      fecha: '2026-07-31',
+      descripcion: 'Consulta por tos persistente',
+      diagnostico: null,
+      tratamiento: null,
+      observaciones: null,
+      createdAt: new Date('2026-07-31T10:00:00Z'),
+      updatedAt: new Date('2026-07-31T10:00:00Z'),
+    } as EventoClinico;
+
+    const duenio = { idUsuario: 7 };
+
+    it('el dueño consulta la historia clinica de su propia mascota', async () => {
+      const mascota = {
+        idMascota: 10,
+        usuarios: [duenio],
+        historiaClinica: historia,
+      } as unknown as Mascota;
+      const requester: JwtPayload = {
+        sub: 7,
+        email: 'sofia@petcare.com',
+        idRol: 1,
+        rol: RoleName.DUENO_MASCOTA,
+      };
+
+      mascotasRepository.findOne.mockResolvedValue(mascota);
+      eventosClinicosRepository.find.mockResolvedValue([eventoGuardado]);
+
+      const result = await service.findHistoriaClinicaByMascota(10, requester);
+
+      expect(eventosClinicosRepository.find).toHaveBeenCalledWith({
+        where: { historia: { idHistoria: 20 } },
+        relations: ['historia', 'historia.mascota', 'veterinario'],
+        order: { fecha: 'ASC' },
+      });
+      expect(result.idHistoria).toBe(20);
+      expect(result.eventos).toHaveLength(1);
+    });
+
+    it('el veterinario consulta la historia de una mascota que ya es su paciente', async () => {
+      const mascota = {
+        idMascota: 10,
+        usuarios: [duenio],
+        historiaClinica: historia,
+      } as unknown as Mascota;
+      const requester: JwtPayload = {
+        sub: 4,
+        email: 'vet@petcare.com',
+        idRol: 2,
+        rol: RoleName.VETERINARIO,
+      };
+
+      mascotasRepository.findOne.mockResolvedValue(mascota);
+      veterinariosRepository.findOne.mockResolvedValue(veterinario);
+      eventosClinicosRepository.findOne.mockResolvedValue(eventoGuardado);
+      eventosClinicosRepository.find.mockResolvedValue([eventoGuardado]);
+
+      const result = await service.findHistoriaClinicaByMascota(10, requester);
+
+      expect(eventosClinicosRepository.findOne).toHaveBeenCalledWith({
+        where: { historia: { idHistoria: 20 }, veterinario: { idVeterinario: 4 } },
+      });
+      expect(result.eventos).toHaveLength(1);
+    });
+
+    it('rechaza al veterinario que nunca atendio a esa mascota', async () => {
+      const mascota = {
+        idMascota: 10,
+        usuarios: [duenio],
+        historiaClinica: historia,
+      } as unknown as Mascota;
+      const requester: JwtPayload = {
+        sub: 4,
+        email: 'vet@petcare.com',
+        idRol: 2,
+        rol: RoleName.VETERINARIO,
+      };
+
+      mascotasRepository.findOne.mockResolvedValue(mascota);
+      veterinariosRepository.findOne.mockResolvedValue(veterinario);
+      eventosClinicosRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.findHistoriaClinicaByMascota(10, requester),
+      ).rejects.toThrow(ForbiddenException);
+      expect(eventosClinicosRepository.find).not.toHaveBeenCalled();
+    });
+
+    it('rechaza a un usuario que no es dueño ni veterinario de la mascota', async () => {
+      const mascota = {
+        idMascota: 10,
+        usuarios: [duenio],
+        historiaClinica: historia,
+      } as unknown as Mascota;
+      const requester: JwtPayload = {
+        sub: 99,
+        email: 'otro@petcare.com',
+        idRol: 1,
+        rol: RoleName.DUENO_MASCOTA,
+      };
+
+      mascotasRepository.findOne.mockResolvedValue(mascota);
+
+      await expect(
+        service.findHistoriaClinicaByMascota(10, requester),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('devuelve historia vacia cuando la mascota todavia no tiene eventos', async () => {
+      const mascota = {
+        idMascota: 10,
+        usuarios: [duenio],
+        historiaClinica: null,
+      } as unknown as Mascota;
+      const requester: JwtPayload = {
+        sub: 7,
+        email: 'sofia@petcare.com',
+        idRol: 1,
+        rol: RoleName.DUENO_MASCOTA,
+      };
+
+      mascotasRepository.findOne.mockResolvedValue(mascota);
+
+      const result = await service.findHistoriaClinicaByMascota(10, requester);
+
+      expect(result).toEqual({
+        idHistoria: null,
+        idMascota: 10,
+        fechaCreacion: null,
+        eventos: [],
+      });
+      expect(eventosClinicosRepository.find).not.toHaveBeenCalled();
+    });
+
+    it('rechaza la consulta cuando la mascota no existe', async () => {
+      mascotasRepository.findOne.mockResolvedValue(null);
+      const requester: JwtPayload = {
+        sub: 7,
+        email: 'sofia@petcare.com',
+        idRol: 1,
+        rol: RoleName.DUENO_MASCOTA,
+      };
+
+      await expect(
+        service.findHistoriaClinicaByMascota(999, requester),
+      ).rejects.toThrow(NotFoundException);
+    });
   });
 });

@@ -1,0 +1,18 @@
+<main class="buscar-page">
+  <div class="buscar-card">
+    <h1>Historia clínica</h1>
+    <p>Ingresá el identificador de la mascota para ver su historia clínica.</p>
+
+    <form [formGroup]="form" (ngSubmit)="buscar()">
+      <label for="idMascota">ID de la mascota</label>
+      <input id="idMascota" type="number" min="1" step="1" formControlName="idMascota" />
+      @if (form.controls.idMascota.invalid && form.controls.idMascota.touched) {
+        <p class="field-error">Ingresá el identificador de una mascota.</p>
+      }
+
+      <button type="submit">Ver historia clínica</button>
+    </form>
+
+    <a class="btn-secondary" routerLink="/eventos-clinicos/nuevo">+ Registrar evento clínico</a>
+  </div>
+</main>

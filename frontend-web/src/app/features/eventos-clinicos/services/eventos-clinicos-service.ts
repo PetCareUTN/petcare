@@ -7,6 +7,7 @@ import { AuthService } from '../../auth/services/auth-service';
 import {
   CreateEventoClinicoRequest,
   EventoClinicoResponse,
+  HistoriaClinicaResponse,
 } from '../models/evento-clinico';
 
 @Injectable({ providedIn: 'root' })
@@ -18,6 +19,14 @@ export class EventosClinicosService {
   create(data: CreateEventoClinicoRequest): Observable<EventoClinicoResponse> {
     return this.http
       .post<EventoClinicoResponse>(this.baseUrl, data, { headers: this.authHeaders() })
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
+  getByMascota(idMascota: number): Observable<HistoriaClinicaResponse> {
+    return this.http
+      .get<HistoriaClinicaResponse>(`${this.baseUrl}/mascota/${idMascota}`, {
+        headers: this.authHeaders(),
+      })
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
   }
 

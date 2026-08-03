@@ -1,7 +1,7 @@
 <div class="page">
   <header class="list-header">
-    <h1>Mis mascotas</h1>
-    <a class="btn-primary" routerLink="/mascotas/nueva">+ Registrar mascota</a>
+    <h1>{{ heading }}</h1>
+    <a class="btn-primary" routerLink="nueva">+ Registrar mascota</a>
   </header>
 
   @if (isLoading()) {
@@ -17,7 +17,7 @@
       <div class="empty-state">
         <p>Todavía no registraste ninguna mascota.</p>
         <p>Registrá tu primera mascota para comenzar.</p>
-        <a class="btn-primary" routerLink="/mascotas/nueva">Registrar mascota</a>
+        <a class="btn-primary" routerLink="nueva">Registrar mascota</a>
       </div>
     } @else {
       <div class="pet-grid">
@@ -47,7 +47,7 @@
             </div>
 
             <div class="pet-card-actions">
-              <a class="btn-secondary" [routerLink]="['/mascotas', pet.idMascota]">Ver perfil</a>
+              <a class="btn-secondary" [routerLink]="[pet.idMascota]">Ver perfil</a>
             </div>
           </article>
         }

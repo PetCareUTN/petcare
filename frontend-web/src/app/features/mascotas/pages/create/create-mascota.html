@@ -5,14 +5,14 @@
         <h1>Registrar mascota</h1>
         <p>Alta de mascota asociada a tu usuario.</p>
       </div>
-      <a routerLink="/">Volver</a>
+      <a routerLink="..">Volver</a>
     </header>
 
     @if (successMessage()) {
       <p class="banner banner-success">
         {{ successMessage() }}
         @if (createdPetId(); as petId) {
-          <a [routerLink]="['/mascotas', petId]">Ver perfil</a>
+          <a [routerLink]="['..', petId]">Ver perfil</a>
         }
       </p>
     }

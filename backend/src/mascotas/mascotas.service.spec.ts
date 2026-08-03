@@ -1,8 +1,13 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { PetSex } from '../common/enums/pet-sex.enum';
+import { RoleName } from '../common/enums/role-name.enum';
+import { ValidationStatus } from '../common/enums/validation-status.enum';
+import { EventoClinico } from '../eventos-clinicos/entities/evento-clinico.entity';
 import { User } from '../users/entities/user.entity';
+import { Veterinario } from '../veterinarios/entities/veterinario.entity';
 import { Mascota } from './entities/mascota.entity';
 import { MascotasService } from './mascotas.service';
 import { UpdateMascotaDto } from './dto/update-mascota.dto';
@@ -17,8 +22,32 @@ describe('MascotasService', () => {
   let usersRepository: {
     findOne: jest.Mock;
   };
+  let veterinariosRepository: {
+    findOne: jest.Mock;
+  };
+  let eventosClinicosRepository: {
+    findOne: jest.Mock;
+  };
   const duenio = { idUsuario: 1 } as User;
   const otroUsuario = { idUsuario: 2 } as User;
+  const duenioRequester: JwtPayload = {
+    sub: duenio.idUsuario,
+    email: 'duenio@petcare.com',
+    idRol: 1,
+    rol: RoleName.DUENO_MASCOTA,
+  };
+  const otroUsuarioRequester: JwtPayload = {
+    sub: otroUsuario.idUsuario,
+    email: 'otro@petcare.com',
+    idRol: 1,
+    rol: RoleName.DUENO_MASCOTA,
+  };
+  const veterinarioRequester: JwtPayload = {
+    sub: 4,
+    email: 'vet@petcare.com',
+    idRol: 2,
+    rol: RoleName.VETERINARIO,
+  };
 
   const buildMascota = (overrides: Partial<Mascota> = {}): Mascota =>
     ({
@@ -56,12 +85,26 @@ describe('MascotasService', () => {
             findOne: jest.fn(),
           },
         },
+        {
+          provide: getRepositoryToken(Veterinario),
+          useValue: {
+            findOne: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(EventoClinico),
+          useValue: {
+            findOne: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<MascotasService>(MascotasService);
     mascotasRepository = module.get(getRepositoryToken(Mascota));
     usersRepository = module.get(getRepositoryToken(User));
+    veterinariosRepository = module.get(getRepositoryToken(Veterinario));
+    eventosClinicosRepository = module.get(getRepositoryToken(EventoClinico));
   });
 
   describe('create', () => {
@@ -115,26 +158,91 @@ describe('MascotasService', () => {
     it('throws NotFoundException when the mascota does not exist', async () => {
       mascotasRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.findOne(999, duenio.idUsuario)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.findOne(999, duenioRequester),
+      ).rejects.toThrow(NotFoundException);
     });
 
-    it('throws ForbiddenException when the user is not an owner', async () => {
+    it('throws ForbiddenException when the user is not an owner nor a treating vet', async () => {
       mascotasRepository.findOne.mockResolvedValue(buildMascota());
 
-      await expect(service.findOne(10, otroUsuario.idUsuario)).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(
+        service.findOne(10, otroUsuarioRequester),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('returns the mascota when the user is an owner', async () => {
       mascotasRepository.findOne.mockResolvedValue(buildMascota());
 
-      const result = await service.findOne(10, duenio.idUsuario);
+      const result = await service.findOne(10, duenioRequester);
 
       expect(result.idMascota).toBe(10);
       expect(result.nombre).toBe('Firulais');
+    });
+
+    it('returns the mascota when a validated vet already treated it', async () => {
+      mascotasRepository.findOne.mockResolvedValue(
+        buildMascota({ idHistoria: 20 }),
+      );
+      veterinariosRepository.findOne.mockResolvedValue({
+        idVeterinario: 4,
+        estadoValidacion: ValidationStatus.APROBADO,
+      });
+      eventosClinicosRepository.findOne.mockResolvedValue({ idEvento: 30 });
+
+      const result = await service.findOne(10, veterinarioRequester);
+
+      expect(veterinariosRepository.findOne).toHaveBeenCalledWith({
+        where: { usuario: { idUsuario: 4 } },
+      });
+      expect(eventosClinicosRepository.findOne).toHaveBeenCalledWith({
+        where: {
+          historia: { idHistoria: 20 },
+          veterinario: { idVeterinario: 4 },
+        },
+      });
+      expect(result.idMascota).toBe(10);
+    });
+
+    it('throws ForbiddenException when the vet never treated the mascota', async () => {
+      mascotasRepository.findOne.mockResolvedValue(
+        buildMascota({ idHistoria: 20 }),
+      );
+      veterinariosRepository.findOne.mockResolvedValue({
+        idVeterinario: 4,
+        estadoValidacion: ValidationStatus.APROBADO,
+      });
+      eventosClinicosRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.findOne(10, veterinarioRequester),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('throws ForbiddenException when the vet is not validated', async () => {
+      mascotasRepository.findOne.mockResolvedValue(
+        buildMascota({ idHistoria: 20 }),
+      );
+      veterinariosRepository.findOne.mockResolvedValue({
+        idVeterinario: 4,
+        estadoValidacion: ValidationStatus.PENDIENTE,
+      });
+
+      await expect(
+        service.findOne(10, veterinarioRequester),
+      ).rejects.toThrow(ForbiddenException);
+      expect(eventosClinicosRepository.findOne).not.toHaveBeenCalled();
+    });
+
+    it('throws ForbiddenException when the mascota never had a historia clinica', async () => {
+      mascotasRepository.findOne.mockResolvedValue(
+        buildMascota({ idHistoria: null }),
+      );
+
+      await expect(
+        service.findOne(10, veterinarioRequester),
+      ).rejects.toThrow(ForbiddenException);
+      expect(veterinariosRepository.findOne).not.toHaveBeenCalled();
     });
   });
 
