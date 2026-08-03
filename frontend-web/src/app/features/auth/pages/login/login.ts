@@ -38,7 +38,10 @@ export class LoginPage {
       next: (response) => {
         this.isSubmitting.set(false);
         this.authService.saveToken(response.token);
-        this.router.navigateByUrl('/');
+        this.authService.saveRole(response.usuario.id_rol);
+        this.router.navigateByUrl(
+          this.authService.isVeterinario() ? '/eventos-clinicos' : '/',
+        );
       },
       error: (error: ApiError) => {
         this.isSubmitting.set(false);

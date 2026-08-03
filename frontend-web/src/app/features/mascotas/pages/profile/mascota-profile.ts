@@ -14,6 +14,9 @@ export class MascotaProfilePage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   protected readonly mascotasService = inject(MascotasService);
 
+  protected readonly backLabel: string =
+    this.route.snapshot.data['backLabel'] ?? 'Volver a mis mascotas';
+
   protected readonly isLoading = signal(true);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly mascota = signal<MascotaResponse | null>(null);

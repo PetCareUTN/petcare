@@ -25,6 +25,9 @@ import com.petcare.app.features.auth.domain.AuthSessionController
 import com.petcare.app.features.auth.ui.AuthenticatedHomeScreen
 import com.petcare.app.features.auth.ui.LoginScreen
 import com.petcare.app.features.auth.ui.RegisterScreen
+import com.petcare.app.features.historiaclinica.data.remote.EventoClinicoResponse
+import com.petcare.app.features.historiaclinica.domain.HistoriaClinicaController
+import com.petcare.app.features.historiaclinica.ui.HistoriaClinicaScreen
 import com.petcare.app.features.pets.data.remote.CreatePetRequest
 import com.petcare.app.features.pets.data.remote.PetResponse
 import com.petcare.app.features.pets.data.remote.UpdatePetRequest
@@ -60,6 +63,11 @@ class MainActivity : ComponentActivity() {
                 val petsController = remember {
                     PetsController(
                         petsApi = RetrofitClient.petsApi(sessionStore)
+                    )
+                }
+                val historiaClinicaController = remember {
+                    HistoriaClinicaController(
+                        historiaClinicaApi = RetrofitClient.historiaClinicaApi(sessionStore)
                     )
                 }
                 var isLoading by rememberSaveable {
@@ -125,6 +133,18 @@ class MainActivity : ComponentActivity() {
                 var petProfileError by rememberSaveable {
                     mutableStateOf<String?>(null)
                 }
+                var isViewingHistoria by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isLoadingHistoria by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var historiaError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var historiaEventos by remember {
+                    mutableStateOf<List<EventoClinicoResponse>>(emptyList())
+                }
 
                 fun logout() {
                     sessionController.logout()
@@ -139,6 +159,9 @@ class MainActivity : ComponentActivity() {
                     selectedPetId = null
                     selectedPet = null
                     petProfileError = null
+                    isViewingHistoria = false
+                    historiaError = null
+                    historiaEventos = emptyList()
                 }
 
                 fun loadPets() {
@@ -185,6 +208,31 @@ class MainActivity : ComponentActivity() {
                             petProfileError = "Ocurrio un error inesperado"
                         } finally {
                             isLoadingPetProfile = false
+                        }
+                    }
+                }
+
+                fun loadHistoriaClinica(idMascota: Int) {
+                    isLoadingHistoria = true
+                    historiaError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            val historia = historiaClinicaController.getHistoriaClinica(idMascota)
+                            historiaEventos = historia.eventos
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                historiaError = "No se pudo cargar la historia clinica"
+                            }
+                        } catch (exception: IOException) {
+                            historiaError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            historiaError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingHistoria = false
                         }
                     }
                 }
@@ -287,6 +335,18 @@ class MainActivity : ComponentActivity() {
                             editingPet = null
                         }
                     )
+                } else if (loggedUserName != null && selectedPetId != null && isViewingHistoria) {
+                    HistoriaClinicaScreen(
+                        isLoading = isLoadingHistoria,
+                        errorMessage = historiaError,
+                        eventos = historiaEventos,
+                        onRetry = { selectedPetId?.let { loadHistoriaClinica(it) } },
+                        onBack = {
+                            isViewingHistoria = false
+                            historiaError = null
+                            historiaEventos = emptyList()
+                        }
+                    )
                 } else if (loggedUserName != null && selectedPetId != null) {
                     PetProfileScreen(
                         isLoading = isLoadingPetProfile,
@@ -297,6 +357,12 @@ class MainActivity : ComponentActivity() {
                             selectedPetId = null
                             selectedPet = null
                             petProfileError = null
+                        },
+                        onViewHistoria = {
+                            historiaError = null
+                            historiaEventos = emptyList()
+                            isViewingHistoria = true
+                            selectedPetId?.let { loadHistoriaClinica(it) }
                         }
                     )
                 } else if (loggedUserName != null) {

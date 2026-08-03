@@ -31,3 +31,10 @@ export interface EventoClinicoResponse {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface HistoriaClinicaResponse {
+  idHistoria: number | null;
+  idMascota: number;
+  fechaCreacion: string | null;
+  eventos: EventoClinicoResponse[];
+}
