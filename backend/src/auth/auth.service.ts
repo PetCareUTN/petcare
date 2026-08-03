@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -8,9 +9,11 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
 import { RoleName } from '../common/enums/role-name.enum';
+import { ValidationStatus } from '../common/enums/validation-status.enum';
 import { Role } from '../roles/entities/role.entity';
 import { UserPublicDto } from '../users/dto/user-public.dto';
 import { UsersService } from '../users/users.service';
+import { Veterinario } from '../veterinarios/entities/veterinario.entity';
 import { LoginDto } from './dto/login.dto';
 import { LoginResponseDto } from './dto/login-response.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
@@ -33,6 +36,8 @@ export class AuthService {
     private readonly jwtService: JwtService,
     @InjectRepository(Role)
     private readonly rolesRepository: Repository<Role>,
+    @InjectRepository(Veterinario)
+    private readonly veterinariosRepository: Repository<Veterinario>,
   ) {}
 
   async register(dto: RegisterDto): Promise<RegisterResponseDto> {
@@ -84,6 +89,10 @@ export class AuthService {
       });
     }
 
+    if (user.rol.nombre === RoleName.VETERINARIO) {
+      await this.verificarVeterinarioAprobado(user.idUsuario);
+    }
+
     const payload: JwtPayload = {
       sub: user.idUsuario,
       email: user.email,
@@ -93,6 +102,27 @@ export class AuthService {
     const token = await this.jwtService.signAsync(payload);
 
     return LoginResponseDto.build(token, user);
+  }
+
+  private async verificarVeterinarioAprobado(idUsuario: number): Promise<void> {
+    const veterinario = await this.veterinariosRepository.findOne({
+      where: { usuario: { idUsuario } },
+    });
+
+    if (!veterinario || veterinario.estadoValidacion === ValidationStatus.PENDIENTE) {
+      throw new ForbiddenException({
+        codigoEstado: 403,
+        mensaje:
+          'Tu cuenta de veterinario todavía no fue validada por un administrador.',
+      });
+    }
+
+    if (veterinario.estadoValidacion === ValidationStatus.RECHAZADO) {
+      throw new ForbiddenException({
+        codigoEstado: 403,
+        mensaje: `Tu solicitud de validación fue rechazada. Motivo: ${veterinario.motivoRechazo ?? 'sin especificar'}.`,
+      });
+    }
   }
 
   async getProfile(userId: number): Promise<UserPublicDto> {

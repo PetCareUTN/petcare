@@ -66,10 +66,39 @@ describe('UsersService', () => {
       apellido: data.apellido,
       email: data.email,
       password: data.password,
+      telefono: null,
+      direccion: null,
       rol: { idRol: data.idRol },
     });
     expect(repository.save).toHaveBeenCalledWith(created);
     expect(result).toBe(created);
+  });
+
+  it('create persists telefono and direccion when provided (registro de veterinario)', async () => {
+    const data = {
+      nombre: 'Clinica Norte',
+      apellido: null,
+      email: 'clinica@petcare.test',
+      password: 'hashed-password',
+      idRol: 2,
+      telefono: '3511234567',
+      direccion: 'Av. Siempre Viva 123',
+    };
+    const created = { ...data, rol: { idRol: 2 } } as unknown as User;
+    repository.create.mockReturnValue(created);
+    repository.save.mockResolvedValue(created);
+
+    await service.create(data);
+
+    expect(repository.create).toHaveBeenCalledWith({
+      nombre: data.nombre,
+      apellido: null,
+      email: data.email,
+      password: data.password,
+      telefono: data.telefono,
+      direccion: data.direccion,
+      rol: { idRol: data.idRol },
+    });
   });
 
   it('update applies partial changes and persists them', async () => {
