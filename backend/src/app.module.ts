@@ -14,6 +14,7 @@ import { Veterinario } from './veterinarios/entities/veterinario.entity';
 import { VeterinariosModule } from './veterinarios/veterinarios.module';
 import { Notificacion } from './notificaciones/entities/notificacion.entity';
 import { NotificacionesModule } from './notificaciones/notificaciones.module';
+import { MailModule } from './mail/mail.module';
 
 dotenv.config();
 
@@ -35,6 +36,7 @@ dotenv.config();
     MascotasModule,
     VeterinariosModule,
     NotificacionesModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

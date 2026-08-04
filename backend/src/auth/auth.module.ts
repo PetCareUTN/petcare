@@ -7,11 +7,13 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
     UsersModule,
     RolesModule,
+    MailModule,
     // registerAsync + useFactory: los valores se leen cuando Nest instancia el
     // módulo (ya con dotenv.config() ejecutado en app.module), no en tiempo de
     // import, para que JWT_SECRET esté disponible.

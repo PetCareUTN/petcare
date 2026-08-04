@@ -1,7 +1,9 @@
 import {
   ConflictException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
@@ -16,6 +18,9 @@ import { LoginResponseDto } from './dto/login-response.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { RegisterDto } from './dto/register.dto';
 import { RegisterResponseDto } from './dto/register-response.dto';
+import { CambiarContraseñaDto } from './dto/cambiar-contrasena.dto';
+import { RestablecerContrasenaDto } from './dto/restablecer-contrasena.dto';
+import { MailService } from 'src/mail/mail.service';
 
 const SALT_ROUNDS = 10;
 const DEFAULT_ROLE = RoleName.DUENO_MASCOTA;
@@ -31,6 +36,7 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly mailService: MailService,
     @InjectRepository(Role)
     private readonly rolesRepository: Repository<Role>,
   ) {}
@@ -106,4 +112,102 @@ export class AuthService {
 
     return UserPublicDto.fromEntity(user);
   }
+  async changePassword(userId: number, dto: CambiarContraseñaDto){
+    // Verificar si el usuario existe
+    const user = await this.usersService.findById(userId);
+    if (!user) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Usuario no encontrado',
+      });
+    }
+    // Comparar contraseña vieja con la contraseña almacenada
+    const passwordMatches = await bcrypt.compare(dto.viejaContraseña, user.password);
+    if (!passwordMatches) {
+      throw new UnauthorizedException({
+        codigoEstado: 401,
+        mensaje: 'Contraseña actual incorrecta',
+      });
+    }
+    // Guardar contrseña nueva hasheada en la BD
+    const nuevaContraseñaHash = await bcrypt.hash(dto.nuevaContraseña, SALT_ROUNDS);
+    await this.usersService.updatePassword(userId, nuevaContraseñaHash);
+    return { mensaje: 'Contraseña cambiada exitosamente' };
+}
+
+  async forgotPassword(email: string) {
+    const user = await this.usersService.findByEmail(email);
+    if(user) {
+      const codigo = Math.floor(100000 + Math.random() * 900000).toString();
+      const fechaExpiracion = new Date(Date.now() + 10 * 60 * 1000);
+      const codigoHash = await bcrypt.hash(codigo, SALT_ROUNDS);
+
+      await this.usersService.updatePasswordRecoveryData(user.idUsuario, codigoHash, fechaExpiracion);
+      await this.mailService.sendRecoveryCode(user.email, codigo);
+    }
+
+    return { mensaje: 'Si el email está registrado, se ha enviado un código para restablecer la contraseña',}
+  }
+
+  async resetPassword(dto: RestablecerContrasenaDto) {
+  // Buscar usuario por email
+  const user = await this.usersService.findByEmail(dto.email);
+
+  if (!user) {
+    throw new BadRequestException({
+      codigoEstado: 400,
+      mensaje: 'Código o email inválido',
+    });
+  }
+
+  // Verificar que exista una solicitud de recuperación
+  if (!user.codigoRecuperacion || !user.fechaExpiracionCodigo) {
+    throw new BadRequestException({
+      codigoEstado: 400,
+      mensaje: 'No existe una solicitud de recuperación activa',
+    });
+  }
+
+  // Verificar que el código no haya expirado
+  if (user.fechaExpiracionCodigo < new Date()) {
+    throw new BadRequestException({
+      codigoEstado: 400,
+      mensaje: 'El código de recuperación ha expirado',
+    });
+  }
+
+  // Comparar el código ingresado con el hash almacenado
+  const codigoValido = await bcrypt.compare(
+    dto.codigo,
+    user.codigoRecuperacion,
+  );
+
+  if (!codigoValido) {
+    throw new BadRequestException({
+      codigoEstado: 400,
+      mensaje: 'Código de recuperación incorrecto',
+    });
+  }
+
+  // Hashear la nueva contraseña
+  const nuevaPasswordHash = await bcrypt.hash(
+    dto.nuevaContraseña,
+    SALT_ROUNDS,
+  );
+
+  // Actualizar la contraseña
+  await this.usersService.updatePassword(
+    user.idUsuario,
+    nuevaPasswordHash,
+  );
+
+  // Limpiar los datos de recuperación
+  await this.usersService.clearRecoveryData(
+    user.idUsuario,
+  );
+
+  return {
+    mensaje: 'Contraseña restablecida correctamente',
+  };
+}
 }

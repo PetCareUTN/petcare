@@ -75,6 +75,20 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'olvide-contrasena',
+    loadComponent: () =>
+      import('./features/auth/pages/forgot-password/forgot-password').then(
+        (m) => m.ForgotPasswordPage,
+      ),
+  },
+  {
+    path: 'restablecer-contrasena',
+    loadComponent: () =>
+      import('./features/auth/pages/reset-password/reset-password').then(
+        (m) => m.ResetPasswordPage,
+      ),
+  },
+  {
     path: '**',
     redirectTo: 'login',
   },

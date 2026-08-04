@@ -49,6 +49,22 @@ export class User {
   @OneToOne(() => Veterinario, (veterinario) => veterinario.usuario)
   veterinario?: Veterinario;
 
+  @Column({
+    name: 'codigo_recuperacion',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
+  codigoRecuperacion: string | null;
+
+  @Column({
+    name: 'fecha_expiracion_codigo',
+    type: 'timestamp',
+    nullable: true,
+  })
+  fechaExpiracionCodigo: Date | null;
+
+
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }

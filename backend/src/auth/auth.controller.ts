@@ -6,6 +6,8 @@ import {
   HttpStatus,
   Post,
   UseGuards,
+  Request,
+  Patch,
 } from '@nestjs/common';
 import { RoleName } from '../common/enums/role-name.enum';
 import { AuthService } from './auth.service';
@@ -19,6 +21,9 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import type { JwtPayload } from './interfaces/jwt-payload.interface';
 import { UserPublicDto } from '../users/dto/user-public.dto';
+import { CambiarContraseñaDto } from './dto/cambiar-contrasena.dto';
+import { OlvideContrasenaDto } from './dto/olvide-contrasena.dto';
+import { RestablecerContrasenaDto } from './dto/restablecer-contrasena.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -50,4 +55,28 @@ export class AuthController {
   adminTest(): { mensaje: string } {
     return { mensaje: 'Acceso autorizado para administrador' };
   }
+
+@Patch('cambiar-contrasena')
+@UseGuards(JwtAuthGuard)
+async changePassword(
+  @CurrentUser() user: JwtPayload,
+  @Body() dto: CambiarContraseñaDto,
+) {
+  return this.authService.changePassword(user.sub, dto);
+} 
+
+@Post('olvide-contrasena')
+@HttpCode(HttpStatus.OK)
+async forgotPassword(@Body() dto: OlvideContrasenaDto) {
+  return  this.authService.forgotPassword(dto.email);
+}
+
+@Patch('restablecer-contrasena')
+@HttpCode(HttpStatus.OK)
+resetPassword(
+  @Body() dto: RestablecerContrasenaDto,
+) {
+  return this.authService.resetPassword(dto);
+}
+
 }

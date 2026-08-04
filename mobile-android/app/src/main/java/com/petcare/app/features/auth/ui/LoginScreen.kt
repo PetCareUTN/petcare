@@ -11,6 +11,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,7 +29,8 @@ import com.petcare.app.features.auth.domain.LoginValidator
 fun LoginScreen(
     isLoading: Boolean = false,
     serverError: String? = null,
-    onLogin: (email: String, password: String) -> Unit
+    onLogin: (email: String, password: String) -> Unit,
+    onForgotPassword: () -> Unit = {}
 ) {
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
@@ -123,6 +125,13 @@ fun LoginScreen(
             } else {
                 Text("Iniciar sesión")
             }
+        }
+
+        TextButton(
+            onClick = onForgotPassword,
+            modifier = Modifier.padding(top = 16.dp)
+        ) {
+            Text("¿Olvidaste tu contraseña?")
         }
     }
 }
