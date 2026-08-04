@@ -35,6 +35,11 @@ import com.petcare.app.features.pets.domain.PetsController
 import com.petcare.app.features.pets.ui.EditPetScreen
 import com.petcare.app.features.pets.ui.PetProfileScreen
 import com.petcare.app.features.pets.ui.RegisterPetScreen
+import com.petcare.app.features.profile.data.remote.UpdateProfileRequest
+import com.petcare.app.features.profile.data.remote.UserProfileResponse
+import com.petcare.app.features.profile.domain.ProfileController
+import com.petcare.app.features.profile.ui.EditProfileScreen
+import com.petcare.app.features.profile.ui.ProfileScreen
 import com.petcare.app.ui.theme.PetCareTheme
 import java.io.IOException
 import kotlinx.coroutines.launch
@@ -68,6 +73,11 @@ class MainActivity : ComponentActivity() {
                 val historiaClinicaController = remember {
                     HistoriaClinicaController(
                         historiaClinicaApi = RetrofitClient.historiaClinicaApi(sessionStore)
+                    )
+                }
+                val profileController = remember {
+                    ProfileController(
+                        profileApi = RetrofitClient.profileApi(sessionStore)
                     )
                 }
                 var isLoading by rememberSaveable {
@@ -145,6 +155,27 @@ class MainActivity : ComponentActivity() {
                 var historiaEventos by remember {
                     mutableStateOf<List<EventoClinicoResponse>>(emptyList())
                 }
+                var isViewingProfile by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isEditingProfile by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isLoadingProfile by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isSavingProfile by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var profileError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var saveProfileError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var profile by remember {
+                    mutableStateOf<UserProfileResponse?>(null)
+                }
 
                 fun logout() {
                     sessionController.logout()
@@ -162,6 +193,11 @@ class MainActivity : ComponentActivity() {
                     isViewingHistoria = false
                     historiaError = null
                     historiaEventos = emptyList()
+                    isViewingProfile = false
+                    isEditingProfile = false
+                    profileError = null
+                    saveProfileError = null
+                    profile = null
                 }
 
                 fun loadPets() {
@@ -233,6 +269,30 @@ class MainActivity : ComponentActivity() {
                             historiaError = "Ocurrio un error inesperado"
                         } finally {
                             isLoadingHistoria = false
+                        }
+                    }
+                }
+
+                fun loadProfile() {
+                    isLoadingProfile = true
+                    profileError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            profile = profileController.getMyProfile()
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                profileError = "No se pudo cargar tu perfil"
+                            }
+                        } catch (exception: IOException) {
+                            profileError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            profileError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingProfile = false
                         }
                     }
                 }
@@ -335,6 +395,62 @@ class MainActivity : ComponentActivity() {
                             editingPet = null
                         }
                     )
+                } else if (loggedUserName != null && isEditingProfile) {
+                    profile?.let { currentProfile ->
+                        EditProfileScreen(
+                            profile = currentProfile,
+                            isSaving = isSavingProfile,
+                            saveError = saveProfileError,
+                            onSave = { request: UpdateProfileRequest ->
+                                isSavingProfile = true
+                                saveProfileError = null
+
+                                lifecycleScope.launch {
+                                    try {
+                                        profile = profileController.updateMyProfile(request)
+                                        isEditingProfile = false
+                                    } catch (exception: HttpException) {
+                                        saveProfileError = when (exception.code()) {
+                                            401 -> {
+                                                logout()
+                                                serverError =
+                                                    "La sesion expiro. Inicia sesion nuevamente"
+                                                null
+                                            }
+                                            409 -> "Ese correo ya esta en uso"
+                                            400 -> "Revisa los datos ingresados"
+                                            else -> "No se pudo actualizar el perfil"
+                                        }
+                                    } catch (exception: IOException) {
+                                        saveProfileError = "No se pudo conectar con el servidor"
+                                    } catch (exception: Exception) {
+                                        saveProfileError = "Ocurrio un error inesperado"
+                                    } finally {
+                                        isSavingProfile = false
+                                    }
+                                }
+                            },
+                            onCancel = {
+                                saveProfileError = null
+                                isEditingProfile = false
+                            }
+                        )
+                    }
+                } else if (loggedUserName != null && isViewingProfile) {
+                    ProfileScreen(
+                        isLoading = isLoadingProfile,
+                        errorMessage = profileError,
+                        profile = profile,
+                        onRetry = { loadProfile() },
+                        onBack = {
+                            isViewingProfile = false
+                            profileError = null
+                        },
+                        onEdit = {
+                            saveProfileError = null
+                            isEditingProfile = true
+                        }
+                    )
                 } else if (loggedUserName != null && selectedPetId != null && isViewingHistoria) {
                     HistoriaClinicaScreen(
                         isLoading = isLoadingHistoria,
@@ -386,6 +502,11 @@ class MainActivity : ComponentActivity() {
                             selectedPet = null
                             petProfileError = null
                             loadPetProfile(pet.id)
+                        },
+                        onProfileClick = {
+                            profileError = null
+                            isViewingProfile = true
+                            loadProfile()
                         }
                     )
                 } else if (isRegisteringUser) {
