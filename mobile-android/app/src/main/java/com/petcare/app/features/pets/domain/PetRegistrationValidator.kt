@@ -18,6 +18,7 @@ data class PetRegistrationValidationResult(
 object PetRegistrationValidator {
 
     private val dateRegex = Regex("""^\d{4}-\d{2}-\d{2}$""")
+    private val allowedSpecies = setOf("Perro", "Gato")
 
     fun validate(
         name: String,
@@ -39,6 +40,7 @@ object PetRegistrationValidator {
             },
             speciesError = when {
                 trimmedSpecies.isBlank() -> "Ingresa la especie"
+                trimmedSpecies !in allowedSpecies -> "Selecciona Perro o Gato"
                 trimmedSpecies.length > 50 -> "La especie no puede superar 50 caracteres"
                 else -> null
             },

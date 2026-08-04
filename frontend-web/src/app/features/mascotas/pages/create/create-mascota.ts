@@ -6,6 +6,36 @@ import { AuthService } from '../../../auth/services/auth-service';
 import { CreateMascotaRequest, PetSex } from '../../models/mascota';
 import { MascotasService } from '../../services/mascotas-service';
 
+const BREED_OPTIONS_BY_SPECIES: Record<string, string[]> = {
+  Perro: [
+    'Mestizo',
+    'Labrador Retriever',
+    'Golden Retriever',
+    'Caniche',
+    'Bulldog Frances',
+    'Pastor Aleman',
+    'Beagle',
+    'Boxer',
+    'Chihuahua',
+    'Dachshund',
+    'Shih Tzu',
+    'Yorkshire Terrier',
+    'Otro',
+  ],
+  Gato: [
+    'Mestizo',
+    'Siames',
+    'Persa',
+    'Maine Coon',
+    'Bengala',
+    'Ragdoll',
+    'Sphynx',
+    'British Shorthair',
+    'Angora',
+    'Otro',
+  ],
+};
+
 @Component({
   selector: 'app-create-mascota',
   imports: [ReactiveFormsModule, RouterLink],
@@ -23,6 +53,7 @@ export class CreateMascotaPage {
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly selectedFile = signal<File | null>(null);
   protected readonly createdPetId = signal<number | null>(null);
+  protected readonly speciesOptions = Object.keys(BREED_OPTIONS_BY_SPECIES);
 
   protected readonly form = this.formBuilder.group({
     nombre: ['', [Validators.required, Validators.maxLength(100)]],
@@ -35,6 +66,15 @@ export class CreateMascotaPage {
     observaciones: [''],
     alergias: [''],
   });
+
+  protected breedOptions(): string[] {
+    const species = this.form.controls.especie.value;
+    return species ? (BREED_OPTIONS_BY_SPECIES[species] ?? []) : [];
+  }
+
+  protected onSpeciesChanged(): void {
+    this.form.controls.raza.setValue('');
+  }
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;

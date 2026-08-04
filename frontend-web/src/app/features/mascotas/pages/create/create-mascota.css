@@ -97,6 +97,21 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
+.input-with-unit {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+.input-with-unit input {
+  flex: 1;
+}
+
+.input-with-unit span {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
 .checkbox-field {
   display: flex;
   gap: var(--spacing-sm);

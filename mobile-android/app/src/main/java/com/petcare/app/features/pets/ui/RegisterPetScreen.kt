@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,12 +21,19 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,7 +53,43 @@ import com.petcare.app.ui.theme.PetCareMuted
 import com.petcare.app.ui.theme.PetCareSurfaceSoft
 import com.petcare.app.ui.theme.PetCareTealDark
 import com.petcare.app.ui.theme.PetCareTealSoft
+import java.text.SimpleDateFormat
+import java.util.Locale
+import java.util.TimeZone
 
+private val breedOptionsBySpecies = mapOf(
+    "Perro" to listOf(
+        "Mestizo",
+        "Labrador Retriever",
+        "Golden Retriever",
+        "Caniche",
+        "Bulldog Frances",
+        "Pastor Aleman",
+        "Beagle",
+        "Boxer",
+        "Chihuahua",
+        "Dachshund",
+        "Shih Tzu",
+        "Yorkshire Terrier",
+        "Otro"
+    ),
+    "Gato" to listOf(
+        "Mestizo",
+        "Siames",
+        "Persa",
+        "Maine Coon",
+        "Bengala",
+        "Ragdoll",
+        "Sphynx",
+        "British Shorthair",
+        "Angora",
+        "Otro"
+    )
+)
+
+private val speciesOptions = breedOptionsBySpecies.keys.toList()
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterPetScreen(
     isSaving: Boolean,
@@ -61,6 +105,7 @@ fun RegisterPetScreen(
     var weight by rememberSaveable { mutableStateOf("") }
     var isSterilized by rememberSaveable { mutableStateOf(false) }
     var observations by rememberSaveable { mutableStateOf("") }
+    val breedOptions = breedOptionsBySpecies[species].orEmpty()
     var photoUriText by rememberSaveable { mutableStateOf<String?>(null) }
     var validation by remember {
         mutableStateOf(PetRegistrationValidationResult())
@@ -143,22 +188,27 @@ fun RegisterPetScreen(
                     singleLine = true
                 )
 
-                OutlinedTextField(
-                    value = species,
-                    onValueChange = { species = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Especie") },
+                PetDropdownField(
+                    label = "Especie",
+                    selectedValue = species,
+                    placeholder = "Seleccionar especie",
+                    options = speciesOptions,
+                    enabled = !isSaving,
                     isError = validation.speciesError != null,
-                    supportingText = validation.speciesError?.let { { Text(it) } },
-                    singleLine = true
+                    supportingText = validation.speciesError,
+                    onSelect = {
+                        species = it
+                        breed = ""
+                    }
                 )
 
-                OutlinedTextField(
-                    value = breed,
-                    onValueChange = { breed = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Raza") },
-                    singleLine = true
+                PetDropdownField(
+                    label = "Raza",
+                    selectedValue = breed,
+                    placeholder = "Seleccionar raza",
+                    options = breedOptions,
+                    enabled = !isSaving && species.isNotBlank(),
+                    onSelect = { breed = it }
                 )
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -193,27 +243,36 @@ fun RegisterPetScreen(
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedTextField(
-                        value = birthDate,
-                        onValueChange = { birthDate = it },
+                    BirthDatePickerField(
+                        selectedDate = birthDate,
                         modifier = Modifier.weight(1f),
-                        label = { Text("Nacimiento") },
-                        placeholder = { Text("AAAA-MM-DD") },
+                        enabled = !isSaving,
                         isError = validation.birthDateError != null,
-                        supportingText = validation.birthDateError?.let { { Text(it) } },
-                        singleLine = true
+                        supportingText = validation.birthDateError,
+                        onDateSelected = { birthDate = it }
                     )
 
-                    OutlinedTextField(
-                        value = weight,
-                        onValueChange = { weight = it },
+                    Row(
                         modifier = Modifier.weight(1f),
-                        label = { Text("Peso") },
-                        isError = validation.weightError != null,
-                        supportingText = validation.weightError?.let { { Text(it) } },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        singleLine = true
-                    )
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = weight,
+                            onValueChange = { weight = it },
+                            modifier = Modifier.weight(1f),
+                            label = { Text("Peso") },
+                            isError = validation.weightError != null,
+                            supportingText = validation.weightError?.let { { Text(it) } },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            singleLine = true
+                        )
+                        Text(
+                            text = "kg",
+                            color = PetCareMuted,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
                 }
 
                 Surface(
@@ -338,3 +397,154 @@ fun RegisterPetScreen(
         Spacer(modifier = Modifier.height(16.dp))
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BirthDatePickerField(
+    selectedDate: String,
+    modifier: Modifier = Modifier,
+    enabled: Boolean,
+    onDateSelected: (String) -> Unit,
+    isError: Boolean = false,
+    supportingText: String? = null
+) {
+    var showPicker by remember { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = selectedDate.toBirthDateMillis()
+    )
+
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = "Nacimiento",
+            style = MaterialTheme.typography.labelLarge
+        )
+
+        OutlinedButton(
+            onClick = { showPicker = true },
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            border = BorderStroke(
+                1.dp,
+                if (isError) MaterialTheme.colorScheme.error else PetCareLine
+            )
+        ) {
+            Text(
+                text = selectedDate.ifBlank { "Seleccionar fecha" },
+                color = if (selectedDate.isBlank()) PetCareMuted else MaterialTheme.colorScheme.onSurface
+            )
+        }
+
+        supportingText?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+
+    if (showPicker) {
+        DatePickerDialog(
+            onDismissRequest = { showPicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let {
+                            onDateSelected(it.toBirthDateText())
+                        }
+                        showPicker = false
+                    }
+                ) {
+                    Text("Aceptar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPicker = false }) {
+                    Text("Cancelar")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+}
+
+@Composable
+private fun PetDropdownField(
+    label: String,
+    selectedValue: String,
+    placeholder: String,
+    options: List<String>,
+    enabled: Boolean,
+    onSelect: (String) -> Unit,
+    isError: Boolean = false,
+    supportingText: String? = null
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge
+        )
+
+        Box(modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = { expanded = true },
+                enabled = enabled,
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large,
+                border = BorderStroke(
+                    1.dp,
+                    if (isError) MaterialTheme.colorScheme.error else PetCareLine
+                )
+            ) {
+                Text(
+                    text = selectedValue.ifBlank { placeholder },
+                    color = if (selectedValue.isBlank()) PetCareMuted else MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                options.forEach { option ->
+                    DropdownMenuItem(
+                        text = { Text(option) },
+                        onClick = {
+                            onSelect(option)
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+
+        supportingText?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
+
+private fun Long.toBirthDateText(): String =
+    birthDateFormatter().format(this)
+
+private fun String.toBirthDateMillis(): Long? =
+    takeIf { it.isNotBlank() }?.let {
+        runCatching { birthDateFormatter().parse(it)?.time }.getOrNull()
+    }
+
+private fun birthDateFormatter(): SimpleDateFormat =
+    SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }
