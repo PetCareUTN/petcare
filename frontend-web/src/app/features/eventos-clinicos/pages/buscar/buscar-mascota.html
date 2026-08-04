@@ -1,18 +1,72 @@
-<main class="buscar-page">
-  <div class="buscar-card">
+<main class="historia-page">
+  <header class="historia-header">
     <h1>Historia clínica</h1>
-    <p>Ingresá el identificador de la mascota para ver su historia clínica.</p>
+    <p class="page-subtitle">Registrá y consultá la historia clínica de tus pacientes.</p>
+  </header>
 
-    <form [formGroup]="form" (ngSubmit)="buscar()">
-      <label for="idMascota">ID de la mascota</label>
-      <input id="idMascota" type="number" min="1" step="1" formControlName="idMascota" />
-      @if (form.controls.idMascota.invalid && form.controls.idMascota.touched) {
-        <p class="field-error">Ingresá el identificador de una mascota.</p>
+  <div class="historia-grid">
+    <section class="historia-card">
+      <h2>Registrar evento clínico</h2>
+      <p class="card-subtitle">Sumá un evento a la historia clínica de tu paciente.</p>
+      <a class="btn-primary btn-large" routerLink="/eventos-clinicos/nuevo">
+        + Registrar evento clínico
+      </a>
+    </section>
+
+    <section class="historia-card">
+      <h2>Consultar historia clínica</h2>
+      <p class="card-subtitle">Buscá a tu paciente por ID o por nombre.</p>
+
+      @if (isLoading()) {
+        <p class="status-text">Cargando pacientes...</p>
+      } @else if (errorMessage()) {
+        <p class="banner banner-error">{{ errorMessage() }}</p>
+      } @else if (mascotas().length === 0) {
+        <div class="hint-box">
+          <p>Todavía no tenés pacientes registrados.</p>
+          <a class="btn-link" routerLink="/eventos-clinicos/pacientes/nueva">Registrar mascota</a>
+        </div>
+      } @else {
+        <input
+          type="search"
+          class="search-input"
+          placeholder="Buscar por ID o nombre..."
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)"
+        />
+
+        <div class="results">
+          @if (searchQuery().trim() && filteredMascotas().length === 0) {
+            <p class="hint-text">No se encontraron pacientes para "{{ searchQuery() }}".</p>
+          } @else {
+            <ul class="result-list">
+              @for (pet of filteredMascotas(); track pet.idMascota) {
+                <li class="result-item">
+                  @if (pet.foto) {
+                    <img
+                      class="result-photo"
+                      [src]="mascotasService.resolveFotoUrl(pet.foto)"
+                      alt="Foto de {{ pet.nombre }}"
+                    />
+                  } @else {
+                    <div class="result-photo result-placeholder">{{ pet.nombre.charAt(0) }}</div>
+                  }
+                  <div class="result-info">
+                    <span class="result-name">{{ pet.nombre }}</span>
+                    <span class="result-meta">ID {{ pet.idMascota }} &middot; {{ pet.especie }}</span>
+                  </div>
+                  <a
+                    class="btn-secondary"
+                    [routerLink]="['/eventos-clinicos/mascota', pet.idMascota]"
+                  >
+                    Ver historia clínica
+                  </a>
+                </li>
+              }
+            </ul>
+          }
+        </div>
       }
-
-      <button type="submit">Ver historia clínica</button>
-    </form>
-
-    <a class="btn-secondary" routerLink="/eventos-clinicos/nuevo">+ Registrar evento clínico</a>
+    </section>
   </div>
 </main>
