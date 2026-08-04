@@ -40,6 +40,20 @@ class PetRegistrationValidatorTest {
     }
 
     @Test
+    fun `validate rechaza especies fuera de perro o gato`() {
+        val result = PetRegistrationValidator.validate(
+            name = "Nina",
+            species = "Conejo",
+            sex = "hembra",
+            birthDate = "",
+            weight = ""
+        )
+
+        assertFalse(result.isValid)
+        assertTrue(result.speciesError != null)
+    }
+
+    @Test
     fun `validate rechaza fecha y peso invalidos`() {
         val result = PetRegistrationValidator.validate(
             name = "Nina",
