@@ -1,10 +1,3 @@
-export interface SolicitudRequest {
-  numeroDocumento: string;
-  numeroMatricula: string;
-  provinciaMatricula: string;
-  matricula: File;
-}
-
 export interface VeterinarioResponse {
   idVeterinario: number;
   idUsuario: number;

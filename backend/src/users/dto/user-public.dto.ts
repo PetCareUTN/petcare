@@ -7,9 +7,10 @@ import { User } from '../entities/user.entity';
 export class UserPublicDto {
   id_usuario: number;
   nombre: string;
-  apellido: string;
+  apellido: string | null;
   email: string;
   telefono: string | null;
+  direccion: string | null;
   id_rol: number;
   estado: string;
   fecha_registro: Date;
@@ -21,6 +22,7 @@ export class UserPublicDto {
     dto.apellido = user.apellido;
     dto.email = user.email;
     dto.telefono = user.telefono ?? null;
+    dto.direccion = user.direccion ?? null;
     dto.id_rol = user.rol.idRol;
     dto.estado = user.estado;
     dto.fecha_registro = user.fechaRegistro;

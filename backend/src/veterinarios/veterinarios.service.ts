@@ -5,19 +5,29 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import * as bcrypt from 'bcrypt';
 import { Repository } from 'typeorm';
+import { RoleName } from '../common/enums/role-name.enum';
 import { ValidationStatus } from '../common/enums/validation-status.enum';
 import { NotificationType } from '../common/enums/notification-type.enum';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
+import { Role } from '../roles/entities/role.entity';
+import { UsersService } from '../users/users.service';
+import { RegisterVeterinarioDto } from './dto/register-veterinario.dto';
 import { VeterinarioResponseDto } from './dto/veterinario-response.dto';
 import { Veterinario } from './entities/veterinario.entity';
 import type { UploadedDocumentFile } from './types/uploaded-document-file.type';
+
+const SALT_ROUNDS = 10;
 
 @Injectable()
 export class VeterinariosService {
   constructor(
     @InjectRepository(Veterinario)
     private readonly veterinariosRepository: Repository<Veterinario>,
+    @InjectRepository(Role)
+    private readonly rolesRepository: Repository<Role>,
+    private readonly usersService: UsersService,
     private readonly notificacionesService: NotificacionesService,
   ) {}
 
@@ -30,11 +40,18 @@ export class VeterinariosService {
     return `uploads/matriculas/${file.filename}`;
   }
 
-  async crearSolicitud(
-    idUsuario: number,
-    body: Record<string, string>,
+  /**
+   * Registro combinado para la web: crea la cuenta directamente con rol
+   * veterinario y la solicitud de validación en un solo paso (en vez de
+   * depender de que un dueño ya logueado pida ascender a veterinario, flujo
+   * que además tenía un candado circular: para pedir la validación hacía
+   * falta ya ser veterinario). El login queda bloqueado hasta que un admin
+   * apruebe la solicitud (ver AuthService.login).
+   */
+  async registrarVeterinario(
+    dto: RegisterVeterinarioDto,
     file: UploadedDocumentFile,
-  ): Promise<VeterinarioResponseDto> {
+  ): Promise<{ mensaje: string }> {
     if (!file) {
       throw new BadRequestException({
         codigoEstado: 400,
@@ -42,65 +59,56 @@ export class VeterinariosService {
       });
     }
 
-    const { numeroDocumento, numeroMatricula, provinciaMatricula } = body;
-
-    if (!numeroDocumento || !numeroMatricula || !provinciaMatricula) {
-      throw new BadRequestException({
-        codigoEstado: 400,
-        mensaje: 'Los campos numeroDocumento, numeroMatricula y provinciaMatricula son obligatorios',
-      });
-    }
-
-    const existente = await this.veterinariosRepository.findOne({
-      where: { usuario: { idUsuario } },
-    });
-
-    if (existente && existente.estadoValidacion !== ValidationStatus.RECHAZADO) {
+    const existente = await this.usersService.findByEmail(dto.email);
+    if (existente) {
       throw new ConflictException({
         codigoEstado: 409,
-        mensaje: 'Ya existe una solicitud de validación para este usuario',
+        mensaje: 'El email ya se encuentra registrado',
       });
     }
 
-    if (existente && existente.estadoValidacion === ValidationStatus.RECHAZADO) {
-      existente.numeroDocumento = numeroDocumento;
-      existente.numeroMatricula = numeroMatricula;
-      existente.provinciaMatricula = provinciaMatricula;
-      existente.matriculaUrl = this.getRelativeMatriculaUrl(file);
-      existente.estadoValidacion = ValidationStatus.PENDIENTE;
-      existente.motivoRechazo = null;
-
-      const guardado = await this.veterinariosRepository.save(existente);
-
-      await this.notificacionesService.crear(
-        idUsuario,
-        NotificationType.SOLICITUD_RECIBIDA,
-        'Solicitud recibida',
-        'Tu solicitud de validación fue recibida y está pendiente de revisión.',
+    const rolVeterinario = await this.rolesRepository.findOne({
+      where: { nombre: RoleName.VETERINARIO },
+    });
+    if (!rolVeterinario) {
+      throw new Error(
+        'No se encontró el rol "veterinario". Verifique el seed de roles.',
       );
-
-      return VeterinarioResponseDto.fromEntity(guardado);
     }
 
+    const passwordHash = await bcrypt.hash(dto.password, SALT_ROUNDS);
+
+    const usuario = await this.usersService.create({
+      nombre: dto.nombre,
+      apellido: null,
+      email: dto.email,
+      password: passwordHash,
+      idRol: rolVeterinario.idRol,
+      telefono: dto.telefono,
+      direccion: dto.direccion,
+    });
+
     const veterinario = this.veterinariosRepository.create({
-      usuario: { idUsuario } as any,
-      numeroDocumento,
-      numeroMatricula,
-      provinciaMatricula,
+      usuario,
+      numeroDocumento: dto.numeroDocumento,
+      numeroMatricula: dto.numeroMatricula,
+      provinciaMatricula: dto.provinciaMatricula,
       matriculaUrl: this.getRelativeMatriculaUrl(file),
       estadoValidacion: ValidationStatus.PENDIENTE,
     });
-
-    const guardado = await this.veterinariosRepository.save(veterinario);
+    await this.veterinariosRepository.save(veterinario);
 
     await this.notificacionesService.crear(
-      idUsuario,
+      usuario.idUsuario,
       NotificationType.SOLICITUD_RECIBIDA,
       'Solicitud recibida',
-      'Tu solicitud de validación fue recibida y está pendiente de revisión.',
+      'Tu cuenta fue creada y tu matrícula quedó pendiente de revisión. Vas a poder iniciar sesión cuando un administrador la apruebe.',
     );
 
-    return VeterinarioResponseDto.fromEntity(guardado);
+    return {
+      mensaje:
+        'Cuenta creada correctamente. Un administrador revisará tu matrícula antes de que puedas iniciar sesión.',
+    };
   }
 
   async obtenerEstado(idUsuario: number): Promise<VeterinarioResponseDto> {

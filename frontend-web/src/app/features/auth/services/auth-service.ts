@@ -60,6 +60,10 @@ export class AuthService {
     return this.getRoleId() === 2;
   }
 
+  isAdmin(): boolean {
+    return this.getRoleId() === 3;
+  }
+
   /**
    * Normaliza el error HTTP al contrato { codigoEstado, mensaje } que usa el
    * backend. Si no hay respuesta del servidor (p. ej. está caído), devuelve un

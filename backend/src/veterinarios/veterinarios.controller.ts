@@ -11,8 +11,6 @@ import {
   UploadedFile,
   UseGuards,
   UseInterceptors,
-  UsePipes,
-  ValidationPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -25,50 +23,44 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { RechazarSolicitudDto } from './dto/aprobar-rechazar.dto';
+import { RegisterVeterinarioDto } from './dto/register-veterinario.dto';
 import type { UploadedDocumentFile } from './types/uploaded-document-file.type';
 import { VeterinariosService } from './veterinarios.service';
 
 const MATRICULAS_DIR = join(process.cwd(), 'uploads', 'matriculas');
 
+const matriculaFileInterceptor = FileInterceptor('matricula', {
+  storage: diskStorage({
+    destination: MATRICULAS_DIR,
+    filename: (_req, file, cb) => {
+      const uniqueName = `${randomUUID()}${extname(file.originalname)}`;
+      cb(null, uniqueName);
+    },
+  }),
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['.jpg', '.jpeg', '.png', '.pdf'];
+    const ext = extname(file.originalname).toLowerCase();
+    if (!allowed.includes(ext)) {
+      cb(new Error('Solo se permiten archivos JPG, PNG o PDF'), false);
+      return;
+    }
+    cb(null, true);
+  },
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
+
 @Controller('veterinarios')
 export class VeterinariosController {
   constructor(private readonly veterinariosService: VeterinariosService) {}
 
-  @Post('solicitar')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleName.VETERINARIO)
-  @UseInterceptors(
-    FileInterceptor('matricula', {
-      storage: diskStorage({
-        destination: MATRICULAS_DIR,
-        filename: (_req, file, cb) => {
-          const uniqueName = `${randomUUID()}${extname(file.originalname)}`;
-          cb(null, uniqueName);
-        },
-      }),
-      fileFilter: (_req, file, cb) => {
-        const allowed = ['.jpg', '.jpeg', '.png', '.pdf'];
-        const ext = extname(file.originalname).toLowerCase();
-        if (!allowed.includes(ext)) {
-          cb(
-            new Error('Solo se permiten archivos JPG, PNG o PDF'),
-            false,
-          );
-          return;
-        }
-        cb(null, true);
-      },
-      limits: { fileSize: 5 * 1024 * 1024 },
-    }),
-  )
-  @UsePipes(new ValidationPipe({ whitelist: false, forbidNonWhitelisted: false }))
+  @Post('registro')
+  @UseInterceptors(matriculaFileInterceptor)
   @HttpCode(HttpStatus.CREATED)
-  crearSolicitud(
-    @CurrentUser() user: JwtPayload,
-    @Body() body: Record<string, string>,
+  registro(
+    @Body() dto: RegisterVeterinarioDto,
     @UploadedFile() file: UploadedDocumentFile,
   ) {
-    return this.veterinariosService.crearSolicitud(user.sub, body, file);
+    return this.veterinariosService.registrarVeterinario(dto, file);
   }
 
   @Get('mi-estado')
