@@ -77,4 +77,52 @@ export class UsersService {
 
     return this.usersRepository.save(user);
   }
+  async updatePassword(idUsuario: number, passwordHash: string): Promise<User> {
+  const user = await this.findById(idUsuario);
+
+  if (!user) {
+    throw new NotFoundException({
+      codigoEstado: 404,
+      mensaje: 'Usuario no encontrado',
+    });
+  }
+
+  user.password = passwordHash;
+
+  return this.usersRepository.save(user);
+}
+async updatePasswordRecoveryData(
+  idUsuario: number,
+  codigoRecuperacion: string,
+  fechaExpiracionCodigo: Date,
+): Promise<User> {
+  const user = await this.findById(idUsuario);
+
+  if (!user) {
+    throw new NotFoundException({
+      codigoEstado: 404,
+      mensaje: 'Usuario no encontrado',
+    });
+  }
+
+  user.codigoRecuperacion = codigoRecuperacion;
+  user.fechaExpiracionCodigo = fechaExpiracionCodigo;
+
+  return this.usersRepository.save(user);
+}
+async clearRecoveryData(idUsuario: number): Promise<User> {
+  const user = await this.findById(idUsuario);
+
+  if (!user) {
+    throw new NotFoundException({
+      codigoEstado: 404,
+      mensaje: 'Usuario no encontrado',
+    });
+  }
+
+  user.codigoRecuperacion = null;
+  user.fechaExpiracionCodigo = null;
+
+  return this.usersRepository.save(user);
+}
 }

@@ -2,6 +2,7 @@ package com.petcare.app.features.auth.data.remote
 
 import com.google.gson.annotations.SerializedName
 import retrofit2.http.Body
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 
 data class LoginRequest(
@@ -31,6 +32,19 @@ data class UserResponse(
     val registrationDate: String
 )
 
+data class ForgotPasswordRequest(
+    val email: String
+)
+
+data class ResetPasswordRequest(
+    val email: String,
+    val codigo: String,
+    @SerializedName("nuevaContraseña")
+    val nuevaContrasena: String
+)
+
+data class MessageResponse(
+    val mensaje: String
 data class RegisterRequest(
     val nombre: String,
     val apellido: String,
@@ -66,4 +80,14 @@ interface AuthApi {
     suspend fun login(
         @Body request: LoginRequest
     ): LoginResponse
+
+    @POST("auth/olvide-contrasena")
+    suspend fun forgotPassword(
+        @Body request: ForgotPasswordRequest
+    ): MessageResponse
+
+    @PATCH("auth/restablecer-contrasena")
+    suspend fun resetPassword(
+        @Body request: ResetPasswordRequest
+    ): MessageResponse
 }

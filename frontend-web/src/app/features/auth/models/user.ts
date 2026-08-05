@@ -33,3 +33,13 @@ export interface ApiError {
   codigoEstado: number;
   mensaje: string;
 }
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  email: string;
+  codigo: string;
+  nuevaContraseña: string;
+}

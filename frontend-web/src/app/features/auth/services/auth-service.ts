@@ -4,10 +4,12 @@ import { Observable, catchError, throwError } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import {
   ApiError,
+  ForgotPasswordRequest,
   LoginRequest,
   LoginResponse,
   RegisterRequest,
   RegisterResponse,
+  ResetPasswordRequest,
 } from '../models/user';
 
 @Injectable({ providedIn: 'root' })
@@ -26,6 +28,18 @@ export class AuthService {
   login(data: LoginRequest): Observable<LoginResponse> {
     return this.http
       .post<LoginResponse>(`${this.baseUrl}/login`, data)
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
+  forgotPassword(data: ForgotPasswordRequest): Observable<{ mensaje: string }> {
+    return this.http
+      .post<{ mensaje: string }>(`${this.baseUrl}/olvide-contrasena`, data)
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
+  resetPassword(data: ResetPasswordRequest): Observable<{ mensaje: string }> {
+    return this.http
+      .patch<{ mensaje: string }>(`${this.baseUrl}/restablecer-contrasena`, data)
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
   }
 

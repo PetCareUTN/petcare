@@ -14,6 +14,7 @@ import { Veterinario } from './veterinarios/entities/veterinario.entity';
 import { VeterinariosModule } from './veterinarios/veterinarios.module';
 import { Notificacion } from './notificaciones/entities/notificacion.entity';
 import { NotificacionesModule } from './notificaciones/notificaciones.module';
+import { MailModule } from './mail/mail.module';
 import { EventoClinico } from './eventos-clinicos/entities/evento-clinico.entity';
 import { EventosClinicosModule } from './eventos-clinicos/eventos-clinicos.module';
 import { HistoriaClinica } from './historias-clinicas/entities/historia-clinica.entity';
@@ -46,6 +47,7 @@ dotenv.config();
     MascotasModule,
     VeterinariosModule,
     NotificacionesModule,
+    MailModule,
     EventosClinicosModule,
   ],
   controllers: [AppController],

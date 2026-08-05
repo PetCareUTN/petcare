@@ -10,9 +10,6 @@ async function bootstrap() {
   app.enableCors({
     origin: process.env.CORS_ORIGIN ?? 'http://localhost:4200',
   });
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
-    prefix: '/uploads',
-  });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
