@@ -55,7 +55,8 @@ class PetsControllerTest {
                 birthDate = "2022-05-10",
                 peso = 12.5,
                 esterilizado = true,
-                observaciones = "Sin observaciones"
+                observaciones = "Sin observaciones",
+                alergias = "Alergia al polen"
             )
 
             val pet = controller.createPet(request)
@@ -63,6 +64,7 @@ class PetsControllerTest {
             assertEquals(request, fakePetsApi.createdRequest)
             assertEquals("Nina", pet.nombre)
             assertEquals("Perro", pet.especie)
+            assertEquals("Alergia al polen", pet.alergias)
         }
 
     @Test
@@ -80,7 +82,8 @@ class PetsControllerTest {
                 birthDate = "2022-05-10",
                 peso = 13.0,
                 esterilizado = true,
-                observaciones = "Peso actualizado"
+                observaciones = "Peso actualizado",
+                alergias = null
             )
 
             val pet = controller.updatePet(7, request)
@@ -90,6 +93,32 @@ class PetsControllerTest {
             assertEquals("Nina", pet.nombre)
             assertEquals(13.0, pet.peso)
             assertEquals("Peso actualizado", pet.observaciones)
+        }
+
+    @Test
+    fun `updatePet actualiza la informacion medica basica de la mascota`() =
+        runBlocking {
+            val fakePetsApi = FakePetsApi()
+            val controller = PetsController(
+                petsApi = fakePetsApi
+            )
+            val request = UpdatePetRequest(
+                nombre = "Rocky",
+                especie = "Perro",
+                raza = "Labrador",
+                sexo = "macho",
+                birthDate = "2023-03-10",
+                peso = 28.0,
+                esterilizado = true,
+                observaciones = "Toma medicacion diaria",
+                alergias = "Alergia a la penicilina"
+            )
+
+            val pet = controller.updatePet(1, request)
+
+            assertEquals(request, fakePetsApi.updatedRequest)
+            assertEquals("Alergia a la penicilina", pet.alergias)
+            assertEquals("Toma medicacion diaria", pet.observaciones)
         }
 
     private class FakePetsApi : PetsApi {
@@ -109,7 +138,8 @@ class PetsControllerTest {
                     peso = 28.0,
                     esterilizado = true,
                     foto = null,
-                    observaciones = null
+                    observaciones = null,
+                    alergias = null
                 ),
                 PetResponse(
                     id = 2,
@@ -121,7 +151,8 @@ class PetsControllerTest {
                     peso = null,
                     esterilizado = false,
                     foto = null,
-                    observaciones = null
+                    observaciones = null,
+                    alergias = null
                 )
             )
 
@@ -140,7 +171,8 @@ class PetsControllerTest {
                 peso = request.peso,
                 esterilizado = request.esterilizado,
                 foto = null,
-                observaciones = request.observaciones
+                observaciones = request.observaciones,
+                alergias = request.alergias
             )
         }
 
@@ -153,6 +185,7 @@ class PetsControllerTest {
             peso: RequestBody?,
             esterilizado: RequestBody,
             observaciones: RequestBody?,
+            alergias: RequestBody?,
             foto: MultipartBody.Part
         ): PetResponse =
             throw UnsupportedOperationException("No usado en este test")
@@ -170,7 +203,8 @@ class PetsControllerTest {
                 peso = request.peso,
                 esterilizado = request.esterilizado,
                 foto = null,
-                observaciones = request.observaciones
+                observaciones = request.observaciones,
+                alergias = request.alergias
             )
         }
 
@@ -184,6 +218,7 @@ class PetsControllerTest {
             peso: RequestBody?,
             esterilizado: RequestBody,
             observaciones: RequestBody?,
+            alergias: RequestBody?,
             foto: MultipartBody.Part
         ): PetResponse =
             throw UnsupportedOperationException("No usado en este test")

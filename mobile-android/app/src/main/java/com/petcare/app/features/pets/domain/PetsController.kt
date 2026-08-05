@@ -33,6 +33,7 @@ class PetsController(
             peso = request.peso?.toString()?.asTextBody(),
             esterilizado = request.esterilizado.toString().asTextBody(),
             observaciones = request.observaciones?.asTextBody(),
+            alergias = request.alergias?.asTextBody(),
             foto = photo
         )
 
@@ -54,6 +55,7 @@ class PetsController(
             peso = request.peso?.toString()?.asTextBody(),
             esterilizado = request.esterilizado.toString().asTextBody(),
             observaciones = request.observaciones?.asTextBody(),
+            alergias = request.alergias?.asTextBody(),
             foto = photo
         )
 
