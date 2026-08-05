@@ -3,8 +3,13 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { VeterinariosService } from './veterinarios.service';
 import { Veterinario } from './entities/veterinario.entity';
+import { Role } from '../roles/entities/role.entity';
+import { User } from '../users/entities/user.entity';
+import { UsersService } from '../users/users.service';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { ValidationStatus } from '../common/enums/validation-status.enum';
+import { RoleName } from '../common/enums/role-name.enum';
+import { RegisterVeterinarioDto } from './dto/register-veterinario.dto';
 
 describe('VeterinariosService', () => {
   let service: VeterinariosService;
@@ -13,6 +18,13 @@ describe('VeterinariosService', () => {
     create: jest.Mock;
     save: jest.Mock;
     find: jest.Mock;
+  };
+  let rolesRepository: {
+    findOne: jest.Mock;
+  };
+  let usersService: {
+    findByEmail: jest.Mock;
+    create: jest.Mock;
   };
   let notificacionesService: {
     crear: jest.Mock;
@@ -23,11 +35,18 @@ describe('VeterinariosService', () => {
     filename: 'test.pdf',
   } as Express.Multer.File;
 
-  const mockBody = {
+  const registroDto: RegisterVeterinarioDto = {
+    nombre: 'Clinica Norte',
+    email: 'clinica@petcare.test',
+    password: 'ClaveSegura123',
+    telefono: '3511234567',
+    direccion: 'Av. Siempre Viva 123',
     numeroDocumento: '12345678',
     numeroMatricula: 'MAT-001',
     provinciaMatricula: 'Buenos Aires',
   };
+
+  const vetRole: Role = { idRol: 2, nombre: RoleName.VETERINARIO };
 
   beforeEach(async () => {
     repository = {
@@ -36,12 +55,16 @@ describe('VeterinariosService', () => {
       save: jest.fn(),
       find: jest.fn(),
     };
+    rolesRepository = { findOne: jest.fn() };
+    usersService = { findByEmail: jest.fn(), create: jest.fn() };
     notificacionesService = { crear: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         VeterinariosService,
         { provide: getRepositoryToken(Veterinario), useValue: repository },
+        { provide: getRepositoryToken(Role), useValue: rolesRepository },
+        { provide: UsersService, useValue: usersService },
         { provide: NotificacionesService, useValue: notificacionesService },
       ],
     }).compile();
@@ -53,65 +76,77 @@ describe('VeterinariosService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('crearSolicitud', () => {
-    it('debería crear una solicitud nueva cuando no existe registro previo', async () => {
-      repository.findOne.mockResolvedValue(null);
-      const created = { idVeterinario: 1, estadoValidacion: ValidationStatus.PENDIENTE };
-      repository.create.mockReturnValue(created);
-      repository.save.mockResolvedValue(created);
+  describe('registrarVeterinario', () => {
+    it('crea el usuario con rol veterinario y la solicitud de validación pendiente', async () => {
+      usersService.findByEmail.mockResolvedValue(null);
+      rolesRepository.findOne.mockResolvedValue(vetRole);
+      const usuarioCreado = { idUsuario: 1 } as User;
+      usersService.create.mockResolvedValue(usuarioCreado);
+      const veterinarioCreado = {
+        idVeterinario: 1,
+        estadoValidacion: ValidationStatus.PENDIENTE,
+      };
+      repository.create.mockReturnValue(veterinarioCreado);
+      repository.save.mockResolvedValue(veterinarioCreado);
       notificacionesService.crear.mockResolvedValue({});
 
-      const result = await service.crearSolicitud(1, mockBody, mockFile);
+      const result = await service.registrarVeterinario(registroDto, mockFile);
+
+      expect(usersService.findByEmail).toHaveBeenCalledWith(registroDto.email);
+      expect(rolesRepository.findOne).toHaveBeenCalledWith({
+        where: { nombre: RoleName.VETERINARIO },
+      });
+      expect(usersService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          nombre: registroDto.nombre,
+          apellido: null,
+          email: registroDto.email,
+          idRol: vetRole.idRol,
+          telefono: registroDto.telefono,
+          direccion: registroDto.direccion,
+        }),
+      );
+      const createArgs = usersService.create.mock.calls[0][0];
+      expect(createArgs.password).not.toBe(registroDto.password);
 
       expect(repository.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          numeroDocumento: '12345678',
-          numeroMatricula: 'MAT-001',
-          provinciaMatricula: 'Buenos Aires',
+          usuario: usuarioCreado,
+          numeroDocumento: registroDto.numeroDocumento,
+          numeroMatricula: registroDto.numeroMatricula,
+          provinciaMatricula: registroDto.provinciaMatricula,
           estadoValidacion: ValidationStatus.PENDIENTE,
         }),
       );
       expect(repository.save).toHaveBeenCalled();
       expect(notificacionesService.crear).toHaveBeenCalled();
-      expect(result).toBeDefined();
-    });
-
-    it('debería lanzar ConflictException si ya existe solicitud pendiente', async () => {
-      const existente = { idVeterinario: 1, estadoValidacion: ValidationStatus.PENDIENTE };
-      repository.findOne.mockResolvedValue(existente);
-
-      await expect(service.crearSolicitud(1, mockBody, mockFile)).rejects.toThrow(
-        ConflictException,
-      );
-    });
-
-    it('debería actualizar registro existente si fue rechazado', async () => {
-      const existente = {
-        idVeterinario: 1,
-        estadoValidacion: ValidationStatus.RECHAZADO,
-        numeroDocumento: '00000000',
-        numeroMatricula: 'OLD',
-        provinciaMatricula: 'Old',
-        matriculaUrl: 'old.pdf',
-        motivoRechazo: 'Motivo viejo',
-      };
-      repository.findOne.mockResolvedValue(existente);
-      repository.save.mockResolvedValue({ ...existente, estadoValidacion: ValidationStatus.PENDIENTE });
-      notificacionesService.crear.mockResolvedValue({});
-
-      const result = await service.crearSolicitud(1, mockBody, mockFile);
-
-      expect(existente.numeroDocumento).toBe('12345678');
-      expect(existente.estadoValidacion).toBe(ValidationStatus.PENDIENTE);
-      expect(existente.motivoRechazo).toBeNull();
-      expect(repository.save).toHaveBeenCalled();
-      expect(notificacionesService.crear).toHaveBeenCalled();
+      expect(result.mensaje).toBeDefined();
     });
 
     it('debería lanzar BadRequestException si no se envía archivo', async () => {
-      await expect(service.crearSolicitud(1, mockBody, undefined as any)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.registrarVeterinario(registroDto, undefined as any),
+      ).rejects.toThrow(BadRequestException);
+      expect(usersService.findByEmail).not.toHaveBeenCalled();
+    });
+
+    it('debería lanzar ConflictException si el email ya está registrado', async () => {
+      usersService.findByEmail.mockResolvedValue({ idUsuario: 5 } as User);
+
+      await expect(
+        service.registrarVeterinario(registroDto, mockFile),
+      ).rejects.toThrow(ConflictException);
+      expect(usersService.create).not.toHaveBeenCalled();
+    });
+
+    it('lanza un error si no existe el rol veterinario en el seed', async () => {
+      usersService.findByEmail.mockResolvedValue(null);
+      rolesRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.registrarVeterinario(registroDto, mockFile),
+      ).rejects.toThrow('No se encontró el rol "veterinario"');
+      expect(usersService.create).not.toHaveBeenCalled();
     });
   });
 

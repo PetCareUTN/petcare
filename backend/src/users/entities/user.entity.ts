@@ -21,14 +21,17 @@ export class User {
   @Column({ type: 'varchar', length: 100 })
   nombre: string;
 
-  @Column({ type: 'varchar', length: 100 })
-  apellido: string;
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  apellido: string | null;
 
   @Column({ type: 'varchar', length: 150, unique: true })
   email: string;
 
   @Column({ type: 'varchar', length: 30, nullable: true })
-  telefono: string;
+  telefono: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  direccion: string | null;
 
   @Column({ type: 'varchar', length: 255 })
   password: string;

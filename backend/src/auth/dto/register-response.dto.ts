@@ -3,7 +3,7 @@ import { User } from '../../users/entities/user.entity';
 export class RegisterResponseDto {
   id_usuario: number;
   nombre: string;
-  apellido: string;
+  apellido: string | null;
   email: string;
   id_rol: number;
   estado: string;

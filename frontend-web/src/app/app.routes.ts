@@ -97,13 +97,6 @@ export const routes: Routes = [
     ],
   },
   {
-    path: 'veterinarios/solicitar',
-    loadComponent: () =>
-      import('./features/veterinarios/pages/solicitar-validacion/solicitar-validacion').then(
-        (m) => m.SolicitarValidacionPage,
-      ),
-  },
-  {
     path: 'veterinarios/estado',
     loadComponent: () =>
       import('./features/veterinarios/pages/estado-validacion/estado-validacion').then(

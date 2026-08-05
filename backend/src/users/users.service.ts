@@ -25,16 +25,20 @@ export class UsersService {
 
   async create(data: {
     nombre: string;
-    apellido: string;
+    apellido?: string | null;
     email: string;
     password: string;
     idRol: number;
+    telefono?: string | null;
+    direccion?: string | null;
   }): Promise<User> {
     const user = this.usersRepository.create({
       nombre: data.nombre,
-      apellido: data.apellido,
+      apellido: data.apellido ?? null,
       email: data.email,
       password: data.password,
+      telefono: data.telefono ?? null,
+      direccion: data.direccion ?? null,
       rol: { idRol: data.idRol },
     });
 

@@ -16,10 +16,9 @@ export class VeterinariosService {
   private readonly authService = inject(AuthService);
   private readonly baseUrl = `${environment.apiUrl}/veterinarios`;
 
-  solicitar(formData: FormData): Observable<VeterinarioResponse> {
-    const headers = this.getAuthHeaders();
+  registrar(formData: FormData): Observable<{ mensaje: string }> {
     return this.http
-      .post<VeterinarioResponse>(`${this.baseUrl}/solicitar`, formData, { headers })
+      .post<{ mensaje: string }>(`${this.baseUrl}/registro`, formData)
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
   }
 

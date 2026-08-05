@@ -1,12 +1,14 @@
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 import { RoleName } from '../common/enums/role-name.enum';
+import { ValidationStatus } from '../common/enums/validation-status.enum';
 import { Role } from '../roles/entities/role.entity';
 import { User } from '../users/entities/user.entity';
 import { UsersService } from '../users/users.service';
+import { Veterinario } from '../veterinarios/entities/veterinario.entity';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -24,8 +26,12 @@ describe('AuthService', () => {
   let rolesRepository: {
     findOne: jest.Mock;
   };
+  let veterinariosRepository: {
+    findOne: jest.Mock;
+  };
 
   const defaultRole: Role = { idRol: 1, nombre: RoleName.DUENO_MASCOTA };
+  const vetRole: Role = { idRol: 2, nombre: RoleName.VETERINARIO };
 
   const registerDto: RegisterDto = {
     nombre: 'Simon',
@@ -58,6 +64,12 @@ describe('AuthService', () => {
             findOne: jest.fn(),
           },
         },
+        {
+          provide: getRepositoryToken(Veterinario),
+          useValue: {
+            findOne: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -65,6 +77,7 @@ describe('AuthService', () => {
     usersService = module.get(UsersService);
     jwtService = module.get(JwtService);
     rolesRepository = module.get(getRepositoryToken(Role));
+    veterinariosRepository = module.get(getRepositoryToken(Veterinario));
   });
 
   it('should be defined', () => {
@@ -80,7 +93,8 @@ describe('AuthService', () => {
       nombre: registerDto.nombre,
       apellido: registerDto.apellido,
       email: registerDto.email,
-      telefono: null as unknown as string,
+      telefono: null,
+      direccion: null,
       password: 'hashed-password',
       fechaRegistro: new Date('2026-07-02T00:00:00.000Z'),
       estado: 'activo',
@@ -139,16 +153,17 @@ describe('AuthService', () => {
       password: 'ClaveSegura123',
     };
 
-    const buildUser = async (): Promise<User> => ({
+    const buildUser = async (rol: Role = defaultRole): Promise<User> => ({
       idUsuario: 7,
       nombre: 'Simon',
       apellido: 'Breitkopf',
       email: loginDto.email,
-      telefono: null as unknown as string,
+      telefono: null,
+      direccion: null,
       password: await bcrypt.hash(loginDto.password, 10),
       fechaRegistro: new Date('2026-07-02T00:00:00.000Z'),
       estado: 'activo',
-      rol: defaultRole,
+      rol,
       updatedAt: new Date('2026-07-02T00:00:00.000Z'),
     });
 
@@ -175,6 +190,7 @@ describe('AuthService', () => {
         apellido: user.apellido,
         email: user.email,
         telefono: null,
+        direccion: null,
         id_rol: defaultRole.idRol,
         estado: user.estado,
         fecha_registro: user.fechaRegistro,
@@ -201,6 +217,57 @@ describe('AuthService', () => {
         UnauthorizedException,
       );
       expect(jwtService.signAsync).not.toHaveBeenCalled();
+    });
+
+    it('blocks a veterinario account with a pending validation request', async () => {
+      const user = await buildUser(vetRole);
+      usersService.findByEmail.mockResolvedValue(user);
+      veterinariosRepository.findOne.mockResolvedValue({
+        estadoValidacion: ValidationStatus.PENDIENTE,
+      });
+
+      await expect(service.login(loginDto)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(jwtService.signAsync).not.toHaveBeenCalled();
+    });
+
+    it('blocks a veterinario account that never requested validation', async () => {
+      const user = await buildUser(vetRole);
+      usersService.findByEmail.mockResolvedValue(user);
+      veterinariosRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.login(loginDto)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(jwtService.signAsync).not.toHaveBeenCalled();
+    });
+
+    it('blocks a veterinario account that was rejected', async () => {
+      const user = await buildUser(vetRole);
+      usersService.findByEmail.mockResolvedValue(user);
+      veterinariosRepository.findOne.mockResolvedValue({
+        estadoValidacion: ValidationStatus.RECHAZADO,
+        motivoRechazo: 'Matrícula vencida',
+      });
+
+      await expect(service.login(loginDto)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(jwtService.signAsync).not.toHaveBeenCalled();
+    });
+
+    it('allows a veterinario account that was approved', async () => {
+      const user = await buildUser(vetRole);
+      usersService.findByEmail.mockResolvedValue(user);
+      veterinariosRepository.findOne.mockResolvedValue({
+        estadoValidacion: ValidationStatus.APROBADO,
+      });
+      jwtService.signAsync.mockResolvedValue('signed-jwt');
+
+      const result = await service.login(loginDto);
+
+      expect(result.token).toBe('signed-jwt');
     });
   });
 });
