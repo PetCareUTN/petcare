@@ -139,6 +139,38 @@
             @if (evento.observaciones) {
               <p class="evento-detalle"><strong>Observaciones:</strong> {{ evento.observaciones }}</p>
             }
+
+            <div class="evento-archivos">
+              @if (evento.archivos.length > 0) {
+                <ul class="archivo-list">
+                  @for (archivo of evento.archivos; track archivo.idArchivo) {
+                    <li>
+                      <a [href]="resolveArchivoUrl(archivo.url)" target="_blank" rel="noopener">
+                        {{ archivo.nombreOriginal }}
+                      </a>
+                    </li>
+                  }
+                </ul>
+              }
+
+              @if (authService.isVeterinario()) {
+                <label class="btn-text archivo-upload-label" [for]="'archivo-input-' + evento.idEvento">
+                  {{ uploadingEventoId() === evento.idEvento ? 'Subiendo...' : '+ Adjuntar estudio o receta' }}
+                </label>
+                <input
+                  type="file"
+                  [id]="'archivo-input-' + evento.idEvento"
+                  class="archivo-input"
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  multiple
+                  [disabled]="uploadingEventoId() === evento.idEvento"
+                  (change)="subirArchivos(evento.idEvento, $any($event.target))"
+                />
+                @if (uploadErrors()[evento.idEvento]) {
+                  <p class="field-error">{{ uploadErrors()[evento.idEvento] }}</p>
+                }
+              }
+            </div>
           </li>
         }
       </ol>

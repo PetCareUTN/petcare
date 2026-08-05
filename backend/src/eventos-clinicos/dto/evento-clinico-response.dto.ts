@@ -1,5 +1,6 @@
 import { ClinicalEventType } from '../../common/enums/clinical-event-type.enum';
 import { EventoClinico } from '../entities/evento-clinico.entity';
+import { ArchivoMedicoResponseDto } from './archivo-medico-response.dto';
 
 export class EventoClinicoResponseDto {
   idEvento: number;
@@ -14,6 +15,7 @@ export class EventoClinicoResponseDto {
   observaciones: string | null;
   createdAt: Date;
   updatedAt: Date;
+  archivos: ArchivoMedicoResponseDto[];
 
   static fromEntity(evento: EventoClinico): EventoClinicoResponseDto {
     return {
@@ -29,6 +31,9 @@ export class EventoClinicoResponseDto {
       observaciones: evento.observaciones,
       createdAt: evento.createdAt,
       updatedAt: evento.updatedAt,
+      archivos: (evento.archivosMedicos ?? []).map((archivo) =>
+        ArchivoMedicoResponseDto.fromEntity(archivo, evento.idEvento),
+      ),
     };
   }
 }

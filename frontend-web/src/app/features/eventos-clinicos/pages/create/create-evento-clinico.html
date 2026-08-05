@@ -75,4 +75,38 @@
       {{ isSubmitting() ? 'Registrando...' : 'Registrar evento' }}
     </button>
   </form>
+
+  @if (createdEventId(); as eventId) {
+    <section class="evento-archivos">
+      @if (archivosSubidos().length > 0) {
+        <ul class="archivo-list">
+          @for (archivo of archivosSubidos(); track archivo.idArchivo) {
+            <li>
+              <a [href]="resolveArchivoUrl(archivo.url)" target="_blank" rel="noopener">
+                {{ archivo.nombreOriginal }}
+              </a>
+            </li>
+          }
+        </ul>
+      }
+
+      @if (authService.isVeterinario()) {
+        <label class="btn-text archivo-upload-label" [for]="'archivo-input-' + eventId">
+          {{ uploadingArchivos() ? 'Subiendo...' : '+ Adjuntar estudio o receta' }}
+        </label>
+        <input
+          type="file"
+          [id]="'archivo-input-' + eventId"
+          class="archivo-input"
+          accept=".jpg,.jpeg,.png,.pdf"
+          multiple
+          [disabled]="uploadingArchivos()"
+          (change)="subirArchivos($any($event.target))"
+        />
+        @if (uploadError()) {
+          <p class="field-error">{{ uploadError() }}</p>
+        }
+      }
+    </section>
+  }
 </main>

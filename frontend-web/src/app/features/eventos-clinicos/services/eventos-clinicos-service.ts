@@ -5,6 +5,7 @@ import { environment } from '../../../../environments/environment';
 import { ApiError } from '../../auth/models/user';
 import { AuthService } from '../../auth/services/auth-service';
 import {
+  ArchivoMedicoResponse,
   CreateEventoClinicoRequest,
   EventoClinicoResponse,
   HistoriaClinicaResponse,
@@ -28,6 +29,26 @@ export class EventosClinicosService {
         headers: this.authHeaders(),
       })
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
+  agregarArchivos(idEvento: number, archivos: File[]): Observable<ArchivoMedicoResponse[]> {
+    const formData = new FormData();
+    archivos.forEach((archivo) => formData.append('archivos', archivo));
+
+    return this.http
+      .post<ArchivoMedicoResponse[]>(`${this.baseUrl}/${idEvento}/archivos-medicos`, formData, {
+        headers: this.authHeaders(),
+      })
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
+  /**
+   * El backend guarda `url` como ruta relativa (p. ej. `/uploads/eventos-clinicos/x.pdf`),
+   * servida desde su propio origen. El frontend corre en otro puerto, así que hay
+   * que anteponerle la URL de la API para que el navegador la resuelva bien.
+   */
+  resolveArchivoUrl(url: string): string {
+    return url.startsWith('http') ? url : `${environment.apiUrl}${url}`;
   }
 
   private authHeaders(): HttpHeaders | undefined {

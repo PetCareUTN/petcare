@@ -1,4 +1,8 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
@@ -9,8 +13,10 @@ import { HistoriaClinica } from '../historias-clinicas/entities/historia-clinica
 import { Mascota } from '../mascotas/entities/mascota.entity';
 import { Veterinario } from '../veterinarios/entities/veterinario.entity';
 import { CreateEventoClinicoDto } from './dto/create-evento-clinico.dto';
+import { ArchivoMedico } from './entities/archivo-medico.entity';
 import { EventoClinico } from './entities/evento-clinico.entity';
 import { EventosClinicosService } from './eventos-clinicos.service';
+import type { UploadedMedicalFile } from './types/uploaded-medical-file.type';
 
 describe('EventosClinicosService', () => {
   let service: EventosClinicosService;
@@ -19,6 +25,10 @@ describe('EventosClinicosService', () => {
     save: jest.Mock;
     find: jest.Mock;
     findOne: jest.Mock;
+  };
+  let archivosMedicosRepository: {
+    create: jest.Mock;
+    save: jest.Mock;
   };
   let historiasClinicasRepository: {
     create: jest.Mock;
@@ -53,6 +63,10 @@ describe('EventosClinicosService', () => {
       find: jest.fn(),
       findOne: jest.fn(),
     };
+    archivosMedicosRepository = {
+      create: jest.fn(),
+      save: jest.fn(),
+    };
     historiasClinicasRepository = {
       create: jest.fn(),
       save: jest.fn(),
@@ -71,6 +85,10 @@ describe('EventosClinicosService', () => {
         {
           provide: getRepositoryToken(EventoClinico),
           useValue: eventosClinicosRepository,
+        },
+        {
+          provide: getRepositoryToken(ArchivoMedico),
+          useValue: archivosMedicosRepository,
         },
         {
           provide: getRepositoryToken(HistoriaClinica),
@@ -253,7 +271,12 @@ describe('EventosClinicosService', () => {
 
       expect(eventosClinicosRepository.find).toHaveBeenCalledWith({
         where: { historia: { idHistoria: 20 } },
-        relations: ['historia', 'historia.mascota', 'veterinario'],
+        relations: [
+          'historia',
+          'historia.mascota',
+          'veterinario',
+          'archivosMedicos',
+        ],
         order: { fecha: 'ASC' },
       });
       expect(result.idHistoria).toBe(20);
@@ -281,7 +304,10 @@ describe('EventosClinicosService', () => {
       const result = await service.findHistoriaClinicaByMascota(10, requester);
 
       expect(eventosClinicosRepository.findOne).toHaveBeenCalledWith({
-        where: { historia: { idHistoria: 20 }, veterinario: { idVeterinario: 4 } },
+        where: {
+          historia: { idHistoria: 20 },
+          veterinario: { idVeterinario: 4 },
+        },
       });
       expect(result.eventos).toHaveLength(1);
     });
@@ -367,6 +393,141 @@ describe('EventosClinicosService', () => {
       await expect(
         service.findHistoriaClinicaByMascota(999, requester),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('agregarArchivos', () => {
+    const historia = { idHistoria: 20 } as HistoriaClinica;
+    const eventoGuardado = {
+      idEvento: 30,
+      historia,
+      veterinario,
+    } as EventoClinico;
+
+    const archivo: UploadedMedicalFile = {
+      filename: 'a1b2c3.pdf',
+      originalname: 'analisis-sangre.pdf',
+      mimetype: 'application/pdf',
+      size: 1024,
+    };
+
+    it('adjunta archivos cuando el veterinario es el autor del evento', async () => {
+      veterinariosRepository.findOne.mockResolvedValue(veterinario);
+      eventosClinicosRepository.findOne.mockResolvedValue(eventoGuardado);
+      archivosMedicosRepository.create.mockImplementation(
+        (data: Partial<ArchivoMedico>) => data,
+      );
+      archivosMedicosRepository.save.mockResolvedValue([
+        {
+          idArchivo: 1,
+          nombreOriginal: archivo.originalname,
+          nombreArchivo: archivo.filename,
+          mimeType: archivo.mimetype,
+          tamanoBytes: archivo.size,
+          createdAt: new Date('2026-08-01T10:00:00Z'),
+        },
+      ]);
+
+      const result = await service.agregarArchivos(30, 7, [archivo]);
+
+      expect(eventosClinicosRepository.findOne).toHaveBeenCalledWith({
+        where: { idEvento: 30 },
+        relations: ['historia', 'veterinario'],
+      });
+      expect(archivosMedicosRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          evento: eventoGuardado,
+          nombreOriginal: archivo.originalname,
+          nombreArchivo: archivo.filename,
+          mimeType: archivo.mimetype,
+          tamanoBytes: archivo.size,
+        }),
+      );
+      expect(result).toEqual([
+        expect.objectContaining({
+          idArchivo: 1,
+          idEvento: 30,
+          nombreOriginal: archivo.originalname,
+          url: '/uploads/eventos-clinicos/a1b2c3.pdf',
+        }),
+      ]);
+    });
+
+    it('adjunta archivos cuando otro veterinario ya es paciente de esa historia', async () => {
+      const otroVeterinario = {
+        idVeterinario: 9,
+        estadoValidacion: ValidationStatus.APROBADO,
+      } as Veterinario;
+
+      veterinariosRepository.findOne.mockResolvedValue(otroVeterinario);
+      eventosClinicosRepository.findOne
+        .mockResolvedValueOnce(eventoGuardado)
+        .mockResolvedValueOnce(eventoGuardado);
+      archivosMedicosRepository.create.mockImplementation(
+        (data: Partial<ArchivoMedico>) => data,
+      );
+      archivosMedicosRepository.save.mockResolvedValue([
+        {
+          idArchivo: 2,
+          nombreOriginal: archivo.originalname,
+          nombreArchivo: archivo.filename,
+          mimeType: archivo.mimetype,
+          tamanoBytes: archivo.size,
+          createdAt: new Date('2026-08-01T10:00:00Z'),
+        },
+      ]);
+
+      const result = await service.agregarArchivos(30, 15, [archivo]);
+
+      expect(eventosClinicosRepository.findOne).toHaveBeenNthCalledWith(2, {
+        where: {
+          historia: { idHistoria: 20 },
+          veterinario: { idVeterinario: 9 },
+        },
+      });
+      expect(result).toHaveLength(1);
+    });
+
+    it('rechaza a un veterinario que no atendio esa historia ni es el autor', async () => {
+      const otroVeterinario = {
+        idVeterinario: 9,
+        estadoValidacion: ValidationStatus.APROBADO,
+      } as Veterinario;
+
+      veterinariosRepository.findOne.mockResolvedValue(otroVeterinario);
+      eventosClinicosRepository.findOne
+        .mockResolvedValueOnce(eventoGuardado)
+        .mockResolvedValueOnce(null);
+
+      await expect(service.agregarArchivos(30, 15, [archivo])).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(archivosMedicosRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('rechaza cuando el evento clinico no existe', async () => {
+      veterinariosRepository.findOne.mockResolvedValue(veterinario);
+      eventosClinicosRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.agregarArchivos(999, 7, [archivo])).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('rechaza cuando no se envio ningun archivo', async () => {
+      await expect(service.agregarArchivos(30, 7, [])).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(veterinariosRepository.findOne).not.toHaveBeenCalled();
+    });
+
+    it('rechaza cuando el usuario no es un veterinario validado', async () => {
+      veterinariosRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.agregarArchivos(30, 7, [archivo])).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(eventosClinicosRepository.findOne).not.toHaveBeenCalled();
     });
   });
 });

@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiError } from '../../../auth/models/user';
 import { AuthService } from '../../../auth/services/auth-service';
 import {
+  ArchivoMedicoResponse,
   ClinicalEventType,
   CreateEventoClinicoRequest,
 } from '../../models/evento-clinico';
@@ -23,7 +24,7 @@ type EventTypeOption = {
 export class CreateEventoClinicoPage implements OnInit {
   private readonly formBuilder = inject(FormBuilder);
   private readonly eventosClinicosService = inject(EventosClinicosService);
-  private readonly authService = inject(AuthService);
+  protected readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -41,6 +42,9 @@ export class CreateEventoClinicoPage implements OnInit {
   protected readonly successMessage = signal<string | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly createdEventId = signal<number | null>(null);
+  protected readonly archivosSubidos = signal<ArchivoMedicoResponse[]>([]);
+  protected readonly uploadingArchivos = signal(false);
+  protected readonly uploadError = signal<string | null>(null);
 
   protected readonly form = this.formBuilder.group({
     idMascota: [null as number | null, [Validators.required, Validators.min(1)]],
@@ -78,6 +82,8 @@ export class CreateEventoClinicoPage implements OnInit {
     this.successMessage.set(null);
     this.errorMessage.set(null);
     this.createdEventId.set(null);
+    this.archivosSubidos.set([]);
+    this.uploadError.set(null);
     this.isSubmitting.set(true);
 
     const value = this.form.getRawValue();
@@ -95,6 +101,7 @@ export class CreateEventoClinicoPage implements OnInit {
       next: (evento) => {
         this.isSubmitting.set(false);
         this.createdEventId.set(evento.idEvento);
+        this.archivosSubidos.set(evento.archivos);
         this.successMessage.set(
           `Evento clinico registrado en la historia #${evento.idHistoria}.`,
         );
@@ -111,6 +118,38 @@ export class CreateEventoClinicoPage implements OnInit {
       error: (error: ApiError) => {
         this.isSubmitting.set(false);
         this.errorMessage.set(error.mensaje ?? 'Ocurrio un error al registrar el evento.');
+      },
+    });
+  }
+
+  protected resolveArchivoUrl(url: string): string {
+    return this.eventosClinicosService.resolveArchivoUrl(url);
+  }
+
+  protected subirArchivos(input: HTMLInputElement): void {
+    const idEvento = this.createdEventId();
+    if (idEvento === null) {
+      return;
+    }
+
+    const archivos = input.files ? Array.from(input.files) : [];
+    if (archivos.length === 0) {
+      return;
+    }
+
+    this.uploadingArchivos.set(true);
+    this.uploadError.set(null);
+
+    this.eventosClinicosService.agregarArchivos(idEvento, archivos).subscribe({
+      next: (nuevosArchivos) => {
+        this.uploadingArchivos.set(false);
+        input.value = '';
+        this.archivosSubidos.update((actuales) => [...actuales, ...nuevosArchivos]);
+      },
+      error: (error: ApiError) => {
+        this.uploadingArchivos.set(false);
+        input.value = '';
+        this.uploadError.set(error.mensaje ?? 'No se pudo adjuntar el archivo.');
       },
     });
   }

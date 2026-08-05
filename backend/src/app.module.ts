@@ -16,6 +16,7 @@ import { Notificacion } from './notificaciones/entities/notificacion.entity';
 import { NotificacionesModule } from './notificaciones/notificaciones.module';
 import { MailModule } from './mail/mail.module';
 import { EventoClinico } from './eventos-clinicos/entities/evento-clinico.entity';
+import { ArchivoMedico } from './eventos-clinicos/entities/archivo-medico.entity';
 import { EventosClinicosModule } from './eventos-clinicos/eventos-clinicos.module';
 import { HistoriaClinica } from './historias-clinicas/entities/historia-clinica.entity';
 
@@ -38,6 +39,7 @@ dotenv.config();
         Notificacion,
         HistoriaClinica,
         EventoClinico,
+        ArchivoMedico,
       ],
       synchronize: false,
     }),
