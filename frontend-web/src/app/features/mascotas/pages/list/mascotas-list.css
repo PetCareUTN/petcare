@@ -18,6 +18,29 @@
   margin: 0;
 }
 
+.search-bar {
+  max-width: 960px;
+  margin: 0 auto var(--spacing-lg);
+}
+
+.search-bar input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 1rem;
+  font-family: inherit;
+  color: var(--text-primary);
+  background-color: var(--surface);
+}
+
+.search-bar input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
 .btn-primary {
   display: inline-block;
   padding: 0.65rem 1.25rem;
@@ -137,6 +160,15 @@
 .pet-card-actions {
   margin-top: auto;
   padding-top: var(--spacing-sm);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.pet-card-actions .btn-secondary {
+  flex: 1 1 auto;
+  text-align: center;
+  white-space: nowrap;
 }
 
 @media (max-width: 900px) {

@@ -77,7 +77,7 @@ export const routes: Routes = [
           import('./features/mascotas/pages/list/mascotas-list').then(
             (m) => m.MascotasListPage,
           ),
-        data: { heading: 'Mis Pacientes' },
+        data: { heading: 'Mis Pacientes', showHistoriaClinica: true },
       },
       {
         path: 'pacientes/nueva',

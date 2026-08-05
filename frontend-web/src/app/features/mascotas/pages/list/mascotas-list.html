@@ -4,6 +4,17 @@
     <a class="btn-primary" routerLink="nueva">+ Registrar mascota</a>
   </header>
 
+  @if (showHistoriaClinica && !isLoading() && !errorMessage() && mascotas().length > 0) {
+    <div class="search-bar">
+      <input
+        type="search"
+        placeholder="Buscar por ID o nombre..."
+        [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event)"
+      />
+    </div>
+  }
+
   @if (isLoading()) {
     <p class="status-text">Cargando...</p>
   }
@@ -19,9 +30,13 @@
         <p>Registrá tu primera mascota para comenzar.</p>
         <a class="btn-primary" routerLink="nueva">Registrar mascota</a>
       </div>
+    } @else if (filteredMascotas().length === 0) {
+      <div class="empty-state">
+        <p>No se encontraron pacientes para "{{ searchQuery() }}".</p>
+      </div>
     } @else {
       <div class="pet-grid">
-        @for (pet of mascotas(); track pet.idMascota) {
+        @for (pet of filteredMascotas(); track pet.idMascota) {
           <article class="pet-card">
             @if (pet.foto) {
               <img
@@ -48,6 +63,11 @@
 
             <div class="pet-card-actions">
               <a class="btn-secondary" [routerLink]="[pet.idMascota]">Ver perfil</a>
+              @if (showHistoriaClinica) {
+                <a class="btn-secondary" [routerLink]="['/eventos-clinicos/mascota', pet.idMascota]">
+                  Historia clínica
+                </a>
+              }
             </div>
           </article>
         }
