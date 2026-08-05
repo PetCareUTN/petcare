@@ -99,6 +99,25 @@
   color: var(--text-primary);
 }
 
+.section-title {
+  margin: var(--spacing-sm) 0 0;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.btn-primary {
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--radius-md);
+  background-color: var(--primary);
+  color: #ffffff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.btn-primary:hover {
+  background-color: #446f64;
+}
+
 .profile-actions {
   display: flex;
   flex-wrap: wrap;

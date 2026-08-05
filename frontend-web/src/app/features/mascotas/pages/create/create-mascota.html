@@ -5,14 +5,14 @@
         <h1>Registrar mascota</h1>
         <p>Alta de mascota asociada a tu usuario.</p>
       </div>
-      <a routerLink="/">Volver</a>
+      <a routerLink="..">Volver</a>
     </header>
 
     @if (successMessage()) {
       <p class="banner banner-success">
         {{ successMessage() }}
         @if (createdPetId(); as petId) {
-          <a [routerLink]="['/mascotas', petId]">Ver perfil</a>
+          <a [routerLink]="['..', petId]">Ver perfil</a>
         }
       </p>
     }
@@ -32,7 +32,12 @@
 
       <div class="field">
         <label for="especie">Especie</label>
-        <input id="especie" type="text" formControlName="especie" />
+        <select id="especie" formControlName="especie" (change)="onSpeciesChanged()">
+          <option value="">Seleccionar especie</option>
+          @for (species of speciesOptions; track species) {
+            <option [value]="species">{{ species }}</option>
+          }
+        </select>
         @if (form.controls.especie.invalid && form.controls.especie.touched) {
           <p class="field-error">La especie es obligatoria.</p>
         }
@@ -40,7 +45,12 @@
 
       <div class="field">
         <label for="raza">Raza</label>
-        <input id="raza" type="text" formControlName="raza" />
+        <select id="raza" formControlName="raza" [disabled]="!form.controls.especie.value">
+          <option value="">Seleccionar raza</option>
+          @for (breed of breedOptions(); track breed) {
+            <option [value]="breed">{{ breed }}</option>
+          }
+        </select>
       </div>
 
       <div class="field">
@@ -58,7 +68,10 @@
 
       <div class="field">
         <label for="peso">Peso</label>
-        <input id="peso" type="number" min="0" step="0.01" formControlName="peso" />
+        <div class="input-with-unit">
+          <input id="peso" type="number" min="0" step="0.01" formControlName="peso" />
+          <span>kg</span>
+        </div>
         @if (form.controls.peso.invalid && form.controls.peso.touched) {
           <p class="field-error">El peso no puede ser negativo.</p>
         }
@@ -81,6 +94,11 @@
         <input type="checkbox" formControlName="esterilizado" />
         Esterilizado
       </label>
+
+      <div class="field field-wide">
+        <label for="alergias">Alergias</label>
+        <textarea id="alergias" rows="3" formControlName="alergias"></textarea>
+      </div>
 
       <div class="field field-wide">
         <label for="observaciones">Observaciones</label>

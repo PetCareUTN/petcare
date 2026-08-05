@@ -8,7 +8,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { mkdir, writeFile } from 'fs/promises';
 import { extname, join } from 'path';
 import { Repository } from 'typeorm';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { RoleName } from '../common/enums/role-name.enum';
+import { ValidationStatus } from '../common/enums/validation-status.enum';
+import { EventoClinico } from '../eventos-clinicos/entities/evento-clinico.entity';
 import { User } from '../users/entities/user.entity';
+import { Veterinario } from '../veterinarios/entities/veterinario.entity';
 import { CreateMascotaDto } from './dto/create-mascota.dto';
 import { MascotaResponseDto } from './dto/mascota-response.dto';
 import { UpdateMascotaDto } from './dto/update-mascota.dto';
@@ -22,6 +27,10 @@ export class MascotasService {
     private readonly mascotasRepository: Repository<Mascota>,
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    @InjectRepository(Veterinario)
+    private readonly veterinariosRepository: Repository<Veterinario>,
+    @InjectRepository(EventoClinico)
+    private readonly eventosClinicosRepository: Repository<EventoClinico>,
   ) {}
 
   async create(
@@ -52,6 +61,7 @@ export class MascotasService {
       esterilizado: dto.esterilizado ?? false,
       foto: fotoPath,
       observaciones: dto.observaciones ?? null,
+      alergias: dto.alergias ?? null,
       usuarios: [duenio],
     });
 
@@ -71,8 +81,8 @@ export class MascotasService {
     return `/uploads/mascotas/${filename}`;
   }
 
-  async findOne(id: number, userId: number): Promise<MascotaResponseDto> {
-    const mascota = await this.findMascotaAndVerifyOwner(id, userId);
+  async findOne(id: number, requester: JwtPayload): Promise<MascotaResponseDto> {
+    const mascota = await this.findMascotaForViewing(id, requester);
     return MascotaResponseDto.fromEntity(mascota);
   }
 
@@ -108,6 +118,9 @@ export class MascotasService {
     if (dto.observaciones !== undefined) {
       mascota.observaciones = dto.observaciones;
     }
+    if (dto.alergias !== undefined) {
+      mascota.alergias = dto.alergias;
+    }
     if (foto) {
       mascota.foto = await this.saveFoto(foto);
     }
@@ -120,6 +133,66 @@ export class MascotasService {
     id: number,
     userId: number,
   ): Promise<Mascota> {
+    const mascota = await this.findMascota(id);
+
+    const esDuenio = mascota.usuarios.some((user) => user.idUsuario === userId);
+    if (!esDuenio) {
+      throw new ForbiddenException({
+        codigoEstado: 403,
+        mensaje: 'No tiene permisos para acceder a este recurso',
+      });
+    }
+
+    return mascota;
+  }
+
+  /**
+   * A diferencia de la edición (solo el dueño), la consulta de datos básicos
+   * también la puede hacer un veterinario validado que ya sea tratante de
+   * la mascota (mismo criterio que la consulta de historia clínica).
+   */
+  private async findMascotaForViewing(
+    id: number,
+    requester: JwtPayload,
+  ): Promise<Mascota> {
+    const mascota = await this.findMascota(id);
+
+    const esDuenio = mascota.usuarios.some(
+      (user) => user.idUsuario === requester.sub,
+    );
+    if (esDuenio) {
+      return mascota;
+    }
+
+    if (requester.rol === RoleName.VETERINARIO && mascota.idHistoria) {
+      const veterinario = await this.veterinariosRepository.findOne({
+        where: { usuario: { idUsuario: requester.sub } },
+      });
+
+      if (
+        veterinario &&
+        veterinario.estadoValidacion === ValidationStatus.APROBADO
+      ) {
+        const evento = await this.eventosClinicosRepository.findOne({
+          where: {
+            historia: { idHistoria: mascota.idHistoria },
+            veterinario: { idVeterinario: veterinario.idVeterinario },
+          },
+        });
+
+        if (evento) {
+          return mascota;
+        }
+      }
+    }
+
+    throw new ForbiddenException({
+      codigoEstado: 403,
+      mensaje: 'No tiene permisos para acceder a este recurso',
+    });
+  }
+
+  private async findMascota(id: number): Promise<Mascota> {
     const mascota = await this.mascotasRepository.findOne({
       where: { idMascota: id },
       relations: ['usuarios'],
@@ -129,14 +202,6 @@ export class MascotasService {
       throw new NotFoundException({
         codigoEstado: 404,
         mensaje: 'Mascota no encontrada',
-      });
-    }
-
-    const esDuenio = mascota.usuarios.some((user) => user.idUsuario === userId);
-    if (!esDuenio) {
-      throw new ForbiddenException({
-        codigoEstado: 403,
-        mensaje: 'No tiene permisos para acceder a este recurso',
       });
     }
 

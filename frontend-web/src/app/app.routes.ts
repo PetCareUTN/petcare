@@ -47,6 +47,56 @@ export const routes: Routes = [
     ],
   },
   {
+    path: 'eventos-clinicos',
+    loadComponent: () => import('./shared/layout/vet-layout').then((m) => m.VetLayout),
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./features/eventos-clinicos/pages/buscar/buscar-mascota').then(
+            (m) => m.BuscarMascotaPage,
+          ),
+      },
+      {
+        path: 'nuevo',
+        loadComponent: () =>
+          import('./features/eventos-clinicos/pages/create/create-evento-clinico').then(
+            (m) => m.CreateEventoClinicoPage,
+          ),
+      },
+      {
+        path: 'mascota/:idMascota',
+        loadComponent: () =>
+          import('./features/eventos-clinicos/pages/historia/historia-clinica').then(
+            (m) => m.HistoriaClinicaPage,
+          ),
+      },
+      {
+        path: 'pacientes',
+        loadComponent: () =>
+          import('./features/mascotas/pages/list/mascotas-list').then(
+            (m) => m.MascotasListPage,
+          ),
+        data: { heading: 'Mis Pacientes' },
+      },
+      {
+        path: 'pacientes/nueva',
+        loadComponent: () =>
+          import('./features/mascotas/pages/create/create-mascota').then(
+            (m) => m.CreateMascotaPage,
+          ),
+      },
+      {
+        path: 'pacientes/:id',
+        loadComponent: () =>
+          import('./features/mascotas/pages/profile/mascota-profile').then(
+            (m) => m.MascotaProfilePage,
+          ),
+        data: { backLabel: 'Volver a mis pacientes' },
+      },
+    ],
+  },
+  {
     path: 'veterinarios/solicitar',
     loadComponent: () =>
       import('./features/veterinarios/pages/solicitar-validacion/solicitar-validacion').then(

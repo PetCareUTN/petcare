@@ -45,9 +45,36 @@ data class ResetPasswordRequest(
 
 data class MessageResponse(
     val mensaje: String
+data class RegisterRequest(
+    val nombre: String,
+    val apellido: String,
+    val email: String,
+    val password: String
+)
+
+data class RegisterResponse(
+    @SerializedName("id_usuario")
+    val id: Int,
+
+    val nombre: String,
+    val apellido: String,
+    val email: String,
+
+    @SerializedName("id_rol")
+    val roleId: Int,
+
+    val estado: String,
+
+    @SerializedName("fecha_registro")
+    val registrationDate: String
 )
 
 interface AuthApi {
+
+    @POST("auth/register")
+    suspend fun register(
+        @Body request: RegisterRequest
+    ): RegisterResponse
 
     @POST("auth/login")
     suspend fun login(

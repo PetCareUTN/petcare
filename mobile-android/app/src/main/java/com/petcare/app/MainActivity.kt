@@ -1,6 +1,8 @@
 package com.petcare.app
 
+import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -8,8 +10,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,9 +27,25 @@ import com.petcare.app.features.auth.domain.AuthSessionController
 import com.petcare.app.features.auth.ui.ForgotPasswordScreen
 import com.petcare.app.features.auth.ui.LoginScreen
 import com.petcare.app.features.auth.ui.ResetPasswordScreen
+import com.petcare.app.features.auth.ui.AuthenticatedHomeScreen
+import com.petcare.app.features.auth.ui.LoginScreen
+import com.petcare.app.features.auth.ui.RegisterScreen
+import com.petcare.app.features.historiaclinica.data.remote.EventoClinicoResponse
+import com.petcare.app.features.historiaclinica.domain.HistoriaClinicaController
+import com.petcare.app.features.historiaclinica.ui.HistoriaClinicaScreen
+import com.petcare.app.features.pets.data.remote.CreatePetRequest
+import com.petcare.app.features.pets.data.remote.PetResponse
+import com.petcare.app.features.pets.data.remote.UpdatePetRequest
+import com.petcare.app.features.pets.domain.PetsController
+import com.petcare.app.features.pets.ui.EditPetScreen
+import com.petcare.app.features.pets.ui.PetProfileScreen
+import com.petcare.app.features.pets.ui.RegisterPetScreen
 import com.petcare.app.ui.theme.PetCareTheme
 import java.io.IOException
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.HttpException
 
 private enum class AuthScreen {
@@ -46,19 +62,44 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             PetCareTheme {
+                val sessionStore = remember {
+                    SessionManager(applicationContext)
+                }
                 val sessionController = remember {
                     AuthSessionController(
-                        authApi = RetrofitClient.authApi,
-                        sessionStore = SessionManager(applicationContext)
+                        authApi = RetrofitClient.authApi(sessionStore),
+                        sessionStore = sessionStore
+                    )
+                }
+                val petsController = remember {
+                    PetsController(
+                        petsApi = RetrofitClient.petsApi(sessionStore)
+                    )
+                }
+                val historiaClinicaController = remember {
+                    HistoriaClinicaController(
+                        historiaClinicaApi = RetrofitClient.historiaClinicaApi(sessionStore)
                     )
                 }
                 var isLoading by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isLoadingPets by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isSavingPet by rememberSaveable {
                     mutableStateOf(false)
                 }
                 var isRestoringSession by rememberSaveable {
                     mutableStateOf(true)
                 }
                 var serverError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var petsError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var savePetError by rememberSaveable {
                     mutableStateOf<String?>(null)
                 }
                 var loggedUserName by rememberSaveable {
@@ -76,10 +117,157 @@ class MainActivity : ComponentActivity() {
                 var resetPasswordSuccess by rememberSaveable {
                     mutableStateOf<String?>(null)
                 }
+                var isRegisteringPet by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isUpdatingPet by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var updatePetError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var editingPet by remember {
+                    mutableStateOf<PetResponse?>(null)
+                }
+                var pets by remember {
+                    mutableStateOf<List<PetResponse>>(emptyList())
+                }
+                var isRegisteringUser by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isRegisterLoading by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var registerError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var registerSuccessMessage by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var selectedPetId by rememberSaveable {
+                    mutableStateOf<Int?>(null)
+                }
+                var selectedPet by remember {
+                    mutableStateOf<PetResponse?>(null)
+                }
+                var isLoadingPetProfile by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var petProfileError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var isViewingHistoria by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isLoadingHistoria by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var historiaError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var historiaEventos by remember {
+                    mutableStateOf<List<EventoClinicoResponse>>(emptyList())
+                }
+
+                fun logout() {
+                    sessionController.logout()
+                    loggedUserName = null
+                    pets = emptyList()
+                    serverError = null
+                    petsError = null
+                    savePetError = null
+                    isRegisteringPet = false
+                    updatePetError = null
+                    editingPet = null
+                    selectedPetId = null
+                    selectedPet = null
+                    petProfileError = null
+                    isViewingHistoria = false
+                    historiaError = null
+                    historiaEventos = emptyList()
+                }
+
+                fun loadPets() {
+                    isLoadingPets = true
+                    petsError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            pets = petsController.getMyPets()
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                petsError = "No se pudieron cargar tus mascotas"
+                            }
+                        } catch (exception: IOException) {
+                            petsError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            petsError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingPets = false
+                        }
+                    }
+                }
+
+                fun loadPetProfile(id: Int) {
+                    isLoadingPetProfile = true
+                    petProfileError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            selectedPet = petsController.getPetById(id)
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                petProfileError = "No se pudo cargar el perfil de la mascota"
+                            }
+                        } catch (exception: IOException) {
+                            petProfileError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            petProfileError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingPetProfile = false
+                        }
+                    }
+                }
+
+                fun loadHistoriaClinica(idMascota: Int) {
+                    isLoadingHistoria = true
+                    historiaError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            val historia = historiaClinicaController.getHistoriaClinica(idMascota)
+                            historiaEventos = historia.eventos
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                historiaError = "No se pudo cargar la historia clinica"
+                            }
+                        } catch (exception: IOException) {
+                            historiaError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            historiaError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingHistoria = false
+                        }
+                    }
+                }
 
                 LaunchedEffect(Unit) {
-                    loggedUserName = sessionController.restoreSession()?.userName
+                    val restoredSession = sessionController.restoreSession()
+                    loggedUserName = restoredSession?.userName
                     isRestoringSession = false
+
+                    if (restoredSession != null) {
+                        loadPets()
+                    }
                 }
 
                 if (isRestoringSession) {
@@ -90,17 +278,183 @@ class MainActivity : ComponentActivity() {
                     ) {
                         CircularProgressIndicator()
                     }
+                } else if (loggedUserName != null && isRegisteringPet) {
+                    RegisterPetScreen(
+                        isSaving = isSavingPet,
+                        saveError = savePetError,
+                        onSave = { request, photoUri ->
+                            isSavingPet = true
+                            savePetError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    createPet(
+                                        petsController = petsController,
+                                        request = request,
+                                        photoUri = photoUri
+                                    )
+                                    isRegisteringPet = false
+                                    loadPets()
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError =
+                                            "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        savePetError = "No se pudo registrar la mascota"
+                                    }
+                                } catch (exception: IOException) {
+                                    savePetError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    savePetError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isSavingPet = false
+                                }
+                            }
+                        },
+                        onCancel = {
+                            savePetError = null
+                            isRegisteringPet = false
+                        }
+                    )
+                } else if (loggedUserName != null && editingPet != null) {
+                    EditPetScreen(
+                        pet = editingPet!!,
+                        isSaving = isUpdatingPet,
+                        saveError = updatePetError,
+                        onSave = { request, photoUri ->
+                            isUpdatingPet = true
+                            updatePetError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    updatePet(
+                                        petsController = petsController,
+                                        id = editingPet!!.id,
+                                        request = request,
+                                        photoUri = photoUri
+                                    )
+                                    editingPet = null
+                                    loadPets()
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError =
+                                            "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        updatePetError = "No se pudo actualizar la mascota"
+                                    }
+                                } catch (exception: IOException) {
+                                    updatePetError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    updatePetError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isUpdatingPet = false
+                                }
+                            }
+                        },
+                        onCancel = {
+                            updatePetError = null
+                            editingPet = null
+                        }
+                    )
+                } else if (loggedUserName != null && selectedPetId != null && isViewingHistoria) {
+                    HistoriaClinicaScreen(
+                        isLoading = isLoadingHistoria,
+                        errorMessage = historiaError,
+                        eventos = historiaEventos,
+                        onRetry = { selectedPetId?.let { loadHistoriaClinica(it) } },
+                        onBack = {
+                            isViewingHistoria = false
+                            historiaError = null
+                            historiaEventos = emptyList()
+                        }
+                    )
+                } else if (loggedUserName != null && selectedPetId != null) {
+                    PetProfileScreen(
+                        isLoading = isLoadingPetProfile,
+                        errorMessage = petProfileError,
+                        pet = selectedPet,
+                        onRetry = { selectedPetId?.let { loadPetProfile(it) } },
+                        onBack = {
+                            selectedPetId = null
+                            selectedPet = null
+                            petProfileError = null
+                        },
+                        onViewHistoria = {
+                            historiaError = null
+                            historiaEventos = emptyList()
+                            isViewingHistoria = true
+                            selectedPetId?.let { loadHistoriaClinica(it) }
+                        }
+                    )
                 } else if (loggedUserName != null) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "¡Bienvenido, $loggedUserName!",
-                            style = MaterialTheme.typography.headlineMedium
-                        )
-                    }
+                    AuthenticatedHomeScreen(
+                        userName = loggedUserName.orEmpty(),
+                        pets = pets,
+                        isLoadingPets = isLoadingPets,
+                        petsError = petsError,
+                        onRetryPets = { loadPets() },
+                        onRegisterPet = {
+                            savePetError = null
+                            isRegisteringPet = true
+                        },
+                        onEditPet = { pet ->
+                            updatePetError = null
+                            editingPet = pet
+                        },
+                        onLogout = { logout() },
+                        onPetClick = { pet ->
+                            selectedPetId = pet.id
+                            selectedPet = null
+                            petProfileError = null
+                            loadPetProfile(pet.id)
+                        }
+                    )
+                } else if (isRegisteringUser) {
+                    RegisterScreen(
+                        isLoading = isRegisterLoading,
+                        serverError = registerError,
+                        successMessage = registerSuccessMessage,
+                        onRegister = { nombre, apellido, email, password ->
+                            isRegisterLoading = true
+                            registerError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    sessionController.register(
+                                        nombre = nombre,
+                                        apellido = apellido,
+                                        email = email,
+                                        password = password
+                                    )
+
+                                    registerSuccessMessage =
+                                        "Cuenta creada correctamente. Ya podes iniciar sesion."
+                                } catch (exception: HttpException) {
+                                    registerError = when (exception.code()) {
+                                        409 -> "Ese correo ya esta registrado"
+                                        400 -> "Revisa los datos ingresados"
+                                        500 -> "Ocurrio un error en el servidor"
+                                        else -> "No se pudo completar el registro"
+                                    }
+                                } catch (exception: IOException) {
+                                    registerError =
+                                        "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    registerError =
+                                        "Ocurrio un error inesperado"
+                                } finally {
+                                    isRegisterLoading = false
+                                }
+                            }
+                        },
+                        onNavigateToLogin = {
+                            isRegisteringUser = false
+                            registerError = null
+                            registerSuccessMessage = null
+                        }
+                    )
                 } else {
                     when (currentScreen) {
                         AuthScreen.LOGIN -> {
@@ -143,6 +497,30 @@ class MainActivity : ComponentActivity() {
                                     forgotPasswordSuccess = null
                                 }
                             )
+                                    loggedUserName = session.userName
+                                    loadPets()
+                                } catch (exception: HttpException) {
+                                    serverError = when (exception.code()) {
+                                        400, 401 -> "Correo o contrasena incorrectos"
+                                        404 -> "No se encontro el servicio de autenticacion"
+                                        500 -> "Ocurrio un error en el servidor"
+                                        else -> "No se pudo iniciar sesion"
+                                    }
+                                } catch (exception: IOException) {
+                                    serverError =
+                                        "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    serverError =
+                                        "Ocurrio un error inesperado"
+                                } finally {
+                                    isLoading = false
+                                }
+                            }
+                        },
+                        onNavigateToRegister = {
+                            isRegisteringUser = true
+                            registerError = null
+                            registerSuccessMessage = null
                         }
 
                         AuthScreen.FORGOT_PASSWORD -> {
@@ -240,6 +618,63 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    private suspend fun createPet(
+        petsController: PetsController,
+        request: CreatePetRequest,
+        photoUri: Uri?
+    ): PetResponse =
+        if (photoUri == null) {
+            petsController.createPet(request)
+        } else {
+            petsController.createPetWithPhoto(
+                request = request,
+                photo = buildPhotoPart(photoUri)
+            )
+        }
+
+    private suspend fun updatePet(
+        petsController: PetsController,
+        id: Int,
+        request: UpdatePetRequest,
+        photoUri: Uri?
+    ): PetResponse =
+        if (photoUri == null) {
+            petsController.updatePet(id, request)
+        } else {
+            petsController.updatePetWithPhoto(
+                id = id,
+                request = request,
+                photo = buildPhotoPart(photoUri)
+            )
+        }
+
+    private fun buildPhotoPart(photoUri: Uri): MultipartBody.Part {
+        val contentResolver = applicationContext.contentResolver
+        val mimeType = contentResolver.getType(photoUri) ?: "image/jpeg"
+        val fileName = getDisplayName(photoUri) ?: "mascota.jpg"
+        val bytes = contentResolver.openInputStream(photoUri)?.use { input ->
+            input.readBytes()
+        } ?: throw IOException("No se pudo leer la foto seleccionada")
+
+        return MultipartBody.Part.createFormData(
+            name = "foto",
+            filename = fileName,
+            body = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
+        )
+    }
+
+    private fun getDisplayName(photoUri: Uri): String? {
+        val contentResolver = applicationContext.contentResolver
+        return contentResolver.query(photoUri, null, null, null, null)?.use { cursor ->
+            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (nameIndex >= 0 && cursor.moveToFirst()) {
+                cursor.getString(nameIndex)
+            } else {
+                null
             }
         }
     }

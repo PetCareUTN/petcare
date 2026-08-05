@@ -17,6 +17,7 @@ export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.apiUrl}/auth`;
   private readonly tokenStorageKey = 'petcare_token';
+  private readonly roleStorageKey = 'petcare_id_rol';
 
   register(data: RegisterRequest): Observable<RegisterResponse> {
     return this.http
@@ -52,10 +53,25 @@ export class AuthService {
 
   clearToken(): void {
     localStorage.removeItem(this.tokenStorageKey);
+    localStorage.removeItem(this.roleStorageKey);
   }
 
   isAuthenticated(): boolean {
     return this.getToken() !== null;
+  }
+
+  saveRole(idRol: number): void {
+    localStorage.setItem(this.roleStorageKey, String(idRol));
+  }
+
+  /** 1: dueño_mascota | 2: veterinario | 3: administrador | 4: prestador */
+  getRoleId(): number | null {
+    const stored = localStorage.getItem(this.roleStorageKey);
+    return stored ? Number(stored) : null;
+  }
+
+  isVeterinario(): boolean {
+    return this.getRoleId() === 2;
   }
 
   /**

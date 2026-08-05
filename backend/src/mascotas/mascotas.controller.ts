@@ -78,7 +78,7 @@ export class MascotasController {
     @CurrentUser() user: JwtPayload,
     @Param('id', ParseIntPipe) id: number,
   ): Promise<MascotaResponseDto> {
-    return this.mascotasService.findOne(id, user.sub);
+    return this.mascotasService.findOne(id, user);
   }
 
   @Patch(':id')

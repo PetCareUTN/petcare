@@ -9,7 +9,10 @@ export interface CreateMascotaRequest {
   peso?: number;
   esterilizado?: boolean;
   observaciones?: string;
+  alergias?: string;
 }
+
+export type UpdateMascotaRequest = Partial<CreateMascotaRequest>;
 
 export interface MascotaResponse {
   idMascota: number;
@@ -23,5 +26,6 @@ export interface MascotaResponse {
   esterilizado: boolean;
   foto: string | null;
   observaciones: string | null;
+  alergias: string | null;
   idUsuarios: number[];
 }

@@ -51,4 +51,8 @@ export class CreateMascotaDto {
   @IsString()
   @IsOptional()
   observaciones?: string;
+
+  @IsString()
+  @IsOptional()
+  alergias?: string;
 }

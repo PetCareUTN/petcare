@@ -2,12 +2,15 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  JoinColumn,
   JoinTable,
   ManyToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { PetSex } from '../../common/enums/pet-sex.enum';
+import { HistoriaClinica } from '../../historias-clinicas/entities/historia-clinica.entity';
 import { User } from '../../users/entities/user.entity';
 
 @Entity('mascotas')
@@ -45,6 +48,9 @@ export class Mascota {
   @Column({ type: 'text', nullable: true })
   observaciones: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  alergias: string | null;
+
   @ManyToMany(() => User, (user) => user.mascotas)
   @JoinTable({
     name: 'usuarios_mascotas',
@@ -58,6 +64,12 @@ export class Mascota {
     },
   })
   usuarios: User[];
+
+  @OneToOne(() => HistoriaClinica, (historiaClinica) => historiaClinica.mascota, {
+    nullable: true,
+  })
+  @JoinColumn({ name: 'id_historia' })
+  historiaClinica: HistoriaClinica | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
