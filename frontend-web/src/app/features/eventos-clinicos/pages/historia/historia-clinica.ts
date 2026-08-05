@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ApiError } from '../../../auth/models/user';
+import { AuthService } from '../../../auth/services/auth-service';
 import { MascotaResponse } from '../../../mascotas/models/mascota';
 import { MascotasService } from '../../../mascotas/services/mascotas-service';
 import {
@@ -39,6 +40,7 @@ export class HistoriaClinicaPage implements OnInit {
   private readonly formBuilder = inject(FormBuilder);
   private readonly eventosClinicosService = inject(EventosClinicosService);
   protected readonly mascotasService = inject(MascotasService);
+  protected readonly authService = inject(AuthService);
 
   protected readonly eventTypes: EventTypeOption[] = [
     { value: 'consulta', label: 'Consulta' },
@@ -59,6 +61,9 @@ export class HistoriaClinicaPage implements OnInit {
   protected readonly isFormOpen = signal(false);
   protected readonly isSubmitting = signal(false);
   protected readonly submitError = signal<string | null>(null);
+
+  protected readonly uploadingEventoId = signal<number | null>(null);
+  protected readonly uploadErrors = signal<Record<number, string>>({});
 
   protected readonly form = this.formBuilder.group({
     tipo: ['consulta' as ClinicalEventType, [Validators.required]],
@@ -138,6 +143,45 @@ export class HistoriaClinicaPage implements OnInit {
       error: (error: ApiError) => {
         this.isSubmitting.set(false);
         this.submitError.set(error.mensaje ?? 'Ocurrio un error al registrar el evento.');
+      },
+    });
+  }
+
+  protected resolveArchivoUrl(url: string): string {
+    return this.eventosClinicosService.resolveArchivoUrl(url);
+  }
+
+  protected subirArchivos(idEvento: number, input: HTMLInputElement): void {
+    const archivos = input.files ? Array.from(input.files) : [];
+    if (archivos.length === 0) {
+      return;
+    }
+
+    this.uploadingEventoId.set(idEvento);
+    this.uploadErrors.update((errors) => {
+      const { [idEvento]: _omit, ...rest } = errors;
+      return rest;
+    });
+
+    this.eventosClinicosService.agregarArchivos(idEvento, archivos).subscribe({
+      next: (nuevosArchivos) => {
+        this.uploadingEventoId.set(null);
+        input.value = '';
+        this.eventos.update((eventos) =>
+          eventos.map((evento) =>
+            evento.idEvento === idEvento
+              ? { ...evento, archivos: [...evento.archivos, ...nuevosArchivos] }
+              : evento,
+          ),
+        );
+      },
+      error: (error: ApiError) => {
+        this.uploadingEventoId.set(null);
+        input.value = '';
+        this.uploadErrors.update((errors) => ({
+          ...errors,
+          [idEvento]: error.mensaje ?? 'No se pudo adjuntar el archivo.',
+        }));
       },
     });
   }

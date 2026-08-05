@@ -17,6 +17,16 @@ export interface CreateEventoClinicoRequest {
   observaciones?: string;
 }
 
+export interface ArchivoMedicoResponse {
+  idArchivo: number;
+  idEvento: number;
+  nombreOriginal: string;
+  url: string;
+  mimeType: string;
+  tamanoBytes: number;
+  createdAt: string;
+}
+
 export interface EventoClinicoResponse {
   idEvento: number;
   idHistoria: number;
@@ -30,6 +40,7 @@ export interface EventoClinicoResponse {
   observaciones: string | null;
   createdAt: string;
   updatedAt: string;
+  archivos: ArchivoMedicoResponse[];
 }
 
 export interface HistoriaClinicaResponse {

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -11,16 +12,21 @@ import { ValidationStatus } from '../common/enums/validation-status.enum';
 import { HistoriaClinica } from '../historias-clinicas/entities/historia-clinica.entity';
 import { Mascota } from '../mascotas/entities/mascota.entity';
 import { Veterinario } from '../veterinarios/entities/veterinario.entity';
+import { ArchivoMedicoResponseDto } from './dto/archivo-medico-response.dto';
 import { CreateEventoClinicoDto } from './dto/create-evento-clinico.dto';
 import { EventoClinicoResponseDto } from './dto/evento-clinico-response.dto';
 import { HistoriaClinicaResponseDto } from './dto/historia-clinica-response.dto';
+import { ArchivoMedico } from './entities/archivo-medico.entity';
 import { EventoClinico } from './entities/evento-clinico.entity';
+import type { UploadedMedicalFile } from './types/uploaded-medical-file.type';
 
 @Injectable()
 export class EventosClinicosService {
   constructor(
     @InjectRepository(EventoClinico)
     private readonly eventosClinicosRepository: Repository<EventoClinico>,
+    @InjectRepository(ArchivoMedico)
+    private readonly archivosMedicosRepository: Repository<ArchivoMedico>,
     @InjectRepository(HistoriaClinica)
     private readonly historiasClinicasRepository: Repository<HistoriaClinica>,
     @InjectRepository(Mascota)
@@ -71,7 +77,12 @@ export class EventosClinicosService {
 
     const eventos = await this.eventosClinicosRepository.find({
       where: { historia: { idHistoria: mascota.historiaClinica.idHistoria } },
-      relations: ['historia', 'historia.mascota', 'veterinario'],
+      relations: [
+        'historia',
+        'historia.mascota',
+        'veterinario',
+        'archivosMedicos',
+      ],
       order: { fecha: 'ASC' },
     });
 
@@ -79,6 +90,59 @@ export class EventosClinicosService {
       mascota.historiaClinica,
       idMascota,
       eventos,
+    );
+  }
+
+  /**
+   * Solo el veterinario que registró el evento u otro veterinario validado
+   * que ya sea "paciente" del mismo dueño (con al menos un evento propio en
+   * la historia) puede sumar estudios/recetas a esa consulta.
+   */
+  async agregarArchivos(
+    idEvento: number,
+    idUsuario: number,
+    files: UploadedMedicalFile[],
+  ): Promise<ArchivoMedicoResponseDto[]> {
+    if (!files || files.length === 0) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje: 'Debe adjuntar al menos un archivo',
+      });
+    }
+
+    const veterinario = await this.findVeterinarioValidado(idUsuario);
+    const evento = await this.findEventoConHistoria(idEvento);
+
+    const esAutor =
+      evento.veterinario.idVeterinario === veterinario.idVeterinario;
+    const esPaciente = esAutor
+      ? true
+      : await this.esPacienteDelVeterinario(
+          evento.historia.idHistoria,
+          veterinario.idVeterinario,
+        );
+
+    if (!esPaciente) {
+      throw new ForbiddenException({
+        codigoEstado: 403,
+        mensaje: 'No tiene permisos para adjuntar archivos a este evento',
+      });
+    }
+
+    const archivos = files.map((file) =>
+      this.archivosMedicosRepository.create({
+        evento,
+        nombreOriginal: file.originalname,
+        nombreArchivo: file.filename,
+        mimeType: file.mimetype,
+        tamanoBytes: file.size,
+      }),
+    );
+
+    const savedArchivos = await this.archivosMedicosRepository.save(archivos);
+
+    return savedArchivos.map((archivo) =>
+      ArchivoMedicoResponseDto.fromEntity(archivo, idEvento),
     );
   }
 
@@ -107,7 +171,10 @@ export class EventosClinicosService {
         veterinario &&
         veterinario.estadoValidacion === ValidationStatus.APROBADO &&
         mascota.historiaClinica &&
-        (await this.esPacienteDelVeterinario(mascota.historiaClinica.idHistoria, veterinario.idVeterinario))
+        (await this.esPacienteDelVeterinario(
+          mascota.historiaClinica.idHistoria,
+          veterinario.idVeterinario,
+        ))
       ) {
         return;
       }
@@ -133,12 +200,35 @@ export class EventosClinicosService {
     return evento !== null;
   }
 
-  private async findVeterinarioValidado(idUsuario: number): Promise<Veterinario> {
+  private async findEventoConHistoria(
+    idEvento: number,
+  ): Promise<EventoClinico> {
+    const evento = await this.eventosClinicosRepository.findOne({
+      where: { idEvento },
+      relations: ['historia', 'veterinario'],
+    });
+
+    if (!evento) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Evento clinico no encontrado',
+      });
+    }
+
+    return evento;
+  }
+
+  private async findVeterinarioValidado(
+    idUsuario: number,
+  ): Promise<Veterinario> {
     const veterinario = await this.veterinariosRepository.findOne({
       where: { usuario: { idUsuario } },
     });
 
-    if (!veterinario || veterinario.estadoValidacion !== ValidationStatus.APROBADO) {
+    if (
+      !veterinario ||
+      veterinario.estadoValidacion !== ValidationStatus.APROBADO
+    ) {
       throw new ForbiddenException({
         codigoEstado: 403,
         mensaje: 'Su cuenta de veterinario no esta validada',

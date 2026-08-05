@@ -4,12 +4,14 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { ClinicalEventType } from '../../common/enums/clinical-event-type.enum';
 import { HistoriaClinica } from '../../historias-clinicas/entities/historia-clinica.entity';
 import { Veterinario } from '../../veterinarios/entities/veterinario.entity';
+import { ArchivoMedico } from './archivo-medico.entity';
 
 @Entity('eventos_clinicos')
 export class EventoClinico {
@@ -51,4 +53,7 @@ export class EventoClinico {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  @OneToMany(() => ArchivoMedico, (archivo) => archivo.evento)
+  archivosMedicos: ArchivoMedico[];
 }
