@@ -23,7 +23,7 @@ import { RegisterDto } from './dto/register.dto';
 import { RegisterResponseDto } from './dto/register-response.dto';
 import { CambiarContraseñaDto } from './dto/cambiar-contrasena.dto';
 import { RestablecerContrasenaDto } from './dto/restablecer-contrasena.dto';
-import { MailService } from 'src/mail/mail.service';
+import { MailService } from '../mail/mail.service';
 
 const SALT_ROUNDS = 10;
 const DEFAULT_ROLE = RoleName.DUENO_MASCOTA;

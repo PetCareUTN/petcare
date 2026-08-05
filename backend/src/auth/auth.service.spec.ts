@@ -9,6 +9,7 @@ import { Role } from '../roles/entities/role.entity';
 import { User } from '../users/entities/user.entity';
 import { UsersService } from '../users/users.service';
 import { Veterinario } from '../veterinarios/entities/veterinario.entity';
+import { MailService } from '../mail/mail.service';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -56,6 +57,12 @@ describe('AuthService', () => {
           provide: JwtService,
           useValue: {
             signAsync: jest.fn(),
+          },
+        },
+        {
+          provide: MailService,
+          useValue: {
+            sendRecoveryCode: jest.fn(),
           },
         },
         {
