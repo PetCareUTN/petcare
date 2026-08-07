@@ -1,4 +1,8 @@
-import { ConflictException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -20,6 +24,14 @@ describe('AuthService', () => {
     findByEmail: jest.Mock<Promise<User | null>, [string]>;
     findById: jest.Mock<Promise<User | null>, [number]>;
     create: jest.Mock<Promise<User>, [Parameters<UsersService['create']>[0]]>;
+    updatePasswordRecoveryData: jest.Mock;
+    updatePassword: jest.Mock;
+    clearRecoveryData: jest.Mock;
+    activateIfPending: jest.Mock;
+  };
+  let mailService: {
+    sendRecoveryCode: jest.Mock;
+    sendAssistedOwnerActivationCode: jest.Mock;
   };
   let jwtService: {
     signAsync: jest.Mock<Promise<string>, [Record<string, unknown>]>;
@@ -51,6 +63,10 @@ describe('AuthService', () => {
             findByEmail: jest.fn(),
             findById: jest.fn(),
             create: jest.fn(),
+            updatePasswordRecoveryData: jest.fn(),
+            updatePassword: jest.fn(),
+            clearRecoveryData: jest.fn(),
+            activateIfPending: jest.fn(),
           },
         },
         {
@@ -63,6 +79,7 @@ describe('AuthService', () => {
           provide: MailService,
           useValue: {
             sendRecoveryCode: jest.fn(),
+            sendAssistedOwnerActivationCode: jest.fn(),
           },
         },
         {
@@ -83,6 +100,7 @@ describe('AuthService', () => {
     service = module.get<AuthService>(AuthService);
     usersService = module.get(UsersService);
     jwtService = module.get(JwtService);
+    mailService = module.get(MailService);
     rolesRepository = module.get(getRepositoryToken(Role));
     veterinariosRepository = module.get(getRepositoryToken(Veterinario));
   });
@@ -105,7 +123,11 @@ describe('AuthService', () => {
       password: 'hashed-password',
       fechaRegistro: new Date('2026-07-02T00:00:00.000Z'),
       estado: 'activo',
+      idVeterinarioAltaAsistida: null,
       rol: defaultRole,
+      mascotas: [],
+      codigoRecuperacion: null,
+      fechaExpiracionCodigo: null,
       updatedAt: new Date('2026-07-02T00:00:00.000Z'),
     };
     usersService.create.mockResolvedValue(savedUser);
@@ -154,6 +176,111 @@ describe('AuthService', () => {
     expect(usersService.create).not.toHaveBeenCalled();
   });
 
+  describe('createAssistedOwner', () => {
+    const dto = {
+      nombre: ' Laura ',
+      apellido: ' Gomez ',
+      email: 'LAURA@PETCARE.TEST',
+      telefono: ' 3511234567 ',
+    };
+
+    const veterinarian = {
+      idVeterinario: 11,
+      estadoValidacion: ValidationStatus.APROBADO,
+    } as Veterinario;
+
+    const savedUser: User = {
+      idUsuario: 22,
+      nombre: 'Laura',
+      apellido: 'Gomez',
+      email: 'laura@petcare.test',
+      telefono: '3511234567',
+      direccion: null,
+      password: 'temporary-hash',
+      fechaRegistro: new Date('2026-08-07T00:00:00.000Z'),
+      estado: 'pendiente_activacion',
+      idVeterinarioAltaAsistida: veterinarian.idVeterinario,
+      rol: defaultRole,
+      mascotas: [],
+      codigoRecuperacion: null,
+      fechaExpiracionCodigo: null,
+      updatedAt: new Date('2026-08-07T00:00:00.000Z'),
+    };
+
+    it('creates a pending owner and sends an activation code by email', async () => {
+      usersService.findByEmail.mockResolvedValue(null);
+      rolesRepository.findOne.mockResolvedValue(defaultRole);
+      veterinariosRepository.findOne.mockResolvedValue(veterinarian);
+      usersService.create.mockResolvedValue(savedUser);
+
+      const result = await service.createAssistedOwner(dto, 5);
+
+      expect(usersService.findByEmail).toHaveBeenCalledWith(
+        'laura@petcare.test',
+      );
+      expect(veterinariosRepository.findOne).toHaveBeenCalledWith({
+        where: { usuario: { idUsuario: 5 } },
+      });
+      expect(usersService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          nombre: 'Laura',
+          apellido: 'Gomez',
+          email: 'laura@petcare.test',
+          telefono: '3511234567',
+          idRol: defaultRole.idRol,
+          estado: 'pendiente_activacion',
+          idVeterinarioAltaAsistida: veterinarian.idVeterinario,
+        }),
+      );
+      const createArgs = usersService.create.mock.calls[0][0];
+      expect(createArgs.password).not.toBe('');
+      expect(createArgs.password).not.toBe(dto.email);
+      expect(usersService.updatePasswordRecoveryData).toHaveBeenCalledWith(
+        savedUser.idUsuario,
+        expect.any(String),
+        expect.any(Date),
+      );
+      expect(mailService.sendAssistedOwnerActivationCode).toHaveBeenCalledWith(
+        savedUser.email,
+        expect.stringMatching(/^\d{6}$/),
+      );
+      expect(result.usuario).toEqual(
+        expect.objectContaining({
+          id_usuario: savedUser.idUsuario,
+          email: savedUser.email,
+          estado: 'pendiente_activacion',
+        }),
+      );
+      expect(
+        (result.usuario as unknown as { password?: string }).password,
+      ).toBeUndefined();
+    });
+
+    it('rejects assisted owner creation when the email already exists', async () => {
+      usersService.findByEmail.mockResolvedValue(savedUser);
+
+      await expect(service.createAssistedOwner(dto, 5)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(usersService.create).not.toHaveBeenCalled();
+      expect(mailService.sendAssistedOwnerActivationCode).not.toHaveBeenCalled();
+    });
+
+    it('rejects assisted owner creation when the veterinarian is not approved', async () => {
+      usersService.findByEmail.mockResolvedValue(null);
+      rolesRepository.findOne.mockResolvedValue(defaultRole);
+      veterinariosRepository.findOne.mockResolvedValue({
+        estadoValidacion: ValidationStatus.PENDIENTE,
+      });
+
+      await expect(service.createAssistedOwner(dto, 5)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(usersService.create).not.toHaveBeenCalled();
+      expect(mailService.sendAssistedOwnerActivationCode).not.toHaveBeenCalled();
+    });
+  });
+
   describe('login', () => {
     const loginDto: LoginDto = {
       email: 'simon@petcare.test',
@@ -170,7 +297,11 @@ describe('AuthService', () => {
       password: await bcrypt.hash(loginDto.password, 10),
       fechaRegistro: new Date('2026-07-02T00:00:00.000Z'),
       estado: 'activo',
+      idVeterinarioAltaAsistida: null,
       rol,
+      mascotas: [],
+      codigoRecuperacion: null,
+      fechaExpiracionCodigo: null,
       updatedAt: new Date('2026-07-02T00:00:00.000Z'),
     });
 
@@ -275,6 +406,47 @@ describe('AuthService', () => {
       const result = await service.login(loginDto);
 
       expect(result.token).toBe('signed-jwt');
+    });
+  });
+
+  describe('resetPassword', () => {
+    it('activates a pending assisted owner after setting a new password', async () => {
+      const recoveryCode = '123456';
+      const user: User = {
+        idUsuario: 33,
+        nombre: 'Laura',
+        apellido: 'Gomez',
+        email: 'laura@petcare.test',
+        telefono: null,
+        direccion: null,
+        password: 'temporary-hash',
+        fechaRegistro: new Date('2026-08-07T00:00:00.000Z'),
+        estado: 'pendiente_activacion',
+        idVeterinarioAltaAsistida: 11,
+        rol: defaultRole,
+        mascotas: [],
+        codigoRecuperacion: await bcrypt.hash(recoveryCode, 10),
+        fechaExpiracionCodigo: new Date(Date.now() + 10 * 60 * 1000),
+        updatedAt: new Date('2026-08-07T00:00:00.000Z'),
+      };
+      usersService.findByEmail.mockResolvedValue(user);
+
+      await service.resetPassword({
+        email: user.email,
+        codigo: recoveryCode,
+        nuevaContraseña: 'NuevaClave123',
+      });
+
+      expect(usersService.updatePassword).toHaveBeenCalledWith(
+        user.idUsuario,
+        expect.any(String),
+      );
+      expect(usersService.activateIfPending).toHaveBeenCalledWith(
+        user.idUsuario,
+      );
+      expect(usersService.clearRecoveryData).toHaveBeenCalledWith(
+        user.idUsuario,
+      );
     });
   });
 });

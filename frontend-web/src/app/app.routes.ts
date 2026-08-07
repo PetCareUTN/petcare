@@ -94,6 +94,13 @@ export const routes: Routes = [
           ),
         data: { backLabel: 'Volver a mis pacientes' },
       },
+      {
+        path: 'duenos/alta-asistida',
+        loadComponent: () =>
+          import('./features/duenos/pages/alta-asistida/alta-asistida-dueno').then(
+            (m) => m.AltaAsistidaDuenoPage,
+          ),
+      },
     ],
   },
   {
