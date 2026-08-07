@@ -14,7 +14,7 @@ object RetrofitClient {
      * Desde el emulador Android, 10.0.2.2 representa
      * la computadora donde se está ejecutando el emulador.
      */
-     private const val BASE_URL = "http://10.0.2.2:3000/"
+     const val BASE_URL = "http://10.0.2.2:3000/"
 
     fun authApi(sessionStore: SessionStore): AuthApi =
         createRetrofit(sessionStore)
