@@ -45,7 +45,7 @@ fun LoginScreen(
     isLoading: Boolean = false,
     serverError: String? = null,
     onLogin: (email: String, password: String) -> Unit,
-    onForgotPassword: () -> Unit = {}
+    onForgotPassword: () -> Unit = {},
     onNavigateToRegister: () -> Unit = {}
 ) {
     var email by rememberSaveable { mutableStateOf("") }
@@ -226,6 +226,7 @@ fun LoginScreen(
             modifier = Modifier.padding(top = 16.dp)
         ) {
             Text("¿Olvidaste tu contraseña?")
+        }
         Surface(
             modifier = Modifier.fillMaxWidth(),
             color = PetCareMint,

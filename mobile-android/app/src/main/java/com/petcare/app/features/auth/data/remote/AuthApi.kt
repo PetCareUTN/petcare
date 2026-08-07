@@ -45,6 +45,8 @@ data class ResetPasswordRequest(
 
 data class MessageResponse(
     val mensaje: String
+)
+
 data class RegisterRequest(
     val nombre: String,
     val apellido: String,
