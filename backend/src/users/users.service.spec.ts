@@ -68,6 +68,8 @@ describe('UsersService', () => {
       password: data.password,
       telefono: null,
       direccion: null,
+      estado: 'activo',
+      idVeterinarioAltaAsistida: null,
       rol: { idRol: data.idRol },
     });
     expect(repository.save).toHaveBeenCalledWith(created);
@@ -97,6 +99,37 @@ describe('UsersService', () => {
       password: data.password,
       telefono: data.telefono,
       direccion: data.direccion,
+      estado: 'activo',
+      idVeterinarioAltaAsistida: null,
+      rol: { idRol: data.idRol },
+    });
+  });
+
+  it('create persists assisted owner state and veterinarian audit id when provided', async () => {
+    const data = {
+      nombre: 'Laura',
+      apellido: 'Gomez',
+      email: 'laura@petcare.test',
+      password: 'hashed-password',
+      idRol: 1,
+      estado: 'pendiente_activacion',
+      idVeterinarioAltaAsistida: 11,
+    };
+    const created = { ...data, rol: { idRol: 1 } } as unknown as User;
+    repository.create.mockReturnValue(created);
+    repository.save.mockResolvedValue(created);
+
+    await service.create(data);
+
+    expect(repository.create).toHaveBeenCalledWith({
+      nombre: data.nombre,
+      apellido: data.apellido,
+      email: data.email,
+      password: data.password,
+      telefono: null,
+      direccion: null,
+      estado: 'pendiente_activacion',
+      idVeterinarioAltaAsistida: 11,
       rol: { idRol: data.idRol },
     });
   });
@@ -162,6 +195,20 @@ describe('UsersService', () => {
     await service.update(1, { email: 'simon@petcare.test' });
 
     expect(repository.findOne).toHaveBeenCalledTimes(1);
+    expect(repository.save).toHaveBeenCalledWith(user);
+  });
+
+  it('activateIfPending changes pending assisted accounts to active', async () => {
+    const user = {
+      idUsuario: 1,
+      estado: 'pendiente_activacion',
+    } as User;
+    repository.findOne.mockResolvedValueOnce(user);
+    repository.save.mockImplementation((value: User) => Promise.resolve(value));
+
+    const result = await service.activateIfPending(1);
+
+    expect(result.estado).toBe('activo');
     expect(repository.save).toHaveBeenCalledWith(user);
   });
 });

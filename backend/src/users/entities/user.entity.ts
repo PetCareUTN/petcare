@@ -42,6 +42,13 @@ export class User {
   @Column({ type: 'varchar', length: 20, default: 'activo' })
   estado: string;
 
+  @Column({
+    name: 'id_veterinario_alta_asistida',
+    type: 'int',
+    nullable: true,
+  })
+  idVeterinarioAltaAsistida: number | null;
+
   @ManyToOne(() => Role, { eager: true, nullable: false })
   @JoinColumn({ name: 'id_rol' })
   rol: Role;

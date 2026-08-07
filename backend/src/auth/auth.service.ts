@@ -9,6 +9,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
 import { Repository } from 'typeorm';
 import { RoleName } from '../common/enums/role-name.enum';
 import { ValidationStatus } from '../common/enums/validation-status.enum';
@@ -21,12 +22,14 @@ import { LoginResponseDto } from './dto/login-response.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { RegisterDto } from './dto/register.dto';
 import { RegisterResponseDto } from './dto/register-response.dto';
+import { CreateAssistedOwnerDto } from './dto/create-assisted-owner.dto';
 import { CambiarContraseñaDto } from './dto/cambiar-contrasena.dto';
 import { RestablecerContrasenaDto } from './dto/restablecer-contrasena.dto';
 import { MailService } from '../mail/mail.service';
 
 const SALT_ROUNDS = 10;
 const DEFAULT_ROLE = RoleName.DUENO_MASCOTA;
+const ASSISTED_OWNER_PENDING_STATUS = 'pendiente_activacion';
 
 // Hash bcrypt ficticio (válido en formato) usado cuando el email no existe,
 // para que bcrypt.compare tarde lo mismo que con un usuario real y no se pueda
@@ -78,6 +81,64 @@ export class AuthService {
     return RegisterResponseDto.fromEntity(user);
   }
 
+  async createAssistedOwner(
+    dto: CreateAssistedOwnerDto,
+    veterinarianUserId: number,
+  ): Promise<{ mensaje: string; usuario: UserPublicDto }> {
+    const email = dto.email.trim().toLowerCase();
+    const existingUser = await this.usersService.findByEmail(email);
+    if (existingUser) {
+      throw new ConflictException({
+        codigoEstado: 409,
+        mensaje: 'El email ya se encuentra registrado',
+      });
+    }
+
+    const defaultRole = await this.rolesRepository.findOne({
+      where: { nombre: DEFAULT_ROLE },
+    });
+    if (!defaultRole) {
+      throw new Error(
+        `No se encontró el rol por defecto "${DEFAULT_ROLE}". Verifique el seed de roles.`,
+      );
+    }
+
+    const veterinarian = await this.getApprovedVeterinarian(veterinarianUserId);
+    const temporaryPasswordHash = await bcrypt.hash(
+      randomBytes(32).toString('hex'),
+      SALT_ROUNDS,
+    );
+
+    const user = await this.usersService.create({
+      nombre: dto.nombre.trim(),
+      apellido: dto.apellido?.trim() || null,
+      email,
+      telefono: dto.telefono?.trim() || null,
+      password: temporaryPasswordHash,
+      idRol: defaultRole.idRol,
+      estado: ASSISTED_OWNER_PENDING_STATUS,
+      idVeterinarioAltaAsistida: veterinarian.idVeterinario,
+    });
+    user.rol = defaultRole;
+
+    const codigo = Math.floor(100000 + Math.random() * 900000).toString();
+    const fechaExpiracion = new Date(Date.now() + 10 * 60 * 1000);
+    const codigoHash = await bcrypt.hash(codigo, SALT_ROUNDS);
+
+    await this.usersService.updatePasswordRecoveryData(
+      user.idUsuario,
+      codigoHash,
+      fechaExpiracion,
+    );
+    await this.mailService.sendAssistedOwnerActivationCode(user.email, codigo);
+
+    return {
+      mensaje:
+        'Cuenta de dueño creada. Se envió un código para activar la contraseña.',
+      usuario: UserPublicDto.fromEntity(user),
+    };
+  }
+
   async login(dto: LoginDto): Promise<LoginResponseDto> {
     const user = await this.usersService.findByEmail(dto.email);
 
@@ -111,6 +172,10 @@ export class AuthService {
   }
 
   private async verificarVeterinarioAprobado(idUsuario: number): Promise<void> {
+    await this.getApprovedVeterinarian(idUsuario);
+  }
+
+  private async getApprovedVeterinarian(idUsuario: number): Promise<Veterinario> {
     const veterinario = await this.veterinariosRepository.findOne({
       where: { usuario: { idUsuario } },
     });
@@ -129,6 +194,8 @@ export class AuthService {
         mensaje: `Tu solicitud de validación fue rechazada. Motivo: ${veterinario.motivoRechazo ?? 'sin especificar'}.`,
       });
     }
+
+    return veterinario;
   }
 
   async getProfile(userId: number): Promise<UserPublicDto> {
@@ -230,6 +297,7 @@ export class AuthService {
     user.idUsuario,
     nuevaPasswordHash,
   );
+  await this.usersService.activateIfPending(user.idUsuario);
 
   // Limpiar los datos de recuperación
   await this.usersService.clearRecoveryData(

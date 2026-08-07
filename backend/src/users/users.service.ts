@@ -31,6 +31,8 @@ export class UsersService {
     idRol: number;
     telefono?: string | null;
     direccion?: string | null;
+    estado?: string;
+    idVeterinarioAltaAsistida?: number | null;
   }): Promise<User> {
     const user = this.usersRepository.create({
       nombre: data.nombre,
@@ -39,6 +41,8 @@ export class UsersService {
       password: data.password,
       telefono: data.telefono ?? null,
       direccion: data.direccion ?? null,
+      estado: data.estado ?? 'activo',
+      idVeterinarioAltaAsistida: data.idVeterinarioAltaAsistida ?? null,
       rol: { idRol: data.idRol },
     });
 
@@ -78,51 +82,70 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
   async updatePassword(idUsuario: number, passwordHash: string): Promise<User> {
-  const user = await this.findById(idUsuario);
+    const user = await this.findById(idUsuario);
 
-  if (!user) {
-    throw new NotFoundException({
-      codigoEstado: 404,
-      mensaje: 'Usuario no encontrado',
-    });
+    if (!user) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Usuario no encontrado',
+      });
+    }
+
+    user.password = passwordHash;
+
+    return this.usersRepository.save(user);
   }
 
-  user.password = passwordHash;
+  async activateIfPending(idUsuario: number): Promise<User> {
+    const user = await this.findById(idUsuario);
 
-  return this.usersRepository.save(user);
-}
-async updatePasswordRecoveryData(
-  idUsuario: number,
-  codigoRecuperacion: string,
-  fechaExpiracionCodigo: Date,
-): Promise<User> {
-  const user = await this.findById(idUsuario);
+    if (!user) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Usuario no encontrado',
+      });
+    }
 
-  if (!user) {
-    throw new NotFoundException({
-      codigoEstado: 404,
-      mensaje: 'Usuario no encontrado',
-    });
+    if (user.estado === 'pendiente_activacion') {
+      user.estado = 'activo';
+    }
+
+    return this.usersRepository.save(user);
   }
 
-  user.codigoRecuperacion = codigoRecuperacion;
-  user.fechaExpiracionCodigo = fechaExpiracionCodigo;
+  async updatePasswordRecoveryData(
+    idUsuario: number,
+    codigoRecuperacion: string,
+    fechaExpiracionCodigo: Date,
+  ): Promise<User> {
+    const user = await this.findById(idUsuario);
 
-  return this.usersRepository.save(user);
-}
-async clearRecoveryData(idUsuario: number): Promise<User> {
-  const user = await this.findById(idUsuario);
+    if (!user) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Usuario no encontrado',
+      });
+    }
 
-  if (!user) {
-    throw new NotFoundException({
-      codigoEstado: 404,
-      mensaje: 'Usuario no encontrado',
-    });
+    user.codigoRecuperacion = codigoRecuperacion;
+    user.fechaExpiracionCodigo = fechaExpiracionCodigo;
+
+    return this.usersRepository.save(user);
   }
 
-  user.codigoRecuperacion = null;
-  user.fechaExpiracionCodigo = null;
+  async clearRecoveryData(idUsuario: number): Promise<User> {
+    const user = await this.findById(idUsuario);
 
-  return this.usersRepository.save(user);
-}
+    if (!user) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Usuario no encontrado',
+      });
+    }
+
+    user.codigoRecuperacion = null;
+    user.fechaExpiracionCodigo = null;
+
+    return this.usersRepository.save(user);
+  }
 }

@@ -17,8 +17,10 @@ import { LoginDto } from './dto/login.dto';
 import { LoginResponseDto } from './dto/login-response.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RegisterResponseDto } from './dto/register-response.dto';
+import { CreateAssistedOwnerDto } from './dto/create-assisted-owner.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { VeterinarioValidadoGuard } from './guards/veterinario-validado.guard';
 import type { JwtPayload } from './interfaces/jwt-payload.interface';
 import { UserPublicDto } from '../users/dto/user-public.dto';
 import { CambiarContraseñaDto } from './dto/cambiar-contrasena.dto';
@@ -39,6 +41,17 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   login(@Body() dto: LoginDto): Promise<LoginResponseDto> {
     return this.authService.login(dto);
+  }
+
+  @Post('duenos/alta-asistida')
+  @HttpCode(HttpStatus.CREATED)
+  @UseGuards(JwtAuthGuard, RolesGuard, VeterinarioValidadoGuard)
+  @Roles(RoleName.VETERINARIO)
+  createAssistedOwner(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: CreateAssistedOwnerDto,
+  ): Promise<{ mensaje: string; usuario: UserPublicDto }> {
+    return this.authService.createAssistedOwner(dto, user.sub);
   }
 
   /** Ruta protegida de demostración: devuelve el perfil del usuario autenticado. */
