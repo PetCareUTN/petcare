@@ -50,7 +50,7 @@ fun ForgotPasswordScreen(
         )
 
         Text(
-            text = "Recuperar contraseña",
+            text = "Recuperar o activar cuenta",
             modifier = Modifier.padding(top = 8.dp, bottom = 24.dp),
             style = MaterialTheme.typography.headlineSmall
         )
@@ -73,7 +73,7 @@ fun ForgotPasswordScreen(
 
         if (!codeSent) {
             Text(
-                text = "Ingresá tu email y te enviaremos un código para restablecer tu contraseña.",
+                text = "Ingrese su email y le enviaremos un codigo para recuperar su contrasena o activar su cuenta.",
                 modifier = Modifier.padding(bottom = 16.dp),
                 style = MaterialTheme.typography.bodyMedium
             )

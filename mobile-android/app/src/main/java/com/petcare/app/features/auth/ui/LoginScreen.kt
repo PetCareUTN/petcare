@@ -104,7 +104,7 @@ fun LoginScreen(
             )
 
             Text(
-                text = "inicia sesion para continuar",
+                text = "inicie sesión para continuar",
                 color = PetCareMuted,
                 style = MaterialTheme.typography.bodyLarge
             )
@@ -130,7 +130,7 @@ fun LoginScreen(
                             emailError = null
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Correo electronico") },
+                        label = { Text("Correo electrónico") },
                         singleLine = true,
                         enabled = !isLoading,
                         isError = emailError != null,
@@ -150,7 +150,7 @@ fun LoginScreen(
                             passwordError = null
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Contrasena") },
+                        label = { Text("Contraseña") },
                         singleLine = true,
                         enabled = !isLoading,
                         isError = passwordError != null,
@@ -200,7 +200,7 @@ fun LoginScreen(
                                 color = MaterialTheme.colorScheme.onPrimary
                             )
                         } else {
-                            Text("Iniciar sesion")
+                            Text("Iniciar sesión")
                         }
                     }
                 }
@@ -211,12 +211,12 @@ fun LoginScreen(
                 horizontalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "¿No tenes cuenta?",
+                    text = "¿No tienes cuenta?",
                     color = PetCareMuted,
                     style = MaterialTheme.typography.bodyMedium
                 )
                 TextButton(onClick = onNavigateToRegister) {
-                    Text("Registrate")
+                    Text("Registrarse")
                 }
             }
         }
@@ -225,7 +225,7 @@ fun LoginScreen(
             onClick = onForgotPassword,
             modifier = Modifier.padding(top = 16.dp)
         ) {
-            Text("¿Olvidaste tu contraseña?")
+            Text("Olvidé mi contraseña / activar cuenta?")
         }
         Surface(
             modifier = Modifier.fillMaxWidth(),
