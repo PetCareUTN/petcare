@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -7,11 +8,12 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { mkdir, writeFile } from 'fs/promises';
 import { extname, join } from 'path';
-import { Repository } from 'typeorm';
+import { Raw, Repository } from 'typeorm';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { RoleName } from '../common/enums/role-name.enum';
 import { ValidationStatus } from '../common/enums/validation-status.enum';
 import { EventoClinico } from '../eventos-clinicos/entities/evento-clinico.entity';
+import { UserPublicDto } from '../users/dto/user-public.dto';
 import { User } from '../users/entities/user.entity';
 import { Veterinario } from '../veterinarios/entities/veterinario.entity';
 import { CreateMascotaDto } from './dto/create-mascota.dto';
@@ -38,9 +40,7 @@ export class MascotasService {
     dto: CreateMascotaDto,
     foto?: UploadedImageFile,
   ): Promise<MascotaResponseDto> {
-    const duenio = await this.usersRepository.findOne({
-      where: { idUsuario: duenioId },
-    });
+    const duenio = await this.findUserById(duenioId);
     if (!duenio) {
       throw new UnauthorizedException({
         codigoEstado: 401,
@@ -48,6 +48,68 @@ export class MascotasService {
       });
     }
 
+    return this.createForOwner(duenio, dto, foto);
+  }
+
+  async findOwnerByEmail(email?: string): Promise<UserPublicDto> {
+    const normalizedEmail = email?.trim().toLowerCase();
+    if (!normalizedEmail) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje: 'El email del dueño es obligatorio',
+      });
+    }
+
+    const duenio = await this.usersRepository.findOne({
+      where: {
+        email: Raw((alias) => `LOWER(${alias}) = :email`, {
+          email: normalizedEmail,
+        }),
+      },
+    });
+
+    this.ensureExistingOwner(duenio);
+    return UserPublicDto.fromEntity(duenio);
+  }
+
+  async createForExistingOwner(
+    duenioId: number,
+    dto: CreateMascotaDto,
+    foto?: UploadedImageFile,
+  ): Promise<MascotaResponseDto> {
+    const duenio = await this.findUserById(duenioId);
+    this.ensureExistingOwner(duenio);
+
+    return this.createForOwner(duenio, dto, foto);
+  }
+
+  private findUserById(idUsuario: number): Promise<User | null> {
+    return this.usersRepository.findOne({
+      where: { idUsuario },
+    });
+  }
+
+  private ensureExistingOwner(user: User | null): asserts user is User {
+    if (!user) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Dueño no encontrado',
+      });
+    }
+
+    if (user.rol.nombre !== RoleName.DUENO_MASCOTA) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje: 'El usuario indicado no es dueño de mascota',
+      });
+    }
+  }
+
+  private async createForOwner(
+    duenio: User,
+    dto: CreateMascotaDto,
+    foto?: UploadedImageFile,
+  ): Promise<MascotaResponseDto> {
     const fotoPath = foto ? await this.saveFoto(foto) : null;
 
     const mascota = this.mascotasRepository.create({

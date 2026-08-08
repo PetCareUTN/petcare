@@ -9,14 +9,20 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { VeterinarioValidadoGuard } from '../auth/guards/veterinario-validado.guard';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { RoleName } from '../common/enums/role-name.enum';
+import { UserPublicDto } from '../users/dto/user-public.dto';
 import { CreateMascotaDto } from './dto/create-mascota.dto';
 import { MascotaResponseDto } from './dto/mascota-response.dto';
 import { UpdateMascotaDto } from './dto/update-mascota.dto';
@@ -64,6 +70,31 @@ export class MascotasController {
     @UploadedFile() foto?: UploadedImageFile,
   ): Promise<MascotaResponseDto> {
     return this.mascotasService.create(user.sub, dto, foto);
+  }
+
+  @Get('duenos/buscar')
+  @UseGuards(JwtAuthGuard, RolesGuard, VeterinarioValidadoGuard)
+  @Roles(RoleName.VETERINARIO)
+  findOwnerByEmail(@Query('email') email?: string): Promise<UserPublicDto> {
+    return this.mascotasService.findOwnerByEmail(email);
+  }
+
+  @Post('duenos/:idUsuario')
+  @UseGuards(JwtAuthGuard, RolesGuard, VeterinarioValidadoGuard)
+  @UseInterceptors(
+    FileInterceptor('foto', {
+      fileFilter: imageFileFilter,
+      limits: { fileSize: MAX_IMAGE_SIZE_IN_BYTES },
+    }),
+  )
+  @Roles(RoleName.VETERINARIO)
+  @HttpCode(HttpStatus.CREATED)
+  createForExistingOwner(
+    @Param('idUsuario', ParseIntPipe) idUsuario: number,
+    @Body() dto: CreateMascotaDto,
+    @UploadedFile() foto?: UploadedImageFile,
+  ): Promise<MascotaResponseDto> {
+    return this.mascotasService.createForExistingOwner(idUsuario, dto, foto);
   }
 
   @Get()

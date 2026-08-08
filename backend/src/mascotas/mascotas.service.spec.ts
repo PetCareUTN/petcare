@@ -1,4 +1,8 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
@@ -28,8 +32,22 @@ describe('MascotasService', () => {
   let eventosClinicosRepository: {
     findOne: jest.Mock;
   };
-  const duenio = { idUsuario: 1 } as User;
+  const duenio = {
+    idUsuario: 1,
+    nombre: 'Sofia',
+    apellido: 'Munoz',
+    email: 'sofia@petcare.test',
+    telefono: null,
+    direccion: null,
+    estado: 'activo',
+    fechaRegistro: new Date('2026-08-08T00:00:00.000Z'),
+    rol: { idRol: 1, nombre: RoleName.DUENO_MASCOTA },
+  } as User;
   const otroUsuario = { idUsuario: 2 } as User;
+  const veterinariaUser = {
+    idUsuario: 3,
+    rol: { idRol: 2, nombre: RoleName.VETERINARIO },
+  } as User;
   const duenioRequester: JwtPayload = {
     sub: duenio.idUsuario,
     email: 'duenio@petcare.com',
@@ -151,6 +169,112 @@ describe('MascotasService', () => {
       });
 
       expect(result.alergias).toBeNull();
+    });
+  });
+
+  describe('findOwnerByEmail', () => {
+    it('returns a public owner when the email belongs to an owner account', async () => {
+      usersRepository.findOne.mockResolvedValue(duenio);
+
+      const result = await service.findOwnerByEmail('  SOFIA@PETCARE.TEST ');
+
+      expect(usersRepository.findOne).toHaveBeenCalledWith({
+        where: {
+          email: expect.anything(),
+        },
+      });
+      expect(result).toEqual(
+        expect.objectContaining({
+          id_usuario: duenio.idUsuario,
+          email: duenio.email,
+          id_rol: 1,
+        }),
+      );
+      expect((result as unknown as { password?: string }).password).toBeUndefined();
+    });
+
+    it('throws BadRequestException when searching without email', async () => {
+      await expect(service.findOwnerByEmail('   ')).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(usersRepository.findOne).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException when no user exists for the email', async () => {
+      usersRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.findOwnerByEmail('inexistente@petcare.test'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('throws BadRequestException when the user is not an owner', async () => {
+      usersRepository.findOne.mockResolvedValue(veterinariaUser);
+
+      await expect(
+        service.findOwnerByEmail('vet@petcare.test'),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('createForExistingOwner', () => {
+    it('creates a pet associated to an existing owner account', async () => {
+      usersRepository.findOne.mockResolvedValue(duenio);
+      mascotasRepository.create.mockImplementation(
+        (entity: Partial<Mascota>) => entity as Mascota,
+      );
+      mascotasRepository.save.mockImplementation((entity) =>
+        Promise.resolve({ ...entity, idMascota: 11 }),
+      );
+
+      const result = await service.createForExistingOwner(duenio.idUsuario, {
+        nombre: 'Michi',
+        especie: 'Gato',
+        raza: 'Siames',
+        sexo: PetSex.HEMBRA,
+        peso: 4.2,
+      });
+
+      expect(usersRepository.findOne).toHaveBeenCalledWith({
+        where: { idUsuario: duenio.idUsuario },
+      });
+      expect(mascotasRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          nombre: 'Michi',
+          especie: 'Gato',
+          raza: 'Siames',
+          peso: '4.20',
+          usuarios: [duenio],
+        }),
+      );
+      expect(result.idMascota).toBe(11);
+      expect(result.idUsuarios).toEqual([duenio.idUsuario]);
+    });
+
+    it('throws NotFoundException when the target owner does not exist', async () => {
+      usersRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.createForExistingOwner(999, {
+          nombre: 'Michi',
+          especie: 'Gato',
+          sexo: PetSex.HEMBRA,
+        }),
+      ).rejects.toThrow(NotFoundException);
+      expect(mascotasRepository.create).not.toHaveBeenCalled();
+    });
+
+    it('throws BadRequestException when the target user is not an owner', async () => {
+      usersRepository.findOne.mockResolvedValue(veterinariaUser);
+
+      await expect(
+        service.createForExistingOwner(veterinariaUser.idUsuario, {
+          nombre: 'Michi',
+          especie: 'Gato',
+          sexo: PetSex.HEMBRA,
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(mascotasRepository.create).not.toHaveBeenCalled();
     });
   });
 

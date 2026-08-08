@@ -3,7 +3,13 @@
     <header class="pet-header">
       <div>
         <h1>Registrar mascota</h1>
-        <p>Alta de mascota asociada a tu usuario.</p>
+        <p>
+          @if (isVeterinaryFlow) {
+            Alta para dueño existente desde veterinaria/local.
+          } @else {
+            Alta de mascota asociada a tu usuario.
+          }
+        </p>
       </div>
       <a routerLink="..">Volver</a>
     </header>
@@ -12,13 +18,51 @@
       <p class="banner banner-success">
         {{ successMessage() }}
         @if (createdPetId(); as petId) {
-          <a [routerLink]="['..', petId]">Ver perfil</a>
+          <a [routerLink]="profileLink(petId)">Ver perfil</a>
         }
       </p>
     }
 
     @if (errorMessage()) {
       <p class="banner banner-error">{{ errorMessage() }}</p>
+    }
+
+    @if (isVeterinaryFlow) {
+      <section class="owner-lookup" [formGroup]="ownerSearchForm">
+        <div>
+          <h2>Dueño de la mascota</h2>
+          <p>Busca una cuenta existente antes de completar el alta.</p>
+        </div>
+
+        <div class="owner-search-row">
+          <div class="field">
+            <label for="ownerEmail">Email del dueño</label>
+            <input
+              id="ownerEmail"
+              type="email"
+              formControlName="email"
+              (input)="onOwnerEmailChanged()"
+            />
+            @if (ownerSearchForm.controls.email.invalid && ownerSearchForm.controls.email.touched) {
+              <p class="field-error">Ingresa un email valido.</p>
+            }
+          </div>
+
+          <button type="button" class="btn-secondary" [disabled]="isSearchingOwner()" (click)="searchOwner()">
+            {{ isSearchingOwner() ? 'Buscando...' : 'Buscar dueño' }}
+          </button>
+        </div>
+
+        @if (selectedOwner(); as owner) {
+          <p class="owner-result">
+            Dueño seleccionado: <strong>{{ ownerDisplayName(owner) }}</strong> - {{ owner.email }}
+          </p>
+        }
+
+        @if (ownerSearchMessage()) {
+          <p class="field-error">{{ ownerSearchMessage() }}</p>
+        }
+      </section>
     }
 
     <section class="form-grid">
