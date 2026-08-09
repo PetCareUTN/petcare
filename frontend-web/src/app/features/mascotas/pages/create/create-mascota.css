@@ -56,6 +56,58 @@
   gap: var(--spacing-md);
 }
 
+.owner-lookup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--border);
+}
+
+.owner-lookup h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.owner-lookup p {
+  margin: var(--spacing-xs) 0 0;
+  color: var(--text-secondary);
+}
+
+.owner-search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--spacing-md);
+  align-items: end;
+}
+
+.btn-secondary {
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  color: var(--primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--primary-light);
+}
+
+.btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.owner-result {
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius-sm);
+  background-color: color-mix(in srgb, var(--primary) 10%, white);
+}
+
 .field {
   display: flex;
   flex-direction: column;
@@ -194,6 +246,10 @@
   }
 
   .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .owner-search-row {
     grid-template-columns: 1fr;
   }
 }

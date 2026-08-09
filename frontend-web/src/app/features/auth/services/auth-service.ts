@@ -1,9 +1,11 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, catchError, throwError } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import {
   ApiError,
+  AssistedOwnerRequest,
+  AssistedOwnerResponse,
   ForgotPasswordRequest,
   LoginRequest,
   LoginResponse,
@@ -43,6 +45,14 @@ export class AuthService {
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
   }
 
+  createAssistedOwner(data: AssistedOwnerRequest): Observable<AssistedOwnerResponse> {
+    return this.http
+      .post<AssistedOwnerResponse>(`${this.baseUrl}/duenos/alta-asistida`, data, {
+        headers: this.authHeaders(),
+      })
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
   saveToken(token: string): void {
     localStorage.setItem(this.tokenStorageKey, token);
   }
@@ -76,6 +86,11 @@ export class AuthService {
 
   isAdmin(): boolean {
     return this.getRoleId() === 3;
+  }
+
+  private authHeaders(): HttpHeaders | undefined {
+    const token = this.getToken();
+    return token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;
   }
 
   /**

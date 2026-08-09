@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import type ms from 'ms';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { VeterinarioValidadoGuard } from '../auth/guards/veterinario-validado.guard';
 import { EventoClinico } from '../eventos-clinicos/entities/evento-clinico.entity';
 import { User } from '../users/entities/user.entity';
 import { Veterinario } from '../veterinarios/entities/veterinario.entity';
@@ -22,7 +24,7 @@ import { MascotasService } from './mascotas.service';
     }),
   ],
   controllers: [MascotasController],
-  providers: [MascotasService],
+  providers: [MascotasService, RolesGuard, VeterinarioValidadoGuard],
   exports: [MascotasService],
 })
 export class MascotasModule {}

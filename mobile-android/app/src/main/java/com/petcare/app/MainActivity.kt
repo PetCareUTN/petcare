@@ -28,7 +28,6 @@ import com.petcare.app.features.auth.ui.ForgotPasswordScreen
 import com.petcare.app.features.auth.ui.LoginScreen
 import com.petcare.app.features.auth.ui.ResetPasswordScreen
 import com.petcare.app.features.auth.ui.AuthenticatedHomeScreen
-import com.petcare.app.features.auth.ui.LoginScreen
 import com.petcare.app.features.auth.ui.RegisterScreen
 import com.petcare.app.features.historiaclinica.data.remote.EventoClinicoResponse
 import com.petcare.app.features.historiaclinica.domain.HistoriaClinicaController
@@ -594,6 +593,7 @@ class MainActivity : ComponentActivity() {
                                             )
 
                                             loggedUserName = session.userName
+                                            loadPets()
                                         } catch (exception: HttpException) {
                                             serverError = when (exception.code()) {
                                                 400, 401 -> "Correo o contraseña incorrectos"
@@ -616,32 +616,13 @@ class MainActivity : ComponentActivity() {
                                     currentScreen = AuthScreen.FORGOT_PASSWORD
                                     serverError = null
                                     forgotPasswordSuccess = null
+                                },
+                                onNavigateToRegister = {
+                                    isRegisteringUser = true
+                                    registerError = null
+                                    registerSuccessMessage = null
                                 }
                             )
-                                    loggedUserName = session.userName
-                                    loadPets()
-                                } catch (exception: HttpException) {
-                                    serverError = when (exception.code()) {
-                                        400, 401 -> "Correo o contrasena incorrectos"
-                                        404 -> "No se encontro el servicio de autenticacion"
-                                        500 -> "Ocurrio un error en el servidor"
-                                        else -> "No se pudo iniciar sesion"
-                                    }
-                                } catch (exception: IOException) {
-                                    serverError =
-                                        "No se pudo conectar con el servidor"
-                                } catch (exception: Exception) {
-                                    serverError =
-                                        "Ocurrio un error inesperado"
-                                } finally {
-                                    isLoading = false
-                                }
-                            }
-                        },
-                        onNavigateToRegister = {
-                            isRegisteringUser = true
-                            registerError = null
-                            registerSuccessMessage = null
                         }
 
                         AuthScreen.FORGOT_PASSWORD -> {
@@ -656,7 +637,7 @@ class MainActivity : ComponentActivity() {
 
                                     lifecycleScope.launch {
                                         try {
-                                            val response = RetrofitClient.authApi.forgotPassword(
+                                            val response = RetrofitClient.authApi(sessionStore).forgotPassword(
                                                 ForgotPasswordRequest(email = email)
                                             )
                                             forgotPasswordSuccess = response.mensaje
@@ -704,7 +685,7 @@ class MainActivity : ComponentActivity() {
 
                                     lifecycleScope.launch {
                                         try {
-                                            val response = RetrofitClient.authApi.resetPassword(
+                                            val response = RetrofitClient.authApi(sessionStore).resetPassword(
                                                 ResetPasswordRequest(
                                                     email = resetEmail,
                                                     codigo = codigo,
