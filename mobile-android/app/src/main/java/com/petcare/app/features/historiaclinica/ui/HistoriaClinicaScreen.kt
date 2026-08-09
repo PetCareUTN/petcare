@@ -30,6 +30,7 @@ import com.petcare.app.ui.theme.PetCareTeal
 
 private val EVENT_TYPE_LABELS = mapOf(
     "consulta" to "Consulta",
+    "vacuna" to "Vacuna",
     "diagnostico" to "Diagnostico",
     "tratamiento" to "Tratamiento",
     "cirugia" to "Cirugia",
