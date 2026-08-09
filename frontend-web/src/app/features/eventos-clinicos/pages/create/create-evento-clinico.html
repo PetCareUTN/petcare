@@ -48,10 +48,12 @@
       </div>
 
       <div class="field field-wide">
-        <label for="descripcion">Descripcion</label>
+        <label for="descripcion">{{ esVacuna() ? 'Nombre de la vacuna' : 'Descripcion' }}</label>
         <textarea id="descripcion" rows="4" formControlName="descripcion"></textarea>
         @if (form.controls.descripcion.invalid && form.controls.descripcion.touched) {
-          <p class="field-error">La descripcion es obligatoria.</p>
+          <p class="field-error">
+            {{ esVacuna() ? 'El nombre de la vacuna es obligatorio.' : 'La descripcion es obligatoria.' }}
+          </p>
         }
       </div>
 

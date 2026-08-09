@@ -1,5 +1,6 @@
 export type ClinicalEventType =
   | 'consulta'
+  | 'vacuna'
   | 'diagnostico'
   | 'tratamiento'
   | 'cirugia'

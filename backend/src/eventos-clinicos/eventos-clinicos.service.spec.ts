@@ -164,6 +164,53 @@ describe('EventosClinicosService', () => {
     );
   });
 
+  it('registra una vacuna aplicada dentro de la historia clinica (US-15)', async () => {
+    const historia = { idHistoria: 20 } as HistoriaClinica;
+    const mascota = {
+      idMascota: 10,
+      idHistoria: 20,
+      historiaClinica: historia,
+    } as Mascota;
+    const vacunaDto: CreateEventoClinicoDto = {
+      idMascota: 10,
+      tipo: ClinicalEventType.VACUNA,
+      fecha: '2026-08-05',
+      descripcion: 'Antirrabica anual',
+      observaciones: 'Sin reacciones adversas',
+    };
+    const evento = {
+      idEvento: 32,
+      historia,
+      veterinario,
+      tipo: vacunaDto.tipo,
+      fecha: vacunaDto.fecha,
+      descripcion: vacunaDto.descripcion,
+      diagnostico: null,
+      tratamiento: null,
+      observaciones: vacunaDto.observaciones,
+      createdAt: new Date('2026-08-05T10:00:00Z'),
+      updatedAt: new Date('2026-08-05T10:00:00Z'),
+    } as EventoClinico;
+
+    veterinariosRepository.findOne.mockResolvedValue(veterinario);
+    mascotasRepository.findOne.mockResolvedValue(mascota);
+    eventosClinicosRepository.create.mockReturnValue(evento);
+    eventosClinicosRepository.save.mockResolvedValue(evento);
+
+    const result = await service.create(7, vacunaDto);
+
+    expect(eventosClinicosRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        historia,
+        tipo: ClinicalEventType.VACUNA,
+        descripcion: 'Antirrabica anual',
+        observaciones: 'Sin reacciones adversas',
+      }),
+    );
+    expect(result.tipo).toBe(ClinicalEventType.VACUNA);
+    expect(result.idHistoria).toBe(20);
+  });
+
   it('crea la historia clinica cuando la mascota todavia no tiene una', async () => {
     const mascota = {
       idMascota: 10,
