@@ -6,6 +6,7 @@ import { ApiError } from '../../auth/models/user';
 import { AuthService } from '../../auth/services/auth-service';
 import {
   CreateMascotaRequest,
+  MascotaOwner,
   MascotaResponse,
   UpdateMascotaRequest,
 } from '../models/mascota';
@@ -21,6 +22,29 @@ export class MascotasService {
 
     return this.http
       .post<MascotaResponse>(this.baseUrl, formData, { headers: this.authHeaders() })
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
+  findOwnerByEmail(email: string): Observable<MascotaOwner> {
+    return this.http
+      .get<MascotaOwner>(`${this.baseUrl}/duenos/buscar`, {
+        headers: this.authHeaders(),
+        params: { email },
+      })
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
+  createForOwner(
+    idUsuario: number,
+    data: CreateMascotaRequest,
+    foto?: File,
+  ): Observable<MascotaResponse> {
+    const formData = this.buildFormData(data, foto);
+
+    return this.http
+      .post<MascotaResponse>(`${this.baseUrl}/duenos/${idUsuario}`, formData, {
+        headers: this.authHeaders(),
+      })
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
   }
 

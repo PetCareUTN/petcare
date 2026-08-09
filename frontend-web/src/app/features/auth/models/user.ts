@@ -29,6 +29,18 @@ export interface LoginResponse {
   usuario: RegisterResponse;
 }
 
+export interface AssistedOwnerRequest {
+  nombre: string;
+  apellido?: string | null;
+  email: string;
+  telefono?: string | null;
+}
+
+export interface AssistedOwnerResponse {
+  mensaje: string;
+  usuario: RegisterResponse;
+}
+
 export interface ApiError {
   codigoEstado: number;
   mensaje: string;

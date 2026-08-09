@@ -53,13 +53,13 @@ fun ResetPasswordScreen(
         )
 
         Text(
-            text = "Restablecer contraseña",
+            text = "Definir nueva contrasena",
             modifier = Modifier.padding(top = 8.dp, bottom = 24.dp),
             style = MaterialTheme.typography.headlineSmall
         )
 
         Text(
-            text = "Ingresá el código que recibiste en $email y tu nueva contraseña.",
+            text = "Ingresa el codigo que recibiste en $email y tu nueva contrasena.",
             modifier = Modifier.padding(bottom = 16.dp),
             style = MaterialTheme.typography.bodyMedium
         )
@@ -87,7 +87,7 @@ fun ResetPasswordScreen(
                 codigoError = null
             },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("Código de verificación") },
+            label = { Text("Codigo de verificacion") },
             singleLine = true,
             enabled = !isLoading,
             isError = codigoError != null,
@@ -109,7 +109,7 @@ fun ResetPasswordScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 8.dp),
-            label = { Text("Nueva contraseña") },
+            label = { Text("Nueva contrasena") },
             singleLine = true,
             enabled = !isLoading,
             isError = nuevaContrasenaError != null,
@@ -132,7 +132,7 @@ fun ResetPasswordScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 8.dp),
-            label = { Text("Confirmar contraseña") },
+            label = { Text("Confirmar contrasena") },
             singleLine = true,
             enabled = !isLoading,
             isError = confirmarContrasenaError != null,
@@ -148,15 +148,15 @@ fun ResetPasswordScreen(
 
         Button(
             onClick = {
-                codigoError = if (codigo.isBlank()) "El código es obligatorio" else null
+                codigoError = if (codigo.isBlank()) "El codigo es obligatorio" else null
                 nuevaContrasenaError = when {
-                    nuevaContrasena.isBlank() -> "La contraseña es obligatoria"
-                    nuevaContrasena.length < 8 -> "La contraseña debe tener al menos 8 caracteres"
+                    nuevaContrasena.isBlank() -> "La contrasena es obligatoria"
+                    nuevaContrasena.length < 8 -> "La contrasena debe tener al menos 8 caracteres"
                     else -> null
                 }
                 confirmarContrasenaError = when {
-                    confirmarContrasena.isBlank() -> "Confirmá tu contraseña"
-                    confirmarContrasena != nuevaContrasena -> "Las contraseñas no coinciden"
+                    confirmarContrasena.isBlank() -> "Confirma tu contrasena"
+                    confirmarContrasena != nuevaContrasena -> "Las contrasenas no coinciden"
                     else -> null
                 }
 
@@ -172,7 +172,7 @@ fun ResetPasswordScreen(
             if (isLoading) {
                 CircularProgressIndicator()
             } else {
-                Text("Restablecer contraseña")
+                Text("Definir contrasena")
             }
         }
 
@@ -180,7 +180,7 @@ fun ResetPasswordScreen(
             onClick = onNavigateToLogin,
             modifier = Modifier.padding(top = 16.dp)
         ) {
-            Text("Volver al inicio de sesión")
+            Text("Volver al inicio de sesion")
         }
     }
 }

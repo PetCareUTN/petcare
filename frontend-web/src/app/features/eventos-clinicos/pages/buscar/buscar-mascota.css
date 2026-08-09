@@ -188,6 +188,10 @@
   font-size: 1.1rem;
 }
 
+.btn-spaced {
+  margin-top: var(--spacing-sm);
+}
+
 .btn-secondary {
   flex: 0 0 auto;
   padding: 0.5rem 0.9rem;

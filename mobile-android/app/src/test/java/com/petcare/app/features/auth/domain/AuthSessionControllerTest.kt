@@ -3,10 +3,13 @@ package com.petcare.app.features.auth.domain
 import com.petcare.app.features.auth.data.local.AuthSession
 import com.petcare.app.features.auth.data.local.SessionStore
 import com.petcare.app.features.auth.data.remote.AuthApi
+import com.petcare.app.features.auth.data.remote.ForgotPasswordRequest
 import com.petcare.app.features.auth.data.remote.LoginRequest
 import com.petcare.app.features.auth.data.remote.LoginResponse
+import com.petcare.app.features.auth.data.remote.MessageResponse
 import com.petcare.app.features.auth.data.remote.RegisterRequest
 import com.petcare.app.features.auth.data.remote.RegisterResponse
+import com.petcare.app.features.auth.data.remote.ResetPasswordRequest
 import com.petcare.app.features.auth.data.remote.UserResponse
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -121,6 +124,12 @@ class AuthSessionControllerTest {
                     registrationDate = "2026-07-23"
                 )
             )
+
+        override suspend fun forgotPassword(request: ForgotPasswordRequest): MessageResponse =
+            MessageResponse(mensaje = "Codigo enviado")
+
+        override suspend fun resetPassword(request: ResetPasswordRequest): MessageResponse =
+            MessageResponse(mensaje = "Contrasena actualizada")
     }
 
     private class FakeSessionStore(

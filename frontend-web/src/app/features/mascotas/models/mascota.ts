@@ -14,6 +14,18 @@ export interface CreateMascotaRequest {
 
 export type UpdateMascotaRequest = Partial<CreateMascotaRequest>;
 
+export interface MascotaOwner {
+  id_usuario: number;
+  nombre: string;
+  apellido: string | null;
+  email: string;
+  telefono: string | null;
+  direccion: string | null;
+  id_rol: number;
+  estado: string;
+  fecha_registro: string;
+}
+
 export interface MascotaResponse {
   idMascota: number;
   nombre: string;

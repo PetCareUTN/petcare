@@ -1,0 +1,68 @@
+<main class="alta-page">
+  <header class="alta-header">
+    <div>
+      <h1>Alta asistida de dueño</h1>
+      <p class="page-subtitle">
+        Crea una cuenta para un responsable que todavia no usa PetCare.
+      </p>
+    </div>
+    <a class="btn-secondary" routerLink="/eventos-clinicos/pacientes">Volver a pacientes</a>
+  </header>
+
+  <div class="alta-grid">
+    <section class="alta-card">
+      <h2>Datos del responsable</h2>
+      <p class="card-subtitle">
+        El sistema enviará un email para que defina su contraseña.
+      </p>
+
+      @if (successMessage()) {
+        <p class="banner banner-success">{{ successMessage() }}</p>
+      }
+
+      @if (errorMessage()) {
+        <p class="banner banner-error">{{ errorMessage() }}</p>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="submit()" class="alta-form">
+        <label>
+          Nombre
+          <input type="text" formControlName="nombre" autocomplete="given-name" />
+          @if (form.controls.nombre.touched && form.controls.nombre.invalid) {
+            <span class="field-error">Ingresá un nombre de hasta 100 caracteres.</span>
+          }
+        </label>
+
+        <label>
+          Apellido
+          <input type="text" formControlName="apellido" autocomplete="family-name" />
+          @if (form.controls.apellido.touched && form.controls.apellido.invalid) {
+            <span class="field-error">El apellido no puede superar los 100 caracteres.</span>
+          }
+        </label>
+
+        <label>
+          Email
+          <input type="email" formControlName="email" autocomplete="email" />
+          @if (form.controls.email.touched && form.controls.email.invalid) {
+            <span class="field-error">Ingresá un email valido.</span>
+          }
+        </label>
+
+        <label>
+          Telefono
+          <input type="tel" formControlName="telefono" autocomplete="tel" />
+          @if (form.controls.telefono.touched && form.controls.telefono.invalid) {
+            <span class="field-error">El telefono no puede superar los 30 caracteres.</span>
+          }
+        </label>
+
+        <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
+          {{ isSubmitting() ? 'Creando cuenta...' : 'Crear cuenta y enviar email' }}
+        </button>
+      </form>
+    </section>
+
+    
+  </div>
+</main>
