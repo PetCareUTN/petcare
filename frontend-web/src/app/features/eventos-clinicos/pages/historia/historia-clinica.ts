@@ -21,6 +21,7 @@ type EventTypeOption = {
 
 const EVENT_TYPE_LABELS: Record<ClinicalEventType, string> = {
   consulta: 'Consulta',
+  vacuna: 'Vacuna',
   diagnostico: 'Diagnóstico',
   tratamiento: 'Tratamiento',
   cirugia: 'Cirugía',
@@ -44,6 +45,7 @@ export class HistoriaClinicaPage implements OnInit {
 
   protected readonly eventTypes: EventTypeOption[] = [
     { value: 'consulta', label: 'Consulta' },
+    { value: 'vacuna', label: 'Vacuna' },
     { value: 'diagnostico', label: 'Diagnostico' },
     { value: 'tratamiento', label: 'Tratamiento' },
     { value: 'cirugia', label: 'Cirugia' },

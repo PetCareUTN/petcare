@@ -30,6 +30,7 @@ export class CreateEventoClinicoPage implements OnInit {
 
   protected readonly eventTypes: EventTypeOption[] = [
     { value: 'consulta', label: 'Consulta' },
+    { value: 'vacuna', label: 'Vacuna' },
     { value: 'diagnostico', label: 'Diagnostico' },
     { value: 'tratamiento', label: 'Tratamiento' },
     { value: 'cirugia', label: 'Cirugia' },
@@ -152,6 +153,10 @@ export class CreateEventoClinicoPage implements OnInit {
         this.uploadError.set(error.mensaje ?? 'No se pudo adjuntar el archivo.');
       },
     });
+  }
+
+  protected esVacuna(): boolean {
+    return this.form.controls.tipo.value === 'vacuna';
   }
 
   private optionalText(value: string | null | undefined): string | undefined {
