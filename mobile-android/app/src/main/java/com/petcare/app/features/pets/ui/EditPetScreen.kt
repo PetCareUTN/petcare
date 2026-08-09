@@ -52,6 +52,7 @@ fun EditPetScreen(
     var weight by rememberSaveable { mutableStateOf(pet.peso?.toString() ?: "") }
     var isSterilized by rememberSaveable { mutableStateOf(pet.esterilizado) }
     var observations by rememberSaveable { mutableStateOf(pet.observaciones ?: "") }
+    var allergies by rememberSaveable { mutableStateOf(pet.alergias ?: "") }
     var photoUriText by rememberSaveable { mutableStateOf<String?>(null) }
     var validation by remember {
         mutableStateOf(PetRegistrationValidationResult())
@@ -175,6 +176,15 @@ fun EditPetScreen(
         }
 
         OutlinedTextField(
+            value = allergies,
+            onValueChange = { allergies = it },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(100.dp),
+            label = { Text("Alergias") }
+        )
+
+        OutlinedTextField(
             value = observations,
             onValueChange = { observations = it },
             modifier = Modifier
@@ -232,7 +242,8 @@ fun EditPetScreen(
                             birthDate = birthDate.trim().ifBlank { null },
                             peso = weight.trim().ifBlank { null }?.toDouble(),
                             esterilizado = isSterilized,
-                            observaciones = observations.trim().ifBlank { null }
+                            observaciones = observations.trim().ifBlank { null },
+                            alergias = allergies.trim().ifBlank { null }
                         ),
                         photoUri
                     )

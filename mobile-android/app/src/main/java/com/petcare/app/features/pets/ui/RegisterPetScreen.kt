@@ -105,6 +105,7 @@ fun RegisterPetScreen(
     var weight by rememberSaveable { mutableStateOf("") }
     var isSterilized by rememberSaveable { mutableStateOf(false) }
     var observations by rememberSaveable { mutableStateOf("") }
+    var allergies by rememberSaveable { mutableStateOf("") }
     val breedOptions = breedOptionsBySpecies[species].orEmpty()
     var photoUriText by rememberSaveable { mutableStateOf<String?>(null) }
     var validation by remember {
@@ -296,6 +297,15 @@ fun RegisterPetScreen(
                 }
 
                 OutlinedTextField(
+                    value = allergies,
+                    onValueChange = { allergies = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp),
+                    label = { Text("Alergias") }
+                )
+
+                OutlinedTextField(
                     value = observations,
                     onValueChange = { observations = it },
                     modifier = Modifier
@@ -378,7 +388,8 @@ fun RegisterPetScreen(
                             birthDate = birthDate.trim().ifBlank { null },
                             peso = weight.trim().ifBlank { null }?.toDouble(),
                             esterilizado = isSterilized,
-                            observaciones = observations.trim().ifBlank { null }
+                            observaciones = observations.trim().ifBlank { null },
+                            alergias = allergies.trim().ifBlank { null }
                         ),
                         photoUri
                     )

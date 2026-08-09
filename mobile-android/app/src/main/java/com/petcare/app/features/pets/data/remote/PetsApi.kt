@@ -26,7 +26,8 @@ data class PetResponse(
     val peso: Double?,
     val esterilizado: Boolean,
     val foto: String?,
-    val observaciones: String?
+    val observaciones: String?,
+    val alergias: String?
 )
 
 data class CreatePetRequest(
@@ -40,7 +41,8 @@ data class CreatePetRequest(
 
     val peso: Double?,
     val esterilizado: Boolean,
-    val observaciones: String?
+    val observaciones: String?,
+    val alergias: String?
 )
 
 data class UpdatePetRequest(
@@ -54,7 +56,8 @@ data class UpdatePetRequest(
 
     val peso: Double?,
     val esterilizado: Boolean,
-    val observaciones: String?
+    val observaciones: String?,
+    val alergias: String?
 )
 
 interface PetsApi {
@@ -83,6 +86,7 @@ interface PetsApi {
         @Part("peso") peso: RequestBody?,
         @Part("esterilizado") esterilizado: RequestBody,
         @Part("observaciones") observaciones: RequestBody?,
+        @Part("alergias") alergias: RequestBody?,
         @Part foto: MultipartBody.Part
     ): PetResponse
 
@@ -104,6 +108,7 @@ interface PetsApi {
         @Part("peso") peso: RequestBody?,
         @Part("esterilizado") esterilizado: RequestBody,
         @Part("observaciones") observaciones: RequestBody?,
+        @Part("alergias") alergias: RequestBody?,
         @Part foto: MultipartBody.Part
     ): PetResponse
 }

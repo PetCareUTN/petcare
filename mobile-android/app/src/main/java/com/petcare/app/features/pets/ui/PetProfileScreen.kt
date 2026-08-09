@@ -174,6 +174,32 @@ private fun PetProfileContent(pet: PetResponse, onViewHistoria: () -> Unit) {
                 label = "Esterilizado",
                 value = if (pet.esterilizado) "Si" else "No"
             )
+        }
+    }
+
+    Spacer(modifier = Modifier.height(18.dp))
+
+    Text(
+        text = "Informacion medica",
+        style = MaterialTheme.typography.titleLarge
+    )
+
+    Spacer(modifier = Modifier.height(10.dp))
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, PetCareLine),
+        shape = MaterialTheme.shapes.extraLarge
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            DetailRow(
+                label = "Alergias",
+                value = pet.alergias?.ifBlank { null } ?: "Sin alergias registradas"
+            )
             DetailRow(
                 label = "Observaciones",
                 value = pet.observaciones?.ifBlank { null } ?: "Sin observaciones registradas"
