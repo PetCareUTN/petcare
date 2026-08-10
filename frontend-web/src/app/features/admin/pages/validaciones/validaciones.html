@@ -5,7 +5,10 @@
         <h1>Validaciones pendientes</h1>
         <p>Solicitudes de validación de veterinarios pendientes de revisión.</p>
       </div>
-      <app-notification-bell />
+      <div class="pet-header-actions">
+        <app-notification-bell />
+        <a class="btn-volver" routerLink="/">Volver al inicio</a>
+      </div>
     </header>
 
     @if (isLoading()) {
