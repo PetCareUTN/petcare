@@ -128,6 +128,9 @@ describe('AuthService', () => {
       mascotas: [],
       codigoRecuperacion: null,
       fechaExpiracionCodigo: null,
+      emailNuevo: null,
+      codigoCambioEmail: null,
+      fechaExpiracionCodigoEmail: null,
       updatedAt: new Date('2026-07-02T00:00:00.000Z'),
     };
     usersService.create.mockResolvedValue(savedUser);
@@ -204,6 +207,9 @@ describe('AuthService', () => {
       mascotas: [],
       codigoRecuperacion: null,
       fechaExpiracionCodigo: null,
+      emailNuevo: null,
+      codigoCambioEmail: null,
+      fechaExpiracionCodigoEmail: null,
       updatedAt: new Date('2026-08-07T00:00:00.000Z'),
     };
 
@@ -302,6 +308,9 @@ describe('AuthService', () => {
       mascotas: [],
       codigoRecuperacion: null,
       fechaExpiracionCodigo: null,
+      emailNuevo: null,
+      codigoCambioEmail: null,
+      fechaExpiracionCodigoEmail: null,
       updatedAt: new Date('2026-07-02T00:00:00.000Z'),
     });
 
@@ -427,6 +436,9 @@ describe('AuthService', () => {
         mascotas: [],
         codigoRecuperacion: await bcrypt.hash(recoveryCode, 10),
         fechaExpiracionCodigo: new Date(Date.now() + 10 * 60 * 1000),
+        emailNuevo: null,
+        codigoCambioEmail: null,
+        fechaExpiracionCodigoEmail: null,
         updatedAt: new Date('2026-08-07T00:00:00.000Z'),
       };
       usersService.findByEmail.mockResolvedValue(user);
