@@ -74,6 +74,28 @@ export class User {
   })
   fechaExpiracionCodigo: Date | null;
 
+  @Column({
+    name: 'email_nuevo',
+    type: 'varchar',
+    length: 150,
+    nullable: true,
+  })
+  emailNuevo: string | null;
+
+  @Column({
+    name: 'codigo_cambio_email',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
+  codigoCambioEmail: string | null;
+
+  @Column({
+    name: 'fecha_expiracion_codigo_email',
+    type: 'timestamp',
+    nullable: true,
+  })
+  fechaExpiracionCodigoEmail: Date | null;
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;

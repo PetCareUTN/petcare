@@ -42,6 +42,7 @@ import com.petcare.app.features.pets.ui.RegisterPetScreen
 import com.petcare.app.features.profile.data.remote.UpdateProfileRequest
 import com.petcare.app.features.profile.data.remote.UserProfileResponse
 import com.petcare.app.features.profile.domain.ProfileController
+import com.petcare.app.features.profile.ui.ChangeEmailScreen
 import com.petcare.app.features.profile.ui.EditProfileScreen
 import com.petcare.app.features.profile.ui.ProfileScreen
 import com.petcare.app.ui.theme.PetCareTheme
@@ -198,6 +199,18 @@ class MainActivity : ComponentActivity() {
                 var profile by remember {
                     mutableStateOf<UserProfileResponse?>(null)
                 }
+                var isChangingEmail by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isEmailCodeSent by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isProcessingEmailChange by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var emailChangeError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
 
                 fun logout() {
                     sessionController.logout()
@@ -220,6 +233,10 @@ class MainActivity : ComponentActivity() {
                     profileError = null
                     saveProfileError = null
                     profile = null
+                    isChangingEmail = false
+                    isEmailCodeSent = false
+                    isProcessingEmailChange = false
+                    emailChangeError = null
                 }
 
                 fun loadPets() {
@@ -417,6 +434,82 @@ class MainActivity : ComponentActivity() {
                             editingPet = null
                         }
                     )
+                } else if (loggedUserName != null && isChangingEmail) {
+                    profile?.let { currentProfile ->
+                        ChangeEmailScreen(
+                            currentEmail = currentProfile.email,
+                            isCodeSent = isEmailCodeSent,
+                            isLoading = isProcessingEmailChange,
+                            serverError = emailChangeError,
+                            onRequestCode = { nuevoEmail ->
+                                isProcessingEmailChange = true
+                                emailChangeError = null
+
+                                lifecycleScope.launch {
+                                    try {
+                                        profileController.requestEmailChange(nuevoEmail)
+                                        isEmailCodeSent = true
+                                    } catch (exception: HttpException) {
+                                        emailChangeError = when (exception.code()) {
+                                            401 -> {
+                                                logout()
+                                                serverError =
+                                                    "La sesion expiro. Inicia sesion nuevamente"
+                                                null
+                                            }
+                                            409 -> "Ese correo ya esta en uso"
+                                            400 -> "Revisa los datos ingresados"
+                                            else -> "No se pudo enviar el codigo"
+                                        }
+                                    } catch (exception: IOException) {
+                                        emailChangeError = "No se pudo conectar con el servidor"
+                                    } catch (exception: Exception) {
+                                        emailChangeError = "Ocurrio un error inesperado"
+                                    } finally {
+                                        isProcessingEmailChange = false
+                                    }
+                                }
+                            },
+                            onConfirmCode = { codigo ->
+                                isProcessingEmailChange = true
+                                emailChangeError = null
+
+                                lifecycleScope.launch {
+                                    try {
+                                        profileController.confirmEmailChange(codigo)
+                                        isChangingEmail = false
+                                        isEmailCodeSent = false
+                                        isViewingProfile = true
+                                        loadProfile()
+                                    } catch (exception: HttpException) {
+                                        emailChangeError = when (exception.code()) {
+                                            401 -> {
+                                                logout()
+                                                serverError =
+                                                    "La sesion expiro. Inicia sesion nuevamente"
+                                                null
+                                            }
+                                            409 -> "Ese correo ya esta en uso"
+                                            400 -> "Codigo invalido o expirado"
+                                            else -> "No se pudo confirmar el cambio de email"
+                                        }
+                                    } catch (exception: IOException) {
+                                        emailChangeError = "No se pudo conectar con el servidor"
+                                    } catch (exception: Exception) {
+                                        emailChangeError = "Ocurrio un error inesperado"
+                                    } finally {
+                                        isProcessingEmailChange = false
+                                    }
+                                }
+                            },
+                            onCancel = {
+                                isChangingEmail = false
+                                isEmailCodeSent = false
+                                emailChangeError = null
+                                isEditingProfile = true
+                            }
+                        )
+                    }
                 } else if (loggedUserName != null && isEditingProfile) {
                     profile?.let { currentProfile ->
                         EditProfileScreen(
@@ -455,6 +548,13 @@ class MainActivity : ComponentActivity() {
                             onCancel = {
                                 saveProfileError = null
                                 isEditingProfile = false
+                            },
+                            onChangeEmail = {
+                                saveProfileError = null
+                                isEditingProfile = false
+                                isChangingEmail = true
+                                isEmailCodeSent = false
+                                emailChangeError = null
                             }
                         )
                     }

@@ -4,6 +4,7 @@ import com.google.gson.annotations.SerializedName
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.PATCH
+import retrofit2.http.POST
 
 data class UserProfileResponse(
     @SerializedName("id_usuario")
@@ -30,6 +31,18 @@ data class UpdateProfileRequest(
     val telefono: String?
 )
 
+data class RequestEmailChangeRequest(
+    val nuevoEmail: String
+)
+
+data class ConfirmEmailChangeRequest(
+    val codigo: String
+)
+
+data class MessageResponse(
+    val mensaje: String
+)
+
 interface ProfileApi {
 
     @GET("auth/me")
@@ -39,4 +52,14 @@ interface ProfileApi {
     suspend fun updateMyProfile(
         @Body request: UpdateProfileRequest
     ): UserProfileResponse
+
+    @POST("users/me/cambiar-email")
+    suspend fun requestEmailChange(
+        @Body request: RequestEmailChangeRequest
+    ): MessageResponse
+
+    @PATCH("users/me/confirmar-email")
+    suspend fun confirmEmailChange(
+        @Body request: ConfirmEmailChangeRequest
+    ): MessageResponse
 }

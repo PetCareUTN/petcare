@@ -1,18 +1,24 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
+import { MailService } from '../mail/mail.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
+
+const SALT_ROUNDS = 10;
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    private readonly mailService: MailService,
   ) {}
 
   findByEmail(email: string): Promise<User | null> {
@@ -59,14 +65,11 @@ export class UsersService {
     }
 
     if (dto.email !== undefined && dto.email !== user.email) {
-      const existingUser = await this.findByEmail(dto.email);
-      if (existingUser) {
-        throw new ConflictException({
-          codigoEstado: 409,
-          mensaje: 'El email ya se encuentra registrado',
-        });
-      }
-      user.email = dto.email;
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje:
+          'Para cambiar el email usá la opción de cambio de email con verificación',
+      });
     }
 
     if (dto.nombre !== undefined) {
@@ -147,5 +150,94 @@ export class UsersService {
     user.fechaExpiracionCodigo = null;
 
     return this.usersRepository.save(user);
+  }
+
+  async solicitarCambioEmail(idUsuario: number, nuevoEmail: string) {
+    const user = await this.findById(idUsuario);
+    if (!user) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Usuario no encontrado',
+      });
+    }
+
+    if (nuevoEmail === user.email) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje: 'El nuevo email debe ser distinto al actual',
+      });
+    }
+
+    const existingUser = await this.findByEmail(nuevoEmail);
+    if (existingUser) {
+      throw new ConflictException({
+        codigoEstado: 409,
+        mensaje: 'El email ya se encuentra registrado',
+      });
+    }
+
+    const codigo = Math.floor(100000 + Math.random() * 900000).toString();
+    const codigoHash = await bcrypt.hash(codigo, SALT_ROUNDS);
+    const fechaExpiracion = new Date(Date.now() + 10 * 60 * 1000);
+
+    user.emailNuevo = nuevoEmail;
+    user.codigoCambioEmail = codigoHash;
+    user.fechaExpiracionCodigoEmail = fechaExpiracion;
+    await this.usersRepository.save(user);
+
+    await this.mailService.sendEmailChangeCode(user.email, codigo, nuevoEmail);
+
+    return {
+      mensaje: 'Se ha enviado un código de confirmación a tu email actual',
+    };
+  }
+
+  async confirmarCambioEmail(idUsuario: number, codigo: string) {
+    const user = await this.findById(idUsuario);
+    if (!user) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Usuario no encontrado',
+      });
+    }
+
+    if (!user.emailNuevo || !user.codigoCambioEmail || !user.fechaExpiracionCodigoEmail) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje: 'No existe una solicitud de cambio de email activa',
+      });
+    }
+
+    if (user.fechaExpiracionCodigoEmail < new Date()) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje: 'El código de cambio de email ha expirado',
+      });
+    }
+
+    const codigoValido = await bcrypt.compare(codigo, user.codigoCambioEmail);
+    if (!codigoValido) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje: 'Código de cambio de email incorrecto',
+      });
+    }
+
+    const existingUser = await this.findByEmail(user.emailNuevo);
+    if (existingUser) {
+      throw new ConflictException({
+        codigoEstado: 409,
+        mensaje: 'El email ya se encuentra registrado',
+      });
+    }
+
+    user.email = user.emailNuevo;
+    user.emailNuevo = null;
+    user.codigoCambioEmail = null;
+    user.fechaExpiracionCodigoEmail = null;
+
+    await this.usersRepository.save(user);
+
+    return { mensaje: 'Email actualizado correctamente' };
   }
 }

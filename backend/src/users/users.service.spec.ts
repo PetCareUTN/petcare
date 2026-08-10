@@ -1,6 +1,8 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import * as bcrypt from 'bcrypt';
+import { MailService } from '../mail/mail.service';
 import { User } from './entities/user.entity';
 import { UsersService } from './users.service';
 
@@ -11,6 +13,7 @@ describe('UsersService', () => {
     create: jest.Mock;
     save: jest.Mock;
   };
+  let mailService: { sendEmailChangeCode: jest.Mock };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -24,11 +27,18 @@ describe('UsersService', () => {
             save: jest.fn(),
           },
         },
+        {
+          provide: MailService,
+          useValue: {
+            sendEmailChangeCode: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
     service = module.get<UsersService>(UsersService);
     repository = module.get(getRepositoryToken(User));
+    mailService = module.get(MailService);
   });
 
   it('should be defined', () => {
@@ -164,22 +174,16 @@ describe('UsersService', () => {
     expect(repository.save).not.toHaveBeenCalled();
   });
 
-  it('update throws ConflictException when the new email is already taken', async () => {
+  it('update throws BadRequestException when trying to change the email directly', async () => {
     const user = {
       idUsuario: 1,
       email: 'simon@petcare.test',
     } as User;
-    const otherUser = {
-      idUsuario: 2,
-      email: 'ocupado@petcare.test',
-    } as User;
-    repository.findOne
-      .mockResolvedValueOnce(user)
-      .mockResolvedValueOnce(otherUser);
+    repository.findOne.mockResolvedValueOnce(user);
 
     await expect(
       service.update(1, { email: 'ocupado@petcare.test' }),
-    ).rejects.toThrow(ConflictException);
+    ).rejects.toThrow(BadRequestException);
     expect(repository.save).not.toHaveBeenCalled();
   });
 
@@ -210,5 +214,81 @@ describe('UsersService', () => {
 
     expect(result.estado).toBe('activo');
     expect(repository.save).toHaveBeenCalledWith(user);
+  });
+
+  it('solicitarCambioEmail sends a code to the current email and stores the pending change', async () => {
+    const user = {
+      idUsuario: 1,
+      email: 'simon@petcare.test',
+    } as User;
+    repository.findOne
+      .mockResolvedValueOnce(user)
+      .mockResolvedValueOnce(null);
+    repository.save.mockImplementation((value: User) => Promise.resolve(value));
+
+    await service.solicitarCambioEmail(1, 'nuevo@petcare.test');
+
+    expect(user.emailNuevo).toBe('nuevo@petcare.test');
+    expect(user.codigoCambioEmail).toBeTruthy();
+    expect(mailService.sendEmailChangeCode).toHaveBeenCalledWith(
+      'simon@petcare.test',
+      expect.any(String),
+      'nuevo@petcare.test',
+    );
+  });
+
+  it('solicitarCambioEmail throws ConflictException when the new email is already taken', async () => {
+    const user = {
+      idUsuario: 1,
+      email: 'simon@petcare.test',
+    } as User;
+    const otherUser = {
+      idUsuario: 2,
+      email: 'ocupado@petcare.test',
+    } as User;
+    repository.findOne
+      .mockResolvedValueOnce(user)
+      .mockResolvedValueOnce(otherUser);
+
+    await expect(
+      service.solicitarCambioEmail(1, 'ocupado@petcare.test'),
+    ).rejects.toThrow(ConflictException);
+    expect(repository.save).not.toHaveBeenCalled();
+  });
+
+  it('confirmarCambioEmail applies the pending email when the code is valid', async () => {
+    const codigo = '123456';
+    const user = {
+      idUsuario: 1,
+      email: 'simon@petcare.test',
+      emailNuevo: 'nuevo@petcare.test',
+      codigoCambioEmail: await bcrypt.hash(codigo, 10),
+      fechaExpiracionCodigoEmail: new Date(Date.now() + 10 * 60 * 1000),
+    } as User;
+    repository.findOne
+      .mockResolvedValueOnce(user)
+      .mockResolvedValueOnce(null);
+    repository.save.mockImplementation((value: User) => Promise.resolve(value));
+
+    await service.confirmarCambioEmail(1, codigo);
+
+    expect(user.email).toBe('nuevo@petcare.test');
+    expect(user.emailNuevo).toBeNull();
+    expect(user.codigoCambioEmail).toBeNull();
+  });
+
+  it('confirmarCambioEmail throws BadRequestException when there is no pending request', async () => {
+    const user = {
+      idUsuario: 1,
+      email: 'simon@petcare.test',
+      emailNuevo: null,
+      codigoCambioEmail: null,
+      fechaExpiracionCodigoEmail: null,
+    } as User;
+    repository.findOne.mockResolvedValueOnce(user);
+
+    await expect(service.confirmarCambioEmail(1, '123456')).rejects.toThrow(
+      BadRequestException,
+    );
   });
 });

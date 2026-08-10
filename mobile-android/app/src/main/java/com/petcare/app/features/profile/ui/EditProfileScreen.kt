@@ -15,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,11 +37,11 @@ fun EditProfileScreen(
     isSaving: Boolean,
     saveError: String?,
     onSave: (UpdateProfileRequest) -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    onChangeEmail: () -> Unit
 ) {
     var nombre by rememberSaveable { mutableStateOf(profile.nombre) }
     var apellido by rememberSaveable { mutableStateOf(profile.apellido) }
-    var email by rememberSaveable { mutableStateOf(profile.email) }
     var telefono by rememberSaveable { mutableStateOf(profile.telefono ?: "") }
     var validation by remember {
         mutableStateOf(ProfileValidationResult())
@@ -82,15 +83,23 @@ fun EditProfileScreen(
         )
 
         OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
+            value = profile.email,
+            onValueChange = {},
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Correo electrónico") },
-            isError = validation.emailError != null,
-            supportingText = validation.emailError?.let { { Text(it) } },
+            readOnly = true,
+            enabled = false,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             singleLine = true
         )
+
+        TextButton(
+            onClick = onChangeEmail,
+            enabled = !isSaving,
+            modifier = Modifier.padding(top = 4.dp)
+        ) {
+            Text("Cambiar email")
+        }
 
         OutlinedTextField(
             value = telefono,
@@ -118,7 +127,7 @@ fun EditProfileScreen(
                 val nextValidation = ProfileValidator.validate(
                     nombre = nombre,
                     apellido = apellido,
-                    email = email,
+                    email = profile.email,
                     telefono = telefono
                 )
                 validation = nextValidation
@@ -128,7 +137,7 @@ fun EditProfileScreen(
                         UpdateProfileRequest(
                             nombre = nombre.trim(),
                             apellido = apellido.trim(),
-                            email = email.trim(),
+                            email = profile.email,
                             telefono = telefono.trim().ifBlank { null }
                         )
                     )
