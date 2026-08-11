@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -44,9 +45,15 @@ fun HistoriaClinicaScreen(
     isLoading: Boolean,
     errorMessage: String?,
     eventos: List<EventoClinicoResponse>,
+    isExporting: Boolean,
+    exportMessage: String?,
+    canExport: Boolean,
+    onExportPdf: () -> Unit,
+    onExportArchivos: () -> Unit,
     onRetry: () -> Unit,
     onBack: () -> Unit
 ) {
+    val hasArchivos = eventos.any { it.archivos.isNotEmpty() }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -74,6 +81,56 @@ fun HistoriaClinicaScreen(
         }
 
         Spacer(modifier = Modifier.height(18.dp))
+
+        if (!isLoading && errorMessage == null && eventos.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = onExportPdf,
+                    enabled = canExport && !isExporting,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large
+                ) {
+                    Text("Exportar historial (PDF)")
+                }
+                OutlinedButton(
+                    onClick = onExportArchivos,
+                    enabled = hasArchivos && !isExporting,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large
+                ) {
+                    Text(
+                        if (hasArchivos) "Exportar archivos medicos"
+                        else "Sin archivos medicos adjuntos"
+                    )
+                }
+                if (isExporting) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(0.dp))
+                        Text(
+                            text = "  Exportando...",
+                            color = PetCareMuted,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+                exportMessage?.let {
+                    Text(
+                        text = it,
+                        color = PetCareTeal,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+        }
 
         when {
             isLoading -> {

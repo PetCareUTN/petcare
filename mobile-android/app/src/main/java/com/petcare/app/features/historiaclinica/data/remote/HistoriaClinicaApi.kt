@@ -15,7 +15,18 @@ data class EventoClinicoResponse(
     val tratamiento: String?,
     val observaciones: String?,
     val createdAt: String,
-    val updatedAt: String
+    val updatedAt: String,
+    val archivos: List<ArchivoMedicoResponse> = emptyList()
+)
+
+data class ArchivoMedicoResponse(
+    val idArchivo: Int,
+    val idEvento: Int,
+    val nombreOriginal: String,
+    val url: String,
+    val mimeType: String,
+    val tamanoBytes: Long,
+    val createdAt: String
 )
 
 data class HistoriaClinicaResponse(

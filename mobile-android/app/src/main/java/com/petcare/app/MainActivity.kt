@@ -31,6 +31,9 @@ import com.petcare.app.features.auth.ui.AuthenticatedHomeScreen
 import com.petcare.app.features.auth.ui.RegisterScreen
 import com.petcare.app.features.historiaclinica.data.remote.EventoClinicoResponse
 import com.petcare.app.features.historiaclinica.domain.HistoriaClinicaController
+import com.petcare.app.features.historiaclinica.export.ExportStorage
+import com.petcare.app.features.historiaclinica.export.HistoriaClinicaPdfGenerator
+import com.petcare.app.features.historiaclinica.export.MedicalFilesDownloader
 import com.petcare.app.features.historiaclinica.ui.HistoriaClinicaScreen
 import com.petcare.app.features.pets.data.remote.CreatePetRequest
 import com.petcare.app.features.pets.data.remote.PetResponse
@@ -47,7 +50,10 @@ import com.petcare.app.features.profile.ui.EditProfileScreen
 import com.petcare.app.features.profile.ui.ProfileScreen
 import com.petcare.app.ui.theme.PetCareTheme
 import java.io.IOException
+import java.net.URLConnection
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -177,6 +183,12 @@ class MainActivity : ComponentActivity() {
                 }
                 var historiaEventos by remember {
                     mutableStateOf<List<EventoClinicoResponse>>(emptyList())
+                }
+                var isExportingHistoria by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var exportHistoriaMessage by rememberSaveable {
+                    mutableStateOf<String?>(null)
                 }
                 var isViewingProfile by rememberSaveable {
                     mutableStateOf(false)
@@ -578,11 +590,95 @@ class MainActivity : ComponentActivity() {
                         isLoading = isLoadingHistoria,
                         errorMessage = historiaError,
                         eventos = historiaEventos,
+                        isExporting = isExportingHistoria,
+                        exportMessage = exportHistoriaMessage,
+                        canExport = selectedPet != null,
+                        onExportPdf = {
+                            val pet = selectedPet ?: return@HistoriaClinicaScreen
+                            val eventos = historiaEventos
+                            isExportingHistoria = true
+                            exportHistoriaMessage = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    val file = withContext(Dispatchers.IO) {
+                                        HistoriaClinicaPdfGenerator.generate(
+                                            context = applicationContext,
+                                            pet = pet,
+                                            eventos = eventos
+                                        )
+                                    }
+                                    val saved = withContext(Dispatchers.IO) {
+                                        ExportStorage.saveToDownloads(
+                                            context = applicationContext,
+                                            source = file,
+                                            mimeType = "application/pdf"
+                                        )
+                                    }
+                                    exportHistoriaMessage = if (saved) {
+                                        "PDF guardado en Descargas"
+                                    } else {
+                                        "No se pudo guardar en Descargas, pero podes compartirlo"
+                                    }
+                                    startActivity(
+                                        ExportStorage.buildShareIntent(
+                                            this@MainActivity, file, "application/pdf"
+                                        )
+                                    )
+                                } catch (exception: Exception) {
+                                    exportHistoriaMessage = "No se pudo exportar el PDF"
+                                } finally {
+                                    isExportingHistoria = false
+                                }
+                            }
+                        },
+                        onExportArchivos = {
+                            val eventos = historiaEventos
+                            isExportingHistoria = true
+                            exportHistoriaMessage = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    val files = MedicalFilesDownloader.downloadAll(
+                                        context = applicationContext,
+                                        eventos = eventos
+                                    )
+                                    if (files.isEmpty()) {
+                                        exportHistoriaMessage =
+                                            "No se pudieron descargar los archivos medicos"
+                                    } else {
+                                        withContext(Dispatchers.IO) {
+                                            files.forEach { archivo ->
+                                                val mime = URLConnection
+                                                    .guessContentTypeFromName(archivo.name)
+                                                    ?: "application/octet-stream"
+                                                ExportStorage.saveToDownloads(
+                                                    applicationContext, archivo, mime
+                                                )
+                                            }
+                                        }
+                                        exportHistoriaMessage =
+                                            "Se exportaron ${files.size} archivo(s) a Descargas"
+                                        startActivity(
+                                            ExportStorage.buildShareMultipleIntent(
+                                                this@MainActivity, files, "*/*"
+                                            )
+                                        )
+                                    }
+                                } catch (exception: Exception) {
+                                    exportHistoriaMessage =
+                                        "No se pudieron exportar los archivos medicos"
+                                } finally {
+                                    isExportingHistoria = false
+                                }
+                            }
+                        },
                         onRetry = { selectedPetId?.let { loadHistoriaClinica(it) } },
                         onBack = {
                             isViewingHistoria = false
                             historiaError = null
                             historiaEventos = emptyList()
+                            exportHistoriaMessage = null
                         }
                     )
                 } else if (loggedUserName != null && selectedPetId != null) {
