@@ -5,7 +5,7 @@
         <h1>Registrar evento clinico</h1>
         <p>Carga de eventos asociados a la historia clinica de una mascota.</p>
       </div>
-      <a routerLink="/eventos-clinicos">Volver</a>
+      <a routerLink="/eventos-clinicos" [queryParams]="backQueryParams()">Volver</a>
     </header>
 
     @if (successMessage()) {

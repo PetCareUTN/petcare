@@ -20,6 +20,11 @@ import { ArchivoMedico } from './entities/archivo-medico.entity';
 import { EventoClinico } from './entities/evento-clinico.entity';
 import type { UploadedMedicalFile } from './types/uploaded-medical-file.type';
 
+type VetAttentionContext = {
+  ownerDocument?: string;
+  ownerEmail?: string;
+};
+
 @Injectable()
 export class EventosClinicosService {
   constructor(
@@ -67,9 +72,10 @@ export class EventosClinicosService {
   async findHistoriaClinicaByMascota(
     idMascota: number,
     requester: JwtPayload,
+    attentionContext?: VetAttentionContext,
   ): Promise<HistoriaClinicaResponseDto> {
     const mascota = await this.findMascota(idMascota);
-    await this.verificarPermisoConsulta(mascota, requester);
+    await this.verificarPermisoConsulta(mascota, requester, attentionContext);
 
     if (!mascota.historiaClinica) {
       return HistoriaClinicaResponseDto.vacia(idMascota);
@@ -154,6 +160,7 @@ export class EventosClinicosService {
   private async verificarPermisoConsulta(
     mascota: Mascota,
     requester: JwtPayload,
+    attentionContext?: VetAttentionContext,
   ): Promise<void> {
     const esDuenio = mascota.usuarios.some(
       (user) => user.idUsuario === requester.sub,
@@ -167,22 +174,46 @@ export class EventosClinicosService {
         where: { usuario: { idUsuario: requester.sub } },
       });
 
-      if (
-        veterinario &&
-        veterinario.estadoValidacion === ValidationStatus.APROBADO &&
-        mascota.historiaClinica &&
-        (await this.esPacienteDelVeterinario(
-          mascota.historiaClinica.idHistoria,
-          veterinario.idVeterinario,
-        ))
-      ) {
-        return;
+      if (veterinario?.estadoValidacion === ValidationStatus.APROBADO) {
+        if (this.perteneceAlDuenioBuscado(mascota, attentionContext)) {
+          return;
+        }
+
+        if (
+          mascota.historiaClinica &&
+          (await this.esPacienteDelVeterinario(
+            mascota.historiaClinica.idHistoria,
+            veterinario.idVeterinario,
+          ))
+        ) {
+          return;
+        }
       }
     }
 
     throw new ForbiddenException({
       codigoEstado: 403,
       mensaje: 'No tiene permisos para acceder a este recurso',
+    });
+  }
+
+  private perteneceAlDuenioBuscado(
+    mascota: Mascota,
+    attentionContext?: VetAttentionContext,
+  ): boolean {
+    const ownerDocument = attentionContext?.ownerDocument?.trim();
+    const ownerEmail = attentionContext?.ownerEmail?.trim().toLowerCase();
+
+    if (!ownerDocument && !ownerEmail) {
+      return false;
+    }
+
+    return mascota.usuarios.some((user) => {
+      if (ownerDocument && user.numeroDocumento === ownerDocument) {
+        return true;
+      }
+
+      return ownerEmail ? user.email.toLowerCase() === ownerEmail : false;
     });
   }
 

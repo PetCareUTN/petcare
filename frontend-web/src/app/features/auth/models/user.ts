@@ -14,6 +14,7 @@ export interface RegisterResponse {
   nombre: string;
   apellido: string;
   email: string;
+  numero_documento?: string | null;
   id_rol: number;
   estado: string;
   fecha_registro: string;
@@ -33,6 +34,7 @@ export interface AssistedOwnerRequest {
   nombre: string;
   apellido?: string | null;
   email: string;
+  numeroDocumento: string;
   telefono?: string | null;
 }
 

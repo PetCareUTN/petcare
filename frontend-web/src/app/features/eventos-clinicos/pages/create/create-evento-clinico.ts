@@ -45,6 +45,7 @@ export class CreateEventoClinicoPage implements OnInit {
   protected readonly archivosSubidos = signal<ArchivoMedicoResponse[]>([]);
   protected readonly uploadingArchivos = signal(false);
   protected readonly uploadError = signal<string | null>(null);
+  protected readonly backQueryParams = signal<Record<string, string | number>>({});
 
   protected readonly form = this.formBuilder.group({
     idMascota: [null as number | null, [Validators.required, Validators.min(1)]],
@@ -62,10 +63,15 @@ export class CreateEventoClinicoPage implements OnInit {
       return;
     }
 
-    const idMascota = Number(this.route.snapshot.queryParamMap.get('idMascota'));
+    const idMascota = Number(
+      this.route.snapshot.queryParamMap.get('idMascota') ??
+        this.route.snapshot.queryParamMap.get('selectedPetId'),
+    );
     if (Number.isInteger(idMascota) && idMascota > 0) {
       this.form.patchValue({ idMascota });
     }
+
+    this.backQueryParams.set(this.buildBackQueryParams());
   }
 
   submit(): void {
@@ -157,6 +163,28 @@ export class CreateEventoClinicoPage implements OnInit {
   private optionalText(value: string | null | undefined): string | undefined {
     const trimmed = value?.trim();
     return trimmed ? trimmed : undefined;
+  }
+
+  private buildBackQueryParams(): Record<string, string | number> {
+    const params: Record<string, string | number> = {};
+    const ownerDocument = this.route.snapshot.queryParamMap.get('ownerDocument');
+    const ownerEmail = this.route.snapshot.queryParamMap.get('ownerEmail');
+    const selectedPetId = this.route.snapshot.queryParamMap.get('selectedPetId');
+    const idMascota = this.route.snapshot.queryParamMap.get('idMascota');
+
+    if (ownerDocument) {
+      params['ownerDocument'] = ownerDocument;
+    } else if (ownerEmail) {
+      params['ownerEmail'] = ownerEmail;
+    }
+
+    if (selectedPetId) {
+      params['selectedPetId'] = selectedPetId;
+    } else if (idMascota) {
+      params['selectedPetId'] = idMascota;
+    }
+
+    return params;
   }
 
   private today(): string {

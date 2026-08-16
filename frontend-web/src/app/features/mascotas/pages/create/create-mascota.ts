@@ -1,10 +1,12 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiError } from '../../../auth/models/user';
 import { AuthService } from '../../../auth/services/auth-service';
 import { CreateMascotaRequest, MascotaOwner, PetSex } from '../../models/mascota';
 import { MascotasService } from '../../services/mascotas-service';
+
+type OwnerSearchMode = 'documento' | 'email';
 
 const BREED_OPTIONS_BY_SPECIES: Record<string, string[]> = {
   Perro: [
@@ -42,11 +44,12 @@ const BREED_OPTIONS_BY_SPECIES: Record<string, string[]> = {
   templateUrl: './create-mascota.html',
   styleUrl: './create-mascota.css',
 })
-export class CreateMascotaPage {
+export class CreateMascotaPage implements OnInit {
   private readonly formBuilder = inject(FormBuilder);
   private readonly mascotasService = inject(MascotasService);
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly isSubmitting = signal(false);
   protected readonly isSearchingOwner = signal(false);
@@ -56,11 +59,14 @@ export class CreateMascotaPage {
   protected readonly selectedOwner = signal<MascotaOwner | null>(null);
   protected readonly selectedFile = signal<File | null>(null);
   protected readonly createdPetId = signal<number | null>(null);
+  protected readonly ownerSearchMode = signal<OwnerSearchMode>('documento');
+  protected readonly backQueryParams = signal<Record<string, string | number>>({});
   protected readonly speciesOptions = Object.keys(BREED_OPTIONS_BY_SPECIES);
   protected readonly isVeterinaryFlow = this.authService.isVeterinario();
 
   protected readonly ownerSearchForm = this.formBuilder.group({
-    email: ['', [Validators.required, Validators.email]],
+    documento: ['', [Validators.pattern(/^[0-9]*$/), Validators.maxLength(20)]],
+    email: ['', [Validators.email]],
   });
 
   protected readonly form = this.formBuilder.group({
@@ -74,6 +80,25 @@ export class CreateMascotaPage {
     observaciones: [''],
     alergias: [''],
   });
+
+  ngOnInit(): void {
+    const ownerDocument = this.route.snapshot.queryParamMap.get('ownerDocument');
+    const ownerEmail = this.route.snapshot.queryParamMap.get('ownerEmail');
+
+    if (ownerDocument) {
+      this.ownerSearchMode.set('documento');
+      this.ownerSearchForm.patchValue({ documento: ownerDocument });
+    } else if (ownerEmail) {
+      this.ownerSearchMode.set('email');
+      this.ownerSearchForm.patchValue({ email: ownerEmail });
+    }
+
+    this.backQueryParams.set(this.buildBackQueryParams());
+
+    if (this.isVeterinaryFlow && (ownerDocument || ownerEmail)) {
+      this.searchOwner();
+    }
+  }
 
   protected breedOptions(): string[] {
     const species = this.form.controls.especie.value;
@@ -94,31 +119,61 @@ export class CreateMascotaPage {
       : ['..', String(petId)];
   }
 
-  protected onOwnerEmailChanged(): void {
+  protected setOwnerSearchMode(mode: OwnerSearchMode): void {
+    this.ownerSearchMode.set(mode);
+    this.selectedOwner.set(null);
+    this.ownerSearchMessage.set(null);
+    if (mode === 'documento') {
+      this.ownerSearchForm.patchValue({ email: '' });
+      return;
+    }
+    this.ownerSearchForm.patchValue({ documento: '' });
+  }
+
+  protected onOwnerSearchChanged(): void {
     this.selectedOwner.set(null);
     this.ownerSearchMessage.set(null);
   }
 
   protected searchOwner(): void {
+    const mode = this.ownerSearchMode();
+    const documento =
+      mode === 'documento' ? (this.ownerSearchForm.controls.documento.value?.trim() ?? '') : '';
+    const email =
+      mode === 'email' ? (this.ownerSearchForm.controls.email.value?.trim().toLowerCase() ?? '') : '';
+
     if (this.ownerSearchForm.invalid) {
       this.ownerSearchForm.markAllAsTouched();
+      this.ownerSearchMessage.set('Revisá el dato ingresado para buscar al dueño.');
       return;
     }
 
-    const email = this.ownerSearchForm.controls.email.value?.trim() ?? '';
+    if (mode === 'documento' && !documento) {
+      this.ownerSearchForm.markAllAsTouched();
+      this.ownerSearchMessage.set('Ingresá el DNI para buscar al dueño.');
+      return;
+    }
+
+    if (mode === 'email' && !email) {
+      this.ownerSearchForm.markAllAsTouched();
+      this.ownerSearchMessage.set('Ingresá el email para buscar al dueño.');
+      return;
+    }
+
     this.selectedOwner.set(null);
     this.ownerSearchMessage.set(null);
     this.errorMessage.set(null);
     this.isSearchingOwner.set(true);
 
-    this.mascotasService.findOwnerByEmail(email).subscribe({
+    this.mascotasService.findOwner({ documento: documento || undefined, email: email || undefined }).subscribe({
       next: (owner) => {
         this.isSearchingOwner.set(false);
         this.selectedOwner.set(owner);
+        this.backQueryParams.set(this.buildBackQueryParams());
       },
       error: (error: ApiError) => {
         this.isSearchingOwner.set(false);
-        this.ownerSearchMessage.set(error.mensaje ?? 'No se encontró un dueño con ese email.');
+        this.ownerSearchMessage.set(error.mensaje ?? 'No se encontró un dueño con esos datos.');
       },
     });
   }
@@ -195,5 +250,41 @@ export class CreateMascotaPage {
         this.errorMessage.set(error.mensaje ?? 'Ocurrio un error al registrar la mascota.');
       },
     });
+  }
+
+  protected backLink(): string[] {
+    return this.isVeterinaryFlow ? ['/eventos-clinicos'] : ['..'];
+  }
+
+  protected profileQueryParams(petId: number): Record<string, string | number> {
+    if (!this.isVeterinaryFlow) {
+      return {};
+    }
+
+    return {
+      ...this.buildBackQueryParams(),
+      selectedPetId: petId,
+    };
+  }
+
+  private buildBackQueryParams(): Record<string, string | number> {
+    const params: Record<string, string | number> = {};
+    const ownerDocument =
+      this.selectedOwner()?.numero_documento ??
+      this.route.snapshot.queryParamMap.get('ownerDocument');
+    const ownerEmail = this.selectedOwner()?.email ?? this.route.snapshot.queryParamMap.get('ownerEmail');
+    const selectedPetId = this.route.snapshot.queryParamMap.get('selectedPetId');
+
+    if (ownerDocument) {
+      params['ownerDocument'] = ownerDocument;
+    } else if (ownerEmail) {
+      params['ownerEmail'] = ownerEmail;
+    }
+
+    if (selectedPetId) {
+      params['selectedPetId'] = selectedPetId;
+    }
+
+    return params;
   }
 }

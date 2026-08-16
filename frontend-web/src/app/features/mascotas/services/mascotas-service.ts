@@ -25,11 +25,22 @@ export class MascotasService {
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
   }
 
-  findOwnerByEmail(email: string): Observable<MascotaOwner> {
+  findOwner(query: { email?: string; documento?: string }): Observable<MascotaOwner> {
     return this.http
       .get<MascotaOwner>(`${this.baseUrl}/duenos/buscar`, {
         headers: this.authHeaders(),
-        params: { email },
+        params: {
+          ...(query.email ? { email: query.email } : {}),
+          ...(query.documento ? { documento: query.documento } : {}),
+        },
+      })
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
+  findByOwner(idUsuario: number): Observable<MascotaResponse[]> {
+    return this.http
+      .get<MascotaResponse[]>(`${this.baseUrl}/duenos/${idUsuario}`, {
+        headers: this.authHeaders(),
       })
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
   }
@@ -128,9 +139,18 @@ export class MascotasService {
     return formData;
   }
 
-  getById(id: number): Observable<MascotaResponse> {
+  getById(
+    id: number,
+    context?: { ownerDocument?: string; ownerEmail?: string },
+  ): Observable<MascotaResponse> {
     return this.http
-      .get<MascotaResponse>(`${this.baseUrl}/${id}`, { headers: this.authHeaders() })
+      .get<MascotaResponse>(`${this.baseUrl}/${id}`, {
+        headers: this.authHeaders(),
+        params: {
+          ...(context?.ownerDocument ? { ownerDocument: context.ownerDocument } : {}),
+          ...(context?.ownerEmail ? { ownerEmail: context.ownerEmail } : {}),
+        },
+      })
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
   }
 

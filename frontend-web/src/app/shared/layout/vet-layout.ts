@@ -23,10 +23,8 @@ export class VetLayout {
     { initialValue: this.router.url },
   );
 
-  protected readonly isPacientesActive = () =>
-    this.currentUrl().startsWith('/eventos-clinicos/pacientes');
-
-  protected readonly isHistoriaActive = () => !this.isPacientesActive();
+  protected readonly isAttentionActive = () =>
+    this.currentUrl().startsWith('/eventos-clinicos');
 
   logout(): void {
     this.authService.clearToken();

@@ -23,10 +23,17 @@ export class EventosClinicosService {
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
   }
 
-  getByMascota(idMascota: number): Observable<HistoriaClinicaResponse> {
+  getByMascota(
+    idMascota: number,
+    context?: { ownerDocument?: string; ownerEmail?: string },
+  ): Observable<HistoriaClinicaResponse> {
     return this.http
       .get<HistoriaClinicaResponse>(`${this.baseUrl}/mascota/${idMascota}`, {
         headers: this.authHeaders(),
+        params: {
+          ...(context?.ownerDocument ? { ownerDocument: context.ownerDocument } : {}),
+          ...(context?.ownerEmail ? { ownerEmail: context.ownerEmail } : {}),
+        },
       })
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
   }
