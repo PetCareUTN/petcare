@@ -57,6 +57,18 @@ describe('UsersService', () => {
     expect(result).toBe(user);
   });
 
+  it('findByDocument looks up a user by DNI', async () => {
+    const user = { idUsuario: 1, numeroDocumento: '30111222' } as User;
+    repository.findOne.mockResolvedValue(user);
+
+    const result = await service.findByDocument('30111222');
+
+    expect(repository.findOne).toHaveBeenCalledWith({
+      where: { numeroDocumento: '30111222' },
+    });
+    expect(result).toBe(user);
+  });
+
   it('create persists a new user with the given role', async () => {
     const data = {
       nombre: 'Simon',
@@ -75,6 +87,7 @@ describe('UsersService', () => {
       nombre: data.nombre,
       apellido: data.apellido,
       email: data.email,
+      numeroDocumento: null,
       password: data.password,
       telefono: null,
       direccion: null,
@@ -106,6 +119,7 @@ describe('UsersService', () => {
       nombre: data.nombre,
       apellido: null,
       email: data.email,
+      numeroDocumento: null,
       password: data.password,
       telefono: data.telefono,
       direccion: data.direccion,
@@ -135,6 +149,7 @@ describe('UsersService', () => {
       nombre: data.nombre,
       apellido: data.apellido,
       email: data.email,
+      numeroDocumento: null,
       password: data.password,
       telefono: null,
       direccion: null,

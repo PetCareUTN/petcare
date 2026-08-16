@@ -21,6 +21,7 @@ export class AltaAsistidaDuenoPage {
   protected readonly form = this.fb.nonNullable.group({
     nombre: ['', [Validators.required, Validators.maxLength(100)]],
     apellido: ['', [Validators.maxLength(100)]],
+    numeroDocumento: ['', [Validators.required, Validators.pattern(/^[0-9]+$/), Validators.maxLength(20)]],
     email: ['', [Validators.required, Validators.email, Validators.maxLength(150)]],
     telefono: ['', [Validators.maxLength(30)]],
   });
@@ -41,6 +42,7 @@ export class AltaAsistidaDuenoPage {
       .createAssistedOwner({
         nombre: value.nombre.trim(),
         apellido: value.apellido.trim() || null,
+        numeroDocumento: value.numeroDocumento.trim(),
         email: value.email.trim().toLowerCase(),
         telefono: value.telefono.trim() || null,
       })

@@ -94,6 +94,15 @@ export class AuthService {
       });
     }
 
+    const numeroDocumento = dto.numeroDocumento.trim();
+    const existingDocument = await this.usersService.findByDocument(numeroDocumento);
+    if (existingDocument) {
+      throw new ConflictException({
+        codigoEstado: 409,
+        mensaje: 'El documento ya se encuentra registrado',
+      });
+    }
+
     const defaultRole = await this.rolesRepository.findOne({
       where: { nombre: DEFAULT_ROLE },
     });
@@ -113,6 +122,7 @@ export class AuthService {
       nombre: dto.nombre.trim(),
       apellido: dto.apellido?.trim() || null,
       email,
+      numeroDocumento,
       telefono: dto.telefono?.trim() || null,
       password: temporaryPasswordHash,
       idRol: defaultRole.idRol,

@@ -9,6 +9,7 @@ export class UserPublicDto {
   nombre: string;
   apellido: string | null;
   email: string;
+  numero_documento: string | null;
   telefono: string | null;
   direccion: string | null;
   id_rol: number;
@@ -21,6 +22,7 @@ export class UserPublicDto {
     dto.nombre = user.nombre;
     dto.apellido = user.apellido;
     dto.email = user.email;
+    dto.numero_documento = user.numeroDocumento ?? null;
     dto.telefono = user.telefono ?? null;
     dto.direccion = user.direccion ?? null;
     dto.id_rol = user.rol.idRol;

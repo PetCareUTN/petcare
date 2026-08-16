@@ -11,14 +11,14 @@
           }
         </p>
       </div>
-      <a routerLink="..">Volver</a>
+      <a [routerLink]="backLink()" [queryParams]="backQueryParams()">Volver</a>
     </header>
 
     @if (successMessage()) {
       <p class="banner banner-success">
         {{ successMessage() }}
         @if (createdPetId(); as petId) {
-          <a [routerLink]="profileLink(petId)">Ver perfil</a>
+          <a [routerLink]="profileLink(petId)" [queryParams]="profileQueryParams(petId)">Ver perfil</a>
         }
       </p>
     }
@@ -31,22 +31,55 @@
       <section class="owner-lookup" [formGroup]="ownerSearchForm">
         <div>
           <h2>Dueño de la mascota</h2>
-          <p>Busca una cuenta existente antes de completar el alta.</p>
+          <p>Elegí un dato de búsqueda para asociar la mascota al responsable.</p>
         </div>
 
         <div class="owner-search-row">
+          <div class="segmented-control">
+            <button
+              type="button"
+              [class.active]="ownerSearchMode() === 'documento'"
+              (click)="setOwnerSearchMode('documento')"
+            >
+              DNI
+            </button>
+            <button
+              type="button"
+              [class.active]="ownerSearchMode() === 'email'"
+              (click)="setOwnerSearchMode('email')"
+            >
+              Email
+            </button>
+          </div>
+
+          @if (ownerSearchMode() === 'documento') {
+          <div class="field">
+            <label for="ownerDocument">DNI del dueño</label>
+            <input
+              id="ownerDocument"
+              type="text"
+              inputmode="numeric"
+              formControlName="documento"
+              (input)="onOwnerSearchChanged()"
+            />
+            @if (ownerSearchForm.controls.documento.invalid && ownerSearchForm.controls.documento.touched) {
+              <p class="field-error">Ingresá solo números.</p>
+            }
+          </div>
+          } @else {
           <div class="field">
             <label for="ownerEmail">Email del dueño</label>
             <input
               id="ownerEmail"
               type="email"
               formControlName="email"
-              (input)="onOwnerEmailChanged()"
+              (input)="onOwnerSearchChanged()"
             />
             @if (ownerSearchForm.controls.email.invalid && ownerSearchForm.controls.email.touched) {
               <p class="field-error">Ingresa un email valido.</p>
             }
           </div>
+          }
 
           <button type="button" class="btn-secondary" [disabled]="isSearchingOwner()" (click)="searchOwner()">
             {{ isSearchingOwner() ? 'Buscando...' : 'Buscar dueño' }}
@@ -55,7 +88,11 @@
 
         @if (selectedOwner(); as owner) {
           <p class="owner-result">
-            Dueño seleccionado: <strong>{{ ownerDisplayName(owner) }}</strong> - {{ owner.email }}
+            Dueño seleccionado: <strong>{{ ownerDisplayName(owner) }}</strong>
+            @if (owner.numero_documento) {
+              <span>- DNI {{ owner.numero_documento }}</span>
+            }
+            <span>- {{ owner.email }}</span>
           </p>
         }
 

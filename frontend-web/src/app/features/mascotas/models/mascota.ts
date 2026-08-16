@@ -19,6 +19,7 @@ export interface MascotaOwner {
   nombre: string;
   apellido: string | null;
   email: string;
+  numero_documento: string | null;
   telefono: string | null;
   direccion: string | null;
   id_rol: number;

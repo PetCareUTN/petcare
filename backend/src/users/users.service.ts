@@ -25,6 +25,10 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { email } });
   }
 
+  findByDocument(numeroDocumento: string): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { numeroDocumento } });
+  }
+
   findById(idUsuario: number): Promise<User | null> {
     return this.usersRepository.findOne({ where: { idUsuario } });
   }
@@ -35,6 +39,7 @@ export class UsersService {
     email: string;
     password: string;
     idRol: number;
+    numeroDocumento?: string | null;
     telefono?: string | null;
     direccion?: string | null;
     estado?: string;
@@ -44,6 +49,7 @@ export class UsersService {
       nombre: data.nombre,
       apellido: data.apellido ?? null,
       email: data.email,
+      numeroDocumento: data.numeroDocumento ?? null,
       password: data.password,
       telefono: data.telefono ?? null,
       direccion: data.direccion ?? null,
@@ -70,6 +76,17 @@ export class UsersService {
         mensaje:
           'Para cambiar el email usá la opción de cambio de email con verificación',
       });
+    }
+
+    if (dto.numeroDocumento !== undefined && dto.numeroDocumento !== user.numeroDocumento) {
+      const existingUser = await this.findByDocument(dto.numeroDocumento);
+      if (existingUser) {
+        throw new ConflictException({
+          codigoEstado: 409,
+          mensaje: 'El documento ya se encuentra registrado',
+        });
+      }
+      user.numeroDocumento = dto.numeroDocumento;
     }
 
     if (dto.nombre !== undefined) {

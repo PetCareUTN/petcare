@@ -296,7 +296,11 @@ describe('EventosClinicosService', () => {
       updatedAt: new Date('2026-07-31T10:00:00Z'),
     } as EventoClinico;
 
-    const duenio = { idUsuario: 7 };
+    const duenio = {
+      idUsuario: 7,
+      email: 'sofia@petcare.com',
+      numeroDocumento: '30111222',
+    };
 
     it('el dueño consulta la historia clinica de su propia mascota', async () => {
       const mascota = {
@@ -356,6 +360,33 @@ describe('EventosClinicosService', () => {
           veterinario: { idVeterinario: 4 },
         },
       });
+      expect(result.eventos).toHaveLength(1);
+    });
+
+    it('el veterinario validado consulta la historia desde el contexto del dueño buscado', async () => {
+      const mascota = {
+        idMascota: 10,
+        usuarios: [duenio],
+        historiaClinica: historia,
+      } as unknown as Mascota;
+      const requester: JwtPayload = {
+        sub: 4,
+        email: 'vet@petcare.com',
+        idRol: 2,
+        rol: RoleName.VETERINARIO,
+      };
+
+      mascotasRepository.findOne.mockResolvedValue(mascota);
+      veterinariosRepository.findOne.mockResolvedValue(veterinario);
+      eventosClinicosRepository.find.mockResolvedValue([eventoGuardado]);
+
+      const result = await service.findHistoriaClinicaByMascota(
+        10,
+        requester,
+        { ownerDocument: '30111222' },
+      );
+
+      expect(eventosClinicosRepository.findOne).not.toHaveBeenCalled();
       expect(result.eventos).toHaveLength(1);
     });
 

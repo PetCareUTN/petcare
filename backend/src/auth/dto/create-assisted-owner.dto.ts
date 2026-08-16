@@ -16,6 +16,11 @@ export class CreateAssistedOwnerDto {
   email: string;
 
   @IsString()
+  @IsNotEmpty()
+  @MaxLength(20)
+  numeroDocumento: string;
+
+  @IsString()
   @IsOptional()
   @MaxLength(30)
   telefono?: string;

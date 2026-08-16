@@ -75,8 +75,20 @@ export class MascotasController {
   @Get('duenos/buscar')
   @UseGuards(JwtAuthGuard, RolesGuard, VeterinarioValidadoGuard)
   @Roles(RoleName.VETERINARIO)
-  findOwnerByEmail(@Query('email') email?: string): Promise<UserPublicDto> {
-    return this.mascotasService.findOwnerByEmail(email);
+  findOwner(
+    @Query('email') email?: string,
+    @Query('documento') documento?: string,
+  ): Promise<UserPublicDto> {
+    return this.mascotasService.findOwner(email, documento);
+  }
+
+  @Get('duenos/:idUsuario')
+  @UseGuards(JwtAuthGuard, RolesGuard, VeterinarioValidadoGuard)
+  @Roles(RoleName.VETERINARIO)
+  findByOwner(
+    @Param('idUsuario', ParseIntPipe) idUsuario: number,
+  ): Promise<MascotaResponseDto[]> {
+    return this.mascotasService.findAllByOwnerId(idUsuario);
   }
 
   @Post('duenos/:idUsuario')
@@ -108,8 +120,10 @@ export class MascotasController {
   findOne(
     @CurrentUser() user: JwtPayload,
     @Param('id', ParseIntPipe) id: number,
+    @Query('ownerDocument') ownerDocument?: string,
+    @Query('ownerEmail') ownerEmail?: string,
   ): Promise<MascotaResponseDto> {
-    return this.mascotasService.findOne(id, user);
+    return this.mascotasService.findOne(id, user, { ownerDocument, ownerEmail });
   }
 
   @Patch(':id')

@@ -22,6 +22,7 @@ describe('AuthService', () => {
   let service: AuthService;
   let usersService: {
     findByEmail: jest.Mock<Promise<User | null>, [string]>;
+    findByDocument: jest.Mock<Promise<User | null>, [string]>;
     findById: jest.Mock<Promise<User | null>, [number]>;
     create: jest.Mock<Promise<User>, [Parameters<UsersService['create']>[0]]>;
     updatePasswordRecoveryData: jest.Mock;
@@ -61,6 +62,7 @@ describe('AuthService', () => {
           provide: UsersService,
           useValue: {
             findByEmail: jest.fn(),
+            findByDocument: jest.fn(),
             findById: jest.fn(),
             create: jest.fn(),
             updatePasswordRecoveryData: jest.fn(),
@@ -118,6 +120,7 @@ describe('AuthService', () => {
       nombre: registerDto.nombre,
       apellido: registerDto.apellido,
       email: registerDto.email,
+      numeroDocumento: null,
       telefono: null,
       direccion: null,
       password: 'hashed-password',
@@ -184,6 +187,7 @@ describe('AuthService', () => {
       nombre: ' Laura ',
       apellido: ' Gomez ',
       email: 'LAURA@PETCARE.TEST',
+      numeroDocumento: ' 30111222 ',
       telefono: ' 3511234567 ',
     };
 
@@ -197,6 +201,7 @@ describe('AuthService', () => {
       nombre: 'Laura',
       apellido: 'Gomez',
       email: 'laura@petcare.test',
+      numeroDocumento: '30111222',
       telefono: '3511234567',
       direccion: null,
       password: 'temporary-hash',
@@ -215,6 +220,7 @@ describe('AuthService', () => {
 
     it('creates a pending owner and sends an activation code by email', async () => {
       usersService.findByEmail.mockResolvedValue(null);
+      usersService.findByDocument.mockResolvedValue(null);
       rolesRepository.findOne.mockResolvedValue(defaultRole);
       veterinariosRepository.findOne.mockResolvedValue(veterinarian);
       usersService.create.mockResolvedValue(savedUser);
@@ -224,6 +230,7 @@ describe('AuthService', () => {
       expect(usersService.findByEmail).toHaveBeenCalledWith(
         'laura@petcare.test',
       );
+      expect(usersService.findByDocument).toHaveBeenCalledWith('30111222');
       expect(veterinariosRepository.findOne).toHaveBeenCalledWith({
         where: { usuario: { idUsuario: 5 } },
       });
@@ -232,6 +239,7 @@ describe('AuthService', () => {
           nombre: 'Laura',
           apellido: 'Gomez',
           email: 'laura@petcare.test',
+          numeroDocumento: '30111222',
           telefono: '3511234567',
           idRol: defaultRole.idRol,
           estado: 'pendiente_activacion',
@@ -275,6 +283,7 @@ describe('AuthService', () => {
     it('rejects assisted owner creation when the veterinarian is not approved', async () => {
       usersService.findByEmail.mockResolvedValue(null);
       rolesRepository.findOne.mockResolvedValue(defaultRole);
+      usersService.findByDocument.mockResolvedValue(null);
       veterinariosRepository.findOne.mockResolvedValue({
         estadoValidacion: ValidationStatus.PENDIENTE,
       });
@@ -298,6 +307,7 @@ describe('AuthService', () => {
       nombre: 'Simon',
       apellido: 'Breitkopf',
       email: loginDto.email,
+      numeroDocumento: null,
       telefono: null,
       direccion: null,
       password: await bcrypt.hash(loginDto.password, 10),
@@ -336,6 +346,7 @@ describe('AuthService', () => {
         nombre: user.nombre,
         apellido: user.apellido,
         email: user.email,
+        numero_documento: null,
         telefono: null,
         direccion: null,
         id_rol: defaultRole.idRol,
@@ -426,6 +437,7 @@ describe('AuthService', () => {
         nombre: 'Laura',
         apellido: 'Gomez',
         email: 'laura@petcare.test',
+        numeroDocumento: '30111222',
         telefono: null,
         direccion: null,
         password: 'temporary-hash',
