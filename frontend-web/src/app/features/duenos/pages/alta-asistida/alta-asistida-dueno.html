@@ -6,7 +6,7 @@
         Crea una cuenta para un responsable que todavia no usa PetCare.
       </p>
     </div>
-    <a class="btn-secondary" routerLink="/eventos-clinicos/pacientes">Volver a pacientes</a>
+    <a class="btn-secondary" routerLink="/eventos-clinicos">Volver a atención</a>
   </header>
 
   <div class="alta-grid">
@@ -38,6 +38,14 @@
           <input type="text" formControlName="apellido" autocomplete="family-name" />
           @if (form.controls.apellido.touched && form.controls.apellido.invalid) {
             <span class="field-error">El apellido no puede superar los 100 caracteres.</span>
+          }
+        </label>
+
+        <label>
+          DNI
+          <input type="text" formControlName="numeroDocumento" inputmode="numeric" autocomplete="off" />
+          @if (form.controls.numeroDocumento.touched && form.controls.numeroDocumento.invalid) {
+            <span class="field-error">Ingresá un DNI válido, solo con números.</span>
           }
         </label>
 

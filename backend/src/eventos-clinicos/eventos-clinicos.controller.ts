@@ -8,6 +8,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
@@ -86,10 +87,13 @@ export class EventosClinicosController {
   findByMascota(
     @CurrentUser() user: JwtPayload,
     @Param('idMascota', ParseIntPipe) idMascota: number,
+    @Query('ownerDocument') ownerDocument?: string,
+    @Query('ownerEmail') ownerEmail?: string,
   ): Promise<HistoriaClinicaResponseDto> {
     return this.eventosClinicosService.findHistoriaClinicaByMascota(
       idMascota,
       user,
+      { ownerDocument, ownerEmail },
     );
   }
 

@@ -22,6 +22,11 @@ import { UpdateMascotaDto } from './dto/update-mascota.dto';
 import { Mascota } from './entities/mascota.entity';
 import { UploadedImageFile } from './types/uploaded-image-file.type';
 
+type VetAttentionContext = {
+  ownerDocument?: string;
+  ownerEmail?: string;
+};
+
 @Injectable()
 export class MascotasService {
   constructor(
@@ -51,25 +56,34 @@ export class MascotasService {
     return this.createForOwner(duenio, dto, foto);
   }
 
-  async findOwnerByEmail(email?: string): Promise<UserPublicDto> {
+  async findOwner(email?: string, documento?: string): Promise<UserPublicDto> {
+    const normalizedDocument = documento?.trim();
     const normalizedEmail = email?.trim().toLowerCase();
-    if (!normalizedEmail) {
+    if (!normalizedEmail && !normalizedDocument) {
       throw new BadRequestException({
         codigoEstado: 400,
-        mensaje: 'El email del dueño es obligatorio',
+        mensaje: 'El DNI o email del dueño es obligatorio',
       });
     }
 
-    const duenio = await this.usersRepository.findOne({
-      where: {
-        email: Raw((alias) => `LOWER(${alias}) = :email`, {
-          email: normalizedEmail,
-        }),
-      },
-    });
+    const duenio = normalizedDocument
+      ? await this.usersRepository.findOne({
+          where: { numeroDocumento: normalizedDocument },
+        })
+      : await this.usersRepository.findOne({
+          where: {
+            email: Raw((alias) => `LOWER(${alias}) = :email`, {
+              email: normalizedEmail,
+            }),
+          },
+        });
 
     this.ensureExistingOwner(duenio);
     return UserPublicDto.fromEntity(duenio);
+  }
+
+  findOwnerByEmail(email?: string): Promise<UserPublicDto> {
+    return this.findOwner(email);
   }
 
   async createForExistingOwner(
@@ -143,8 +157,16 @@ export class MascotasService {
     return `/uploads/mascotas/${filename}`;
   }
 
-  async findOne(id: number, requester: JwtPayload): Promise<MascotaResponseDto> {
-    const mascota = await this.findMascotaForViewing(id, requester);
+  async findOne(
+    id: number,
+    requester: JwtPayload,
+    attentionContext?: VetAttentionContext,
+  ): Promise<MascotaResponseDto> {
+    const mascota = await this.findMascotaForViewing(
+      id,
+      requester,
+      attentionContext,
+    );
     return MascotaResponseDto.fromEntity(mascota);
   }
 
@@ -216,6 +238,7 @@ export class MascotasService {
   private async findMascotaForViewing(
     id: number,
     requester: JwtPayload,
+    attentionContext?: VetAttentionContext,
   ): Promise<Mascota> {
     const mascota = await this.findMascota(id);
 
@@ -226,7 +249,7 @@ export class MascotasService {
       return mascota;
     }
 
-    if (requester.rol === RoleName.VETERINARIO && mascota.idHistoria) {
+    if (requester.rol === RoleName.VETERINARIO) {
       const veterinario = await this.veterinariosRepository.findOne({
         where: { usuario: { idUsuario: requester.sub } },
       });
@@ -235,6 +258,17 @@ export class MascotasService {
         veterinario &&
         veterinario.estadoValidacion === ValidationStatus.APROBADO
       ) {
+        if (this.perteneceAlDuenioBuscado(mascota, attentionContext)) {
+          return mascota;
+        }
+
+        if (!mascota.idHistoria) {
+          throw new ForbiddenException({
+            codigoEstado: 403,
+            mensaje: 'No tiene permisos para acceder a este recurso',
+          });
+        }
+
         const evento = await this.eventosClinicosRepository.findOne({
           where: {
             historia: { idHistoria: mascota.idHistoria },
@@ -251,6 +285,26 @@ export class MascotasService {
     throw new ForbiddenException({
       codigoEstado: 403,
       mensaje: 'No tiene permisos para acceder a este recurso',
+    });
+  }
+
+  private perteneceAlDuenioBuscado(
+    mascota: Mascota,
+    attentionContext?: VetAttentionContext,
+  ): boolean {
+    const ownerDocument = attentionContext?.ownerDocument?.trim();
+    const ownerEmail = attentionContext?.ownerEmail?.trim().toLowerCase();
+
+    if (!ownerDocument && !ownerEmail) {
+      return false;
+    }
+
+    return mascota.usuarios.some((user) => {
+      if (ownerDocument && user.numeroDocumento === ownerDocument) {
+        return true;
+      }
+
+      return ownerEmail ? user.email.toLowerCase() === ownerEmail : false;
     });
   }
 
@@ -281,5 +335,11 @@ export class MascotasService {
       .getMany();
 
     return mascotas.map((mascota) => MascotaResponseDto.fromEntity(mascota));
+  }
+
+  async findAllByOwnerId(ownerId: number): Promise<MascotaResponseDto[]> {
+    const duenio = await this.findUserById(ownerId);
+    this.ensureExistingOwner(duenio);
+    return this.findAllByUser(ownerId);
   }
 }

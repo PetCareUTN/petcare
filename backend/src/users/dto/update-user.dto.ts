@@ -22,6 +22,12 @@ export class UpdateUserDto {
 
   @IsString()
   @IsOptional()
+  @MaxLength(20)
+  @Matches(/^[0-9]+$/, { message: 'El documento solo puede contener números.' })
+  numeroDocumento?: string;
+
+  @IsString()
+  @IsOptional()
   @MaxLength(30)
   @Matches(TELEFONO_PATTERN, { message: 'El teléfono solo puede contener números.' })
   telefono?: string;

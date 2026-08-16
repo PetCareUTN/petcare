@@ -59,6 +59,7 @@ export class HistoriaClinicaPage implements OnInit {
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly eventos = signal<EventoClinicoResponse[]>([]);
   protected readonly mascota = signal<MascotaResponse | null>(null);
+  protected readonly backQueryParams = signal<Record<string, string | number>>({});
 
   protected readonly isFormOpen = signal(false);
   protected readonly isSubmitting = signal(false);
@@ -79,6 +80,7 @@ export class HistoriaClinicaPage implements OnInit {
   ngOnInit(): void {
     const idMascota = Number(this.route.snapshot.paramMap.get('idMascota'));
     this.idMascota.set(idMascota);
+    this.backQueryParams.set(this.buildBackQueryParams(idMascota));
     this.cargarHistoria(idMascota);
   }
 
@@ -191,10 +193,11 @@ export class HistoriaClinicaPage implements OnInit {
   private cargarHistoria(idMascota: number): void {
     this.isLoading.set(true);
     this.errorMessage.set(null);
+    const attentionContext = this.attentionContext();
 
     forkJoin({
-      historia: this.eventosClinicosService.getByMascota(idMascota),
-      mascota: this.mascotasService.getById(idMascota),
+      historia: this.eventosClinicosService.getByMascota(idMascota, attentionContext),
+      mascota: this.mascotasService.getById(idMascota, attentionContext),
     }).subscribe({
       next: ({ historia, mascota }) => {
         this.isLoading.set(false);
@@ -213,6 +216,33 @@ export class HistoriaClinicaPage implements OnInit {
   private optionalText(value: string | null | undefined): string | undefined {
     const trimmed = value?.trim();
     return trimmed ? trimmed : undefined;
+  }
+
+  private attentionContext(): { ownerDocument?: string; ownerEmail?: string } {
+    const ownerDocument = this.route.snapshot.queryParamMap.get('ownerDocument') ?? undefined;
+    const ownerEmail = this.route.snapshot.queryParamMap.get('ownerEmail') ?? undefined;
+
+    return {
+      ...(ownerDocument ? { ownerDocument } : {}),
+      ...(ownerEmail ? { ownerEmail } : {}),
+    };
+  }
+
+  private buildBackQueryParams(idMascota: number): Record<string, string | number> {
+    const params: Record<string, string | number> = {};
+    const ownerDocument = this.route.snapshot.queryParamMap.get('ownerDocument');
+    const ownerEmail = this.route.snapshot.queryParamMap.get('ownerEmail');
+    const selectedPetId = this.route.snapshot.queryParamMap.get('selectedPetId');
+
+    if (ownerDocument) {
+      params['ownerDocument'] = ownerDocument;
+    } else if (ownerEmail) {
+      params['ownerEmail'] = ownerEmail;
+    }
+
+    params['selectedPetId'] = selectedPetId ?? idMascota;
+
+    return params;
   }
 
   private today(): string {

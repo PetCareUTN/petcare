@@ -37,6 +37,7 @@ describe('MascotasService', () => {
     nombre: 'Sofia',
     apellido: 'Munoz',
     email: 'sofia@petcare.test',
+    numeroDocumento: '30111222',
     telefono: null,
     direccion: null,
     estado: 'activo',
@@ -328,6 +329,21 @@ describe('MascotasService', () => {
       expect(result.idMascota).toBe(10);
     });
 
+    it('returns the mascota when a validated vet is attending the searched owner', async () => {
+      mascotasRepository.findOne.mockResolvedValue(buildMascota());
+      veterinariosRepository.findOne.mockResolvedValue({
+        idVeterinario: 4,
+        estadoValidacion: ValidationStatus.APROBADO,
+      });
+
+      const result = await service.findOne(10, veterinarioRequester, {
+        ownerDocument: '30111222',
+      });
+
+      expect(eventosClinicosRepository.findOne).not.toHaveBeenCalled();
+      expect(result.idMascota).toBe(10);
+    });
+
     it('throws ForbiddenException when the vet never treated the mascota', async () => {
       mascotasRepository.findOne.mockResolvedValue(
         buildMascota({ idHistoria: 20 }),
@@ -362,11 +378,15 @@ describe('MascotasService', () => {
       mascotasRepository.findOne.mockResolvedValue(
         buildMascota({ idHistoria: null }),
       );
+      veterinariosRepository.findOne.mockResolvedValue({
+        idVeterinario: 4,
+        estadoValidacion: ValidationStatus.APROBADO,
+      });
 
       await expect(
         service.findOne(10, veterinarioRequester),
       ).rejects.toThrow(ForbiddenException);
-      expect(veterinariosRepository.findOne).not.toHaveBeenCalled();
+      expect(eventosClinicosRepository.findOne).not.toHaveBeenCalled();
     });
   });
 

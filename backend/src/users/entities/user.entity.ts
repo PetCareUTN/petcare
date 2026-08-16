@@ -27,6 +27,9 @@ export class User {
   @Column({ type: 'varchar', length: 150, unique: true })
   email: string;
 
+  @Column({ name: 'numero_documento', type: 'varchar', length: 20, nullable: true, unique: true })
+  numeroDocumento: string | null;
+
   @Column({ type: 'varchar', length: 30, nullable: true })
   telefono: string | null;
 
