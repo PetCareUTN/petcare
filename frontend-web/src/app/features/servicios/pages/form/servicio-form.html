@@ -1,0 +1,84 @@
+<main class="servicio-page">
+  <form class="servicio-form" [formGroup]="form" (ngSubmit)="submit()">
+    <header class="servicio-header">
+      <div>
+        <h1>{{ isEditMode() ? 'Editar servicio' : 'Publicar servicio' }}</h1>
+        <p>Definí el servicio que ofrecés y tu disponibilidad horaria.</p>
+      </div>
+      <a routerLink="/servicios">Volver</a>
+    </header>
+
+    @if (isLoading()) {
+      <p class="status-text">Cargando...</p>
+    }
+
+    @if (errorMessage()) {
+      <p class="banner banner-error">{{ errorMessage() }}</p>
+    }
+
+    @if (!isLoading()) {
+      <section class="form-grid">
+        <div class="field">
+          <label for="categoria">Categoría</label>
+          <select id="categoria" formControlName="categoria">
+            @for (categoria of categorias; track categoria.value) {
+              <option [value]="categoria.value">{{ categoria.label }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="field field-wide">
+          <label for="descripcion">Descripción</label>
+          <textarea id="descripcion" rows="3" formControlName="descripcion"></textarea>
+        </div>
+      </section>
+
+      <section class="disponibilidades">
+        <div class="disponibilidades-header">
+          <h2>Disponibilidad</h2>
+          <button type="button" class="btn-secondary" (click)="agregarDisponibilidad()">
+            + Agregar franja horaria
+          </button>
+        </div>
+
+        <div class="disponibilidad-list" formArrayName="disponibilidades">
+          @for (grupo of disponibilidades.controls; track $index; let i = $index) {
+            <div class="disponibilidad-row" [formGroupName]="i">
+              <div class="field">
+                <label [for]="'dia-' + i">Día</label>
+                <select [id]="'dia-' + i" formControlName="diaSemana">
+                  @for (dia of dias; track dia.value) {
+                    <option [value]="dia.value">{{ dia.label }}</option>
+                  }
+                </select>
+              </div>
+
+              <div class="field">
+                <label [for]="'inicio-' + i">Desde</label>
+                <input [id]="'inicio-' + i" type="time" formControlName="horaInicio" />
+              </div>
+
+              <div class="field">
+                <label [for]="'fin-' + i">Hasta</label>
+                <input [id]="'fin-' + i" type="time" formControlName="horaFin" />
+              </div>
+
+              <button
+                type="button"
+                class="btn-remove"
+                [disabled]="disponibilidades.length <= 1"
+                (click)="quitarDisponibilidad(i)"
+              >
+                Quitar
+              </button>
+            </div>
+          }
+        </div>
+      </section>
+
+      <button type="submit" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Guardando...' : isEditMode() ? 'Guardar cambios' : 'Publicar servicio' }}
+      </button>
+    }
+  </form>
+</main>
