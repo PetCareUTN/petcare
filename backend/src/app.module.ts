@@ -21,6 +21,9 @@ import { EventosClinicosModule } from './eventos-clinicos/eventos-clinicos.modul
 import { HistoriaClinica } from './historias-clinicas/entities/historia-clinica.entity';
 import { AdopcionesModule } from './adopciones/adopciones.module';
 import { PublicacionAdopcion } from './adopciones/entities/publicacion-adopcion.entity';
+import { Servicio } from './servicios/entities/servicio.entity';
+import { DisponibilidadServicio } from './servicios/entities/disponibilidad-servicio.entity';
+import { ServiciosModule } from './servicios/servicios.module';
 
 dotenv.config();
 
@@ -43,6 +46,8 @@ dotenv.config();
         EventoClinico,
         ArchivoMedico,
         PublicacionAdopcion,
+        Servicio,
+        DisponibilidadServicio,
       ],
       synchronize: false,
     }),
@@ -55,6 +60,7 @@ dotenv.config();
     MailModule,
     EventosClinicosModule,
     AdopcionesModule,
+    ServiciosModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,0 +1,57 @@
+<div class="page">
+  <header class="list-header">
+    <h1>Mis servicios</h1>
+    <a class="btn-primary" routerLink="nuevo">+ Publicar servicio</a>
+  </header>
+
+  @if (isLoading()) {
+    <p class="status-text">Cargando...</p>
+  }
+
+  @if (errorMessage()) {
+    <p class="banner banner-error">{{ errorMessage() }}</p>
+  }
+
+  @if (!isLoading() && !errorMessage()) {
+    @if (servicios().length === 0) {
+      <div class="empty-state">
+        <p>Todavía no publicaste ningún servicio.</p>
+        <p>Publicá tu primer servicio para que los dueños de mascotas puedan encontrarte.</p>
+      </div>
+    } @else {
+      <div class="servicio-grid">
+        @for (servicio of servicios(); track servicio.idServicio) {
+          <article class="servicio-card">
+            <div class="servicio-card-body">
+              <h2 class="servicio-card-categoria">{{ categoriaLabel(servicio.categoria) }}</h2>
+              @if (servicio.descripcion) {
+                <p class="servicio-card-meta">{{ servicio.descripcion }}</p>
+              }
+
+              <ul class="servicio-card-disponibilidades">
+                @for (disponibilidad of servicio.disponibilidades; track disponibilidad.idDisponibilidad) {
+                  <li>
+                    {{ diaLabel(disponibilidad.diaSemana) }}: {{ formatHora(disponibilidad.horaInicio) }} a
+                    {{ formatHora(disponibilidad.horaFin) }}
+                  </li>
+                }
+              </ul>
+            </div>
+
+            <div class="servicio-card-actions">
+              <a class="btn-secondary" [routerLink]="[servicio.idServicio, 'editar']">Editar</a>
+              <button
+                type="button"
+                class="btn-danger"
+                [disabled]="deletingId() === servicio.idServicio"
+                (click)="eliminar(servicio)"
+              >
+                {{ deletingId() === servicio.idServicio ? 'Eliminando...' : 'Eliminar' }}
+              </button>
+            </div>
+          </article>
+        }
+      </div>
+    }
+  }
+</div>

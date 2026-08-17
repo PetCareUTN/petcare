@@ -53,6 +53,13 @@ import com.petcare.app.features.profile.ui.EditProfileScreen
 import com.petcare.app.features.profile.ui.ProfileScreen
 import com.petcare.app.features.settings.data.local.ThemePreferences
 import com.petcare.app.features.settings.ui.ConfiguracionScreen
+import com.petcare.app.features.servicios.data.remote.CreateServicioRequest
+import com.petcare.app.features.servicios.data.remote.DisponibilidadRequest
+import com.petcare.app.features.servicios.data.remote.ServicioResponse
+import com.petcare.app.features.servicios.data.remote.UpdateServicioRequest
+import com.petcare.app.features.servicios.domain.ServiciosController
+import com.petcare.app.features.servicios.ui.ServicioFormScreen
+import com.petcare.app.features.servicios.ui.ServiciosListScreen
 import com.petcare.app.ui.theme.PetCareTheme
 import java.io.IOException
 import java.net.URLConnection
@@ -115,6 +122,11 @@ class MainActivity : ComponentActivity() {
                 val adopcionesController = remember {
                     AdopcionesController(
                         adopcionesApi = RetrofitClient.adopcionesApi(sessionStore)
+                    )
+                }
+                val serviciosController = remember {
+                    ServiciosController(
+                        serviciosApi = RetrofitClient.serviciosApi(sessionStore)
                     )
                 }
                 var isLoading by rememberSaveable {
@@ -258,6 +270,33 @@ class MainActivity : ComponentActivity() {
                 var isViewingSettings by rememberSaveable {
                     mutableStateOf(false)
                 }
+                var isViewingServicios by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isLoadingServicios by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var serviciosError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var servicios by remember {
+                    mutableStateOf<List<ServicioResponse>>(emptyList())
+                }
+                var isCreatingServicio by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var editingServicio by remember {
+                    mutableStateOf<ServicioResponse?>(null)
+                }
+                var isSavingServicio by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var saveServicioError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var deletingServicioId by rememberSaveable {
+                    mutableStateOf<Int?>(null)
+                }
 
                 fun logout() {
                     sessionController.logout()
@@ -289,6 +328,13 @@ class MainActivity : ComponentActivity() {
                     adopcionError = null
                     adopcionSuccess = null
                     isViewingSettings = false
+                    isViewingServicios = false
+                    serviciosError = null
+                    servicios = emptyList()
+                    isCreatingServicio = false
+                    editingServicio = null
+                    saveServicioError = null
+                    deletingServicioId = null
                 }
 
                 fun loadPets() {
@@ -384,6 +430,30 @@ class MainActivity : ComponentActivity() {
                             profileError = "Ocurrio un error inesperado"
                         } finally {
                             isLoadingProfile = false
+                        }
+                    }
+                }
+
+                fun loadServicios() {
+                    isLoadingServicios = true
+                    serviciosError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            servicios = serviciosController.getMyServicios()
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                serviciosError = "No se pudieron cargar tus servicios"
+                            }
+                        } catch (exception: IOException) {
+                            serviciosError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            serviciosError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingServicios = false
                         }
                     }
                 }
@@ -484,6 +554,107 @@ class MainActivity : ComponentActivity() {
                         onCancel = {
                             updatePetError = null
                             editingPet = null
+                        }
+                    )
+                } else if (loggedUserName != null && (isCreatingServicio || editingServicio != null)) {
+                    ServicioFormScreen(
+                        servicio = editingServicio,
+                        isSaving = isSavingServicio,
+                        saveError = saveServicioError,
+                        onSave = { categoria, descripcion, disponibilidades ->
+                            isSavingServicio = true
+                            saveServicioError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    val servicioSiendoEditado = editingServicio
+                                    if (servicioSiendoEditado == null) {
+                                        serviciosController.createServicio(
+                                            CreateServicioRequest(
+                                                categoria = categoria,
+                                                descripcion = descripcion,
+                                                disponibilidades = disponibilidades
+                                            )
+                                        )
+                                    } else {
+                                        serviciosController.updateServicio(
+                                            servicioSiendoEditado.id,
+                                            UpdateServicioRequest(
+                                                categoria = categoria,
+                                                descripcion = descripcion,
+                                                disponibilidades = disponibilidades
+                                            )
+                                        )
+                                    }
+                                    isCreatingServicio = false
+                                    editingServicio = null
+                                    loadServicios()
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError =
+                                            "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        saveServicioError = "No se pudo guardar el servicio"
+                                    }
+                                } catch (exception: IOException) {
+                                    saveServicioError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    saveServicioError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isSavingServicio = false
+                                }
+                            }
+                        },
+                        onCancel = {
+                            saveServicioError = null
+                            isCreatingServicio = false
+                            editingServicio = null
+                        }
+                    )
+                } else if (loggedUserName != null && isViewingServicios) {
+                    ServiciosListScreen(
+                        isLoading = isLoadingServicios,
+                        errorMessage = serviciosError,
+                        servicios = servicios,
+                        deletingId = deletingServicioId,
+                        onBack = {
+                            isViewingServicios = false
+                            serviciosError = null
+                        },
+                        onRetry = { loadServicios() },
+                        onCreateServicio = {
+                            saveServicioError = null
+                            isCreatingServicio = true
+                        },
+                        onEditServicio = { servicio ->
+                            saveServicioError = null
+                            editingServicio = servicio
+                        },
+                        onDeleteServicio = { servicio ->
+                            deletingServicioId = servicio.id
+                            serviciosError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    serviciosController.deleteServicio(servicio.id)
+                                    servicios = servicios.filter { it.id != servicio.id }
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError =
+                                            "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        serviciosError = "No se pudo eliminar el servicio"
+                                    }
+                                } catch (exception: IOException) {
+                                    serviciosError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    serviciosError = "Ocurrio un error inesperado"
+                                } finally {
+                                    deletingServicioId = null
+                                }
+                            }
                         }
                     )
                 } else if (loggedUserName != null && isChangingEmail) {
@@ -827,7 +998,13 @@ class MainActivity : ComponentActivity() {
                             adopcionSuccess = null
                             isPublishingAdopcion = true
                         },
-                        onSettingsClick = { isViewingSettings = true }
+                        onSettingsClick = { isViewingSettings = true },
+                        onServiciosClick = {
+                            saveServicioError = null
+                            serviciosError = null
+                            isViewingServicios = true
+                            loadServicios()
+                        }
                     )
                 } else if (isRegisteringUser) {
                     RegisterScreen(

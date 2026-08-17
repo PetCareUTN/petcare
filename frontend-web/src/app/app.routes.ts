@@ -104,6 +104,33 @@ export const routes: Routes = [
     ],
   },
   {
+    path: 'servicios',
+    loadComponent: () => import('./shared/layout/vet-layout').then((m) => m.VetLayout),
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./features/servicios/pages/list/servicios-list').then(
+            (m) => m.ServiciosListPage,
+          ),
+      },
+      {
+        path: 'nuevo',
+        loadComponent: () =>
+          import('./features/servicios/pages/form/servicio-form').then(
+            (m) => m.ServicioFormPage,
+          ),
+      },
+      {
+        path: ':id/editar',
+        loadComponent: () =>
+          import('./features/servicios/pages/form/servicio-form').then(
+            (m) => m.ServicioFormPage,
+          ),
+      },
+    ],
+  },
+  {
     path: 'veterinarios/estado',
     loadComponent: () =>
       import('./features/veterinarios/pages/estado-validacion/estado-validacion').then(
