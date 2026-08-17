@@ -3,6 +3,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiError } from '../../../auth/models/user';
 import { AuthService } from '../../../auth/services/auth-service';
+import { RichTextEditorComponent } from '../../../../shared/components/rich-text-editor/rich-text-editor';
 import {
   ArchivoMedicoResponse,
   ClinicalEventType,
@@ -17,7 +18,7 @@ type EventTypeOption = {
 
 @Component({
   selector: 'app-create-evento-clinico',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, RichTextEditorComponent],
   templateUrl: './create-evento-clinico.html',
   styleUrl: './create-evento-clinico.css',
 })

@@ -85,7 +85,7 @@
 
         <div class="field field-wide">
           <label for="descripcion">Descripcion</label>
-          <textarea id="descripcion" rows="3" formControlName="descripcion"></textarea>
+          <app-rich-text-editor id="descripcion" formControlName="descripcion" />
           @if (form.controls.descripcion.invalid && form.controls.descripcion.touched) {
             <p class="field-error">La descripcion es obligatoria.</p>
           }
@@ -93,17 +93,17 @@
 
         <div class="field field-wide">
           <label for="diagnostico">Diagnostico</label>
-          <textarea id="diagnostico" rows="2" formControlName="diagnostico"></textarea>
+          <app-rich-text-editor id="diagnostico" formControlName="diagnostico" />
         </div>
 
         <div class="field field-wide">
           <label for="tratamiento">Tratamiento</label>
-          <textarea id="tratamiento" rows="2" formControlName="tratamiento"></textarea>
+          <app-rich-text-editor id="tratamiento" formControlName="tratamiento" />
         </div>
 
         <div class="field field-wide">
           <label for="observaciones">Observaciones</label>
-          <textarea id="observaciones" rows="2" formControlName="observaciones"></textarea>
+          <app-rich-text-editor id="observaciones" formControlName="observaciones" />
         </div>
       </div>
 
@@ -129,15 +129,24 @@
               <span class="evento-tipo">{{ etiquetaTipo(evento.tipo) }}</span>
               <span class="evento-fecha">{{ evento.fecha | date: 'dd/MM/yyyy' }}</span>
             </div>
-            <p class="evento-descripcion">{{ evento.descripcion }}</p>
+            <div class="evento-descripcion rich-text-content" [innerHTML]="evento.descripcion"></div>
             @if (evento.diagnostico) {
-              <p class="evento-detalle"><strong>Diagnóstico:</strong> {{ evento.diagnostico }}</p>
+              <div class="evento-detalle">
+                <strong>Diagnóstico:</strong>
+                <div class="rich-text-content" [innerHTML]="evento.diagnostico"></div>
+              </div>
             }
             @if (evento.tratamiento) {
-              <p class="evento-detalle"><strong>Tratamiento:</strong> {{ evento.tratamiento }}</p>
+              <div class="evento-detalle">
+                <strong>Tratamiento:</strong>
+                <div class="rich-text-content" [innerHTML]="evento.tratamiento"></div>
+              </div>
             }
             @if (evento.observaciones) {
-              <p class="evento-detalle"><strong>Observaciones:</strong> {{ evento.observaciones }}</p>
+              <div class="evento-detalle">
+                <strong>Observaciones:</strong>
+                <div class="rich-text-content" [innerHTML]="evento.observaciones"></div>
+              </div>
             }
 
             <div class="evento-archivos">

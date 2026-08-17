@@ -81,3 +81,74 @@ a {
     --spacing-xl: 1.5rem;
   }
 }
+
+/* Aspecto base y consistente para los campos de texto en toda la app. */
+input[type='text'],
+input[type='email'],
+input[type='password'],
+input[type='search'],
+input[type='number'],
+input[type='date'],
+input[type='tel'],
+input[type='url'],
+textarea,
+select {
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.75rem;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+input[type='text']:focus,
+input[type='email']:focus,
+input[type='password']:focus,
+input[type='search']:focus,
+input[type='number']:focus,
+input[type='date']:focus,
+input[type='tel']:focus,
+input[type='url']:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+textarea {
+  resize: vertical;
+  line-height: 1.5;
+}
+
+/* Renderizado de contenido con formato (negrita, subrayado, listas) generado
+   por el editor de texto enriquecido. */
+.rich-text-content {
+  line-height: 1.5;
+}
+
+.rich-text-content p {
+  margin: 0 0 var(--spacing-xs);
+}
+
+.rich-text-content p:last-child {
+  margin-bottom: 0;
+}
+
+.rich-text-content ul,
+.rich-text-content ol {
+  margin: 0 0 var(--spacing-xs);
+  padding-left: 1.25rem;
+}
+
+.rich-text-content strong {
+  font-weight: 700;
+}
+
+.rich-text-content u {
+  text-decoration: underline;
+}

@@ -53,11 +53,11 @@
       <dl class="detail-grid">
         <div class="detail-item detail-wide">
           <dt>Alergias</dt>
-          <dd>{{ pet.alergias || 'Sin alergias registradas' }}</dd>
+          <dd class="rich-text-content" [innerHTML]="pet.alergias || 'Sin alergias registradas'"></dd>
         </div>
         <div class="detail-item detail-wide">
           <dt>Observaciones</dt>
-          <dd>{{ pet.observaciones || 'Sin observaciones registradas' }}</dd>
+          <dd class="rich-text-content" [innerHTML]="pet.observaciones || 'Sin observaciones registradas'"></dd>
         </div>
       </dl>
 

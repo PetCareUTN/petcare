@@ -104,7 +104,7 @@
           <h2>Mascotas del cliente</h2>
           <p class="card-subtitle">Seleccioná una mascota para consultar historia o cargar la atención.</p>
         </div>
-        @if (selectedOwner()) {
+        @if (selectedOwner() && ownerPets().length > 0) {
           <a
             class="btn-secondary"
             routerLink="/eventos-clinicos/pacientes/nueva"
