@@ -68,11 +68,17 @@ fun AuthenticatedHomeScreen(
     onPetClick: (PetResponse) -> Unit = {},
     onProfileClick: () -> Unit = {},
     onPublishAdoption: () -> Unit = {},
-    onSettingsClick: () -> Unit = {}
+    onSettingsClick: () -> Unit = {},
+    onServiciosClick: () -> Unit = {}
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        bottomBar = { PetCareBottomBar(onProfileClick = onProfileClick) }
+        bottomBar = {
+            PetCareBottomBar(
+                onProfileClick = onProfileClick,
+                onServiciosClick = onServiciosClick
+            )
+        }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -515,7 +521,10 @@ private fun PetRow(pet: PetResponse, onClick: () -> Unit, onEdit: () -> Unit) {
 }
 
 @Composable
-private fun PetCareBottomBar(onProfileClick: () -> Unit) {
+private fun PetCareBottomBar(
+    onProfileClick: () -> Unit,
+    onServiciosClick: () -> Unit
+) {
     NavigationBar(
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 0.dp
@@ -523,9 +532,13 @@ private fun PetCareBottomBar(onProfileClick: () -> Unit) {
         val items = listOf("Inicio", "Mascotas", "Servicios", "Adopción", "Perfil")
         items.forEachIndexed { index, item ->
             val isPerfil = item == "Perfil"
+            val isServicios = item == "Servicios"
             NavigationBarItem(
                 selected = index == 0,
-                onClick = { if (isPerfil) onProfileClick() },
+                onClick = {
+                    if (isPerfil) onProfileClick()
+                    if (isServicios) onServiciosClick()
+                },
                 icon = {
                     val iconRes = when (item) {
                         "Mascotas" -> R.drawable.ic_paw
