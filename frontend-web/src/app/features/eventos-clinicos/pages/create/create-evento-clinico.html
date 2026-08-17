@@ -1,0 +1,114 @@
+<main class="clinical-event-page">
+  <form class="clinical-event-form" [formGroup]="form" (ngSubmit)="submit()">
+    <header class="clinical-event-header">
+      <div>
+        <h1>Registrar evento clinico</h1>
+        <p>Carga de eventos asociados a la historia clinica de una mascota.</p>
+      </div>
+      <a routerLink="/eventos-clinicos" [queryParams]="backQueryParams()">Volver</a>
+    </header>
+
+    @if (successMessage()) {
+      <p class="banner banner-success">
+        {{ successMessage() }}
+        @if (createdEventId(); as eventId) {
+          <span>Evento #{{ eventId }}</span>
+        }
+      </p>
+    }
+
+    @if (errorMessage()) {
+      <p class="banner banner-error">{{ errorMessage() }}</p>
+    }
+
+    <section class="form-grid">
+      <div class="field">
+        <label for="idMascota">Mascota</label>
+        <input id="idMascota" type="number" min="1" step="1" formControlName="idMascota" />
+        @if (form.controls.idMascota.invalid && form.controls.idMascota.touched) {
+          <p class="field-error">Ingresá el identificador de una mascota.</p>
+        }
+      </div>
+
+      <div class="field">
+        <label for="tipo">Tipo de evento</label>
+        <select id="tipo" formControlName="tipo">
+          @for (type of eventTypes; track type.value) {
+            <option [value]="type.value">{{ type.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="fecha">Fecha</label>
+        <input id="fecha" type="date" formControlName="fecha" />
+        @if (form.controls.fecha.invalid && form.controls.fecha.touched) {
+          <p class="field-error">La fecha es obligatoria.</p>
+        }
+      </div>
+
+      <div class="field field-wide">
+        <label for="descripcion">{{ esVacuna() ? 'Nombre de la vacuna' : 'Descripcion' }}</label>
+        <textarea id="descripcion" rows="4" formControlName="descripcion"></textarea>
+        @if (form.controls.descripcion.invalid && form.controls.descripcion.touched) {
+          <p class="field-error">
+            {{ esVacuna() ? 'El nombre de la vacuna es obligatorio.' : 'La descripcion es obligatoria.' }}
+          </p>
+        }
+      </div>
+
+      <div class="field field-wide">
+        <label for="diagnostico">Diagnostico</label>
+        <textarea id="diagnostico" rows="3" formControlName="diagnostico"></textarea>
+      </div>
+
+      <div class="field field-wide">
+        <label for="tratamiento">Tratamiento</label>
+        <textarea id="tratamiento" rows="3" formControlName="tratamiento"></textarea>
+      </div>
+
+      <div class="field field-wide">
+        <label for="observaciones">Observaciones</label>
+        <textarea id="observaciones" rows="3" formControlName="observaciones"></textarea>
+      </div>
+    </section>
+
+    <button type="submit" [disabled]="isSubmitting()">
+      {{ isSubmitting() ? 'Registrando...' : 'Registrar evento' }}
+    </button>
+  </form>
+
+  @if (createdEventId(); as eventId) {
+    <section class="evento-archivos">
+      @if (archivosSubidos().length > 0) {
+        <ul class="archivo-list">
+          @for (archivo of archivosSubidos(); track archivo.idArchivo) {
+            <li>
+              <a [href]="resolveArchivoUrl(archivo.url)" target="_blank" rel="noopener">
+                {{ archivo.nombreOriginal }}
+              </a>
+            </li>
+          }
+        </ul>
+      }
+
+      @if (authService.isVeterinario()) {
+        <label class="btn-text archivo-upload-label" [for]="'archivo-input-' + eventId">
+          {{ uploadingArchivos() ? 'Subiendo...' : '+ Adjuntar estudio o receta' }}
+        </label>
+        <input
+          type="file"
+          [id]="'archivo-input-' + eventId"
+          class="archivo-input"
+          accept=".jpg,.jpeg,.png,.pdf"
+          multiple
+          [disabled]="uploadingArchivos()"
+          (change)="subirArchivos($any($event.target))"
+        />
+        @if (uploadError()) {
+          <p class="field-error">{{ uploadError() }}</p>
+        }
+      }
+    </section>
+  }
+</main>

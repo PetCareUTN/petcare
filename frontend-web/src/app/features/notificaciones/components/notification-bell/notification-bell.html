@@ -1,0 +1,34 @@
+<div class="bell-container">
+  <button class="bell-button" (click)="toggle(); $event.stopPropagation()">
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+    </svg>
+    @if (unreadCount > 0) {
+      <span class="badge">{{ unreadCount }}</span>
+    }
+  </button>
+
+  @if (isOpen()) {
+    <div class="dropdown" (click)="$event.stopPropagation()">
+      <div class="dropdown-header">
+        <span>Notificaciones</span>
+      </div>
+
+      @if (notificaciones().length === 0) {
+        <div class="dropdown-empty">No tenés notificaciones nuevas</div>
+      }
+
+      @for (notificacion of notificaciones(); track notificacion.idNotificacion) {
+        <div class="notification-item">
+          <div class="notification-content">
+            <span class="notification-titulo">{{ notificacion.titulo }}</span>
+            <span class="notification-cuerpo">{{ notificacion.cuerpo }}</span>
+            <span class="notification-fecha">{{ notificacion.fechaEnvio | date:'dd/MM/yyyy HH:mm' }}</span>
+          </div>
+          <button class="btn-leer" (click)="marcarLeida(notificacion)">Marcar leída</button>
+        </div>
+      }
+    </div>
+  }
+</div>

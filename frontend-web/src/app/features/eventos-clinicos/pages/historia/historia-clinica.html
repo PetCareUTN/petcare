@@ -1,0 +1,179 @@
+<main class="historia-page">
+  <header class="historia-header">
+    <div>
+      <h1>Historia clínica</h1>
+      @if (mascota(); as pet) {
+        <p>{{ pet.nombre }} · {{ pet.especie }}{{ pet.raza ? ' · ' + pet.raza : '' }}</p>
+      } @else {
+        <p>Mascota #{{ idMascota() }}</p>
+      }
+    </div>
+    <div class="historia-header-actions">
+      @if (!isFormOpen() && !isLoading() && !errorMessage()) {
+        <button type="button" class="btn-primary" (click)="abrirFormulario()">
+          + Nueva consulta
+        </button>
+      }
+      <a routerLink="/eventos-clinicos" [queryParams]="backQueryParams()">Volver</a>
+    </div>
+  </header>
+
+  @if (mascota(); as pet) {
+    <div class="pet-card">
+      @if (pet.foto) {
+        <img
+          class="pet-card-photo"
+          [src]="mascotasService.resolveFotoUrl(pet.foto)"
+          alt="Foto de {{ pet.nombre }}"
+        />
+      } @else {
+        <div class="pet-card-photo pet-card-placeholder">{{ pet.nombre.charAt(0) }}</div>
+      }
+      <div class="pet-card-info">
+        <h2>{{ pet.nombre }}</h2>
+        <p>
+          {{ pet.especie }}
+          @if (pet.raza) { · {{ pet.raza }} }
+          · {{ pet.sexo === 'macho' ? 'Macho' : 'Hembra' }}
+        </p>
+        @if (pet.peso !== null) {
+          <p>Peso: {{ pet.peso }} kg</p>
+        }
+      </div>
+    </div>
+  }
+
+  @if (isLoading()) {
+    <p class="status-text">Cargando...</p>
+  }
+
+  @if (errorMessage()) {
+    <div class="banner banner-error">
+      <span>{{ errorMessage() }}</span>
+      <button type="button" (click)="reintentar()">Reintentar</button>
+    </div>
+  }
+
+  @if (isFormOpen()) {
+    <form class="consulta-form" [formGroup]="form" (ngSubmit)="registrarConsulta()">
+      <div class="consulta-form-header">
+        <h2>Nueva consulta</h2>
+        <button type="button" class="btn-text" (click)="cerrarFormulario()">Cancelar</button>
+      </div>
+
+      @if (submitError()) {
+        <p class="banner banner-error">{{ submitError() }}</p>
+      }
+
+      <div class="form-grid">
+        <div class="field">
+          <label for="tipo">Tipo de evento</label>
+          <select id="tipo" formControlName="tipo">
+            @for (type of eventTypes; track type.value) {
+              <option [value]="type.value">{{ type.label }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="fecha">Fecha</label>
+          <input id="fecha" type="date" formControlName="fecha" />
+          @if (form.controls.fecha.invalid && form.controls.fecha.touched) {
+            <p class="field-error">La fecha es obligatoria.</p>
+          }
+        </div>
+
+        <div class="field field-wide">
+          <label for="descripcion">Descripcion</label>
+          <textarea id="descripcion" rows="3" formControlName="descripcion"></textarea>
+          @if (form.controls.descripcion.invalid && form.controls.descripcion.touched) {
+            <p class="field-error">La descripcion es obligatoria.</p>
+          }
+        </div>
+
+        <div class="field field-wide">
+          <label for="diagnostico">Diagnostico</label>
+          <textarea id="diagnostico" rows="2" formControlName="diagnostico"></textarea>
+        </div>
+
+        <div class="field field-wide">
+          <label for="tratamiento">Tratamiento</label>
+          <textarea id="tratamiento" rows="2" formControlName="tratamiento"></textarea>
+        </div>
+
+        <div class="field field-wide">
+          <label for="observaciones">Observaciones</label>
+          <textarea id="observaciones" rows="2" formControlName="observaciones"></textarea>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Guardando...' : 'Guardar consulta' }}
+      </button>
+    </form>
+  }
+
+  @if (!isLoading() && !errorMessage()) {
+    @if (eventos().length === 0 && !isFormOpen()) {
+      <div class="empty-state">
+        <p>Esta mascota todavía no tiene eventos clínicos registrados.</p>
+        <button type="button" class="btn-primary" (click)="abrirFormulario()">
+          Registrar la primera consulta
+        </button>
+      </div>
+    } @else if (eventos().length > 0) {
+      <ol class="evento-list">
+        @for (evento of eventos(); track evento.idEvento) {
+          <li class="evento-card">
+            <div class="evento-card-header">
+              <span class="evento-tipo">{{ etiquetaTipo(evento.tipo) }}</span>
+              <span class="evento-fecha">{{ evento.fecha | date: 'dd/MM/yyyy' }}</span>
+            </div>
+            <p class="evento-descripcion">{{ evento.descripcion }}</p>
+            @if (evento.diagnostico) {
+              <p class="evento-detalle"><strong>Diagnóstico:</strong> {{ evento.diagnostico }}</p>
+            }
+            @if (evento.tratamiento) {
+              <p class="evento-detalle"><strong>Tratamiento:</strong> {{ evento.tratamiento }}</p>
+            }
+            @if (evento.observaciones) {
+              <p class="evento-detalle"><strong>Observaciones:</strong> {{ evento.observaciones }}</p>
+            }
+
+            <div class="evento-archivos">
+              @if (evento.archivos.length > 0) {
+                <ul class="archivo-list">
+                  @for (archivo of evento.archivos; track archivo.idArchivo) {
+                    <li>
+                      <a [href]="resolveArchivoUrl(archivo.url)" target="_blank" rel="noopener">
+                        {{ archivo.nombreOriginal }}
+                      </a>
+                    </li>
+                  }
+                </ul>
+              }
+
+              @if (authService.isVeterinario()) {
+                <label class="btn-text archivo-upload-label" [for]="'archivo-input-' + evento.idEvento">
+                  {{ uploadingEventoId() === evento.idEvento ? 'Subiendo...' : '+ Adjuntar estudio o receta' }}
+                </label>
+                <input
+                  type="file"
+                  [id]="'archivo-input-' + evento.idEvento"
+                  class="archivo-input"
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  multiple
+                  [disabled]="uploadingEventoId() === evento.idEvento"
+                  (change)="subirArchivos(evento.idEvento, $any($event.target))"
+                />
+                @if (uploadErrors()[evento.idEvento]) {
+                  <p class="field-error">{{ uploadErrors()[evento.idEvento] }}</p>
+                }
+              }
+            </div>
+          </li>
+        }
+      </ol>
+    }
+  }
+</main>
