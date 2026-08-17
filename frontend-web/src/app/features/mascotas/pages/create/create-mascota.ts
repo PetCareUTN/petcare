@@ -3,6 +3,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiError } from '../../../auth/models/user';
 import { AuthService } from '../../../auth/services/auth-service';
+import { RichTextEditorComponent } from '../../../../shared/components/rich-text-editor/rich-text-editor';
 import { CreateMascotaRequest, MascotaOwner, PetSex } from '../../models/mascota';
 import { MascotasService } from '../../services/mascotas-service';
 
@@ -40,7 +41,7 @@ const BREED_OPTIONS_BY_SPECIES: Record<string, string[]> = {
 
 @Component({
   selector: 'app-create-mascota',
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, RichTextEditorComponent],
   templateUrl: './create-mascota.html',
   styleUrl: './create-mascota.css',
 })
@@ -73,6 +74,7 @@ export class CreateMascotaPage implements OnInit {
     nombre: ['', [Validators.required, Validators.maxLength(100)]],
     especie: ['', [Validators.required, Validators.maxLength(50)]],
     raza: ['', [Validators.maxLength(80)]],
+    razaPersonalizada: ['', [Validators.maxLength(80)]],
     sexo: ['macho' as PetSex, [Validators.required]],
     fechaNacimiento: [''],
     peso: [null as number | null, [Validators.min(0)]],
@@ -105,8 +107,19 @@ export class CreateMascotaPage implements OnInit {
     return species ? (BREED_OPTIONS_BY_SPECIES[species] ?? []) : [];
   }
 
+  protected isCustomBreed(): boolean {
+    return this.form.controls.raza.value === 'Otro';
+  }
+
   protected onSpeciesChanged(): void {
     this.form.controls.raza.setValue('');
+    this.form.controls.razaPersonalizada.setValue('');
+  }
+
+  protected onBreedChanged(): void {
+    if (!this.isCustomBreed()) {
+      this.form.controls.razaPersonalizada.setValue('');
+    }
   }
 
   protected ownerDisplayName(owner: MascotaOwner): string {
@@ -194,6 +207,11 @@ export class CreateMascotaPage implements OnInit {
       return;
     }
 
+    if (this.isCustomBreed() && !this.form.controls.razaPersonalizada.value?.trim()) {
+      this.form.controls.razaPersonalizada.markAsTouched();
+      return;
+    }
+
     if (this.isVeterinaryFlow && !this.selectedOwner()) {
       this.ownerSearchForm.markAllAsTouched();
       this.ownerSearchMessage.set('Busca y selecciona el dueño antes de registrar la mascota.');
@@ -206,10 +224,11 @@ export class CreateMascotaPage implements OnInit {
     this.isSubmitting.set(true);
 
     const value = this.form.getRawValue();
+    const raza = value.raza === 'Otro' ? value.razaPersonalizada?.trim() : value.raza;
     const payload: CreateMascotaRequest = {
       nombre: value.nombre!,
       especie: value.especie!,
-      raza: value.raza || undefined,
+      raza: raza || undefined,
       sexo: value.sexo!,
       fechaNacimiento: value.fechaNacimiento || undefined,
       peso: value.peso ?? undefined,
@@ -237,6 +256,7 @@ export class CreateMascotaPage implements OnInit {
           nombre: '',
           especie: '',
           raza: '',
+          razaPersonalizada: '',
           sexo: 'macho',
           fechaNacimiento: '',
           peso: null,

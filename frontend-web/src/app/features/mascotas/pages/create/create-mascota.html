@@ -126,13 +126,33 @@
 
       <div class="field">
         <label for="raza">Raza</label>
-        <select id="raza" formControlName="raza" [disabled]="!form.controls.especie.value">
+        <select
+          id="raza"
+          formControlName="raza"
+          [disabled]="!form.controls.especie.value"
+          (change)="onBreedChanged()"
+        >
           <option value="">Seleccionar raza</option>
           @for (breed of breedOptions(); track breed) {
             <option [value]="breed">{{ breed }}</option>
           }
         </select>
       </div>
+
+      @if (isCustomBreed()) {
+        <div class="field">
+          <label for="razaPersonalizada">Especificá la raza</label>
+          <input
+            id="razaPersonalizada"
+            type="text"
+            formControlName="razaPersonalizada"
+            placeholder="Ej: Border Collie"
+          />
+          @if (form.controls.razaPersonalizada.touched && !form.controls.razaPersonalizada.value?.trim()) {
+            <p class="field-error">Especificá la raza de la mascota.</p>
+          }
+        </div>
+      }
 
       <div class="field">
         <label for="sexo">Sexo</label>
@@ -178,12 +198,12 @@
 
       <div class="field field-wide">
         <label for="alergias">Alergias</label>
-        <textarea id="alergias" rows="3" formControlName="alergias"></textarea>
+        <app-rich-text-editor id="alergias" formControlName="alergias" />
       </div>
 
       <div class="field field-wide">
         <label for="observaciones">Observaciones</label>
-        <textarea id="observaciones" rows="4" formControlName="observaciones"></textarea>
+        <app-rich-text-editor id="observaciones" formControlName="observaciones" />
       </div>
     </section>
 

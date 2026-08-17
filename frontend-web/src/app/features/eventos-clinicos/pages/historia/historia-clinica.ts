@@ -5,6 +5,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { ApiError } from '../../../auth/models/user';
 import { AuthService } from '../../../auth/services/auth-service';
+import { RichTextEditorComponent } from '../../../../shared/components/rich-text-editor/rich-text-editor';
 import { MascotaResponse } from '../../../mascotas/models/mascota';
 import { MascotasService } from '../../../mascotas/services/mascotas-service';
 import {
@@ -32,7 +33,7 @@ const EVENT_TYPE_LABELS: Record<ClinicalEventType, string> = {
 
 @Component({
   selector: 'app-historia-clinica',
-  imports: [RouterLink, DatePipe, ReactiveFormsModule],
+  imports: [RouterLink, DatePipe, ReactiveFormsModule, RichTextEditorComponent],
   templateUrl: './historia-clinica.html',
   styleUrl: './historia-clinica.css',
 })
