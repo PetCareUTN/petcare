@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -19,6 +21,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -28,11 +33,19 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.petcare.app.R
 import com.petcare.app.features.pets.data.remote.PetResponse
 import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMint
@@ -53,7 +66,9 @@ fun AuthenticatedHomeScreen(
     onEditPet: (PetResponse) -> Unit,
     onLogout: () -> Unit,
     onPetClick: (PetResponse) -> Unit = {},
-    onProfileClick: () -> Unit = {}
+    onProfileClick: () -> Unit = {},
+    onPublishAdoption: () -> Unit = {},
+    onSettingsClick: () -> Unit = {}
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -69,7 +84,12 @@ fun AuthenticatedHomeScreen(
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.Start
         ) {
-            HomeHeader(userName = userName, onLogout = onLogout)
+            HomeHeader(
+                userName = userName,
+                onLogout = onLogout,
+                onProfileClick = onProfileClick,
+                onSettingsClick = onSettingsClick
+            )
 
             Spacer(modifier = Modifier.height(18.dp))
 
@@ -77,6 +97,18 @@ fun AuthenticatedHomeScreen(
                 pet = pets.firstOrNull(),
                 onRegisterPet = onRegisterPet
             )
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Button(
+                onClick = onPublishAdoption,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 52.dp),
+                shape = MaterialTheme.shapes.large
+            ) {
+                Text("Publicar mascota en adopción")
+            }
 
             Spacer(modifier = Modifier.height(18.dp))
 
@@ -110,8 +142,13 @@ fun AuthenticatedHomeScreen(
 @Composable
 private fun HomeHeader(
     userName: String,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    onProfileClick: () -> Unit,
+    onSettingsClick: () -> Unit
 ) {
+    var isMenuExpanded by remember { mutableStateOf(false) }
+    val displayName = userName.ifBlank { "Tutor" }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -124,15 +161,56 @@ private fun HomeHeader(
                 style = MaterialTheme.typography.bodyLarge
             )
             Text(
-                text = userName.ifBlank { "Tutor" },
+                text = displayName,
                 style = MaterialTheme.typography.headlineMedium
             )
         }
-        OutlinedButton(
-            onClick = onLogout,
-            shape = MaterialTheme.shapes.large
-        ) {
-            Text("Salir")
+        Box {
+            Surface(
+                modifier = Modifier
+                    .size(46.dp)
+                    .clickable { isMenuExpanded = true },
+                shape = CircleShape,
+                color = PetCareTeal
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = displayName.trim().take(1).uppercase(),
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+            }
+            DropdownMenu(
+                expanded = isMenuExpanded,
+                onDismissRequest = { isMenuExpanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Mi perfil") },
+                    onClick = {
+                        isMenuExpanded = false
+                        onProfileClick()
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Configuración") },
+                    onClick = {
+                        isMenuExpanded = false
+                        onSettingsClick()
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Cerrar sesión") },
+                    onClick = {
+                        isMenuExpanded = false
+                        onLogout()
+                    }
+                )
+            }
         }
     }
 }
@@ -195,7 +273,7 @@ private fun ActivePetCard(
                     text = if (pet == null) {
                         "Alta rapida con datos basicos y foto opcional"
                     } else {
-                        "Perfil activo listo para historia clinica y QR"
+                        "Perfil activo listo para historia clínica y QR"
                     },
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                     color = Color.White,
@@ -220,7 +298,7 @@ private fun ActivePetCard(
 private fun QuickActions() {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
-            text = "Accesos rapidos",
+            text = "Accesos rápidos",
             style = MaterialTheme.typography.titleMedium
         )
         Row(
@@ -248,8 +326,12 @@ private fun QuickAction(
     ) {
         Text(
             text = text,
-            modifier = Modifier.padding(vertical = 12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 12.dp),
             color = PetCareTealDark,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
             style = MaterialTheme.typography.labelLarge
         )
     }
@@ -337,11 +419,11 @@ private fun PetsContent(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = "Todavia no tenes mascotas registradas",
+                        text = "Todavía no tenés mascotas registradas",
                         style = MaterialTheme.typography.titleMedium
                     )
                     Text(
-                        text = "Agrega sus datos basicos para empezar a construir su perfil.",
+                        text = "Agregá sus datos básicos para empezar a construir su perfil.",
                         color = PetCareMuted,
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -438,20 +520,35 @@ private fun PetCareBottomBar(onProfileClick: () -> Unit) {
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 0.dp
     ) {
-        val items = listOf("Inicio", "Mascotas", "Servicios", "Adopcion", "Perfil")
+        val items = listOf("Inicio", "Mascotas", "Servicios", "Adopción", "Perfil")
         items.forEachIndexed { index, item ->
             val isPerfil = item == "Perfil"
             NavigationBarItem(
                 selected = index == 0,
                 onClick = { if (isPerfil) onProfileClick() },
                 icon = {
-                    Surface(
-                        modifier = Modifier.size(8.dp),
-                        shape = CircleShape,
-                        color = if (index == 0) PetCareTeal else PetCareLine
-                    ) {}
+                    val iconRes = when (item) {
+                        "Mascotas" -> R.drawable.ic_paw
+                        "Servicios" -> R.drawable.ic_services
+                        "Adopción" -> R.drawable.ic_heart
+                        "Perfil" -> R.drawable.ic_person
+                        else -> R.drawable.ic_home
+                    }
+                    Icon(
+                        painter = painterResource(iconRes),
+                        contentDescription = item,
+                        modifier = Modifier.size(22.dp)
+                    )
                 },
-                label = { Text(item) }
+                label = {
+                    Text(
+                        text = item,
+                        maxLines = 1,
+                        softWrap = false,
+                        fontSize = 10.sp,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
             )
         }
     }

@@ -6,6 +6,7 @@ import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +20,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
+import com.petcare.app.features.adopciones.domain.AdopcionesController
+import com.petcare.app.features.adopciones.ui.PublicarAdopcionScreen
 import com.petcare.app.features.auth.data.local.SessionManager
 import com.petcare.app.features.auth.data.remote.ForgotPasswordRequest
 import com.petcare.app.features.auth.data.remote.ResetPasswordRequest
@@ -48,6 +51,8 @@ import com.petcare.app.features.profile.domain.ProfileController
 import com.petcare.app.features.profile.ui.ChangeEmailScreen
 import com.petcare.app.features.profile.ui.EditProfileScreen
 import com.petcare.app.features.profile.ui.ProfileScreen
+import com.petcare.app.features.settings.data.local.ThemePreferences
+import com.petcare.app.features.settings.ui.ConfiguracionScreen
 import com.petcare.app.ui.theme.PetCareTheme
 import java.io.IOException
 import java.net.URLConnection
@@ -72,7 +77,17 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            PetCareTheme {
+            val themePreferences = remember {
+                ThemePreferences(applicationContext)
+            }
+            val systemInDarkTheme = isSystemInDarkTheme()
+            // null = seguir el tema del sistema hasta que el usuario elija.
+            var darkModePreference by remember {
+                mutableStateOf(themePreferences.getDarkMode())
+            }
+            val isDarkMode = darkModePreference ?: systemInDarkTheme
+
+            PetCareTheme(darkTheme = isDarkMode) {
                 val sessionStore = remember {
                     SessionManager(applicationContext)
                 }
@@ -95,6 +110,11 @@ class MainActivity : ComponentActivity() {
                 val profileController = remember {
                     ProfileController(
                         profileApi = RetrofitClient.profileApi(sessionStore)
+                    )
+                }
+                val adopcionesController = remember {
+                    AdopcionesController(
+                        adopcionesApi = RetrofitClient.adopcionesApi(sessionStore)
                     )
                 }
                 var isLoading by rememberSaveable {
@@ -223,6 +243,21 @@ class MainActivity : ComponentActivity() {
                 var emailChangeError by rememberSaveable {
                     mutableStateOf<String?>(null)
                 }
+                var isPublishingAdopcion by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isSavingAdopcion by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var adopcionError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var adopcionSuccess by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var isViewingSettings by rememberSaveable {
+                    mutableStateOf(false)
+                }
 
                 fun logout() {
                     sessionController.logout()
@@ -249,6 +284,11 @@ class MainActivity : ComponentActivity() {
                     isEmailCodeSent = false
                     isProcessingEmailChange = false
                     emailChangeError = null
+                    isPublishingAdopcion = false
+                    isSavingAdopcion = false
+                    adopcionError = null
+                    adopcionSuccess = null
+                    isViewingSettings = false
                 }
 
                 fun loadPets() {
@@ -699,6 +739,62 @@ class MainActivity : ComponentActivity() {
                             selectedPetId?.let { loadHistoriaClinica(it) }
                         }
                     )
+                } else if (loggedUserName != null && isViewingSettings) {
+                    ConfiguracionScreen(
+                        isDarkMode = isDarkMode,
+                        onDarkModeChange = { enabled ->
+                            darkModePreference = enabled
+                            themePreferences.setDarkMode(enabled)
+                        },
+                        onBack = { isViewingSettings = false }
+                    )
+                } else if (loggedUserName != null && isPublishingAdopcion) {
+                    PublicarAdopcionScreen(
+                        pets = pets,
+                        isPublishing = isSavingAdopcion,
+                        errorMessage = adopcionError,
+                        successMessage = adopcionSuccess,
+                        onPublish = { petId, descripcion ->
+                            isSavingAdopcion = true
+                            adopcionError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    adopcionesController.publicar(petId, descripcion)
+                                    adopcionSuccess =
+                                        "Tu mascota ya está publicada en adopción"
+                                } catch (exception: HttpException) {
+                                    adopcionError = when (exception.code()) {
+                                        401 -> {
+                                            logout()
+                                            serverError =
+                                                "La sesion expiro. Inicia sesion nuevamente"
+                                            null
+                                        }
+                                        403 -> "No podés publicar una mascota que no es tuya"
+                                        409 -> "Esa mascota ya tiene una publicación activa"
+                                        404 -> "No se encontró la mascota"
+                                        else -> "No se pudo publicar la mascota"
+                                    }
+                                } catch (exception: IOException) {
+                                    adopcionError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    adopcionError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isSavingAdopcion = false
+                                }
+                            }
+                        },
+                        onRegisterNewPet = {
+                            savePetError = null
+                            isRegisteringPet = true
+                        },
+                        onBack = {
+                            isPublishingAdopcion = false
+                            adopcionError = null
+                            adopcionSuccess = null
+                        }
+                    )
                 } else if (loggedUserName != null) {
                     AuthenticatedHomeScreen(
                         userName = loggedUserName.orEmpty(),
@@ -725,7 +821,13 @@ class MainActivity : ComponentActivity() {
                             profileError = null
                             isViewingProfile = true
                             loadProfile()
-                        }
+                        },
+                        onPublishAdoption = {
+                            adopcionError = null
+                            adopcionSuccess = null
+                            isPublishingAdopcion = true
+                        },
+                        onSettingsClick = { isViewingSettings = true }
                     )
                 } else if (isRegisteringUser) {
                     RegisterScreen(
