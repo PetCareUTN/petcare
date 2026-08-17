@@ -100,6 +100,8 @@ fun RegisterPetScreen(
     var name by rememberSaveable { mutableStateOf("") }
     var species by rememberSaveable { mutableStateOf("") }
     var breed by rememberSaveable { mutableStateOf("") }
+    var customBreed by rememberSaveable { mutableStateOf("") }
+    var customBreedError by rememberSaveable { mutableStateOf<String?>(null) }
     var sex by rememberSaveable { mutableStateOf("") }
     var birthDate by rememberSaveable { mutableStateOf("") }
     var weight by rememberSaveable { mutableStateOf("") }
@@ -200,6 +202,8 @@ fun RegisterPetScreen(
                     onSelect = {
                         species = it
                         breed = ""
+                        customBreed = ""
+                        customBreedError = null
                     }
                 )
 
@@ -209,8 +213,29 @@ fun RegisterPetScreen(
                     placeholder = "Seleccionar raza",
                     options = breedOptions,
                     enabled = !isSaving && species.isNotBlank(),
-                    onSelect = { breed = it }
+                    onSelect = {
+                        breed = it
+                        if (it != "Otro") {
+                            customBreed = ""
+                            customBreedError = null
+                        }
+                    }
                 )
+
+                if (breed == "Otro") {
+                    OutlinedTextField(
+                        value = customBreed,
+                        onValueChange = {
+                            customBreed = it
+                            customBreedError = null
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Especificá la raza") },
+                        isError = customBreedError != null,
+                        supportingText = customBreedError?.let { { Text(it) } },
+                        singleLine = true
+                    )
+                }
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
@@ -378,12 +403,20 @@ fun RegisterPetScreen(
                 )
                 validation = nextValidation
 
-                if (nextValidation.isValid) {
+                val isCustomBreedInvalid = breed == "Otro" && customBreed.isBlank()
+                customBreedError = if (isCustomBreedInvalid) {
+                    "Especificá la raza de la mascota."
+                } else {
+                    null
+                }
+
+                if (nextValidation.isValid && !isCustomBreedInvalid) {
+                    val finalBreed = if (breed == "Otro") customBreed else breed
                     onSave(
                         CreatePetRequest(
                             nombre = name.trim(),
                             especie = species.trim(),
-                            raza = breed.trim().ifBlank { null },
+                            raza = finalBreed.trim().ifBlank { null },
                             sexo = sex,
                             birthDate = birthDate.trim().ifBlank { null },
                             peso = weight.trim().ifBlank { null }?.toDouble(),
