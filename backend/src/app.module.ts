@@ -24,6 +24,8 @@ import { PublicacionAdopcion } from './adopciones/entities/publicacion-adopcion.
 import { Servicio } from './servicios/entities/servicio.entity';
 import { DisponibilidadServicio } from './servicios/entities/disponibilidad-servicio.entity';
 import { ServiciosModule } from './servicios/servicios.module';
+import { DisponibilidadesVeterinariasModule } from './disponibilidades-veterinarias/disponibilidades-veterinarias.module';
+import { DisponibilidadVeterinaria } from './disponibilidades-veterinarias/entities/disponibilidad-veterinaria.entity';
 
 dotenv.config();
 
@@ -48,6 +50,7 @@ dotenv.config();
         PublicacionAdopcion,
         Servicio,
         DisponibilidadServicio,
+        DisponibilidadVeterinaria,
       ],
       synchronize: false,
     }),
@@ -61,6 +64,7 @@ dotenv.config();
     EventosClinicosModule,
     AdopcionesModule,
     ServiciosModule,
+    DisponibilidadesVeterinariasModule,
   ],
   controllers: [AppController],
   providers: [AppService],

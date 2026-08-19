@@ -1,0 +1,65 @@
+<main class="availability-page">
+  <form class="availability-form" [formGroup]="form" (ngSubmit)="submit()">
+    <header class="availability-header">
+      <div>
+        <h1>Disponibilidad</h1>
+        <p>Configurá los días y horarios de atención de la veterinaria.</p>
+      </div>
+      <button type="button" class="btn-secondary" (click)="agregarFranja()">
+        Agregar franja
+      </button>
+    </header>
+
+    @if (isLoading()) {
+      <p class="status-text">Cargando disponibilidad...</p>
+    }
+
+    @if (successMessage()) {
+      <p class="banner banner-success">{{ successMessage() }}</p>
+    }
+
+    @if (errorMessage()) {
+      <p class="banner banner-error">{{ errorMessage() }}</p>
+    }
+
+    @if (!isLoading()) {
+      <section class="availability-list" formArrayName="disponibilidades">
+        @for (grupo of disponibilidades.controls; track $index; let i = $index) {
+          <div class="availability-row" [formGroupName]="i">
+            <div class="field">
+              <label [for]="'dia-' + i">Día</label>
+              <select [id]="'dia-' + i" formControlName="diaSemana">
+                @for (dia of dias; track dia.value) {
+                  <option [value]="dia.value">{{ dia.label }}</option>
+                }
+              </select>
+            </div>
+
+            <div class="field">
+              <label [for]="'inicio-' + i">Desde</label>
+              <input [id]="'inicio-' + i" type="time" formControlName="horaInicio" />
+            </div>
+
+            <div class="field">
+              <label [for]="'fin-' + i">Hasta</label>
+              <input [id]="'fin-' + i" type="time" formControlName="horaFin" />
+            </div>
+
+            <button
+              type="button"
+              class="btn-remove"
+              [disabled]="disponibilidades.length <= 1"
+              (click)="quitarFranja(i)"
+            >
+              Quitar
+            </button>
+          </div>
+        }
+      </section>
+
+      <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Guardando...' : 'Guardar disponibilidad' }}
+      </button>
+    }
+  </form>
+</main>
