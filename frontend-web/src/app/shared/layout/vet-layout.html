@@ -12,6 +12,12 @@
       <a routerLink="/eventos-clinicos" [class.active]="isAttentionActive()">
         Atención veterinaria
       </a>
+      <a
+        routerLink="/eventos-clinicos/disponibilidad"
+        [class.active]="isDisponibilidadActive()"
+      >
+        Disponibilidad
+      </a>
       <a routerLink="/servicios" [class.active]="isServiciosActive()"> Mis servicios </a>
     </nav>
 

@@ -24,7 +24,11 @@ export class VetLayout {
   );
 
   protected readonly isAttentionActive = () =>
-    this.currentUrl().startsWith('/eventos-clinicos');
+    this.currentUrl().startsWith('/eventos-clinicos') &&
+    !this.isDisponibilidadActive();
+
+  protected readonly isDisponibilidadActive = () =>
+    this.currentUrl().startsWith('/eventos-clinicos/disponibilidad');
 
   protected readonly isServiciosActive = () => this.currentUrl().startsWith('/servicios');
 

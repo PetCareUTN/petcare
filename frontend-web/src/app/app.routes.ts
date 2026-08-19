@@ -101,6 +101,13 @@ export const routes: Routes = [
             (m) => m.AltaAsistidaDuenoPage,
           ),
       },
+      {
+        path: 'disponibilidad',
+        loadComponent: () =>
+          import(
+            './features/disponibilidades-veterinarias/pages/configuracion-disponibilidad/configuracion-disponibilidad'
+          ).then((m) => m.ConfiguracionDisponibilidadPage),
+      },
     ],
   },
   {
