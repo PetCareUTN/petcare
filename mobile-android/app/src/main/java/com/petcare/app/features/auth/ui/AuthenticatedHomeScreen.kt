@@ -69,7 +69,8 @@ fun AuthenticatedHomeScreen(
     onProfileClick: () -> Unit = {},
     onPublishAdoption: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
-    onServiciosClick: () -> Unit = {}
+    onServiciosClick: () -> Unit = {},
+    onRequestTurno: () -> Unit = {}
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -118,7 +119,7 @@ fun AuthenticatedHomeScreen(
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            QuickActions()
+            QuickActions(onRequestTurno = onRequestTurno)
 
             Spacer(modifier = Modifier.height(22.dp))
 
@@ -301,7 +302,7 @@ private fun ActivePetCard(
 }
 
 @Composable
-private fun QuickActions() {
+private fun QuickActions(onRequestTurno: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
             text = "Accesos rápidos",
@@ -311,7 +312,7 @@ private fun QuickActions() {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            QuickAction(text = "Turno", modifier = Modifier.weight(1f))
+            QuickAction(text = "Turno", modifier = Modifier.weight(1f), onClick = onRequestTurno)
             QuickAction(text = "Vacuna", modifier = Modifier.weight(1f))
             QuickAction(text = "QR", modifier = Modifier.weight(1f))
             QuickAction(text = "BLE", modifier = Modifier.weight(1f))
@@ -322,10 +323,11 @@ private fun QuickActions() {
 @Composable
 private fun QuickAction(
     text: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
 ) {
     Surface(
-        modifier = modifier,
+        modifier = modifier.clickable(onClick = onClick),
         color = PetCareMint,
         shape = MaterialTheme.shapes.large,
         border = BorderStroke(1.dp, PetCareLine)

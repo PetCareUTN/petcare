@@ -37,12 +37,22 @@
 
             <div class="field">
               <label [for]="'inicio-' + i">Desde</label>
-              <input [id]="'inicio-' + i" type="time" formControlName="horaInicio" />
+              <input
+                [id]="'inicio-' + i"
+                type="time"
+                formControlName="horaInicio"
+                [class.field-invalid]="grupo.get('horaInicio')?.invalid && grupo.get('horaInicio')?.touched"
+              />
             </div>
 
             <div class="field">
               <label [for]="'fin-' + i">Hasta</label>
-              <input [id]="'fin-' + i" type="time" formControlName="horaFin" />
+              <input
+                [id]="'fin-' + i"
+                type="time"
+                formControlName="horaFin"
+                [class.field-invalid]="grupo.get('horaFin')?.invalid && grupo.get('horaFin')?.touched"
+              />
             </div>
 
             <button

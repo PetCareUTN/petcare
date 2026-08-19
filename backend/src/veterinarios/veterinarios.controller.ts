@@ -70,6 +70,12 @@ export class VeterinariosController {
     return this.veterinariosService.obtenerEstado(user.sub);
   }
 
+  @Get('aprobados')
+  @UseGuards(JwtAuthGuard)
+  listarAprobados() {
+    return this.veterinariosService.listarAprobados();
+  }
+
   @Get('pendientes')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleName.ADMINISTRADOR)

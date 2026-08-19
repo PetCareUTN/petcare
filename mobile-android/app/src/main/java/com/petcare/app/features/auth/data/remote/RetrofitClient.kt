@@ -6,6 +6,7 @@ import com.petcare.app.features.historiaclinica.data.remote.HistoriaClinicaApi
 import com.petcare.app.features.pets.data.remote.PetsApi
 import com.petcare.app.features.profile.data.remote.ProfileApi
 import com.petcare.app.features.servicios.data.remote.ServiciosApi
+import com.petcare.app.features.turnos.data.remote.TurnosApi
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -41,6 +42,10 @@ object RetrofitClient {
     fun serviciosApi(sessionStore: SessionStore): ServiciosApi =
         createRetrofit(sessionStore)
             .create(ServiciosApi::class.java)
+
+    fun turnosApi(sessionStore: SessionStore): TurnosApi =
+        createRetrofit(sessionStore)
+            .create(TurnosApi::class.java)
 
     private fun createRetrofit(sessionStore: SessionStore): Retrofit {
         val okHttpClient = OkHttpClient.Builder()

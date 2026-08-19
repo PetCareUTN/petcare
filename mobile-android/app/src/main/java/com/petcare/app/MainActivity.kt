@@ -60,6 +60,11 @@ import com.petcare.app.features.servicios.data.remote.UpdateServicioRequest
 import com.petcare.app.features.servicios.domain.ServiciosController
 import com.petcare.app.features.servicios.ui.ServicioFormScreen
 import com.petcare.app.features.servicios.ui.ServiciosListScreen
+import com.petcare.app.features.turnos.data.remote.CreateTurnoRequest
+import com.petcare.app.features.turnos.data.remote.DisponibilidadTurnoResponse
+import com.petcare.app.features.turnos.data.remote.VeterinariaResponse
+import com.petcare.app.features.turnos.domain.TurnosController
+import com.petcare.app.features.turnos.ui.SolicitarTurnoScreen
 import com.petcare.app.ui.theme.PetCareTheme
 import java.io.IOException
 import java.net.URLConnection
@@ -127,6 +132,11 @@ class MainActivity : ComponentActivity() {
                 val serviciosController = remember {
                     ServiciosController(
                         serviciosApi = RetrofitClient.serviciosApi(sessionStore)
+                    )
+                }
+                val turnosController = remember {
+                    TurnosController(
+                        turnosApi = RetrofitClient.turnosApi(sessionStore)
                     )
                 }
                 var isLoading by rememberSaveable {
@@ -297,6 +307,30 @@ class MainActivity : ComponentActivity() {
                 var deletingServicioId by rememberSaveable {
                     mutableStateOf<Int?>(null)
                 }
+                var isRequestingTurno by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isLoadingVeterinariasTurno by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var veterinariasTurno by remember {
+                    mutableStateOf<List<VeterinariaResponse>>(emptyList())
+                }
+                var isLoadingDisponibilidadesTurno by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var disponibilidadesTurno by remember {
+                    mutableStateOf<List<DisponibilidadTurnoResponse>>(emptyList())
+                }
+                var isSavingTurno by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var turnoError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var turnoSuccess by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
 
                 fun logout() {
                     sessionController.logout()
@@ -335,6 +369,11 @@ class MainActivity : ComponentActivity() {
                     editingServicio = null
                     saveServicioError = null
                     deletingServicioId = null
+                    isRequestingTurno = false
+                    veterinariasTurno = emptyList()
+                    disponibilidadesTurno = emptyList()
+                    turnoError = null
+                    turnoSuccess = null
                 }
 
                 fun loadPets() {
@@ -454,6 +493,52 @@ class MainActivity : ComponentActivity() {
                             serviciosError = "Ocurrio un error inesperado"
                         } finally {
                             isLoadingServicios = false
+                        }
+                    }
+                }
+
+                fun loadVeterinariasTurno() {
+                    isLoadingVeterinariasTurno = true
+
+                    lifecycleScope.launch {
+                        try {
+                            veterinariasTurno = turnosController.getVeterinariasAprobadas()
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                turnoError = "No se pudieron cargar las veterinarias"
+                            }
+                        } catch (exception: IOException) {
+                            turnoError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            turnoError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingVeterinariasTurno = false
+                        }
+                    }
+                }
+
+                fun loadDisponibilidadesTurno(idVeterinario: Int) {
+                    isLoadingDisponibilidadesTurno = true
+
+                    lifecycleScope.launch {
+                        try {
+                            disponibilidadesTurno = turnosController.getDisponibilidades(idVeterinario)
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                turnoError = "No se pudo cargar la disponibilidad de la veterinaria"
+                            }
+                        } catch (exception: IOException) {
+                            turnoError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            turnoError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingDisponibilidadesTurno = false
                         }
                     }
                 }
@@ -966,6 +1051,63 @@ class MainActivity : ComponentActivity() {
                             adopcionSuccess = null
                         }
                     )
+                } else if (loggedUserName != null && isRequestingTurno) {
+                    SolicitarTurnoScreen(
+                        pets = pets,
+                        veterinarias = veterinariasTurno,
+                        isLoadingVeterinarias = isLoadingVeterinariasTurno,
+                        disponibilidades = disponibilidadesTurno,
+                        isLoadingDisponibilidades = isLoadingDisponibilidadesTurno,
+                        isSaving = isSavingTurno,
+                        errorMessage = turnoError,
+                        successMessage = turnoSuccess,
+                        onSelectVeterinaria = { idVeterinario ->
+                            turnoError = null
+                            loadDisponibilidadesTurno(idVeterinario)
+                        },
+                        onSolicitar = { idMascota, idVeterinario, fecha, horaInicio, horaFin ->
+                            isSavingTurno = true
+                            turnoError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    turnosController.solicitarTurno(
+                                        CreateTurnoRequest(
+                                            idMascota = idMascota,
+                                            idVeterinario = idVeterinario,
+                                            fecha = fecha,
+                                            horaInicio = horaInicio,
+                                            horaFin = horaFin
+                                        )
+                                    )
+                                    turnoSuccess = "Tu turno quedó pendiente de confirmación"
+                                } catch (exception: HttpException) {
+                                    turnoError = when (exception.code()) {
+                                        401 -> {
+                                            logout()
+                                            serverError =
+                                                "La sesion expiro. Inicia sesion nuevamente"
+                                            null
+                                        }
+                                        403 -> "No podés solicitar un turno para una mascota que no es tuya"
+                                        404 -> "No se encontró la mascota o la veterinaria"
+                                        else -> "El horario solicitado no está disponible"
+                                    }
+                                } catch (exception: IOException) {
+                                    turnoError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    turnoError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isSavingTurno = false
+                                }
+                            }
+                        },
+                        onBack = {
+                            isRequestingTurno = false
+                            turnoError = null
+                            turnoSuccess = null
+                        }
+                    )
                 } else if (loggedUserName != null) {
                     AuthenticatedHomeScreen(
                         userName = loggedUserName.orEmpty(),
@@ -1004,6 +1146,12 @@ class MainActivity : ComponentActivity() {
                             serviciosError = null
                             isViewingServicios = true
                             loadServicios()
+                        },
+                        onRequestTurno = {
+                            turnoError = null
+                            turnoSuccess = null
+                            isRequestingTurno = true
+                            loadVeterinariasTurno()
                         }
                     )
                 } else if (isRegisteringUser) {

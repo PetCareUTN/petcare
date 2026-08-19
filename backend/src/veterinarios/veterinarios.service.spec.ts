@@ -76,6 +76,32 @@ describe('VeterinariosService', () => {
     expect(service).toBeDefined();
   });
 
+  describe('listarAprobados', () => {
+    it('devuelve solo las veterinarias aprobadas, ordenadas por nombre', async () => {
+      repository.find.mockResolvedValue([
+        {
+          idVeterinario: 2,
+          usuario: { nombre: 'Veterinaria Zeta', direccion: 'Calle 2' },
+        },
+        {
+          idVeterinario: 1,
+          usuario: { nombre: 'Veterinaria Alfa', direccion: 'Calle 1' },
+        },
+      ]);
+
+      const result = await service.listarAprobados();
+
+      expect(repository.find).toHaveBeenCalledWith({
+        where: { estadoValidacion: ValidationStatus.APROBADO },
+        relations: ['usuario'],
+      });
+      expect(result).toEqual([
+        { idVeterinario: 1, nombre: 'Veterinaria Alfa', direccion: 'Calle 1' },
+        { idVeterinario: 2, nombre: 'Veterinaria Zeta', direccion: 'Calle 2' },
+      ]);
+    });
+  });
+
   describe('registrarVeterinario', () => {
     it('crea el usuario con rol veterinario y la solicitud de validación pendiente', async () => {
       usersService.findByEmail.mockResolvedValue(null);
