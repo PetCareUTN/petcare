@@ -145,18 +145,43 @@ export const routes: Routes = [
       ),
   },
   {
-    path: 'admin/validaciones',
-    loadComponent: () =>
-      import('./features/admin/pages/validaciones/validaciones').then(
-        (m) => m.ValidacionesAdminPage,
-      ),
-  },
-  {
-    path: 'admin/validaciones/:id',
-    loadComponent: () =>
-      import('./features/admin/pages/validacion-detalle/validacion-detalle').then(
-        (m) => m.ValidacionDetallePage,
-      ),
+    path: 'admin',
+    loadComponent: () => import('./shared/layout/admin-layout').then((m) => m.AdminLayout),
+    children: [
+      {
+        path: 'usuarios',
+        loadComponent: () =>
+          import('./features/admin/pages/usuarios/usuarios').then(
+            (m) => m.UsuariosAdminPage,
+          ),
+      },
+      {
+        path: 'usuarios/:id',
+        loadComponent: () =>
+          import('./features/admin/pages/usuario-detalle/usuario-detalle').then(
+            (m) => m.UsuarioDetallePage,
+          ),
+      },
+      {
+        path: 'validaciones',
+        loadComponent: () =>
+          import('./features/admin/pages/validaciones/validaciones').then(
+            (m) => m.ValidacionesAdminPage,
+          ),
+      },
+      {
+        path: 'validaciones/:id',
+        loadComponent: () =>
+          import('./features/admin/pages/validacion-detalle/validacion-detalle').then(
+            (m) => m.ValidacionDetallePage,
+          ),
+      },
+      {
+        path: '',
+        redirectTo: 'usuarios',
+        pathMatch: 'full',
+      },
+    ],
   },
   {
     path: 'olvide-contrasena',
