@@ -111,6 +111,23 @@ export class VeterinariosService {
     };
   }
 
+  async listarAprobados(): Promise<
+    { idVeterinario: number; nombre: string; direccion: string | null }[]
+  > {
+    const veterinarios = await this.veterinariosRepository.find({
+      where: { estadoValidacion: ValidationStatus.APROBADO },
+      relations: ['usuario'],
+    });
+
+    return veterinarios
+      .map((veterinario) => ({
+        idVeterinario: veterinario.idVeterinario,
+        nombre: veterinario.usuario.nombre,
+        direccion: veterinario.usuario.direccion,
+      }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }
+
   async obtenerEstado(idUsuario: number): Promise<VeterinarioResponseDto> {
     const veterinario = await this.veterinariosRepository.findOne({
       where: { usuario: { idUsuario } },

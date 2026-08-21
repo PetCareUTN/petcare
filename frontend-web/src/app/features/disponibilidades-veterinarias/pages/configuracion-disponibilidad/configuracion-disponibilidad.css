@@ -81,6 +81,10 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
+.field input.field-invalid {
+  border-color: var(--danger);
+}
+
 .btn-primary,
 .btn-secondary,
 .btn-remove {

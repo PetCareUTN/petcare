@@ -83,6 +83,7 @@ export class ConfiguracionDisponibilidadPage implements OnInit {
   protected submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
+      this.errorMessage.set('Completá el día y los horarios de todas las franjas antes de guardar.');
       return;
     }
 
