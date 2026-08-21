@@ -22,6 +22,7 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -65,14 +66,14 @@ fun SolicitarTurnoScreen(
     errorMessage: String?,
     successMessage: String?,
     onSelectVeterinaria: (idVeterinario: Int) -> Unit,
-    onSolicitar: (idMascota: Int, idVeterinario: Int, fecha: String, horaInicio: String, horaFin: String) -> Unit,
+    onSolicitar: (idMascota: Int, idVeterinario: Int, fecha: String, hora: String, motivoConsulta: String?) -> Unit,
     onBack: () -> Unit
 ) {
     var selectedPetId by rememberSaveable { mutableStateOf<Int?>(null) }
     var selectedVeterinariaId by rememberSaveable { mutableStateOf<Int?>(null) }
     var selectedFecha by rememberSaveable { mutableStateOf("") }
-    var selectedHoraInicio by rememberSaveable { mutableStateOf<String?>(null) }
-    var selectedHoraFin by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedHora by rememberSaveable { mutableStateOf<String?>(null) }
+    var motivoConsulta by rememberSaveable { mutableStateOf("") }
     var formError by rememberSaveable { mutableStateOf<String?>(null) }
 
     Column(
@@ -169,8 +170,7 @@ fun SolicitarTurnoScreen(
                             onClick = {
                                 selectedVeterinariaId = veterinaria.idVeterinario
                                 selectedFecha = ""
-                                selectedHoraInicio = null
-                                selectedHoraFin = null
+                                selectedHora = null
                                 formError = null
                                 onSelectVeterinaria(veterinaria.idVeterinario)
                             }
@@ -186,8 +186,7 @@ fun SolicitarTurnoScreen(
                     selectedDate = selectedFecha,
                     onDateSelected = {
                         selectedFecha = it
-                        selectedHoraInicio = null
-                        selectedHoraFin = null
+                        selectedHora = null
                         formError = null
                     }
                 )
@@ -219,14 +218,13 @@ fun SolicitarTurnoScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                fila.forEach { (inicio, fin) ->
+                                fila.forEach { hora ->
                                     SlotChip(
-                                        label = inicio,
-                                        selected = inicio == selectedHoraInicio,
+                                        label = hora,
+                                        selected = hora == selectedHora,
                                         modifier = Modifier.weight(1f),
                                         onClick = {
-                                            selectedHoraInicio = inicio
-                                            selectedHoraFin = fin
+                                            selectedHora = hora
                                             formError = null
                                         }
                                     )
@@ -239,6 +237,18 @@ fun SolicitarTurnoScreen(
                         }
                     }
                 }
+            }
+
+            if (selectedHora != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(text = "Motivo de consulta (opcional)", style = MaterialTheme.typography.titleSmall)
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = motivoConsulta,
+                    onValueChange = { motivoConsulta = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("Ej: control anual, vacunación...") }
+                )
             }
 
             val error = formError ?: errorMessage
@@ -264,14 +274,19 @@ fun SolicitarTurnoScreen(
                 onClick = {
                     val petId = selectedPetId
                     val veterinariaId = selectedVeterinariaId
-                    val horaInicio = selectedHoraInicio
-                    val horaFin = selectedHoraFin
+                    val hora = selectedHora
                     when {
                         petId == null -> formError = "Elegí una mascota"
                         veterinariaId == null -> formError = "Elegí una veterinaria"
                         selectedFecha.isBlank() -> formError = "Elegí una fecha"
-                        horaInicio == null || horaFin == null -> formError = "Elegí un horario"
-                        else -> onSolicitar(petId, veterinariaId, selectedFecha, horaInicio, horaFin)
+                        hora == null -> formError = "Elegí un horario"
+                        else -> onSolicitar(
+                            petId,
+                            veterinariaId,
+                            selectedFecha,
+                            hora,
+                            motivoConsulta.trim().ifBlank { null }
+                        )
                     }
                 },
                 modifier = Modifier
@@ -467,7 +482,7 @@ private fun diaSemanaDe(fecha: String): String? {
 private fun generarSlots(
     disponibilidades: List<DisponibilidadTurnoResponse>,
     fecha: String
-): List<Pair<String, String>> {
+): List<String> {
     val dia = diaSemanaDe(fecha) ?: return emptyList()
     return disponibilidades
         .filter { it.diaSemana == dia }
@@ -476,9 +491,9 @@ private fun generarSlots(
             val fin = horaToMinutos(disponibilidad.horaFin)
             generateSequence(inicio) { it + SLOT_MINUTES }
                 .takeWhile { it + SLOT_MINUTES <= fin }
-                .map { minutosToHora(it) to minutosToHora(it + SLOT_MINUTES) }
+                .map { minutosToHora(it) }
         }
-        .sortedBy { it.first }
+        .sorted()
 }
 
 private fun fechaFormatter(): SimpleDateFormat =

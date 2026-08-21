@@ -23,20 +23,20 @@ data class CreateTurnoRequest(
     val idMascota: Int,
     val idVeterinario: Int,
     val fecha: String,
-    val horaInicio: String,
-    val horaFin: String
+    val hora: String,
+    val motivoConsulta: String?
 )
 
 data class TurnoResponse(
     val idTurno: Int,
+    val idVeterinario: Int,
     val idMascota: Int,
     val nombreMascota: String,
-    val idVeterinario: Int,
     val fecha: String,
-    val horaInicio: String,
-    val horaFin: String,
+    val hora: String,
+    val motivoConsulta: String?,
     val estado: String,
-    val createdAt: String
+    val motivoRechazo: String?
 )
 
 interface TurnosApi {
@@ -49,7 +49,7 @@ interface TurnosApi {
         @Path("idVeterinario") idVeterinario: Int
     ): List<DisponibilidadTurnoResponse>
 
-    @POST("turnos")
+    @POST("turnos-veterinarios")
     suspend fun solicitarTurno(
         @Body request: CreateTurnoRequest
     ): TurnoResponse
