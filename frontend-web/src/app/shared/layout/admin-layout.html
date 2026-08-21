@@ -1,0 +1,26 @@
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <div class="admin-brand">
+      <img class="admin-brand-logo" src="logo.jpg" alt="PetCare" />
+      <div>
+        <p class="admin-brand-title">PetCare Admin</p>
+        <p class="admin-brand-subtitle">Panel de administración</p>
+      </div>
+    </div>
+
+    <nav class="admin-nav">
+      <a routerLink="/admin/usuarios" [class.active]="isUsuariosActive()">
+        Usuarios
+      </a>
+      <a routerLink="/admin/validaciones" [class.active]="isValidacionesActive()">
+        Validaciones
+      </a>
+    </nav>
+
+    <button type="button" class="admin-logout" (click)="logout()">Cerrar sesión</button>
+  </aside>
+
+  <main class="admin-content">
+    <router-outlet />
+  </main>
+</div>

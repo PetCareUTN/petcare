@@ -1,0 +1,71 @@
+<main class="pet-page">
+  <div class="pet-form">
+    <header class="pet-header">
+      <div>
+        <h1>Gestión de usuarios</h1>
+        <p>Listado de usuarios registrados en el sistema.</p>
+      </div>
+    </header>
+
+    <div class="busqueda-bar">
+      <input
+        type="text"
+        placeholder="Buscar por nombre o email..."
+        [value]="busqueda()"
+        (input)="onBusquedaChange($any($event.target).value)"
+        (keyup.enter)="onBuscar()"
+      />
+    </div>
+
+    @if (isLoading()) {
+      <p class="estado-loading">Cargando usuarios...</p>
+    }
+
+    @if (errorMessage()) {
+      <p class="banner banner-error">{{ errorMessage() }}</p>
+    }
+
+    @if (!isLoading() && usuarios().length === 0) {
+      <p class="empty-state">No se encontraron usuarios.</p>
+    }
+
+    @if (usuarios().length > 0) {
+      <table class="usuarios-table">
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Email</th>
+            <th>Rol</th>
+            <th>Estado</th>
+            <th>Fecha de registro</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (usuario of usuarios(); track usuario.id_usuario) {
+            <tr>
+              <td>{{ usuario.nombre }} {{ usuario.apellido }}</td>
+              <td>{{ usuario.email }}</td>
+              <td><span class="rol-badge">{{ usuario.nombre_rol }}</span></td>
+              <td><span class="estado-badge" [class]="'estado-' + usuario.estado">{{ usuario.estado }}</span></td>
+              <td>{{ usuario.fecha_registro | date:'dd/MM/yyyy' }}</td>
+              <td>
+                <a [routerLink]="['/admin/usuarios', usuario.id_usuario]" class="btn-detalle">Ver detalle</a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <div class="paginacion">
+        <button class="btn-paginacion" (click)="paginaAnterior()" [disabled]="paginaActual() <= 1">
+          Anterior
+        </button>
+        <span class="paginacion-info">Página {{ paginaActual() }} de {{ totalPaginas() }}</span>
+        <button class="btn-paginacion" (click)="paginaSiguiente()" [disabled]="paginaActual() >= totalPaginas()">
+          Siguiente
+        </button>
+      </div>
+    }
+  </div>
+</main>

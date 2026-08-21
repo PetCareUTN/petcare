@@ -5,12 +5,12 @@ import { filter, map, startWith } from 'rxjs';
 import { AuthService } from '../../features/auth/services/auth-service';
 
 @Component({
-  selector: 'vet-layout',
+  selector: 'admin-layout',
   imports: [RouterOutlet, RouterLink],
-  templateUrl: './vet-layout.html',
-  styleUrl: './vet-layout.css',
+  templateUrl: './admin-layout.html',
+  styleUrl: './admin-layout.css',
 })
-export class VetLayout {
+export class AdminLayout {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
 
@@ -23,18 +23,11 @@ export class VetLayout {
     { initialValue: this.router.url },
   );
 
-  protected readonly isAttentionActive = () =>
-    this.currentUrl().startsWith('/eventos-clinicos') &&
-    !this.isDisponibilidadActive() &&
-    !this.isTurnosActive();
+  protected readonly isUsuariosActive = () =>
+    this.currentUrl().startsWith('/admin/usuarios');
 
-  protected readonly isDisponibilidadActive = () =>
-    this.currentUrl().startsWith('/eventos-clinicos/disponibilidad');
-
-  protected readonly isTurnosActive = () =>
-    this.currentUrl().startsWith('/eventos-clinicos/turnos');
-
-  protected readonly isServiciosActive = () => this.currentUrl().startsWith('/servicios');
+  protected readonly isValidacionesActive = () =>
+    this.currentUrl().startsWith('/admin/validaciones');
 
   logout(): void {
     this.authService.clearToken();
