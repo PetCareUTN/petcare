@@ -1,0 +1,243 @@
+.appointments-page {
+  min-height: 100%;
+  padding: var(--spacing-xl) var(--spacing-lg);
+  box-sizing: border-box;
+  background-color: var(--background);
+}
+
+.appointments-panel {
+  width: min(100%, 980px);
+  margin: 0 auto;
+  padding: var(--spacing-xl);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.appointments-header {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  align-items: flex-start;
+  margin-bottom: var(--spacing-lg);
+}
+
+.appointments-header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.appointments-header p,
+.appointment-owner,
+.status-text,
+.empty-state {
+  color: var(--text-secondary);
+}
+
+.appointments-header p {
+  margin: var(--spacing-xs) 0 0;
+}
+
+.status-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-lg);
+}
+
+.status-tabs button,
+.btn-primary,
+.btn-secondary,
+.btn-danger {
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.status-tabs button {
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  color: var(--text-primary);
+}
+
+.status-tabs button.active {
+  border-color: var(--primary);
+  background-color: var(--primary);
+  color: #ffffff;
+}
+
+.appointments-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.appointment-card {
+  padding: var(--spacing-lg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--background);
+}
+
+.appointment-main {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  align-items: flex-start;
+}
+
+.appointment-date {
+  margin: 0 0 var(--spacing-xs);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.appointment-card h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.appointment-owner {
+  margin: var(--spacing-xs) 0 0;
+  font-size: 0.92rem;
+}
+
+.status-badge {
+  flex-shrink: 0;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  background-color: var(--primary-light);
+  color: var(--primary);
+}
+
+.status-badge.confirmado {
+  background-color: color-mix(in srgb, var(--success) 16%, white);
+  color: var(--success);
+}
+
+.status-badge.rechazado,
+.status-badge.cancelado {
+  background-color: color-mix(in srgb, var(--danger) 14%, white);
+  color: var(--danger);
+}
+
+.appointment-reason,
+.appointment-rejection {
+  margin: var(--spacing-md) 0 0;
+  line-height: 1.45;
+}
+
+.appointment-rejection {
+  color: var(--danger);
+}
+
+.appointment-actions,
+.reject-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
+}
+
+.btn-primary,
+.btn-secondary,
+.btn-danger {
+  padding: 0.65rem 1rem;
+}
+
+.btn-primary {
+  border: none;
+  background-color: var(--primary);
+  color: #ffffff;
+}
+
+.btn-secondary {
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  color: var(--primary);
+}
+
+.btn-danger {
+  border: none;
+  background-color: var(--danger);
+  color: #ffffff;
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.reject-box {
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--border);
+}
+
+.reject-box label {
+  display: block;
+  margin-bottom: var(--spacing-xs);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.reject-box textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background-color: var(--surface);
+  color: var(--text-primary);
+  font: inherit;
+  resize: vertical;
+}
+
+.banner,
+.status-text,
+.empty-state {
+  margin: 0 0 var(--spacing-md);
+  font-size: 0.92rem;
+}
+
+.banner {
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius-sm);
+}
+
+.banner-success {
+  background-color: color-mix(in srgb, var(--primary) 14%, white);
+  color: var(--primary);
+}
+
+.banner-error {
+  background-color: color-mix(in srgb, var(--danger) 14%, white);
+  color: var(--danger);
+}
+
+@media (max-width: 720px) {
+  .appointments-panel,
+  .appointment-card {
+    padding: var(--spacing-lg);
+  }
+
+  .appointment-main {
+    flex-direction: column;
+  }
+
+  .appointment-actions,
+  .reject-actions,
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger {
+    width: 100%;
+  }
+}

@@ -108,6 +108,13 @@ export const routes: Routes = [
             './features/disponibilidades-veterinarias/pages/configuracion-disponibilidad/configuracion-disponibilidad'
           ).then((m) => m.ConfiguracionDisponibilidadPage),
       },
+      {
+        path: 'turnos',
+        loadComponent: () =>
+          import(
+            './features/turnos-veterinarios/pages/gestion-turnos/gestion-turnos'
+          ).then((m) => m.GestionTurnosVeterinariosPage),
+      },
     ],
   },
   {
