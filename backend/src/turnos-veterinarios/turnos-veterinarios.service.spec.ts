@@ -332,4 +332,74 @@ describe('TurnosVeterinariosService', () => {
       expect(turnosRepository.save).not.toHaveBeenCalled();
     });
   });
+
+  describe('findMisTurnos', () => {
+    const veterinarioConUsuario = {
+      idVeterinario: 7,
+      estadoValidacion: ValidationStatus.APROBADO,
+      usuario: {
+        idUsuario: 3,
+        nombre: 'Veterinaria Central',
+        direccion: 'Av. Siempre Viva 742',
+      },
+    } as Veterinario;
+
+    const turnoDelDuenio = {
+      ...turnoPendiente,
+      veterinario: veterinarioConUsuario,
+    } as TurnoVeterinario;
+
+    it('lista los turnos del dueño autenticado con la veterinaria como contraparte', async () => {
+      turnosRepository.find.mockResolvedValue([turnoDelDuenio]);
+
+      const result = await service.findMisTurnos(duenio.idUsuario);
+
+      expect(turnosRepository.find).toHaveBeenCalledWith({
+        where: { duenio: { idUsuario: duenio.idUsuario } },
+        relations: ['veterinario', 'veterinario.usuario', 'mascota', 'duenio'],
+        order: { fecha: 'ASC', hora: 'ASC', idTurno: 'ASC' },
+      });
+      expect(result).toEqual([
+        {
+          idTurno: 30,
+          idMascota: 21,
+          nombreMascota: 'Luna',
+          idVeterinario: 7,
+          nombreVeterinaria: 'Veterinaria Central',
+          direccionVeterinaria: 'Av. Siempre Viva 742',
+          fecha: '2026-09-01',
+          hora: '10:00',
+          motivoConsulta: 'Control anual',
+          estado: AppointmentStatus.PENDIENTE,
+          motivoRechazo: null,
+        },
+      ]);
+    });
+
+    it('filtra los turnos del dueño por estado cuando se indica', async () => {
+      turnosRepository.find.mockResolvedValue([]);
+
+      await service.findMisTurnos(
+        duenio.idUsuario,
+        AppointmentStatus.CONFIRMADO,
+      );
+
+      expect(turnosRepository.find).toHaveBeenCalledWith({
+        where: {
+          duenio: { idUsuario: duenio.idUsuario },
+          estado: AppointmentStatus.CONFIRMADO,
+        },
+        relations: ['veterinario', 'veterinario.usuario', 'mascota', 'duenio'],
+        order: { fecha: 'ASC', hora: 'ASC', idTurno: 'ASC' },
+      });
+    });
+
+    it('devuelve una lista vacia cuando el dueño no tiene turnos', async () => {
+      turnosRepository.find.mockResolvedValue([]);
+
+      const result = await service.findMisTurnos(duenio.idUsuario);
+
+      expect(result).toEqual([]);
+    });
+  });
 });

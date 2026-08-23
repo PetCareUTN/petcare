@@ -39,7 +39,25 @@ data class TurnoResponse(
     val motivoRechazo: String?
 )
 
+/** Turno visto por el dueño: la contraparte es la veterinaria. */
+data class MiTurnoResponse(
+    val idTurno: Int,
+    val idMascota: Int,
+    val nombreMascota: String,
+    val idVeterinario: Int,
+    val nombreVeterinaria: String,
+    val direccionVeterinaria: String?,
+    val fecha: String,
+    val hora: String,
+    val motivoConsulta: String?,
+    val estado: String,
+    val motivoRechazo: String?
+)
+
 interface TurnosApi {
+
+    @GET("turnos-veterinarios/mios")
+    suspend fun getMisTurnos(): List<MiTurnoResponse>
 
     @GET("veterinarios/aprobados")
     suspend fun getVeterinariasAprobadas(): List<VeterinariaResponse>
