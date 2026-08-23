@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -19,6 +20,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -36,14 +39,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.petcare.app.features.servicios.data.remote.DisponibilidadRequest
 import com.petcare.app.features.servicios.data.remote.ServicioResponse
 import com.petcare.app.features.servicios.domain.ServicioValidationResult
 import com.petcare.app.features.servicios.domain.ServicioValidator
+import com.petcare.app.R
 import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMuted
+import com.petcare.app.ui.theme.PetCareTealDark
 import com.petcare.app.ui.theme.PetCareTealSoft
 
 private val categoriaOptions = listOf("paseador", "guarderia", "peluqueria")
@@ -88,6 +94,7 @@ fun ServicioFormScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .systemBarsPadding()
             .verticalScroll(rememberScrollState())
             .padding(20.dp),
         verticalArrangement = Arrangement.Top,
@@ -95,26 +102,25 @@ fun ServicioFormScreen(
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            IconButton(onClick = onCancel, enabled = !isSaving) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_arrow_back),
+                    contentDescription = "Volver",
+                    tint = PetCareTealDark
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = if (servicio == null) "Publicar servicio" else "Editar servicio",
-                    style = MaterialTheme.typography.headlineMedium
+                    style = MaterialTheme.typography.headlineSmall
                 )
                 Text(
                     text = "Categoria y disponibilidad semanal",
                     color = PetCareMuted,
                     style = MaterialTheme.typography.bodyMedium
                 )
-            }
-            OutlinedButton(
-                onClick = onCancel,
-                enabled = !isSaving,
-                shape = MaterialTheme.shapes.large
-            ) {
-                Text("Cerrar")
             }
         }
 
