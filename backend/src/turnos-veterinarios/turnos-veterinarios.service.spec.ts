@@ -6,10 +6,13 @@ import {
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AppointmentStatus } from '../common/enums/appointment-status.enum';
+import { DiaSemana } from '../common/enums/dia-semana.enum';
 import { ValidationStatus } from '../common/enums/validation-status.enum';
+import { DisponibilidadVeterinaria } from '../disponibilidades-veterinarias/entities/disponibilidad-veterinaria.entity';
 import { Mascota } from '../mascotas/entities/mascota.entity';
 import { User } from '../users/entities/user.entity';
 import { Veterinario } from '../veterinarios/entities/veterinario.entity';
+import { CreateTurnoVeterinarioDto } from './dto/create-turno-veterinario.dto';
 import { TurnoVeterinario } from './entities/turno-veterinario.entity';
 import { TurnosVeterinariosService } from './turnos-veterinarios.service';
 
@@ -19,9 +22,16 @@ describe('TurnosVeterinariosService', () => {
     find: jest.Mock;
     findOne: jest.Mock;
     save: jest.Mock;
+    create: jest.Mock;
   };
   let veterinariosRepository: {
     findOne: jest.Mock;
+  };
+  let mascotasRepository: {
+    findOne: jest.Mock;
+  };
+  let disponibilidadesRepository: {
+    find: jest.Mock;
   };
 
   const veterinario = {
@@ -64,12 +74,25 @@ describe('TurnosVeterinariosService', () => {
             find: jest.fn(),
             findOne: jest.fn(),
             save: jest.fn(),
+            create: jest.fn(),
           },
         },
         {
           provide: getRepositoryToken(Veterinario),
           useValue: {
             findOne: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(Mascota),
+          useValue: {
+            findOne: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(DisponibilidadVeterinaria),
+          useValue: {
+            find: jest.fn(),
           },
         },
       ],
@@ -80,6 +103,10 @@ describe('TurnosVeterinariosService', () => {
     );
     turnosRepository = module.get(getRepositoryToken(TurnoVeterinario));
     veterinariosRepository = module.get(getRepositoryToken(Veterinario));
+    mascotasRepository = module.get(getRepositoryToken(Mascota));
+    disponibilidadesRepository = module.get(
+      getRepositoryToken(DisponibilidadVeterinaria),
+    );
   });
 
   it('lista turnos de la veterinaria validada filtrando por estado', async () => {
@@ -193,5 +220,116 @@ describe('TurnosVeterinariosService', () => {
     await expect(service.confirmar(99, 999)).rejects.toThrow(
       NotFoundException,
     );
+  });
+
+  describe('solicitar', () => {
+    const idDueno = 12;
+
+    const mascotaPropia = {
+      idMascota: 21,
+      nombre: 'Luna',
+      usuarios: [{ idUsuario: idDueno }],
+    } as Mascota;
+
+    // 2026-09-07 es lunes.
+    const dto: CreateTurnoVeterinarioDto = {
+      idMascota: 21,
+      idVeterinario: 7,
+      fecha: '2026-09-07',
+      hora: '10:00',
+    };
+
+    const disponibilidadLunes = {
+      diaSemana: DiaSemana.LUNES,
+      horaInicio: '09:00',
+      horaFin: '12:00',
+    } as DisponibilidadVeterinaria;
+
+    it('crea un turno pendiente cuando el horario esta disponible', async () => {
+      mascotasRepository.findOne.mockResolvedValue(mascotaPropia);
+      veterinariosRepository.findOne.mockResolvedValue(veterinario);
+      disponibilidadesRepository.find.mockResolvedValue([disponibilidadLunes]);
+      turnosRepository.find.mockResolvedValue([]);
+      const turnoCreado = { ...dto, estado: AppointmentStatus.PENDIENTE };
+      turnosRepository.create.mockReturnValue(turnoCreado);
+      turnosRepository.save.mockResolvedValue({ ...turnoCreado, idTurno: 30 });
+      turnosRepository.findOne.mockResolvedValue({ ...turnoPendiente, idTurno: 30 });
+
+      const result = await service.solicitar(idDueno, dto);
+
+      expect(mascotasRepository.findOne).toHaveBeenCalledWith({
+        where: { idMascota: dto.idMascota },
+        relations: ['usuarios'],
+      });
+      expect(disponibilidadesRepository.find).toHaveBeenCalledWith({
+        where: { veterinario: { idVeterinario: 7 }, diaSemana: DiaSemana.LUNES },
+      });
+      expect(turnosRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          veterinario,
+          mascota: mascotaPropia,
+          fecha: dto.fecha,
+          hora: dto.hora,
+          estado: AppointmentStatus.PENDIENTE,
+        }),
+      );
+      expect(result.idTurno).toBe(30);
+    });
+
+    it('rechaza cuando la mascota no existe', async () => {
+      mascotasRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.solicitar(idDueno, dto)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('rechaza cuando la mascota no pertenece al dueño autenticado', async () => {
+      mascotasRepository.findOne.mockResolvedValue({
+        ...mascotaPropia,
+        usuarios: [{ idUsuario: 999 }],
+      });
+
+      await expect(service.solicitar(idDueno, dto)).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('rechaza cuando la veterinaria no existe o no esta aprobada', async () => {
+      mascotasRepository.findOne.mockResolvedValue(mascotaPropia);
+      veterinariosRepository.findOne.mockResolvedValue({
+        idVeterinario: 7,
+        estadoValidacion: ValidationStatus.PENDIENTE,
+      });
+
+      await expect(service.solicitar(idDueno, dto)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('rechaza un horario fuera de la disponibilidad configurada', async () => {
+      mascotasRepository.findOne.mockResolvedValue(mascotaPropia);
+      veterinariosRepository.findOne.mockResolvedValue(veterinario);
+      disponibilidadesRepository.find.mockResolvedValue([disponibilidadLunes]);
+
+      await expect(
+        service.solicitar(idDueno, { ...dto, hora: '13:00' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(turnosRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('rechaza un horario ya ocupado por otro turno', async () => {
+      mascotasRepository.findOne.mockResolvedValue(mascotaPropia);
+      veterinariosRepository.findOne.mockResolvedValue(veterinario);
+      disponibilidadesRepository.find.mockResolvedValue([disponibilidadLunes]);
+      turnosRepository.find.mockResolvedValue([
+        { hora: '10:15', estado: AppointmentStatus.PENDIENTE },
+      ]);
+
+      await expect(service.solicitar(idDueno, dto)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(turnosRepository.save).not.toHaveBeenCalled();
+    });
   });
 });

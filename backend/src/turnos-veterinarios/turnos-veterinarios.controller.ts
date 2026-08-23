@@ -8,6 +8,7 @@ import {
   ParseEnumPipe,
   ParseIntPipe,
   Patch,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -19,19 +20,31 @@ import { VeterinarioValidadoGuard } from '../auth/guards/veterinario-validado.gu
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { AppointmentStatus } from '../common/enums/appointment-status.enum';
 import { RoleName } from '../common/enums/role-name.enum';
+import { CreateTurnoVeterinarioDto } from './dto/create-turno-veterinario.dto';
 import { RechazarTurnoVeterinarioDto } from './dto/rechazar-turno-veterinario.dto';
 import { TurnoVeterinarioResponseDto } from './dto/turno-veterinario-response.dto';
 import { TurnosVeterinariosService } from './turnos-veterinarios.service';
 
 @Controller('turnos-veterinarios')
-@UseGuards(JwtAuthGuard, RolesGuard, VeterinarioValidadoGuard)
-@Roles(RoleName.VETERINARIO)
 export class TurnosVeterinariosController {
   constructor(
     private readonly turnosVeterinariosService: TurnosVeterinariosService,
   ) {}
 
+  @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleName.DUENO_MASCOTA)
+  @HttpCode(HttpStatus.CREATED)
+  solicitar(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: CreateTurnoVeterinarioDto,
+  ): Promise<TurnoVeterinarioResponseDto> {
+    return this.turnosVeterinariosService.solicitar(user.sub, dto);
+  }
+
   @Get('mia')
+  @UseGuards(JwtAuthGuard, RolesGuard, VeterinarioValidadoGuard)
+  @Roles(RoleName.VETERINARIO)
   findMine(
     @CurrentUser() user: JwtPayload,
     @Query('estado', new ParseEnumPipe(AppointmentStatus, { optional: true }))
@@ -41,6 +54,8 @@ export class TurnosVeterinariosController {
   }
 
   @Patch(':idTurno/confirmar')
+  @UseGuards(JwtAuthGuard, RolesGuard, VeterinarioValidadoGuard)
+  @Roles(RoleName.VETERINARIO)
   @HttpCode(HttpStatus.OK)
   confirmar(
     @CurrentUser() user: JwtPayload,
@@ -50,6 +65,8 @@ export class TurnosVeterinariosController {
   }
 
   @Patch(':idTurno/rechazar')
+  @UseGuards(JwtAuthGuard, RolesGuard, VeterinarioValidadoGuard)
+  @Roles(RoleName.VETERINARIO)
   @HttpCode(HttpStatus.OK)
   rechazar(
     @CurrentUser() user: JwtPayload,

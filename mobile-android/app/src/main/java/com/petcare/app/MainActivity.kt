@@ -1065,7 +1065,7 @@ class MainActivity : ComponentActivity() {
                             turnoError = null
                             loadDisponibilidadesTurno(idVeterinario)
                         },
-                        onSolicitar = { idMascota, idVeterinario, fecha, horaInicio, horaFin ->
+                        onSolicitar = { idMascota, idVeterinario, fecha, hora, motivoConsulta ->
                             isSavingTurno = true
                             turnoError = null
 
@@ -1076,8 +1076,8 @@ class MainActivity : ComponentActivity() {
                                             idMascota = idMascota,
                                             idVeterinario = idVeterinario,
                                             fecha = fecha,
-                                            horaInicio = horaInicio,
-                                            horaFin = horaFin
+                                            hora = hora,
+                                            motivoConsulta = motivoConsulta
                                         )
                                     )
                                     turnoSuccess = "Tu turno quedó pendiente de confirmación"

@@ -26,8 +26,10 @@ import { DisponibilidadServicio } from './servicios/entities/disponibilidad-serv
 import { ServiciosModule } from './servicios/servicios.module';
 import { DisponibilidadesVeterinariasModule } from './disponibilidades-veterinarias/disponibilidades-veterinarias.module';
 import { DisponibilidadVeterinaria } from './disponibilidades-veterinarias/entities/disponibilidad-veterinaria.entity';
-import { Turno } from './turnos/entities/turno.entity';
-import { TurnosModule } from './turnos/turnos.module';
+import { TurnoVeterinario } from './turnos-veterinarios/entities/turno-veterinario.entity';
+import { TurnosVeterinariosModule } from './turnos-veterinarios/turnos-veterinarios.module';
+import { AuditoriaUsuario } from './admin/entities/auditoria-usuario.entity';
+import { AdminModule } from './admin/admin.module';
 
 dotenv.config();
 
@@ -53,7 +55,8 @@ dotenv.config();
         Servicio,
         DisponibilidadServicio,
         DisponibilidadVeterinaria,
-        Turno,
+        TurnoVeterinario,
+        AuditoriaUsuario,
       ],
       synchronize: false,
     }),
@@ -68,7 +71,8 @@ dotenv.config();
     AdopcionesModule,
     ServiciosModule,
     DisponibilidadesVeterinariasModule,
-    TurnosModule,
+    TurnosVeterinariosModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],
