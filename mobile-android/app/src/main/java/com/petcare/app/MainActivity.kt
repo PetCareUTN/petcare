@@ -62,8 +62,10 @@ import com.petcare.app.features.servicios.ui.ServicioFormScreen
 import com.petcare.app.features.servicios.ui.ServiciosListScreen
 import com.petcare.app.features.turnos.data.remote.CreateTurnoRequest
 import com.petcare.app.features.turnos.data.remote.DisponibilidadTurnoResponse
+import com.petcare.app.features.turnos.data.remote.MiTurnoResponse
 import com.petcare.app.features.turnos.data.remote.VeterinariaResponse
 import com.petcare.app.features.turnos.domain.TurnosController
+import com.petcare.app.features.turnos.ui.MisTurnosScreen
 import com.petcare.app.features.turnos.ui.SolicitarTurnoScreen
 import com.petcare.app.ui.theme.PetCareTheme
 import java.io.IOException
@@ -331,6 +333,18 @@ class MainActivity : ComponentActivity() {
                 var turnoSuccess by rememberSaveable {
                     mutableStateOf<String?>(null)
                 }
+                var isViewingMisTurnos by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isLoadingMisTurnos by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var misTurnosError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var misTurnos by remember {
+                    mutableStateOf<List<MiTurnoResponse>>(emptyList())
+                }
 
                 fun logout() {
                     sessionController.logout()
@@ -374,6 +388,10 @@ class MainActivity : ComponentActivity() {
                     disponibilidadesTurno = emptyList()
                     turnoError = null
                     turnoSuccess = null
+                    isViewingMisTurnos = false
+                    isLoadingMisTurnos = false
+                    misTurnosError = null
+                    misTurnos = emptyList()
                 }
 
                 fun loadPets() {
@@ -493,6 +511,30 @@ class MainActivity : ComponentActivity() {
                             serviciosError = "Ocurrio un error inesperado"
                         } finally {
                             isLoadingServicios = false
+                        }
+                    }
+                }
+
+                fun loadMisTurnos() {
+                    isLoadingMisTurnos = true
+                    misTurnosError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            misTurnos = turnosController.getMisTurnos()
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                misTurnosError = "No se pudieron cargar tus turnos"
+                            }
+                        } catch (exception: IOException) {
+                            misTurnosError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            misTurnosError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingMisTurnos = false
                         }
                     }
                 }
@@ -1051,6 +1093,17 @@ class MainActivity : ComponentActivity() {
                             adopcionSuccess = null
                         }
                     )
+                } else if (loggedUserName != null && isViewingMisTurnos) {
+                    MisTurnosScreen(
+                        isLoading = isLoadingMisTurnos,
+                        errorMessage = misTurnosError,
+                        turnos = misTurnos,
+                        onRetry = { loadMisTurnos() },
+                        onBack = {
+                            isViewingMisTurnos = false
+                            misTurnosError = null
+                        }
+                    )
                 } else if (loggedUserName != null && isRequestingTurno) {
                     SolicitarTurnoScreen(
                         pets = pets,
@@ -1152,6 +1205,11 @@ class MainActivity : ComponentActivity() {
                             turnoSuccess = null
                             isRequestingTurno = true
                             loadVeterinariasTurno()
+                        },
+                        onViewMisTurnos = {
+                            misTurnosError = null
+                            isViewingMisTurnos = true
+                            loadMisTurnos()
                         }
                     )
                 } else if (isRegisteringUser) {

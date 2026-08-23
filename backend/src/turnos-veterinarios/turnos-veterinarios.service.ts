@@ -15,6 +15,7 @@ import { User } from '../users/entities/user.entity';
 import { Veterinario } from '../veterinarios/entities/veterinario.entity';
 import { CreateTurnoVeterinarioDto } from './dto/create-turno-veterinario.dto';
 import { RechazarTurnoVeterinarioDto } from './dto/rechazar-turno-veterinario.dto';
+import { TurnoDuenioResponseDto } from './dto/turno-duenio-response.dto';
 import { TurnoVeterinarioResponseDto } from './dto/turno-veterinario-response.dto';
 import { TurnoVeterinario } from './entities/turno-veterinario.entity';
 
@@ -188,6 +189,26 @@ export class TurnosVeterinariosService {
     });
 
     return turnos.map((turno) => TurnoVeterinarioResponseDto.fromEntity(turno));
+  }
+
+  /**
+   * Turnos veterinarios del dueño autenticado. Solo devuelve los turnos que
+   * el propio usuario solicitó, opcionalmente filtrados por estado.
+   */
+  async findMisTurnos(
+    idUsuario: number,
+    estado?: AppointmentStatus,
+  ): Promise<TurnoDuenioResponseDto[]> {
+    const turnos = await this.turnosRepository.find({
+      where: {
+        duenio: { idUsuario },
+        ...(estado ? { estado } : {}),
+      },
+      relations: ['veterinario', 'veterinario.usuario', 'mascota', 'duenio'],
+      order: { fecha: 'ASC', hora: 'ASC', idTurno: 'ASC' },
+    });
+
+    return turnos.map((turno) => TurnoDuenioResponseDto.fromEntity(turno));
   }
 
   async confirmar(

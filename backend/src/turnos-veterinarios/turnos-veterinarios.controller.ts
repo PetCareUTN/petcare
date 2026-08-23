@@ -22,6 +22,7 @@ import { AppointmentStatus } from '../common/enums/appointment-status.enum';
 import { RoleName } from '../common/enums/role-name.enum';
 import { CreateTurnoVeterinarioDto } from './dto/create-turno-veterinario.dto';
 import { RechazarTurnoVeterinarioDto } from './dto/rechazar-turno-veterinario.dto';
+import { TurnoDuenioResponseDto } from './dto/turno-duenio-response.dto';
 import { TurnoVeterinarioResponseDto } from './dto/turno-veterinario-response.dto';
 import { TurnosVeterinariosService } from './turnos-veterinarios.service';
 
@@ -51,6 +52,17 @@ export class TurnosVeterinariosController {
     estado?: AppointmentStatus,
   ): Promise<TurnoVeterinarioResponseDto[]> {
     return this.turnosVeterinariosService.findMine(user.sub, estado);
+  }
+
+  @Get('mios')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleName.DUENO_MASCOTA)
+  findMisTurnos(
+    @CurrentUser() user: JwtPayload,
+    @Query('estado', new ParseEnumPipe(AppointmentStatus, { optional: true }))
+    estado?: AppointmentStatus,
+  ): Promise<TurnoDuenioResponseDto[]> {
+    return this.turnosVeterinariosService.findMisTurnos(user.sub, estado);
   }
 
   @Patch(':idTurno/confirmar')

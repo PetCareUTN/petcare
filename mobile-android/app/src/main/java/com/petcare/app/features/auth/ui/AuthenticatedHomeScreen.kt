@@ -70,7 +70,8 @@ fun AuthenticatedHomeScreen(
     onPublishAdoption: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onServiciosClick: () -> Unit = {},
-    onRequestTurno: () -> Unit = {}
+    onRequestTurno: () -> Unit = {},
+    onViewMisTurnos: () -> Unit = {}
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -115,6 +116,18 @@ fun AuthenticatedHomeScreen(
                 shape = MaterialTheme.shapes.large
             ) {
                 Text("Publicar mascota en adopción")
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            OutlinedButton(
+                onClick = onViewMisTurnos,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 52.dp),
+                shape = MaterialTheme.shapes.large
+            ) {
+                Text("Ver mis turnos")
             }
 
             Spacer(modifier = Modifier.height(18.dp))
