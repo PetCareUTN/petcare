@@ -21,14 +21,22 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -36,6 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,6 +63,7 @@ import com.petcare.app.ui.theme.PetCareSurfaceSoft
 import com.petcare.app.ui.theme.PetCareTeal
 import com.petcare.app.ui.theme.PetCareTealDark
 import com.petcare.app.ui.theme.PetCareTealSoft
+import kotlinx.coroutines.launch
 
 @Composable
 fun AuthenticatedHomeScreen(
@@ -73,90 +83,175 @@ fun AuthenticatedHomeScreen(
     onRequestTurno: () -> Unit = {},
     onViewMisTurnos: () -> Unit = {}
 ) {
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        bottomBar = {
-            PetCareBottomBar(
-                onProfileClick = onProfileClick,
-                onServiciosClick = onServiciosClick
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+
+    // Ejecuta la accion del menu y lo cierra.
+    fun navegar(accion: () -> Unit) {
+        scope.launch { drawerState.close() }
+        accion()
+    }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            MenuLateral(
+                userName = userName,
+                onCerrar = { scope.launch { drawerState.close() } },
+                onRegisterPet = { navegar(onRegisterPet) },
+                onPublishAdoption = { navegar(onPublishAdoption) },
+                onRequestTurno = { navegar(onRequestTurno) },
+                onViewMisTurnos = { navegar(onViewMisTurnos) },
+                onServiciosClick = { navegar(onServiciosClick) }
             )
         }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-                .verticalScroll(rememberScrollState())
-                .padding(innerPadding)
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.Top,
-            horizontalAlignment = Alignment.Start
-        ) {
-            HomeHeader(
-                userName = userName,
-                onLogout = onLogout,
-                onProfileClick = onProfileClick,
-                onSettingsClick = onSettingsClick
-            )
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            ActivePetCard(
-                pet = pets.firstOrNull(),
-                onRegisterPet = onRegisterPet
-            )
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            Button(
-                onClick = onPublishAdoption,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 52.dp),
-                shape = MaterialTheme.shapes.large
-            ) {
-                Text("Publicar mascota en adopción")
+    ) {
+        Scaffold(
+            containerColor = MaterialTheme.colorScheme.background,
+            bottomBar = {
+                PetCareBottomBar(
+                    onServiciosClick = onServiciosClick,
+                    onTurnosClick = onViewMisTurnos
+                )
             }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            OutlinedButton(
-                onClick = onViewMisTurnos,
+        ) { innerPadding ->
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 52.dp),
-                shape = MaterialTheme.shapes.large
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+                    .verticalScroll(rememberScrollState())
+                    .padding(innerPadding)
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.Top,
+                horizontalAlignment = Alignment.Start
             ) {
-                Text("Ver mis turnos")
+                HomeHeader(
+                    userName = userName,
+                    onLogout = onLogout,
+                    onProfileClick = onProfileClick,
+                    onSettingsClick = onSettingsClick,
+                    onOpenMenu = { scope.launch { drawerState.open() } }
+                )
+
+                Spacer(modifier = Modifier.height(22.dp))
+
+                SectionHeader(title = "Mis mascotas")
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                PetsContent(
+                    pets = pets,
+                    isLoadingPets = isLoadingPets,
+                    petsError = petsError,
+                    onRetryPets = onRetryPets,
+                    onRegisterPet = onRegisterPet,
+                    onEditPet = onEditPet,
+                    onPetClick = onPetClick
+                )
+
+                Spacer(modifier = Modifier.height(18.dp))
             }
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            QuickActions(onRequestTurno = onRequestTurno)
-
-            Spacer(modifier = Modifier.height(22.dp))
-
-            SectionHeader(
-                title = "Mis mascotas",
-                action = "Registrar",
-                onAction = onRegisterPet
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            PetsContent(
-                pets = pets,
-                isLoadingPets = isLoadingPets,
-                petsError = petsError,
-                onRetryPets = onRetryPets,
-                onRegisterPet = onRegisterPet,
-                onEditPet = onEditPet,
-                onPetClick = onPetClick
-            )
-
-            Spacer(modifier = Modifier.height(18.dp))
         }
     }
+}
+
+@Composable
+private fun MenuLateral(
+    userName: String,
+    onCerrar: () -> Unit,
+    onRegisterPet: () -> Unit,
+    onPublishAdoption: () -> Unit,
+    onRequestTurno: () -> Unit,
+    onViewMisTurnos: () -> Unit,
+    onServiciosClick: () -> Unit
+) {
+    ModalDrawerSheet(
+        drawerContainerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 8.dp, top = 20.dp, bottom = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "PetCare",
+                    color = PetCareTealDark,
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Text(
+                    text = userName.ifBlank { "Tutor" },
+                    color = PetCareMuted,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            IconButton(onClick = onCerrar) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_close),
+                    contentDescription = "Cerrar menú",
+                    tint = PetCareMuted
+                )
+            }
+        }
+
+        HorizontalDivider(color = PetCareLine)
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        MenuItem(
+            texto = "Registrar nueva mascota",
+            iconRes = R.drawable.ic_paw,
+            onClick = onRegisterPet
+        )
+        MenuItem(
+            texto = "Publicar mascota en adopción",
+            iconRes = R.drawable.ic_heart,
+            onClick = onPublishAdoption
+        )
+        MenuItem(
+            texto = "Nuevo turno",
+            iconRes = R.drawable.ic_add,
+            onClick = onRequestTurno
+        )
+        MenuItem(
+            texto = "Mis turnos",
+            iconRes = R.drawable.ic_calendar,
+            onClick = onViewMisTurnos
+        )
+        MenuItem(
+            texto = "Servicios",
+            iconRes = R.drawable.ic_services,
+            onClick = onServiciosClick
+        )
+    }
+}
+
+@Composable
+private fun MenuItem(
+    texto: String,
+    iconRes: Int,
+    onClick: () -> Unit
+) {
+    NavigationDrawerItem(
+        label = { Text(texto) },
+        selected = false,
+        onClick = onClick,
+        icon = {
+            Icon(
+                painter = painterResource(iconRes),
+                contentDescription = null,
+                modifier = Modifier.size(22.dp)
+            )
+        },
+        colors = NavigationDrawerItemDefaults.colors(
+            unselectedContainerColor = MaterialTheme.colorScheme.surface,
+            unselectedIconColor = PetCareTealDark,
+            unselectedTextColor = MaterialTheme.colorScheme.onSurface
+        ),
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
+    )
 }
 
 @Composable
@@ -164,7 +259,8 @@ private fun HomeHeader(
     userName: String,
     onLogout: () -> Unit,
     onProfileClick: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    onOpenMenu: () -> Unit
 ) {
     var isMenuExpanded by remember { mutableStateOf(false) }
     val displayName = userName.ifBlank { "Tutor" }
@@ -174,16 +270,29 @@ private fun HomeHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
-            Text(
-                text = "Hola,",
-                color = PetCareMuted,
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Text(
-                text = displayName,
-                style = MaterialTheme.typography.headlineMedium
-            )
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onOpenMenu) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_menu),
+                    contentDescription = "Abrir menú",
+                    tint = PetCareTealDark
+                )
+            }
+            Spacer(modifier = Modifier.height(0.dp))
+            Column {
+                Text(
+                    text = "Hola,",
+                    color = PetCareMuted,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = displayName,
+                    style = MaterialTheme.typography.headlineMedium
+                )
+            }
         }
         Box {
             Surface(
@@ -236,133 +345,10 @@ private fun HomeHeader(
 }
 
 @Composable
-private fun ActivePetCard(
-    pet: PetResponse?,
-    onRegisterPet: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = PetCareTeal),
-        shape = MaterialTheme.shapes.extraLarge
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = pet?.nombre ?: "Tu primera mascota",
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                    Text(
-                        text = pet?.let { petSubtitle(it) } ?: "Registra una mascota para empezar",
-                        color = Color.White.copy(alpha = 0.78f),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-                Surface(
-                    modifier = Modifier.size(54.dp),
-                    shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.16f)
-                ) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = pet?.nombre?.firstOrNull()?.uppercase() ?: "+",
-                            color = Color.White,
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                    }
-                }
-            }
-
-            Surface(
-                color = Color.White.copy(alpha = 0.14f),
-                shape = MaterialTheme.shapes.large
-            ) {
-                Text(
-                    text = if (pet == null) {
-                        "Alta rapida con datos basicos y foto opcional"
-                    } else {
-                        "Perfil activo listo para historia clínica y QR"
-                    },
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-
-            if (pet == null) {
-                Button(
-                    onClick = onRegisterPet,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.large
-                ) {
-                    Text("Registrar mascota")
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun QuickActions(onRequestTurno: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(
-            text = "Accesos rápidos",
-            style = MaterialTheme.typography.titleMedium
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            QuickAction(text = "Turno", modifier = Modifier.weight(1f), onClick = onRequestTurno)
-            QuickAction(text = "Vacuna", modifier = Modifier.weight(1f))
-            QuickAction(text = "QR", modifier = Modifier.weight(1f))
-            QuickAction(text = "BLE", modifier = Modifier.weight(1f))
-        }
-    }
-}
-
-@Composable
-private fun QuickAction(
-    text: String,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit = {}
-) {
-    Surface(
-        modifier = modifier.clickable(onClick = onClick),
-        color = PetCareMint,
-        shape = MaterialTheme.shapes.large,
-        border = BorderStroke(1.dp, PetCareLine)
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 12.dp),
-            color = PetCareTealDark,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            style = MaterialTheme.typography.labelLarge
-        )
-    }
-}
-
-@Composable
 private fun SectionHeader(
     title: String,
-    action: String,
-    onAction: () -> Unit
+    action: String? = null,
+    onAction: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -370,6 +356,7 @@ private fun SectionHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(text = title, style = MaterialTheme.typography.titleMedium)
+        if (action == null) return@Row
         OutlinedButton(
             onClick = onAction,
             shape = MaterialTheme.shapes.large
@@ -537,21 +524,21 @@ private fun PetRow(pet: PetResponse, onClick: () -> Unit, onEdit: () -> Unit) {
 
 @Composable
 private fun PetCareBottomBar(
-    onProfileClick: () -> Unit,
-    onServiciosClick: () -> Unit
+    onServiciosClick: () -> Unit,
+    onTurnosClick: () -> Unit
 ) {
     NavigationBar(
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 0.dp
     ) {
-        val items = listOf("Inicio", "Mascotas", "Servicios", "Adopción", "Perfil")
+        val items = listOf("Inicio", "Mascotas", "Servicios", "Adopción", "Turnos")
         items.forEachIndexed { index, item ->
-            val isPerfil = item == "Perfil"
+            val isTurnos = item == "Turnos"
             val isServicios = item == "Servicios"
             NavigationBarItem(
                 selected = index == 0,
                 onClick = {
-                    if (isPerfil) onProfileClick()
+                    if (isTurnos) onTurnosClick()
                     if (isServicios) onServiciosClick()
                 },
                 icon = {
@@ -559,7 +546,7 @@ private fun PetCareBottomBar(
                         "Mascotas" -> R.drawable.ic_paw
                         "Servicios" -> R.drawable.ic_services
                         "Adopción" -> R.drawable.ic_heart
-                        "Perfil" -> R.drawable.ic_person
+                        "Turnos" -> R.drawable.ic_calendar
                         else -> R.drawable.ic_home
                     }
                     Icon(
