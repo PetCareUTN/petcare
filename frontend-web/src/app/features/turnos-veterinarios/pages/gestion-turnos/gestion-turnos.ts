@@ -2,28 +2,64 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiError } from '../../../auth/models/user';
 import {
+  CanceladoPor,
+  TurnoServicioEstado,
+  TurnoServicioResponse,
+} from '../../../turnos-servicios/models/turno-servicio';
+import { TurnosServiciosService } from '../../../turnos-servicios/services/turnos-servicios-service';
+import {
   AppointmentStatus,
   TurnoVeterinarioResponse,
 } from '../../models/turno-veterinario';
 import { TurnosVeterinariosService } from '../../services/turnos-veterinarios-service';
 
-type EstadoOption = { value: AppointmentStatus; label: string };
-type VistaCalendario = 'mes' | 'semana' | 'dia';
+/** Estados posibles de cualquiera de los dos tipos de turno. */
+type EstadoTurno = AppointmentStatus | TurnoServicioEstado;
+type TipoTurno = 'veterinaria' | 'servicio';
 
+type EstadoOption = { value: EstadoTurno; label: string };
+type TipoOption = { value: TipoTurno; label: string };
+
+type VistaCalendario = 'mes' | 'semana' | 'dia';
 type VistaOption = { value: VistaCalendario; label: string };
+
+/**
+ * Turno normalizado para el calendario. Unifica turnos veterinarios y turnos
+ * de servicios, que tienen formas distintas pero se muestran en la misma grilla.
+ */
+interface EventoTurno {
+  /** Los ids se repiten entre ambas tablas, asi que la clave lleva el tipo. */
+  clave: string;
+  tipo: TipoTurno;
+  idTurno: number;
+  fecha: string;
+  hora: string;
+  horaFin: string | null;
+  estado: EstadoTurno;
+  nombreMascota: string;
+  nombreDuenio: string;
+  emailDuenio: string;
+  telefonoDuenio: string | null;
+  categoria: string | null;
+  detalle: string | null;
+  motivoNegativo: string | null;
+  canceladoPor: CanceladoPor | null;
+  veterinario: TurnoVeterinarioResponse | null;
+  servicio: TurnoServicioResponse | null;
+}
 
 interface DiaCalendario {
   fecha: string;
   numero: number;
   esDelMesActual: boolean;
   esHoy: boolean;
-  turnos: TurnoVeterinarioResponse[];
+  turnos: EventoTurno[];
 }
 
 interface FilaHoraria {
   hora: number;
   etiqueta: string;
-  celdas: { fecha: string; turnos: TurnoVeterinarioResponse[] }[];
+  celdas: { fecha: string; turnos: EventoTurno[] }[];
 }
 
 const MESES = [
@@ -65,12 +101,18 @@ const HORA_FIN_POR_DEFECTO = 20;
 })
 export class GestionTurnosVeterinariosPage implements OnInit {
   private readonly turnosService = inject(TurnosVeterinariosService);
+  private readonly turnosServiciosService = inject(TurnosServiciosService);
 
   protected readonly estados: EstadoOption[] = [
     { value: 'pendiente', label: 'Pendientes' },
     { value: 'confirmado', label: 'Confirmados' },
     { value: 'rechazado', label: 'Rechazados' },
     { value: 'cancelado', label: 'Cancelados' },
+  ];
+
+  protected readonly tipos: TipoOption[] = [
+    { value: 'veterinaria', label: 'Veterinaria' },
+    { value: 'servicio', label: 'Mis servicios' },
   ];
 
   protected readonly vistas: VistaOption[] = [
@@ -84,28 +126,46 @@ export class GestionTurnosVeterinariosPage implements OnInit {
   protected readonly vista = signal<VistaCalendario>('mes');
   /** Fecha de referencia (YYYY-MM-DD) sobre la que se arma la vista actual. */
   protected readonly fechaFoco = signal(this.claveDeHoy());
-  protected readonly estadosVisibles = signal<AppointmentStatus[]>([
+  protected readonly estadosVisibles = signal<EstadoTurno[]>([
     'pendiente',
     'confirmado',
   ]);
+  protected readonly tiposVisibles = signal<TipoTurno[]>(['veterinaria', 'servicio']);
 
   protected readonly turnos = signal<TurnoVeterinarioResponse[]>([]);
-  protected readonly turnoSeleccionadoId = signal<number | null>(null);
+  protected readonly turnosServicios = signal<TurnoServicioResponse[]>([]);
+  protected readonly turnoSeleccionadoClave = signal<string | null>(null);
   protected readonly isLoading = signal(true);
-  protected readonly processingTurnoId = signal<number | null>(null);
+  protected readonly isLoadingServicios = signal(true);
+  protected readonly processingClave = signal<string | null>(null);
   protected readonly isRejecting = signal(false);
   protected readonly rejectionReason = signal('');
+  protected readonly isCancelling = signal(false);
+  protected readonly motivoCancelacion = signal('');
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly successMessage = signal<string | null>(null);
 
+  protected readonly cargando = computed(
+    () => this.isLoading() || this.isLoadingServicios(),
+  );
+
+  /** Turnos de ambos origenes normalizados a un unico formato. */
+  private readonly todosLosTurnos = computed<EventoTurno[]>(() => [
+    ...this.turnos().map((turno) => this.desdeVeterinario(turno)),
+    ...this.turnosServicios().map((turno) => this.desdeServicio(turno)),
+  ]);
+
   protected readonly turnosVisibles = computed(() => {
-    const visibles = this.estadosVisibles();
-    return this.turnos().filter((turno) => visibles.includes(turno.estado));
+    const estados = this.estadosVisibles();
+    const tipos = this.tiposVisibles();
+    return this.todosLosTurnos().filter(
+      (turno) => estados.includes(turno.estado) && tipos.includes(turno.tipo),
+    );
   });
 
   /** Turnos visibles agrupados por fecha y ordenados por hora. */
   private readonly turnosPorFecha = computed(() => {
-    const agrupados = new Map<string, TurnoVeterinarioResponse[]>();
+    const agrupados = new Map<string, EventoTurno[]>();
     for (const turno of this.turnosVisibles()) {
       const delDia = agrupados.get(turno.fecha);
       if (delDia) {
@@ -121,14 +181,28 @@ export class GestionTurnosVeterinariosPage implements OnInit {
   });
 
   protected readonly turnoSeleccionado = computed(() => {
-    const id = this.turnoSeleccionadoId();
-    return id === null ? null : (this.turnos().find((t) => t.idTurno === id) ?? null);
+    const clave = this.turnoSeleccionadoClave();
+    return clave === null
+      ? null
+      : (this.todosLosTurnos().find((turno) => turno.clave === clave) ?? null);
   });
 
   protected readonly conteoPorEstado = computed(() => {
-    const conteo = new Map<AppointmentStatus, number>();
-    for (const turno of this.turnos()) {
+    const conteo = new Map<EstadoTurno, number>();
+    const tipos = this.tiposVisibles();
+    for (const turno of this.todosLosTurnos()) {
+      if (!tipos.includes(turno.tipo)) {
+        continue;
+      }
       conteo.set(turno.estado, (conteo.get(turno.estado) ?? 0) + 1);
+    }
+    return conteo;
+  });
+
+  protected readonly conteoPorTipo = computed(() => {
+    const conteo = new Map<TipoTurno, number>();
+    for (const turno of this.todosLosTurnos()) {
+      conteo.set(turno.tipo, (conteo.get(turno.tipo) ?? 0) + 1);
     }
     return conteo;
   });
@@ -212,6 +286,7 @@ export class GestionTurnosVeterinariosPage implements OnInit {
 
   ngOnInit(): void {
     this.loadTurnos();
+    this.loadTurnosServicios();
   }
 
   protected setVista(vista: VistaCalendario): void {
@@ -242,7 +317,7 @@ export class GestionTurnosVeterinariosPage implements OnInit {
     this.fechaFoco.set(this.toClave(this.sumarDias(foco, dias * direccion)));
   }
 
-  protected toggleEstado(estado: AppointmentStatus): void {
+  protected toggleEstado(estado: EstadoTurno): void {
     const visibles = this.estadosVisibles();
     this.estadosVisibles.set(
       visibles.includes(estado)
@@ -251,39 +326,62 @@ export class GestionTurnosVeterinariosPage implements OnInit {
     );
   }
 
-  protected esEstadoVisible(estado: AppointmentStatus): boolean {
+  protected esEstadoVisible(estado: EstadoTurno): boolean {
     return this.estadosVisibles().includes(estado);
   }
 
-  protected conteo(estado: AppointmentStatus): number {
+  protected toggleTipo(tipo: TipoTurno): void {
+    const visibles = this.tiposVisibles();
+    this.tiposVisibles.set(
+      visibles.includes(tipo)
+        ? visibles.filter((value) => value !== tipo)
+        : [...visibles, tipo],
+    );
+  }
+
+  protected esTipoVisible(tipo: TipoTurno): boolean {
+    return this.tiposVisibles().includes(tipo);
+  }
+
+  protected conteo(estado: EstadoTurno): number {
     return this.conteoPorEstado().get(estado) ?? 0;
   }
 
-  protected seleccionarTurno(turno: TurnoVeterinarioResponse): void {
-    this.turnoSeleccionadoId.set(turno.idTurno);
+  protected conteoTipo(tipo: TipoTurno): number {
+    return this.conteoPorTipo().get(tipo) ?? 0;
+  }
+
+  protected seleccionarTurno(turno: EventoTurno): void {
+    this.turnoSeleccionadoClave.set(turno.clave);
     this.cancelReject();
+    this.cancelCancelacion();
     this.errorMessage.set(null);
     this.successMessage.set(null);
   }
 
   protected cerrarPanel(): void {
-    this.turnoSeleccionadoId.set(null);
+    this.turnoSeleccionadoClave.set(null);
     this.cancelReject();
+    this.cancelCancelacion();
   }
 
-  protected confirmar(turno: TurnoVeterinarioResponse): void {
+  protected confirmar(turno: EventoTurno): void {
+    if (!turno.veterinario) {
+      return;
+    }
+
     this.errorMessage.set(null);
     this.successMessage.set(null);
-    this.processingTurnoId.set(turno.idTurno);
+    this.processingClave.set(turno.clave);
 
     this.turnosService.confirmar(turno.idTurno).subscribe({
       next: () => {
-        this.processingTurnoId.set(null);
+        this.processingClave.set(null);
         this.successMessage.set('Turno confirmado correctamente.');
         this.loadTurnos();
       },
       error: (error: ApiError) => {
-        this.processingTurnoId.set(null);
+        this.processingClave.set(null);
         this.errorMessage.set(error.mensaje ?? 'No se pudo confirmar el turno.');
       },
     });
@@ -301,7 +399,11 @@ export class GestionTurnosVeterinariosPage implements OnInit {
     this.rejectionReason.set('');
   }
 
-  protected rechazar(turno: TurnoVeterinarioResponse): void {
+  protected rechazar(turno: EventoTurno): void {
+    if (!turno.veterinario) {
+      return;
+    }
+
     const motivoRechazo = this.rejectionReason().trim();
     if (!motivoRechazo) {
       this.errorMessage.set('Ingresá un motivo de rechazo.');
@@ -310,25 +412,57 @@ export class GestionTurnosVeterinariosPage implements OnInit {
 
     this.errorMessage.set(null);
     this.successMessage.set(null);
-    this.processingTurnoId.set(turno.idTurno);
+    this.processingClave.set(turno.clave);
 
     this.turnosService.rechazar(turno.idTurno, { motivoRechazo }).subscribe({
       next: () => {
-        this.processingTurnoId.set(null);
+        this.processingClave.set(null);
         this.cancelReject();
         this.successMessage.set('Turno rechazado correctamente.');
         this.loadTurnos();
       },
       error: (error: ApiError) => {
-        this.processingTurnoId.set(null);
+        this.processingClave.set(null);
         this.errorMessage.set(error.mensaje ?? 'No se pudo rechazar el turno.');
       },
     });
   }
 
-  /** Nombre corto del día ("Lun", "Mar"...) para una fecha YYYY-MM-DD. */
-  protected nombreCortoDia(fecha: string): string {
-    return DIAS_SEMANA[this.indiceDesdeLunes(this.parseClave(fecha))];
+  protected startCancelacion(): void {
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    this.isCancelling.set(true);
+    this.motivoCancelacion.set('');
+  }
+
+  protected cancelCancelacion(): void {
+    this.isCancelling.set(false);
+    this.motivoCancelacion.set('');
+  }
+
+  protected cancelarTurnoServicio(turno: EventoTurno): void {
+    if (!turno.servicio) {
+      return;
+    }
+
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    this.processingClave.set(turno.clave);
+
+    const motivoCancelacion = this.motivoCancelacion().trim() || undefined;
+
+    this.turnosServiciosService.cancelar(turno.idTurno, { motivoCancelacion }).subscribe({
+      next: () => {
+        this.processingClave.set(null);
+        this.cancelCancelacion();
+        this.successMessage.set('Turno cancelado correctamente.');
+        this.loadTurnosServicios();
+      },
+      error: (error: ApiError) => {
+        this.processingClave.set(null);
+        this.errorMessage.set(error.mensaje ?? 'No se pudo cancelar el turno.');
+      },
+    });
   }
 
   protected formatDate(value: string): string {
@@ -340,18 +474,90 @@ export class GestionTurnosVeterinariosPage implements OnInit {
     return value.slice(0, 5);
   }
 
-  protected estadoLabel(estado: AppointmentStatus): string {
+  /** Nombre corto del día ("Lun", "Mar"...) para una fecha YYYY-MM-DD. */
+  protected nombreCortoDia(fecha: string): string {
+    return DIAS_SEMANA[this.indiceDesdeLunes(this.parseClave(fecha))];
+  }
+
+  protected estadoLabel(estado: EstadoTurno): string {
     return this.estados.find((option) => option.value === estado)?.label ?? estado;
   }
 
   /** Etiqueta en singular para mostrar el estado de un turno puntual. */
-  protected estadoLabelSingular(estado: AppointmentStatus): string {
+  protected estadoLabelSingular(estado: EstadoTurno): string {
     return this.estadoLabel(estado).replace(/s$/, '');
+  }
+
+  protected tipoLabel(tipo: TipoTurno): string {
+    return this.tipos.find((option) => option.value === tipo)?.label ?? tipo;
+  }
+
+  protected categoriaLabel(categoria: string): string {
+    switch (categoria) {
+      case 'paseador':
+        return 'Paseador';
+      case 'guarderia':
+        return 'Guardería';
+      case 'peluqueria':
+        return 'Peluquería';
+      default:
+        return categoria;
+    }
+  }
+
+  /** Texto corto que acompaña a la hora en el chip del calendario. */
+  protected etiquetaCorta(turno: EventoTurno): string {
+    return turno.categoria
+      ? `${turno.nombreMascota} · ${this.categoriaLabel(turno.categoria)}`
+      : turno.nombreMascota;
+  }
+
+  private desdeVeterinario(turno: TurnoVeterinarioResponse): EventoTurno {
+    return {
+      clave: `veterinaria-${turno.idTurno}`,
+      tipo: 'veterinaria',
+      idTurno: turno.idTurno,
+      fecha: turno.fecha,
+      hora: turno.hora,
+      horaFin: null,
+      estado: turno.estado,
+      nombreMascota: turno.nombreMascota,
+      nombreDuenio: turno.nombreDuenio,
+      emailDuenio: turno.emailDuenio,
+      telefonoDuenio: turno.telefonoDuenio,
+      categoria: null,
+      detalle: turno.motivoConsulta,
+      motivoNegativo: turno.motivoRechazo,
+      canceladoPor: null,
+      veterinario: turno,
+      servicio: null,
+    };
+  }
+
+  private desdeServicio(turno: TurnoServicioResponse): EventoTurno {
+    return {
+      clave: `servicio-${turno.idTurno}`,
+      tipo: 'servicio',
+      idTurno: turno.idTurno,
+      fecha: turno.fecha,
+      hora: turno.horaInicio,
+      horaFin: turno.horaFin,
+      estado: turno.estado,
+      nombreMascota: turno.nombreMascota,
+      nombreDuenio: turno.nombreDuenio,
+      emailDuenio: turno.emailDuenio,
+      telefonoDuenio: turno.telefonoDuenio,
+      categoria: turno.categoria,
+      detalle: turno.notas,
+      motivoNegativo: turno.motivoCancelacion,
+      canceladoPor: turno.canceladoPor,
+      veterinario: null,
+      servicio: turno,
+    };
   }
 
   private loadTurnos(): void {
     this.isLoading.set(true);
-    this.errorMessage.set(null);
 
     this.turnosService.getMine().subscribe({
       next: (turnos) => {
@@ -362,6 +568,24 @@ export class GestionTurnosVeterinariosPage implements OnInit {
         this.turnos.set([]);
         this.isLoading.set(false);
         this.errorMessage.set(error.mensaje ?? 'No se pudieron cargar los turnos.');
+      },
+    });
+  }
+
+  private loadTurnosServicios(): void {
+    this.isLoadingServicios.set(true);
+
+    this.turnosServiciosService.getRecibidas().subscribe({
+      next: (turnos) => {
+        this.turnosServicios.set(turnos);
+        this.isLoadingServicios.set(false);
+      },
+      error: (error: ApiError) => {
+        this.turnosServicios.set([]);
+        this.isLoadingServicios.set(false);
+        this.errorMessage.set(
+          error.mensaje ?? 'No se pudieron cargar los turnos de servicios.',
+        );
       },
     });
   }

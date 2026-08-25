@@ -7,6 +7,7 @@ import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 data class DisponibilidadResponse(
     @SerializedName("idDisponibilidad")
@@ -21,6 +22,8 @@ data class ServicioResponse(
     @SerializedName("idServicio")
     val id: Int,
 
+    val idUsuario: Int,
+    val nombrePrestador: String,
     val categoria: String,
     val descripcion: String?,
     val disponibilidades: List<DisponibilidadResponse>
@@ -48,6 +51,11 @@ interface ServiciosApi {
 
     @GET("servicios/mios")
     suspend fun getMyServicios(): List<ServicioResponse>
+
+    @GET("servicios")
+    suspend fun getServicios(
+        @Query("categoria") categoria: String?
+    ): List<ServicioResponse>
 
     @POST("servicios")
     suspend fun createServicio(

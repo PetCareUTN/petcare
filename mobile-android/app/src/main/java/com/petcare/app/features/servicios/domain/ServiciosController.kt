@@ -11,6 +11,9 @@ class ServiciosController(
 
     suspend fun getMyServicios(): List<ServicioResponse> = serviciosApi.getMyServicios()
 
+    suspend fun getServicios(categoria: String?): List<ServicioResponse> =
+        serviciosApi.getServicios(categoria)
+
     suspend fun createServicio(request: CreateServicioRequest): ServicioResponse =
         serviciosApi.createServicio(request)
 

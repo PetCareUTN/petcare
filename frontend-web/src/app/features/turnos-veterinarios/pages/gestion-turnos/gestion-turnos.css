@@ -4,6 +4,9 @@
   --estado-confirmado: #3f8f6b;
   --estado-rechazado: var(--danger);
   --estado-cancelado: #8a9a95;
+
+  --tipo-veterinaria: var(--primary);
+  --tipo-servicio: #6f63b8;
 }
 
 .appointments-page {
@@ -124,13 +127,24 @@
   color: var(--primary);
 }
 
-/* Filtros por estado */
+/* Filtros por tipo y por estado */
 
-.status-filters {
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.filter-group {
   display: flex;
   flex-wrap: wrap;
   gap: var(--spacing-xs);
-  margin-bottom: var(--spacing-lg);
+}
+
+.filter-group + .filter-group {
+  padding-left: var(--spacing-md);
+  border-left: 1px solid var(--border);
 }
 
 .status-filter {
@@ -157,7 +171,8 @@
   font-size: 0.78rem;
 }
 
-.status-dot {
+.status-dot,
+.tipo-dot {
   width: 0.6rem;
   height: 0.6rem;
   border-radius: 50%;
@@ -174,6 +189,16 @@
 
 .status-dot.cancelado {
   background-color: var(--estado-cancelado);
+}
+
+.tipo-dot.veterinaria {
+  background-color: var(--tipo-veterinaria);
+}
+
+/* El cuadrado distingue servicios del círculo de veterinaria sin depender del color. */
+.tipo-dot.servicio {
+  border-radius: 2px;
+  background-color: var(--tipo-servicio);
 }
 
 /* Layout calendario + panel de detalle */
@@ -291,9 +316,20 @@
   padding: 0.35rem 0.5rem;
 }
 
+/* El borde punteado marca los turnos de servicios sin depender del color. */
+.event-chip.tipo-servicio,
+.event-block.tipo-servicio {
+  border-left-style: dashed;
+}
+
 .event-time {
   font-weight: 800;
   white-space: nowrap;
+}
+
+.event-time-end {
+  font-weight: 600;
+  opacity: 0.75;
 }
 
 .event-pet {
@@ -447,6 +483,12 @@
   margin-bottom: var(--spacing-sm);
 }
 
+.detail-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
 .close-button {
   border: none;
   background-color: transparent;
@@ -459,6 +501,13 @@
 .detail-panel h3 {
   margin: 0;
   font-size: 1.15rem;
+}
+
+.detail-categoria {
+  margin: var(--spacing-xs) 0 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--tipo-servicio);
 }
 
 .detail-label {
@@ -489,12 +538,16 @@
   overflow-wrap: anywhere;
 }
 
-.status-badge {
+.status-badge,
+.tipo-badge {
   flex-shrink: 0;
   padding: 0.35rem 0.65rem;
   border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 800;
+}
+
+.status-badge {
   background-color: color-mix(in srgb, var(--estado-pendiente) 16%, white);
   color: var(--estado-pendiente);
 }
@@ -512,6 +565,16 @@
 .status-badge.cancelado {
   background-color: color-mix(in srgb, var(--estado-cancelado) 18%, white);
   color: var(--estado-cancelado);
+}
+
+.tipo-badge.veterinaria {
+  background-color: color-mix(in srgb, var(--tipo-veterinaria) 16%, white);
+  color: var(--tipo-veterinaria);
+}
+
+.tipo-badge.servicio {
+  background-color: color-mix(in srgb, var(--tipo-servicio) 16%, white);
+  color: var(--tipo-servicio);
 }
 
 .appointment-reason,
@@ -623,6 +686,11 @@
   .period-title {
     width: 100%;
     margin-left: 0;
+  }
+
+  .filter-group + .filter-group {
+    padding-left: 0;
+    border-left: none;
   }
 
   .month-grid {

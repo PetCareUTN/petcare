@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -23,6 +24,7 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -31,6 +33,7 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -39,8 +42,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.petcare.app.features.turnos.data.remote.MiTurnoResponse
 import com.petcare.app.features.auth.ui.PetCareBottomBar
+import com.petcare.app.features.servicios.ui.categoriaLabel
+import com.petcare.app.features.turnos.domain.TipoTurnoItem
+import com.petcare.app.features.turnos.domain.TurnoUnificado
 import com.petcare.app.ui.theme.PetCareError
 import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMuted
@@ -64,21 +69,25 @@ private enum class RangoFecha(val etiqueta: String) {
 fun MisTurnosScreen(
     isLoading: Boolean,
     errorMessage: String?,
-    turnos: List<MiTurnoResponse>,
+    turnos: List<TurnoUnificado>,
+    cancelandoId: Int?,
     onRetry: () -> Unit,
     onNavigateHome: () -> Unit,
     onNavigateServicios: () -> Unit,
-    onNavigateAdopciones: () -> Unit
+    onNavigateAdopciones: () -> Unit,
+    onCancelar: (TurnoUnificado, String?) -> Unit
 ) {
     var rango by rememberSaveable { mutableStateOf(RangoFecha.TODOS) }
     // Prefijo ISO: "2026-08-26" filtra un dia y "2026-08" un mes completo.
     var filtroFecha by rememberSaveable { mutableStateOf<String?>(null) }
     var showDatePicker by rememberSaveable { mutableStateOf(false) }
+    var turnoACancelar by remember { mutableStateOf<TurnoUnificado?>(null) }
 
     val hoy = hoyIso()
     // Las fechas vienen en formato ISO (yyyy-MM-dd), asi que se pueden
     // comparar como texto para saber si son anteriores o posteriores a hoy.
-    val turnosFiltrados = turnos.filter { turno ->
+    val turnosOrdenados = turnos.sortedWith(compareBy({ it.fecha }, { it.horaInicio }))
+    val turnosFiltrados = turnosOrdenados.filter { turno ->
         val coincideFecha = filtroFecha == null || turno.fecha.startsWith(filtroFecha!!)
         val coincideRango = when (rango) {
             RangoFecha.TODOS -> true
@@ -114,7 +123,7 @@ fun MisTurnosScreen(
             style = MaterialTheme.typography.headlineMedium
         )
         Text(
-            text = "Turnos veterinarios que solicitaste para tus mascotas.",
+            text = "Turnos de veterinaria y de servicios que solicitaste para tus mascotas.",
             color = PetCareMuted,
             style = MaterialTheme.typography.bodyMedium
         )
@@ -202,8 +211,8 @@ fun MisTurnosScreen(
             turnos.isEmpty() -> {
                 InfoCard(titulo = "Todavía no tenés turnos") {
                     Text(
-                        text = "Cuando solicites un turno veterinario para " +
-                            "alguna de tus mascotas, va a aparecer acá.",
+                        text = "Cuando solicites un turno para alguna de tus mascotas, " +
+                            "va a aparecer acá.",
                         color = PetCareMuted,
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -234,8 +243,12 @@ fun MisTurnosScreen(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(turnosFiltrados) { turno ->
-                        TurnoCard(turno = turno)
+                    items(turnosFiltrados, key = { "${it.tipo}-${it.idTurno}" }) { turno ->
+                        TurnoCard(
+                            turno = turno,
+                            isCancelando = cancelandoId == turno.idTurno,
+                            onCancelarClick = { turnoACancelar = turno }
+                        )
                     }
                 }
             }
@@ -250,6 +263,16 @@ fun MisTurnosScreen(
                 showDatePicker = false
             },
             onDismiss = { showDatePicker = false }
+        )
+    }
+
+    turnoACancelar?.let { turno ->
+        CancelarTurnoDialog(
+            onConfirm = { motivo ->
+                onCancelar(turno, motivo)
+                turnoACancelar = null
+            },
+            onDismiss = { turnoACancelar = null }
         )
     }
 }
@@ -326,6 +349,42 @@ private fun FiltroFechaDialog(
 }
 
 @Composable
+private fun CancelarTurnoDialog(
+    onConfirm: (String?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var motivo by rememberSaveable { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Cancelar turno") },
+        text = {
+            Column {
+                Text("¿Seguro que querés cancelar este turno? Podés contar el motivo (opcional).")
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = motivo,
+                    onValueChange = { motivo = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Motivo (opcional)") },
+                    singleLine = false
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(motivo.trim().ifBlank { null }) }) {
+                Text("Cancelar turno", color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Volver")
+            }
+        }
+    )
+}
+
+@Composable
 private fun InfoCard(
     titulo: String?,
     contenido: @Composable () -> Unit
@@ -350,8 +409,19 @@ private fun InfoCard(
     }
 }
 
+private fun tipoLabel(tipo: TipoTurnoItem): String = when (tipo) {
+    TipoTurnoItem.VETERINARIA -> "Veterinaria"
+    TipoTurnoItem.PASEADOR -> categoriaLabel("paseador")
+    TipoTurnoItem.GUARDERIA -> categoriaLabel("guarderia")
+    TipoTurnoItem.PELUQUERIA -> categoriaLabel("peluqueria")
+}
+
 @Composable
-private fun TurnoCard(turno: MiTurnoResponse) {
+private fun TurnoCard(
+    turno: TurnoUnificado,
+    isCancelando: Boolean,
+    onCancelarClick: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -366,47 +436,80 @@ private fun TurnoCard(turno: MiTurnoResponse) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = turno.nombreMascota,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Column {
+                    Text(
+                        text = turno.nombreMascota,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = tipoLabel(turno.tipo),
+                        color = PetCareTealDark,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
                 EstadoBadge(estado = turno.estado)
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            val horario = if (turno.horaFin != null) {
+                "${formatHora(turno.horaInicio)} a ${formatHora(turno.horaFin)}"
+            } else {
+                formatHora(turno.horaInicio)
+            }
             Text(
-                text = "${formatFecha(turno.fecha)} · ${formatHora(turno.hora)}",
+                text = "${formatFecha(turno.fecha)} · $horario",
                 color = PetCareTealDark,
                 style = MaterialTheme.typography.bodyLarge
             )
             Text(
-                text = "Veterinaria: ${turno.nombreVeterinaria}",
+                text = turno.contraparteNombre,
                 color = PetCareMuted,
                 style = MaterialTheme.typography.bodyMedium
             )
-            turno.direccionVeterinaria?.takeIf { it.isNotBlank() }?.let { direccion ->
+            turno.contraparteDetalle?.takeIf { it.isNotBlank() }?.let { detalle ->
                 Text(
-                    text = direccion,
+                    text = detalle,
                     color = PetCareMuted,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
-            turno.motivoConsulta?.takeIf { it.isNotBlank() }?.let { motivo ->
+            turno.nota?.takeIf { it.isNotBlank() }?.let { nota ->
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = motivo,
+                    text = nota,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
-            turno.motivoRechazo?.takeIf { it.isNotBlank() }?.let { motivo ->
+            turno.motivoNegativo?.takeIf { it.isNotBlank() }?.let { motivo ->
                 Spacer(modifier = Modifier.height(6.dp))
+                val prefijo = if (turno.canceladoPor != null) {
+                    "Cancelado por ${turno.canceladoPor}: "
+                } else {
+                    "Motivo del rechazo: "
+                }
                 Text(
-                    text = "Motivo del rechazo: $motivo",
+                    text = "$prefijo$motivo",
                     color = PetCareError,
                     style = MaterialTheme.typography.bodyMedium
                 )
+            }
+
+            if (turno.puedeCancelar) {
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedButton(
+                    onClick = onCancelarClick,
+                    enabled = !isCancelando,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                ) {
+                    Text(
+                        text = if (isCancelando) "Cancelando..." else "Cancelar turno",
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         }
     }
@@ -417,7 +520,7 @@ private fun EstadoBadge(estado: String) {
     val color = when (estado.lowercase()) {
         "confirmado" -> PetCareTeal
         "pendiente" -> PetCareWarning
-        "rechazado" -> PetCareError
+        "rechazado", "cancelado" -> PetCareError
         else -> PetCareMuted
     }
     Surface(

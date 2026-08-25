@@ -24,6 +24,7 @@ export class DisponibilidadResponseDto {
 export class ServicioResponseDto {
   idServicio: number;
   idUsuario: number;
+  nombrePrestador: string;
   categoria: CategoriaServicio;
   descripcion: string | null;
   disponibilidades: DisponibilidadResponseDto[];
@@ -32,6 +33,9 @@ export class ServicioResponseDto {
     return {
       idServicio: servicio.idServicio,
       idUsuario: servicio.usuario.idUsuario,
+      nombrePrestador: [servicio.usuario.nombre, servicio.usuario.apellido]
+        .filter(Boolean)
+        .join(' '),
       categoria: servicio.categoria,
       descripcion: servicio.descripcion,
       disponibilidades: (servicio.disponibilidades ?? []).map((d) =>
