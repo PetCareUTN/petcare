@@ -90,4 +90,35 @@ export class AdopcionesService {
 
     return PublicacionAdopcionResponseDto.fromEntity(guardada);
   }
+
+  /**
+   * Lista las publicaciones de adopción activas, más recientes primero.
+   */
+  async findAll(): Promise<PublicacionAdopcionResponseDto[]> {
+    const publicaciones = await this.publicacionesRepository.find({
+      where: { estado: AdopcionStatus.ACTIVA },
+      relations: ['mascota'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return publicaciones.map((publicacion) =>
+      PublicacionAdopcionResponseDto.fromEntity(publicacion),
+    );
+  }
+
+  async findOne(idPublicacion: number): Promise<PublicacionAdopcionResponseDto> {
+    const publicacion = await this.publicacionesRepository.findOne({
+      where: { idPublicacion, estado: AdopcionStatus.ACTIVA },
+      relations: ['mascota'],
+    });
+
+    if (!publicacion) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Publicación de adopción no encontrada',
+      });
+    }
+
+    return PublicacionAdopcionResponseDto.fromEntity(publicacion);
+  }
 }

@@ -78,6 +78,7 @@ fun AuthenticatedHomeScreen(
     onPetClick: (PetResponse) -> Unit = {},
     onProfileClick: () -> Unit = {},
     onPublishAdoption: () -> Unit = {},
+    onViewAdopciones: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onServiciosClick: () -> Unit = {},
     onRequestTurno: () -> Unit = {},
@@ -110,8 +111,10 @@ fun AuthenticatedHomeScreen(
             containerColor = MaterialTheme.colorScheme.background,
             bottomBar = {
                 PetCareBottomBar(
+                    selectedItem = "Inicio",
                     onServiciosClick = onServiciosClick,
-                    onTurnosClick = onViewMisTurnos
+                    onTurnosClick = onViewMisTurnos,
+                    onAdopcionClick = onViewAdopciones
                 )
             }
         ) { innerPadding ->
@@ -523,23 +526,30 @@ private fun PetRow(pet: PetResponse, onClick: () -> Unit, onEdit: () -> Unit) {
 }
 
 @Composable
-private fun PetCareBottomBar(
+fun PetCareBottomBar(
+    selectedItem: String,
+    onInicioClick: () -> Unit = {},
     onServiciosClick: () -> Unit,
-    onTurnosClick: () -> Unit
+    onTurnosClick: () -> Unit,
+    onAdopcionClick: () -> Unit
 ) {
     NavigationBar(
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 0.dp
     ) {
         val items = listOf("Inicio", "Mascotas", "Servicios", "Adopción", "Turnos")
-        items.forEachIndexed { index, item ->
+        items.forEach { item ->
+            val isInicio = item == "Inicio"
             val isTurnos = item == "Turnos"
             val isServicios = item == "Servicios"
+            val isAdopcion = item == "Adopción"
             NavigationBarItem(
-                selected = index == 0,
+                selected = item == selectedItem,
                 onClick = {
+                    if (isInicio) onInicioClick()
                     if (isTurnos) onTurnosClick()
                     if (isServicios) onServiciosClick()
+                    if (isAdopcion) onAdopcionClick()
                 },
                 icon = {
                     val iconRes = when (item) {
