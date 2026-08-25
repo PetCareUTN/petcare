@@ -39,14 +39,20 @@
   margin: var(--spacing-xs) 0 0;
 }
 
-.status-tabs {
+.status-tabs,
+.vista-tabs {
   display: flex;
   flex-wrap: wrap;
   gap: var(--spacing-xs);
   margin-bottom: var(--spacing-lg);
 }
 
+.vista-tabs {
+  margin-bottom: var(--spacing-md);
+}
+
 .status-tabs button,
+.vista-tabs button,
 .btn-primary,
 .btn-secondary,
 .btn-danger {
@@ -56,14 +62,16 @@
   cursor: pointer;
 }
 
-.status-tabs button {
+.status-tabs button,
+.vista-tabs button {
   padding: 0.55rem 0.85rem;
   border: 1px solid var(--border);
   background-color: var(--surface);
   color: var(--text-primary);
 }
 
-.status-tabs button.active {
+.status-tabs button.active,
+.vista-tabs button.active {
   border-color: var(--primary);
   background-color: var(--primary);
   color: #ffffff;
