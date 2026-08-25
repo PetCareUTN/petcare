@@ -20,7 +20,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
+import com.petcare.app.features.adopciones.data.remote.PublicacionAdopcionResponse
 import com.petcare.app.features.adopciones.domain.AdopcionesController
+import com.petcare.app.features.adopciones.ui.AdopcionDetalleScreen
+import com.petcare.app.features.adopciones.ui.AdopcionesListScreen
 import com.petcare.app.features.adopciones.ui.PublicarAdopcionScreen
 import com.petcare.app.features.auth.data.local.SessionManager
 import com.petcare.app.features.auth.data.remote.ForgotPasswordRequest
@@ -279,6 +282,33 @@ class MainActivity : ComponentActivity() {
                 var adopcionSuccess by rememberSaveable {
                     mutableStateOf<String?>(null)
                 }
+                var isViewingAdopciones by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isLoadingAdopciones by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var adopcionesListError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var adopciones by remember {
+                    mutableStateOf<List<PublicacionAdopcionResponse>>(emptyList())
+                }
+                var isViewingAdopcionDetalle by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var selectedAdopcionId by rememberSaveable {
+                    mutableStateOf<Int?>(null)
+                }
+                var selectedAdopcion by remember {
+                    mutableStateOf<PublicacionAdopcionResponse?>(null)
+                }
+                var isLoadingAdopcionDetalle by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var adopcionDetalleError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
                 var isViewingSettings by rememberSaveable {
                     mutableStateOf(false)
                 }
@@ -375,6 +405,15 @@ class MainActivity : ComponentActivity() {
                     isSavingAdopcion = false
                     adopcionError = null
                     adopcionSuccess = null
+                    isViewingAdopciones = false
+                    isLoadingAdopciones = false
+                    adopcionesListError = null
+                    adopciones = emptyList()
+                    isViewingAdopcionDetalle = false
+                    selectedAdopcionId = null
+                    selectedAdopcion = null
+                    isLoadingAdopcionDetalle = false
+                    adopcionDetalleError = null
                     isViewingSettings = false
                     isViewingServicios = false
                     serviciosError = null
@@ -511,6 +550,57 @@ class MainActivity : ComponentActivity() {
                             serviciosError = "Ocurrio un error inesperado"
                         } finally {
                             isLoadingServicios = false
+                        }
+                    }
+                }
+
+                fun loadAdopciones() {
+                    isLoadingAdopciones = true
+                    adopcionesListError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            adopciones = adopcionesController.listar()
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                adopcionesListError = "No se pudieron cargar las mascotas en adopcion"
+                            }
+                        } catch (exception: IOException) {
+                            adopcionesListError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            adopcionesListError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingAdopciones = false
+                        }
+                    }
+                }
+
+                fun loadAdopcionDetalle(idPublicacion: Int) {
+                    isLoadingAdopcionDetalle = true
+                    adopcionDetalleError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            selectedAdopcion = adopcionesController.obtenerDetalle(idPublicacion)
+                        } catch (exception: HttpException) {
+                            adopcionDetalleError = when (exception.code()) {
+                                401 -> {
+                                    logout()
+                                    serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                    null
+                                }
+                                404 -> "La publicacion ya no esta disponible"
+                                else -> "No se pudo cargar el detalle de la publicacion"
+                            }
+                        } catch (exception: IOException) {
+                            adopcionDetalleError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            adopcionDetalleError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingAdopcionDetalle = false
                         }
                     }
                 }
@@ -737,6 +827,109 @@ class MainActivity : ComponentActivity() {
                             saveServicioError = null
                             isCreatingServicio = false
                             editingServicio = null
+                        }
+                    )
+                } else if (loggedUserName != null && isViewingAdopcionDetalle) {
+                    AdopcionDetalleScreen(
+                        isLoading = isLoadingAdopcionDetalle,
+                        errorMessage = adopcionDetalleError,
+                        publicacion = selectedAdopcion,
+                        onBack = {
+                            isViewingAdopcionDetalle = false
+                            selectedAdopcionId = null
+                            selectedAdopcion = null
+                            adopcionDetalleError = null
+                        },
+                        onRetry = {
+                            selectedAdopcionId?.let { loadAdopcionDetalle(it) }
+                        }
+                    )
+                } else if (loggedUserName != null && isPublishingAdopcion) {
+                    PublicarAdopcionScreen(
+                        pets = pets,
+                        isPublishing = isSavingAdopcion,
+                        errorMessage = adopcionError,
+                        successMessage = adopcionSuccess,
+                        onPublish = { petId, descripcion ->
+                            isSavingAdopcion = true
+                            adopcionError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    adopcionesController.publicar(petId, descripcion)
+                                    adopcionSuccess =
+                                        "Tu mascota ya está publicada en adopción"
+                                } catch (exception: HttpException) {
+                                    adopcionError = when (exception.code()) {
+                                        401 -> {
+                                            logout()
+                                            serverError =
+                                                "La sesion expiro. Inicia sesion nuevamente"
+                                            null
+                                        }
+                                        403 -> "No podés publicar una mascota que no es tuya"
+                                        409 -> "Esa mascota ya tiene una publicación activa"
+                                        404 -> "No se encontró la mascota"
+                                        else -> "No se pudo publicar la mascota"
+                                    }
+                                } catch (exception: IOException) {
+                                    adopcionError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    adopcionError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isSavingAdopcion = false
+                                }
+                            }
+                        },
+                        onRegisterNewPet = {
+                            savePetError = null
+                            isRegisteringPet = true
+                        },
+                        onBack = {
+                            isPublishingAdopcion = false
+                            adopcionError = null
+                            adopcionSuccess = null
+                            if (isViewingAdopciones) {
+                                loadAdopciones()
+                            }
+                        }
+                    )
+                } else if (loggedUserName != null && isViewingAdopciones) {
+                    AdopcionesListScreen(
+                        isLoading = isLoadingAdopciones,
+                        errorMessage = adopcionesListError,
+                        publicaciones = adopciones,
+                        onNavigateHome = {
+                            isViewingAdopciones = false
+                            adopcionesListError = null
+                        },
+                        onNavigateServicios = {
+                            isViewingAdopciones = false
+                            adopcionesListError = null
+                            saveServicioError = null
+                            serviciosError = null
+                            isViewingServicios = true
+                            loadServicios()
+                        },
+                        onNavigateTurnos = {
+                            isViewingAdopciones = false
+                            adopcionesListError = null
+                            misTurnosError = null
+                            isViewingMisTurnos = true
+                            loadMisTurnos()
+                        },
+                        onRetry = { loadAdopciones() },
+                        onPublicacionClick = { publicacion ->
+                            selectedAdopcionId = publicacion.idPublicacion
+                            selectedAdopcion = null
+                            adopcionDetalleError = null
+                            isViewingAdopcionDetalle = true
+                            loadAdopcionDetalle(publicacion.idPublicacion)
+                        },
+                        onAddClick = {
+                            adopcionError = null
+                            adopcionSuccess = null
+                            isPublishingAdopcion = true
                         }
                     )
                 } else if (loggedUserName != null && isViewingServicios) {
@@ -1046,53 +1239,6 @@ class MainActivity : ComponentActivity() {
                         },
                         onBack = { isViewingSettings = false }
                     )
-                } else if (loggedUserName != null && isPublishingAdopcion) {
-                    PublicarAdopcionScreen(
-                        pets = pets,
-                        isPublishing = isSavingAdopcion,
-                        errorMessage = adopcionError,
-                        successMessage = adopcionSuccess,
-                        onPublish = { petId, descripcion ->
-                            isSavingAdopcion = true
-                            adopcionError = null
-
-                            lifecycleScope.launch {
-                                try {
-                                    adopcionesController.publicar(petId, descripcion)
-                                    adopcionSuccess =
-                                        "Tu mascota ya está publicada en adopción"
-                                } catch (exception: HttpException) {
-                                    adopcionError = when (exception.code()) {
-                                        401 -> {
-                                            logout()
-                                            serverError =
-                                                "La sesion expiro. Inicia sesion nuevamente"
-                                            null
-                                        }
-                                        403 -> "No podés publicar una mascota que no es tuya"
-                                        409 -> "Esa mascota ya tiene una publicación activa"
-                                        404 -> "No se encontró la mascota"
-                                        else -> "No se pudo publicar la mascota"
-                                    }
-                                } catch (exception: IOException) {
-                                    adopcionError = "No se pudo conectar con el servidor"
-                                } catch (exception: Exception) {
-                                    adopcionError = "Ocurrio un error inesperado"
-                                } finally {
-                                    isSavingAdopcion = false
-                                }
-                            }
-                        },
-                        onRegisterNewPet = {
-                            savePetError = null
-                            isRegisteringPet = true
-                        },
-                        onBack = {
-                            isPublishingAdopcion = false
-                            adopcionError = null
-                            adopcionSuccess = null
-                        }
-                    )
                 } else if (loggedUserName != null && isViewingMisTurnos) {
                     MisTurnosScreen(
                         isLoading = isLoadingMisTurnos,
@@ -1192,6 +1338,11 @@ class MainActivity : ComponentActivity() {
                             adopcionError = null
                             adopcionSuccess = null
                             isPublishingAdopcion = true
+                        },
+                        onViewAdopciones = {
+                            adopcionesListError = null
+                            isViewingAdopciones = true
+                            loadAdopciones()
                         },
                         onSettingsClick = { isViewingSettings = true },
                         onServiciosClick = {

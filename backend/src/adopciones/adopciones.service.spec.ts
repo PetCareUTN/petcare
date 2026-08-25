@@ -19,6 +19,7 @@ describe('AdopcionesService', () => {
     create: jest.Mock;
     save: jest.Mock;
     findOne: jest.Mock;
+    find: jest.Mock;
   };
   let mascotasRepository: {
     findOne: jest.Mock;
@@ -51,6 +52,7 @@ describe('AdopcionesService', () => {
       create: jest.fn(),
       save: jest.fn(),
       findOne: jest.fn(),
+      find: jest.fn(),
     };
     mascotasRepository = {
       findOne: jest.fn(),
@@ -173,5 +175,72 @@ describe('AdopcionesService', () => {
       UnauthorizedException,
     );
     expect(publicacionesRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('lista las publicaciones activas, mas recientes primero', async () => {
+    const publicacion = {
+      idPublicacion: 1,
+      mascota: mascotaPropia,
+      usuario: duenio,
+      descripcion: dto.descripcion,
+      estado: AdopcionStatus.ACTIVA,
+      createdAt: new Date('2026-08-16T10:00:00Z'),
+      updatedAt: new Date('2026-08-16T10:00:00Z'),
+    } as PublicacionAdopcion;
+    publicacionesRepository.find.mockResolvedValue([publicacion]);
+
+    const result = await service.findAll();
+
+    expect(publicacionesRepository.find).toHaveBeenCalledWith({
+      where: { estado: AdopcionStatus.ACTIVA },
+      relations: ['mascota'],
+      order: { createdAt: 'DESC' },
+    });
+    expect(result).toEqual([
+      {
+        idPublicacion: 1,
+        estado: AdopcionStatus.ACTIVA,
+        descripcion: dto.descripcion,
+        createdAt: publicacion.createdAt,
+        mascota: {
+          idMascota: 10,
+          nombre: 'Rocky',
+          especie: 'Perro',
+          raza: 'Labrador',
+          sexo: 'macho',
+          fechaNacimiento: '2023-03-10',
+          foto: '/uploads/mascotas/rocky.jpg',
+        },
+      },
+    ]);
+  });
+
+  it('devuelve el detalle de una publicacion activa', async () => {
+    const publicacion = {
+      idPublicacion: 1,
+      mascota: mascotaPropia,
+      usuario: duenio,
+      descripcion: dto.descripcion,
+      estado: AdopcionStatus.ACTIVA,
+      createdAt: new Date('2026-08-16T10:00:00Z'),
+      updatedAt: new Date('2026-08-16T10:00:00Z'),
+    } as PublicacionAdopcion;
+    publicacionesRepository.findOne.mockResolvedValue(publicacion);
+
+    const result = await service.findOne(1);
+
+    expect(publicacionesRepository.findOne).toHaveBeenCalledWith({
+      where: { idPublicacion: 1, estado: AdopcionStatus.ACTIVA },
+      relations: ['mascota'],
+    });
+    expect(result.idPublicacion).toBe(1);
+  });
+
+  it('rechaza el detalle si la publicacion no existe o no esta activa', async () => {
+    publicacionesRepository.findOne.mockResolvedValue(null);
+
+    await expect(service.findOne(999)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 });

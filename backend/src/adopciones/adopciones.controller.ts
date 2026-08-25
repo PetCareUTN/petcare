@@ -1,8 +1,11 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
+  Param,
+  ParseIntPipe,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -25,5 +28,19 @@ export class AdopcionesController {
     @Body() dto: CreatePublicacionAdopcionDto,
   ): Promise<PublicacionAdopcionResponseDto> {
     return this.adopcionesService.publicar(user.sub, dto);
+  }
+
+  @Get()
+  @UseGuards(JwtAuthGuard)
+  findAll(): Promise<PublicacionAdopcionResponseDto[]> {
+    return this.adopcionesService.findAll();
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  findOne(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<PublicacionAdopcionResponseDto> {
+    return this.adopcionesService.findOne(id);
   }
 }
