@@ -45,7 +45,9 @@ fun AdopcionesListScreen(
     onNavigateTurnos: () -> Unit,
     onRetry: () -> Unit,
     onPublicacionClick: (PublicacionAdopcionResponse) -> Unit,
-    onAddClick: () -> Unit
+    onAddClick: () -> Unit,
+    onSolicitudesRecibidasClick: () -> Unit,
+    onMisPublicacionesClick: () -> Unit
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -83,6 +85,26 @@ fun AdopcionesListScreen(
                 shape = MaterialTheme.shapes.large
             ) {
                 Text("Publicar mascota en adopción")
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            OutlinedButton(
+                onClick = onMisPublicacionesClick,
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large
+            ) {
+                Text("Mis publicaciones")
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            OutlinedButton(
+                onClick = onSolicitudesRecibidasClick,
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.large
+            ) {
+                Text("Solicitudes recibidas")
             }
 
             Spacer(modifier = Modifier.height(18.dp))

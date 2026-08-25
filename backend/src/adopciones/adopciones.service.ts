@@ -6,7 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { AdopcionStatus } from '../common/enums/adopcion-status.enum';
 import { Mascota } from '../mascotas/entities/mascota.entity';
 import { User } from '../users/entities/user.entity';
@@ -92,11 +92,34 @@ export class AdopcionesService {
   }
 
   /**
-   * Lista las publicaciones de adopción activas, más recientes primero.
+   * Lista las publicaciones de adopción activas de otros usuarios, más
+   * recientes primero. Excluye las publicaciones propias: no tendría sentido
+   * solicitar la adopción de la propia mascota.
    */
-  async findAll(): Promise<PublicacionAdopcionResponseDto[]> {
+  async findAll(idUsuario: number): Promise<PublicacionAdopcionResponseDto[]> {
     const publicaciones = await this.publicacionesRepository.find({
-      where: { estado: AdopcionStatus.ACTIVA },
+      where: {
+        estado: AdopcionStatus.ACTIVA,
+        usuario: { idUsuario: Not(idUsuario) },
+      },
+      relations: ['mascota'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return publicaciones.map((publicacion) =>
+      PublicacionAdopcionResponseDto.fromEntity(publicacion),
+    );
+  }
+
+  /**
+   * Publicaciones de adopción propias del usuario autenticado, para que
+   * pueda verlas por separado del listado general.
+   */
+  async findMisPublicaciones(
+    idUsuario: number,
+  ): Promise<PublicacionAdopcionResponseDto[]> {
+    const publicaciones = await this.publicacionesRepository.find({
+      where: { usuario: { idUsuario } },
       relations: ['mascota'],
       order: { createdAt: 'DESC' },
     });

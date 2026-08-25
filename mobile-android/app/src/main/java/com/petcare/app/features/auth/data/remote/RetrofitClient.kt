@@ -1,6 +1,7 @@
 package com.petcare.app.features.auth.data.remote
 
 import com.petcare.app.features.adopciones.data.remote.AdopcionesApi
+import com.petcare.app.features.adopciones.data.remote.SolicitudesAdopcionApi
 import com.petcare.app.features.auth.data.local.SessionStore
 import com.petcare.app.features.historiaclinica.data.remote.HistoriaClinicaApi
 import com.petcare.app.features.pets.data.remote.PetsApi
@@ -38,6 +39,10 @@ object RetrofitClient {
     fun adopcionesApi(sessionStore: SessionStore): AdopcionesApi =
         createRetrofit(sessionStore)
             .create(AdopcionesApi::class.java)
+
+    fun solicitudesAdopcionApi(sessionStore: SessionStore): SolicitudesAdopcionApi =
+        createRetrofit(sessionStore)
+            .create(SolicitudesAdopcionApi::class.java)
 
     fun serviciosApi(sessionStore: SessionStore): ServiciosApi =
         createRetrofit(sessionStore)

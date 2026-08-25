@@ -30,10 +30,20 @@ export class AdopcionesController {
     return this.adopcionesService.publicar(user.sub, dto);
   }
 
+  @Get('mias')
+  @UseGuards(JwtAuthGuard)
+  findMisPublicaciones(
+    @CurrentUser() user: JwtPayload,
+  ): Promise<PublicacionAdopcionResponseDto[]> {
+    return this.adopcionesService.findMisPublicaciones(user.sub);
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard)
-  findAll(): Promise<PublicacionAdopcionResponseDto[]> {
-    return this.adopcionesService.findAll();
+  findAll(
+    @CurrentUser() user: JwtPayload,
+  ): Promise<PublicacionAdopcionResponseDto[]> {
+    return this.adopcionesService.findAll(user.sub);
   }
 
   @Get(':id')

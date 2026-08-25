@@ -18,10 +18,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -32,10 +31,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.petcare.app.features.servicios.data.remote.ServicioResponse
-import com.petcare.app.R
+import com.petcare.app.features.auth.ui.PetCareBottomBar
 import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMuted
 import com.petcare.app.ui.theme.PetCareSurfaceSoft
@@ -48,7 +46,9 @@ fun ServiciosListScreen(
     errorMessage: String?,
     servicios: List<ServicioResponse>,
     deletingId: Int?,
-    onBack: () -> Unit,
+    onNavigateHome: () -> Unit,
+    onNavigateTurnos: () -> Unit,
+    onNavigateAdopciones: () -> Unit,
     onRetry: () -> Unit,
     onCreateServicio: () -> Unit,
     onEditServicio: (ServicioResponse) -> Unit,
@@ -56,35 +56,33 @@ fun ServiciosListScreen(
 ) {
     var servicioToDelete by remember { mutableStateOf<ServicioResponse?>(null) }
 
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        bottomBar = {
+            PetCareBottomBar(
+                selectedItem = "Servicios",
+                onInicioClick = onNavigateHome,
+                onServiciosClick = {},
+                onTurnosClick = onNavigateTurnos,
+                onAdopcionClick = onNavigateAdopciones
+            )
+        }
+    ) { innerPadding ->
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .systemBarsPadding()
+            .padding(innerPadding)
             .padding(20.dp),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.Start
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_arrow_back),
-                    contentDescription = "Volver",
-                    tint = PetCareTealDark
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = "Mis servicios", style = MaterialTheme.typography.headlineSmall)
-                Text(
-                    text = "Publica y administra tus servicios",
-                    color = PetCareMuted,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-        }
+        Text(text = "Mis servicios", style = MaterialTheme.typography.headlineSmall)
+        Text(
+            text = "Publica y administra tus servicios",
+            color = PetCareMuted,
+            style = MaterialTheme.typography.bodyMedium
+        )
 
         Spacer(modifier = Modifier.height(14.dp))
 
@@ -93,7 +91,7 @@ fun ServiciosListScreen(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large
         ) {
-            Text("+ Publicar servicio")
+            Text("Publicar servicio")
         }
 
         Spacer(modifier = Modifier.height(18.dp))
@@ -174,6 +172,7 @@ fun ServiciosListScreen(
                 }
             }
         }
+    }
     }
 
     servicioToDelete?.let { servicio ->

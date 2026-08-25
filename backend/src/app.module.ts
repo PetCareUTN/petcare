@@ -30,6 +30,8 @@ import { TurnoVeterinario } from './turnos-veterinarios/entities/turno-veterinar
 import { TurnosVeterinariosModule } from './turnos-veterinarios/turnos-veterinarios.module';
 import { AuditoriaUsuario } from './admin/entities/auditoria-usuario.entity';
 import { AdminModule } from './admin/admin.module';
+import { SolicitudAdopcion } from './solicitudes-adopcion/entities/solicitud-adopcion.entity';
+import { SolicitudesAdopcionModule } from './solicitudes-adopcion/solicitudes-adopcion.module';
 
 dotenv.config();
 
@@ -57,6 +59,7 @@ dotenv.config();
         DisponibilidadVeterinaria,
         TurnoVeterinario,
         AuditoriaUsuario,
+        SolicitudAdopcion,
       ],
       synchronize: false,
     }),
@@ -73,6 +76,7 @@ dotenv.config();
     DisponibilidadesVeterinariasModule,
     TurnosVeterinariosModule,
     AdminModule,
+    SolicitudesAdopcionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

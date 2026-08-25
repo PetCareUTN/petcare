@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -24,6 +23,7 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.petcare.app.features.turnos.data.remote.MiTurnoResponse
+import com.petcare.app.features.auth.ui.PetCareBottomBar
 import com.petcare.app.ui.theme.PetCareError
 import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMuted
@@ -65,7 +66,9 @@ fun MisTurnosScreen(
     errorMessage: String?,
     turnos: List<MiTurnoResponse>,
     onRetry: () -> Unit,
-    onBack: () -> Unit
+    onNavigateHome: () -> Unit,
+    onNavigateServicios: () -> Unit,
+    onNavigateAdopciones: () -> Unit
 ) {
     var rango by rememberSaveable { mutableStateOf(RangoFecha.TODOS) }
     // Prefijo ISO: "2026-08-26" filtra un dia y "2026-08" un mes completo.
@@ -85,19 +88,27 @@ fun MisTurnosScreen(
         coincideFecha && coincideRango
     }
 
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        bottomBar = {
+            PetCareBottomBar(
+                selectedItem = "Turnos",
+                onInicioClick = onNavigateHome,
+                onServiciosClick = onNavigateServicios,
+                onTurnosClick = {},
+                onAdopcionClick = onNavigateAdopciones
+            )
+        }
+    ) { innerPadding ->
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .systemBarsPadding()
+            .padding(innerPadding)
             .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.Start
     ) {
-        TextButton(onClick = onBack) {
-            Text("← Volver")
-        }
-
         Text(
             text = "Mis turnos",
             style = MaterialTheme.typography.headlineMedium
@@ -229,6 +240,7 @@ fun MisTurnosScreen(
                 }
             }
         }
+    }
     }
 
     if (showDatePicker) {

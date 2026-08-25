@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { Not } from 'typeorm';
 import { AdopcionStatus } from '../common/enums/adopcion-status.enum';
 import { Mascota } from '../mascotas/entities/mascota.entity';
 import { User } from '../users/entities/user.entity';
@@ -177,7 +178,7 @@ describe('AdopcionesService', () => {
     expect(publicacionesRepository.save).not.toHaveBeenCalled();
   });
 
-  it('lista las publicaciones activas, mas recientes primero', async () => {
+  it('lista las publicaciones activas de otros usuarios, mas recientes primero', async () => {
     const publicacion = {
       idPublicacion: 1,
       mascota: mascotaPropia,
@@ -189,10 +190,14 @@ describe('AdopcionesService', () => {
     } as PublicacionAdopcion;
     publicacionesRepository.find.mockResolvedValue([publicacion]);
 
-    const result = await service.findAll();
+    const OTRO_USUARIO = 99;
+    const result = await service.findAll(OTRO_USUARIO);
 
     expect(publicacionesRepository.find).toHaveBeenCalledWith({
-      where: { estado: AdopcionStatus.ACTIVA },
+      where: {
+        estado: AdopcionStatus.ACTIVA,
+        usuario: { idUsuario: Not(OTRO_USUARIO) },
+      },
       relations: ['mascota'],
       order: { createdAt: 'DESC' },
     });
@@ -213,6 +218,29 @@ describe('AdopcionesService', () => {
         },
       },
     ]);
+  });
+
+  it('lista las publicaciones propias del usuario autenticado', async () => {
+    const publicacion = {
+      idPublicacion: 1,
+      mascota: mascotaPropia,
+      usuario: duenio,
+      descripcion: dto.descripcion,
+      estado: AdopcionStatus.ACTIVA,
+      createdAt: new Date('2026-08-16T10:00:00Z'),
+      updatedAt: new Date('2026-08-16T10:00:00Z'),
+    } as PublicacionAdopcion;
+    publicacionesRepository.find.mockResolvedValue([publicacion]);
+
+    const result = await service.findMisPublicaciones(ID_DUENIO);
+
+    expect(publicacionesRepository.find).toHaveBeenCalledWith({
+      where: { usuario: { idUsuario: ID_DUENIO } },
+      relations: ['mascota'],
+      order: { createdAt: 'DESC' },
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0].idPublicacion).toBe(1);
   });
 
   it('devuelve el detalle de una publicacion activa', async () => {
