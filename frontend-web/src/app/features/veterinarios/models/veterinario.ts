@@ -5,6 +5,7 @@ export interface VeterinarioResponse {
   numeroMatricula: string;
   provinciaMatricula: string;
   matriculaUrl: string;
+  habilitacionUrl: string | null;
   estadoValidacion: 'PENDIENTE' | 'APROBADO' | 'RECHAZADO';
   motivoRechazo: string | null;
   createdAt: string;
@@ -24,6 +25,7 @@ export interface SolicitudDetalle {
   numeroMatricula: string;
   provinciaMatricula: string;
   matriculaUrl: string;
+  habilitacionUrl: string | null;
   estadoValidacion: 'PENDIENTE' | 'APROBADO' | 'RECHAZADO';
   motivoRechazo: string | null;
   fechaSolicitud: string;

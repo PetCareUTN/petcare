@@ -7,6 +7,7 @@ export class VeterinarioResponseDto {
   numeroMatricula: string;
   provinciaMatricula: string;
   matriculaUrl: string;
+  habilitacionUrl: string | null;
   estadoValidacion: ValidationStatus;
   motivoRechazo: string | null;
   createdAt: Date;
@@ -21,6 +22,9 @@ export class VeterinarioResponseDto {
     dto.numeroMatricula = vet.numeroMatricula;
     dto.provinciaMatricula = vet.provinciaMatricula;
     dto.matriculaUrl = `${baseUrl}/${vet.matriculaUrl}`;
+    dto.habilitacionUrl = vet.habilitacionUrl
+      ? `${baseUrl}/${vet.habilitacionUrl}`
+      : null;
     dto.estadoValidacion = vet.estadoValidacion;
     dto.motivoRechazo = vet.motivoRechazo;
     dto.createdAt = vet.createdAt;

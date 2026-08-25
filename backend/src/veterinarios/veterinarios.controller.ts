@@ -8,11 +8,11 @@ import {
   ParseIntPipe,
   Patch,
   Post,
-  UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { randomUUID } from 'crypto';
@@ -28,39 +28,53 @@ import type { UploadedDocumentFile } from './types/uploaded-document-file.type';
 import { VeterinariosService } from './veterinarios.service';
 
 const MATRICULAS_DIR = join(process.cwd(), 'uploads', 'matriculas');
+const HABILITACIONES_DIR = join(process.cwd(), 'uploads', 'habilitaciones');
 
-const matriculaFileInterceptor = FileInterceptor('matricula', {
-  storage: diskStorage({
-    destination: MATRICULAS_DIR,
-    filename: (_req, file, cb) => {
-      const uniqueName = `${randomUUID()}${extname(file.originalname)}`;
-      cb(null, uniqueName);
-    },
-  }),
-  fileFilter: (_req, file, cb) => {
-    const allowed = ['.jpg', '.jpeg', '.png', '.pdf'];
-    const ext = extname(file.originalname).toLowerCase();
-    if (!allowed.includes(ext)) {
-      cb(new Error('Solo se permiten archivos JPG, PNG o PDF'), false);
-      return;
-    }
-    cb(null, true);
+const documentoFilter = (_req: any, file: any, cb: any) => {
+  const allowed = ['.jpg', '.jpeg', '.png', '.pdf'];
+  const ext = extname(file.originalname).toLowerCase();
+  if (!allowed.includes(ext)) {
+    cb(new Error('Solo se permiten archivos JPG, PNG o PDF'), false);
+    return;
+  }
+  cb(null, true);
+};
+
+const registrarDocumentosInterceptor = FileFieldsInterceptor(
+  [
+    { name: 'matricula', maxCount: 1 },
+    { name: 'habilitacion', maxCount: 1 },
+  ],
+  {
+    storage: diskStorage({
+      destination: (_req, file, cb) => {
+        const dir = file.fieldname === 'matricula' ? MATRICULAS_DIR : HABILITACIONES_DIR;
+        cb(null, dir);
+      },
+      filename: (_req, file, cb) => {
+        const uniqueName = `${randomUUID()}${extname(file.originalname)}`;
+        cb(null, uniqueName);
+      },
+    }),
+    fileFilter: documentoFilter,
+    limits: { fileSize: 5 * 1024 * 1024 },
   },
-  limits: { fileSize: 5 * 1024 * 1024 },
-});
+);
 
 @Controller('veterinarios')
 export class VeterinariosController {
   constructor(private readonly veterinariosService: VeterinariosService) {}
 
   @Post('registro')
-  @UseInterceptors(matriculaFileInterceptor)
+  @UseInterceptors(registrarDocumentosInterceptor)
   @HttpCode(HttpStatus.CREATED)
   registro(
     @Body() dto: RegisterVeterinarioDto,
-    @UploadedFile() file: UploadedDocumentFile,
+    @UploadedFiles() files: { matricula?: Express.Multer.File[]; habilitacion?: Express.Multer.File[] },
   ) {
-    return this.veterinariosService.registrarVeterinario(dto, file);
+    const matricula = files.matricula?.[0];
+    const habilitacion = files.habilitacion?.[0];
+    return this.veterinariosService.registrarVeterinario(dto, matricula, habilitacion);
   }
 
   @Get('mi-estado')

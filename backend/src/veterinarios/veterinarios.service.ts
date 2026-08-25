@@ -40,6 +40,10 @@ export class VeterinariosService {
     return `uploads/matriculas/${file.filename}`;
   }
 
+  private getRelativeHabilitacionUrl(file: UploadedDocumentFile): string {
+    return `uploads/habilitaciones/${file.filename}`;
+  }
+
   /**
    * Registro combinado para la web: crea la cuenta directamente con rol
    * veterinario y la solicitud de validación en un solo paso (en vez de
@@ -50,12 +54,20 @@ export class VeterinariosService {
    */
   async registrarVeterinario(
     dto: RegisterVeterinarioDto,
-    file: UploadedDocumentFile,
+    matriculaFile: UploadedDocumentFile | undefined,
+    habilitacionFile: UploadedDocumentFile | undefined,
   ): Promise<{ mensaje: string }> {
-    if (!file) {
+    if (!matriculaFile) {
       throw new BadRequestException({
         codigoEstado: 400,
         mensaje: 'La matrícula habilitante es obligatoria (imagen o PDF)',
+      });
+    }
+
+    if (!habilitacionFile) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje: 'El certificado de habilitación es obligatorio (imagen o PDF)',
       });
     }
 
@@ -93,7 +105,8 @@ export class VeterinariosService {
       numeroDocumento: dto.numeroDocumento,
       numeroMatricula: dto.numeroMatricula,
       provinciaMatricula: dto.provinciaMatricula,
-      matriculaUrl: this.getRelativeMatriculaUrl(file),
+      matriculaUrl: this.getRelativeMatriculaUrl(matriculaFile),
+      habilitacionUrl: this.getRelativeHabilitacionUrl(habilitacionFile),
       estadoValidacion: ValidationStatus.PENDIENTE,
     });
     await this.veterinariosRepository.save(veterinario);
@@ -178,6 +191,9 @@ export class VeterinariosService {
       numeroMatricula: veterinario.numeroMatricula,
       provinciaMatricula: veterinario.provinciaMatricula,
       matriculaUrl: this.getPublicUrl(veterinario.matriculaUrl),
+      habilitacionUrl: veterinario.habilitacionUrl
+        ? this.getPublicUrl(veterinario.habilitacionUrl)
+        : null,
       estadoValidacion: veterinario.estadoValidacion,
       motivoRechazo: veterinario.motivoRechazo,
       fechaSolicitud: veterinario.createdAt,

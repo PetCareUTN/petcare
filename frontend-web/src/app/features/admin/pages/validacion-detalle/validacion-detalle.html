@@ -67,6 +67,14 @@
             </a>
           </div>
         }
+
+        @if (sol.habilitacionUrl) {
+          <div class="detalle-archivo">
+            <a [href]="sol.habilitacionUrl" target="_blank" rel="noopener noreferrer">
+              Ver certificado de habilitación adjunta
+            </a>
+          </div>
+        }
       </div>
 
       @if (sol.estadoValidacion === 'PENDIENTE') {

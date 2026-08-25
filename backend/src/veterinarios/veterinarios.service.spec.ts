@@ -35,6 +35,11 @@ describe('VeterinariosService', () => {
     filename: 'test.pdf',
   } as Express.Multer.File;
 
+  const mockHabilitacionFile = {
+    path: 'C:\\uploads\\habilitaciones\\test.pdf',
+    filename: 'habilitacion-test.pdf',
+  } as Express.Multer.File;
+
   const registroDto: RegisterVeterinarioDto = {
     nombre: 'Clinica Norte',
     email: 'clinica@petcare.test',
@@ -116,7 +121,7 @@ describe('VeterinariosService', () => {
       repository.save.mockResolvedValue(veterinarioCreado);
       notificacionesService.crear.mockResolvedValue({});
 
-      const result = await service.registrarVeterinario(registroDto, mockFile);
+      const result = await service.registrarVeterinario(registroDto, mockFile, mockHabilitacionFile);
 
       expect(usersService.findByEmail).toHaveBeenCalledWith(registroDto.email);
       expect(rolesRepository.findOne).toHaveBeenCalledWith({
@@ -151,7 +156,7 @@ describe('VeterinariosService', () => {
 
     it('debería lanzar BadRequestException si no se envía archivo', async () => {
       await expect(
-        service.registrarVeterinario(registroDto, undefined as any),
+        service.registrarVeterinario(registroDto, undefined as any, undefined as any),
       ).rejects.toThrow(BadRequestException);
       expect(usersService.findByEmail).not.toHaveBeenCalled();
     });
@@ -160,7 +165,7 @@ describe('VeterinariosService', () => {
       usersService.findByEmail.mockResolvedValue({ idUsuario: 5 } as User);
 
       await expect(
-        service.registrarVeterinario(registroDto, mockFile),
+        service.registrarVeterinario(registroDto, mockFile, mockHabilitacionFile),
       ).rejects.toThrow(ConflictException);
       expect(usersService.create).not.toHaveBeenCalled();
     });
@@ -170,7 +175,7 @@ describe('VeterinariosService', () => {
       rolesRepository.findOne.mockResolvedValue(null);
 
       await expect(
-        service.registrarVeterinario(registroDto, mockFile),
+        service.registrarVeterinario(registroDto, mockFile, mockHabilitacionFile),
       ).rejects.toThrow('No se encontró el rol "veterinario"');
       expect(usersService.create).not.toHaveBeenCalled();
     });
