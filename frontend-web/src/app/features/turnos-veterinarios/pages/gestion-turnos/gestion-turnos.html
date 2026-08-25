@@ -2,10 +2,29 @@
   <section class="appointments-panel">
     <header class="appointments-header">
       <div>
-        <h1>Turnos veterinarios</h1>
-        <p>Gestioná las solicitudes recibidas para la veterinaria.</p>
+        <h1>Turnos</h1>
+        <p>Gestioná las solicitudes de turnos recibidas.</p>
       </div>
     </header>
+
+    <nav class="vista-tabs" aria-label="Tipo de turno">
+      <button type="button" [class.active]="vista() === 'veterinaria'" (click)="setVista('veterinaria')">
+        Veterinaria
+      </button>
+      <button type="button" [class.active]="vista() === 'servicios'" (click)="setVista('servicios')">
+        Mis servicios
+      </button>
+    </nav>
+
+    @if (successMessage()) {
+      <p class="banner banner-success">{{ successMessage() }}</p>
+    }
+
+    @if (errorMessage()) {
+      <p class="banner banner-error">{{ errorMessage() }}</p>
+    }
+
+    @if (vista() === 'veterinaria') {
 
     <nav class="status-tabs" aria-label="Estado de turnos">
       @for (estado of estados; track estado.value) {
@@ -18,14 +37,6 @@
         </button>
       }
     </nav>
-
-    @if (successMessage()) {
-      <p class="banner banner-success">{{ successMessage() }}</p>
-    }
-
-    @if (errorMessage()) {
-      <p class="banner banner-error">{{ errorMessage() }}</p>
-    }
 
     @if (isLoading()) {
       <p class="status-text">Cargando turnos...</p>
@@ -109,6 +120,103 @@
           </article>
         }
       </div>
+    }
+
+    } @else {
+
+    <nav class="status-tabs" aria-label="Estado de turnos de servicios">
+      @for (estado of estadosServicios; track estado.value) {
+        <button
+          type="button"
+          [class.active]="filtroEstadoServicio() === estado.value"
+          (click)="setFiltroEstadoServicio(estado.value)"
+        >
+          {{ estado.label }}
+        </button>
+      }
+    </nav>
+
+    @if (isLoadingServicios()) {
+      <p class="status-text">Cargando turnos...</p>
+    } @else if (!hasTurnosServicios()) {
+      <p class="empty-state">
+        No hay turnos {{ estadoServicioLabel(filtroEstadoServicio()).toLowerCase() }}.
+      </p>
+    } @else {
+      <div class="appointments-list">
+        @for (turno of turnosServicios(); track turno.idTurno) {
+          <article class="appointment-card">
+            <div class="appointment-main">
+              <div>
+                <p class="appointment-date">
+                  {{ formatDate(turno.fecha) }} · {{ formatTime(turno.horaInicio) }} a
+                  {{ formatTime(turno.horaFin) }}
+                </p>
+                <h2>{{ turno.nombreMascota }} · {{ categoriaLabel(turno.categoria) }}</h2>
+                <p class="appointment-owner">
+                  {{ turno.nombreDuenio }} · {{ turno.emailDuenio }}
+                </p>
+                @if (turno.telefonoDuenio) {
+                  <p class="appointment-owner">Tel. {{ turno.telefonoDuenio }}</p>
+                }
+              </div>
+              <span class="status-badge" [class]="turno.estado">
+                {{ estadoServicioLabel(turno.estado) }}
+              </span>
+            </div>
+
+            @if (turno.notas) {
+              <p class="appointment-reason">{{ turno.notas }}</p>
+            }
+
+            @if (turno.motivoCancelacion) {
+              <p class="appointment-rejection">
+                Cancelado por {{ turno.canceladoPor }}: {{ turno.motivoCancelacion }}
+              </p>
+            }
+
+            @if (turno.estado === 'confirmado') {
+              <div class="appointment-actions">
+                <button
+                  type="button"
+                  class="btn-danger"
+                  [disabled]="processingTurnoServicioId() === turno.idTurno"
+                  (click)="startCancelacion(turno)"
+                >
+                  Cancelar
+                </button>
+              </div>
+            }
+
+            @if (cancelTurnoServicioId() === turno.idTurno) {
+              <div class="reject-box">
+                <label [for]="'motivo-servicio-' + turno.idTurno">Motivo de cancelación (opcional)</label>
+                <textarea
+                  [id]="'motivo-servicio-' + turno.idTurno"
+                  rows="3"
+                  [ngModel]="motivoCancelacion()"
+                  (ngModelChange)="motivoCancelacion.set($event)"
+                ></textarea>
+                <div class="reject-actions">
+                  <button
+                    type="button"
+                    class="btn-danger"
+                    [disabled]="processingTurnoServicioId() === turno.idTurno"
+                    (click)="cancelarTurnoServicio(turno)"
+                  >
+                    Confirmar cancelación
+                  </button>
+                  <button type="button" class="btn-secondary" (click)="cancelCancelacion()">
+                    Volver
+                  </button>
+                </div>
+              </div>
+            }
+          </article>
+        }
+      </div>
+    }
+
     }
   </section>
 </main>

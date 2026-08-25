@@ -67,11 +67,17 @@ import com.petcare.app.features.servicios.data.remote.UpdateServicioRequest
 import com.petcare.app.features.servicios.domain.ServiciosController
 import com.petcare.app.features.servicios.ui.ServicioFormScreen
 import com.petcare.app.features.servicios.ui.ServiciosListScreen
+import com.petcare.app.features.servicios.ui.SolicitudesServiciosRecibidasScreen
 import com.petcare.app.features.turnos.data.remote.CreateTurnoRequest
+import com.petcare.app.features.turnos.data.remote.CreateTurnoServicioRequest
 import com.petcare.app.features.turnos.data.remote.DisponibilidadTurnoResponse
+import com.petcare.app.features.turnos.data.remote.MiReservaServicioResponse
 import com.petcare.app.features.turnos.data.remote.MiTurnoResponse
+import com.petcare.app.features.turnos.data.remote.ReservaServicioRecibidaResponse
 import com.petcare.app.features.turnos.data.remote.VeterinariaResponse
+import com.petcare.app.features.turnos.domain.TurnoUnificado
 import com.petcare.app.features.turnos.domain.TurnosController
+import com.petcare.app.features.turnos.domain.TurnosServiciosController
 import com.petcare.app.features.turnos.ui.MisTurnosScreen
 import com.petcare.app.features.turnos.ui.SolicitarTurnoScreen
 import com.petcare.app.ui.theme.PetCareTheme
@@ -151,6 +157,11 @@ class MainActivity : ComponentActivity() {
                 val turnosController = remember {
                     TurnosController(
                         turnosApi = RetrofitClient.turnosApi(sessionStore)
+                    )
+                }
+                val turnosServiciosController = remember {
+                    TurnosServiciosController(
+                        turnosServiciosApi = RetrofitClient.turnosServiciosApi(sessionStore)
                     )
                 }
                 var isLoading by rememberSaveable {
@@ -420,6 +431,33 @@ class MainActivity : ComponentActivity() {
                 var misTurnos by remember {
                     mutableStateOf<List<MiTurnoResponse>>(emptyList())
                 }
+                var serviciosTurno by remember {
+                    mutableStateOf<List<ServicioResponse>>(emptyList())
+                }
+                var isLoadingServiciosTurno by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var misReservasServicios by remember {
+                    mutableStateOf<List<MiReservaServicioResponse>>(emptyList())
+                }
+                var cancelandoTurnoServicioId by rememberSaveable {
+                    mutableStateOf<Int?>(null)
+                }
+                var isViewingSolicitudesServicios by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isLoadingSolicitudesServicios by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var solicitudesServiciosError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var solicitudesServicios by remember {
+                    mutableStateOf<List<ReservaServicioRecibidaResponse>>(emptyList())
+                }
+                var procesandoSolicitudServicioId by rememberSaveable {
+                    mutableStateOf<Int?>(null)
+                }
 
                 fun logout() {
                     sessionController.logout()
@@ -488,6 +526,15 @@ class MainActivity : ComponentActivity() {
                     isLoadingMisTurnos = false
                     misTurnosError = null
                     misTurnos = emptyList()
+                    serviciosTurno = emptyList()
+                    isLoadingServiciosTurno = false
+                    misReservasServicios = emptyList()
+                    cancelandoTurnoServicioId = null
+                    isViewingSolicitudesServicios = false
+                    isLoadingSolicitudesServicios = false
+                    solicitudesServiciosError = null
+                    solicitudesServicios = emptyList()
+                    procesandoSolicitudServicioId = null
                 }
 
                 fun loadPets() {
@@ -715,12 +762,13 @@ class MainActivity : ComponentActivity() {
                     misTurnosError = null
 
                     lifecycleScope.launch {
+                        var sesionExpirada = false
+
                         try {
                             misTurnos = turnosController.getMisTurnos()
                         } catch (exception: HttpException) {
                             if (exception.code() == 401) {
-                                logout()
-                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                sesionExpirada = true
                             } else {
                                 misTurnosError = "No se pudieron cargar tus turnos"
                             }
@@ -728,8 +776,80 @@ class MainActivity : ComponentActivity() {
                             misTurnosError = "No se pudo conectar con el servidor"
                         } catch (exception: Exception) {
                             misTurnosError = "Ocurrio un error inesperado"
+                        }
+
+                        if (!sesionExpirada) {
+                            try {
+                                misReservasServicios = turnosServiciosController.getMisReservas()
+                            } catch (exception: HttpException) {
+                                if (exception.code() == 401) {
+                                    sesionExpirada = true
+                                } else if (misTurnosError == null) {
+                                    misTurnosError = "No se pudieron cargar tus turnos"
+                                }
+                            } catch (exception: IOException) {
+                                if (misTurnosError == null) {
+                                    misTurnosError = "No se pudo conectar con el servidor"
+                                }
+                            } catch (exception: Exception) {
+                                if (misTurnosError == null) {
+                                    misTurnosError = "Ocurrio un error inesperado"
+                                }
+                            }
+                        }
+
+                        if (sesionExpirada) {
+                            logout()
+                            serverError = "La sesion expiro. Inicia sesion nuevamente"
+                        }
+
+                        isLoadingMisTurnos = false
+                    }
+                }
+
+                fun loadServiciosTurno(categoria: String) {
+                    isLoadingServiciosTurno = true
+
+                    lifecycleScope.launch {
+                        try {
+                            serviciosTurno = serviciosController.getServicios(categoria)
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                turnoError = "No se pudieron cargar los prestadores"
+                            }
+                        } catch (exception: IOException) {
+                            turnoError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            turnoError = "Ocurrio un error inesperado"
                         } finally {
-                            isLoadingMisTurnos = false
+                            isLoadingServiciosTurno = false
+                        }
+                    }
+                }
+
+                fun loadSolicitudesServicios() {
+                    isLoadingSolicitudesServicios = true
+                    solicitudesServiciosError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            solicitudesServicios = turnosServiciosController.getRecibidas()
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                solicitudesServiciosError = "No se pudieron cargar las solicitudes recibidas"
+                            }
+                        } catch (exception: IOException) {
+                            solicitudesServiciosError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            solicitudesServiciosError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingSolicitudesServicios = false
                         }
                     }
                 }
@@ -1224,6 +1344,48 @@ class MainActivity : ComponentActivity() {
                                     deletingServicioId = null
                                 }
                             }
+                        },
+                        onSolicitudesRecibidasClick = {
+                            isViewingServicios = false
+                            solicitudesServiciosError = null
+                            isViewingSolicitudesServicios = true
+                            loadSolicitudesServicios()
+                        }
+                    )
+                } else if (loggedUserName != null && isViewingSolicitudesServicios) {
+                    SolicitudesServiciosRecibidasScreen(
+                        isLoading = isLoadingSolicitudesServicios,
+                        errorMessage = solicitudesServiciosError,
+                        turnos = solicitudesServicios,
+                        procesandoId = procesandoSolicitudServicioId,
+                        onBack = {
+                            isViewingSolicitudesServicios = false
+                            solicitudesServiciosError = null
+                        },
+                        onRetry = { loadSolicitudesServicios() },
+                        onCancelar = { turno, motivo ->
+                            procesandoSolicitudServicioId = turno.idTurno
+                            solicitudesServiciosError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    turnosServiciosController.cancelar(turno.idTurno, motivo)
+                                    solicitudesServicios = turnosServiciosController.getRecibidas()
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        solicitudesServiciosError = "No se pudo cancelar el turno"
+                                    }
+                                } catch (exception: IOException) {
+                                    solicitudesServiciosError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    solicitudesServiciosError = "Ocurrio un error inesperado"
+                                } finally {
+                                    procesandoSolicitudServicioId = null
+                                }
+                            }
                         }
                     )
                 } else if (loggedUserName != null && isChangingEmail) {
@@ -1492,7 +1654,9 @@ class MainActivity : ComponentActivity() {
                     MisTurnosScreen(
                         isLoading = isLoadingMisTurnos,
                         errorMessage = misTurnosError,
-                        turnos = misTurnos,
+                        turnos = misTurnos.map { TurnoUnificado.fromVeterinario(it) } +
+                            misReservasServicios.map { TurnoUnificado.fromServicio(it) },
+                        cancelandoId = cancelandoTurnoServicioId,
                         onRetry = { loadMisTurnos() },
                         onNavigateHome = {
                             isViewingMisTurnos = false
@@ -1512,6 +1676,30 @@ class MainActivity : ComponentActivity() {
                             adopcionesListError = null
                             isViewingAdopciones = true
                             loadAdopciones()
+                        },
+                        onCancelar = { turno, motivo ->
+                            cancelandoTurnoServicioId = turno.idTurno
+                            misTurnosError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    turnosServiciosController.cancelar(turno.idTurno, motivo)
+                                    misReservasServicios = turnosServiciosController.getMisReservas()
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        misTurnosError = "No se pudo cancelar el turno"
+                                    }
+                                } catch (exception: IOException) {
+                                    misTurnosError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    misTurnosError = "Ocurrio un error inesperado"
+                                } finally {
+                                    cancelandoTurnoServicioId = null
+                                }
+                            }
                         }
                     )
                 } else if (loggedUserName != null && isRequestingTurno) {
@@ -1519,8 +1707,10 @@ class MainActivity : ComponentActivity() {
                         pets = pets,
                         veterinarias = veterinariasTurno,
                         isLoadingVeterinarias = isLoadingVeterinariasTurno,
-                        disponibilidades = disponibilidadesTurno,
-                        isLoadingDisponibilidades = isLoadingDisponibilidadesTurno,
+                        disponibilidadesVeterinaria = disponibilidadesTurno,
+                        isLoadingDisponibilidadesVeterinaria = isLoadingDisponibilidadesTurno,
+                        serviciosPorCategoria = serviciosTurno,
+                        isLoadingServiciosPorCategoria = isLoadingServiciosTurno,
                         isSaving = isSavingTurno,
                         errorMessage = turnoError,
                         successMessage = turnoSuccess,
@@ -1528,7 +1718,11 @@ class MainActivity : ComponentActivity() {
                             turnoError = null
                             loadDisponibilidadesTurno(idVeterinario)
                         },
-                        onSolicitar = { idMascota, idVeterinario, fecha, hora, motivoConsulta ->
+                        onSelectCategoria = { categoria ->
+                            turnoError = null
+                            loadServiciosTurno(categoria)
+                        },
+                        onSolicitarVeterinario = { idMascota, idVeterinario, fecha, hora, motivoConsulta ->
                             isSavingTurno = true
                             turnoError = null
 
@@ -1554,6 +1748,43 @@ class MainActivity : ComponentActivity() {
                                         }
                                         403 -> "No podés solicitar un turno para una mascota que no es tuya"
                                         404 -> "No se encontró la mascota o la veterinaria"
+                                        else -> "El horario solicitado no está disponible"
+                                    }
+                                } catch (exception: IOException) {
+                                    turnoError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    turnoError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isSavingTurno = false
+                                }
+                            }
+                        },
+                        onSolicitarServicio = { idMascota, idServicio, fecha, horaInicio, notas ->
+                            isSavingTurno = true
+                            turnoError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    turnosServiciosController.solicitar(
+                                        CreateTurnoServicioRequest(
+                                            idMascota = idMascota,
+                                            idServicio = idServicio,
+                                            fecha = fecha,
+                                            horaInicio = horaInicio,
+                                            notas = notas
+                                        )
+                                    )
+                                    turnoSuccess = "Tu turno quedó confirmado"
+                                } catch (exception: HttpException) {
+                                    turnoError = when (exception.code()) {
+                                        401 -> {
+                                            logout()
+                                            serverError =
+                                                "La sesion expiro. Inicia sesion nuevamente"
+                                            null
+                                        }
+                                        403 -> "No podés solicitar un turno para una mascota que no es tuya"
+                                        404 -> "No se encontró la mascota o el servicio"
                                         else -> "El horario solicitado no está disponible"
                                     }
                                 } catch (exception: IOException) {

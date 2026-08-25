@@ -32,6 +32,8 @@ import { AuditoriaUsuario } from './admin/entities/auditoria-usuario.entity';
 import { AdminModule } from './admin/admin.module';
 import { SolicitudAdopcion } from './solicitudes-adopcion/entities/solicitud-adopcion.entity';
 import { SolicitudesAdopcionModule } from './solicitudes-adopcion/solicitudes-adopcion.module';
+import { TurnoServicio } from './turnos-servicios/entities/turno-servicio.entity';
+import { TurnosServiciosModule } from './turnos-servicios/turnos-servicios.module';
 
 dotenv.config();
 
@@ -60,6 +62,7 @@ dotenv.config();
         TurnoVeterinario,
         AuditoriaUsuario,
         SolicitudAdopcion,
+        TurnoServicio,
       ],
       synchronize: false,
     }),
@@ -77,6 +80,7 @@ dotenv.config();
     TurnosVeterinariosModule,
     AdminModule,
     SolicitudesAdopcionModule,
+    TurnosServiciosModule,
   ],
   controllers: [AppController],
   providers: [AppService],

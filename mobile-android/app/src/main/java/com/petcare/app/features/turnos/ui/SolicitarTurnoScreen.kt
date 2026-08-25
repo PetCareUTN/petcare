@@ -39,6 +39,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.petcare.app.features.pets.data.remote.PetResponse
+import com.petcare.app.features.servicios.data.remote.ServicioResponse
+import com.petcare.app.features.servicios.ui.categoriaLabel
 import com.petcare.app.features.turnos.data.remote.DisponibilidadTurnoResponse
 import com.petcare.app.features.turnos.data.remote.VeterinariaResponse
 import com.petcare.app.ui.theme.PetCareLine
@@ -51,31 +53,70 @@ import java.util.Calendar
 import java.util.Locale
 import java.util.TimeZone
 
-private const val SLOT_MINUTES = 30
 private val DIAS_SEMANA = listOf(
     "domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"
 )
+
+private enum class TipoTurno { VETERINARIA, PASEADOR, GUARDERIA, PELUQUERIA }
+
+private fun TipoTurno.label(): String = when (this) {
+    TipoTurno.VETERINARIA -> "Veterinaria"
+    TipoTurno.PASEADOR -> categoriaLabel("paseador")
+    TipoTurno.GUARDERIA -> categoriaLabel("guarderia")
+    TipoTurno.PELUQUERIA -> categoriaLabel("peluqueria")
+}
+
+private fun TipoTurno.categoria(): String? = when (this) {
+    TipoTurno.VETERINARIA -> null
+    TipoTurno.PASEADOR -> "paseador"
+    TipoTurno.GUARDERIA -> "guarderia"
+    TipoTurno.PELUQUERIA -> "peluqueria"
+}
+
+private fun TipoTurno.slotMinutos(): Int = if (this == TipoTurno.GUARDERIA) 60 else 30
+
+private data class RangoDisponible(val diaSemana: String, val horaInicio: String, val horaFin: String)
 
 @Composable
 fun SolicitarTurnoScreen(
     pets: List<PetResponse>,
     veterinarias: List<VeterinariaResponse>,
     isLoadingVeterinarias: Boolean,
-    disponibilidades: List<DisponibilidadTurnoResponse>,
-    isLoadingDisponibilidades: Boolean,
+    disponibilidadesVeterinaria: List<DisponibilidadTurnoResponse>,
+    isLoadingDisponibilidadesVeterinaria: Boolean,
+    serviciosPorCategoria: List<ServicioResponse>,
+    isLoadingServiciosPorCategoria: Boolean,
     isSaving: Boolean,
     errorMessage: String?,
     successMessage: String?,
     onSelectVeterinaria: (idVeterinario: Int) -> Unit,
-    onSolicitar: (idMascota: Int, idVeterinario: Int, fecha: String, hora: String, motivoConsulta: String?) -> Unit,
+    onSelectCategoria: (categoria: String) -> Unit,
+    onSolicitarVeterinario: (
+        idMascota: Int,
+        idVeterinario: Int,
+        fecha: String,
+        hora: String,
+        motivoConsulta: String?,
+    ) -> Unit,
+    onSolicitarServicio: (
+        idMascota: Int,
+        idServicio: Int,
+        fecha: String,
+        horaInicio: String,
+        notas: String?,
+    ) -> Unit,
     onBack: () -> Unit
 ) {
+    var tipo by rememberSaveable { mutableStateOf<TipoTurno?>(null) }
     var selectedPetId by rememberSaveable { mutableStateOf<Int?>(null) }
     var selectedVeterinariaId by rememberSaveable { mutableStateOf<Int?>(null) }
+    var selectedServicioId by rememberSaveable { mutableStateOf<Int?>(null) }
     var selectedFecha by rememberSaveable { mutableStateOf("") }
     var selectedHora by rememberSaveable { mutableStateOf<String?>(null) }
-    var motivoConsulta by rememberSaveable { mutableStateOf("") }
+    var notas by rememberSaveable { mutableStateOf("") }
     var formError by rememberSaveable { mutableStateOf<String?>(null) }
+
+    val selectedServicio = serviciosPorCategoria.find { it.id == selectedServicioId }
 
     Column(
         modifier = Modifier
@@ -88,11 +129,11 @@ fun SolicitarTurnoScreen(
         horizontalAlignment = Alignment.Start
     ) {
         Text(
-            text = "Solicitar turno veterinario",
+            text = "Solicitar turno",
             style = MaterialTheme.typography.headlineMedium
         )
         Text(
-            text = "Elegí tu mascota, la veterinaria y un horario disponible.",
+            text = "Elegí el tipo de turno, tu mascota y un horario disponible.",
             color = PetCareMuted,
             style = MaterialTheme.typography.bodyMedium
         )
@@ -128,6 +169,29 @@ fun SolicitarTurnoScreen(
         if (pets.isEmpty()) {
             EmptyPetsCard()
         } else {
+            Text(text = "Tipo de turno", style = MaterialTheme.typography.titleSmall)
+            Spacer(modifier = Modifier.height(8.dp))
+            TipoTurno.entries.forEach { opcion ->
+                SelectableOptionCard(
+                    title = opcion.label(),
+                    subtitle = "",
+                    selected = tipo == opcion,
+                    onClick = {
+                        if (tipo != opcion) {
+                            tipo = opcion
+                            selectedVeterinariaId = null
+                            selectedServicioId = null
+                            selectedFecha = ""
+                            selectedHora = null
+                            formError = null
+                            opcion.categoria()?.let { onSelectCategoria(it) }
+                        }
+                    }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
             Text(text = "Mascota", style = MaterialTheme.typography.titleSmall)
             Spacer(modifier = Modifier.height(8.dp))
             pets.forEach { pet ->
@@ -143,46 +207,93 @@ fun SolicitarTurnoScreen(
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(text = "Veterinaria", style = MaterialTheme.typography.titleSmall)
-            Spacer(modifier = Modifier.height(8.dp))
+            if (tipo == TipoTurno.VETERINARIA) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(text = "Veterinaria", style = MaterialTheme.typography.titleSmall)
+                Spacer(modifier = Modifier.height(8.dp))
 
-            when {
-                isLoadingVeterinarias -> {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        CircularProgressIndicator()
+                when {
+                    isLoadingVeterinarias -> {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                    veterinarias.isEmpty() -> {
+                        Text(
+                            text = "No hay veterinarias disponibles por el momento",
+                            color = PetCareMuted,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    else -> {
+                        veterinarias.forEach { veterinaria ->
+                            SelectableOptionCard(
+                                title = veterinaria.nombre,
+                                subtitle = veterinaria.direccion ?: "",
+                                selected = veterinaria.idVeterinario == selectedVeterinariaId,
+                                onClick = {
+                                    selectedVeterinariaId = veterinaria.idVeterinario
+                                    selectedFecha = ""
+                                    selectedHora = null
+                                    formError = null
+                                    onSelectVeterinaria(veterinaria.idVeterinario)
+                                }
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
                     }
                 }
-                veterinarias.isEmpty() -> {
-                    Text(
-                        text = "No hay veterinarias disponibles por el momento",
-                        color = PetCareMuted,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-                else -> {
-                    veterinarias.forEach { veterinaria ->
-                        SelectableOptionCard(
-                            title = veterinaria.nombre,
-                            subtitle = veterinaria.direccion ?: "",
-                            selected = veterinaria.idVeterinario == selectedVeterinariaId,
-                            onClick = {
-                                selectedVeterinariaId = veterinaria.idVeterinario
-                                selectedFecha = ""
-                                selectedHora = null
-                                formError = null
-                                onSelectVeterinaria(veterinaria.idVeterinario)
-                            }
+            } else if (tipo != null) {
+                val categoriaTexto = tipo!!.label()
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(text = "Prestador de $categoriaTexto", style = MaterialTheme.typography.titleSmall)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                when {
+                    isLoadingServiciosPorCategoria -> {
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                    serviciosPorCategoria.isEmpty() -> {
+                        Text(
+                            text = "No hay prestadores de $categoriaTexto disponibles por el momento",
+                            color = PetCareMuted,
+                            style = MaterialTheme.typography.bodyMedium
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                    else -> {
+                        serviciosPorCategoria.forEach { servicio ->
+                            SelectableOptionCard(
+                                title = servicio.nombrePrestador,
+                                subtitle = servicio.descripcion ?: "",
+                                selected = servicio.id == selectedServicioId,
+                                onClick = {
+                                    selectedServicioId = servicio.id
+                                    selectedFecha = ""
+                                    selectedHora = null
+                                    formError = null
+                                }
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
                     }
                 }
             }
 
-            if (selectedVeterinariaId != null) {
+            val proveedorElegido = when (tipo) {
+                TipoTurno.VETERINARIA -> selectedVeterinariaId != null
+                null -> false
+                else -> selectedServicioId != null
+            }
+
+            if (proveedorElegido) {
                 Spacer(modifier = Modifier.height(12.dp))
                 TurnoDatePickerField(
                     selectedDate = selectedFecha,
@@ -199,7 +310,10 @@ fun SolicitarTurnoScreen(
                 Text(text = "Horario disponible", style = MaterialTheme.typography.titleSmall)
                 Spacer(modifier = Modifier.height(8.dp))
 
-                if (isLoadingDisponibilidades) {
+                val cargandoDisponibilidad =
+                    tipo == TipoTurno.VETERINARIA && isLoadingDisponibilidadesVeterinaria
+
+                if (cargandoDisponibilidad) {
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
@@ -207,10 +321,21 @@ fun SolicitarTurnoScreen(
                         CircularProgressIndicator()
                     }
                 } else {
-                    val slots = generarSlots(disponibilidades, selectedFecha)
+                    val rangos = if (tipo == TipoTurno.VETERINARIA) {
+                        disponibilidadesVeterinaria.map {
+                            RangoDisponible(it.diaSemana, it.horaInicio, it.horaFin)
+                        }
+                    } else {
+                        (selectedServicio?.disponibilidades ?: emptyList()).map {
+                            RangoDisponible(it.diaSemana, it.horaInicio, it.horaFin)
+                        }
+                    }
+                    val slotMinutos = tipo?.slotMinutos() ?: 30
+                    val slots = generarSlots(rangos, selectedFecha, slotMinutos)
+
                     if (slots.isEmpty()) {
                         Text(
-                            text = "La veterinaria no tiene horarios configurados para ese día",
+                            text = "No hay horarios configurados para ese día",
                             color = PetCareMuted,
                             style = MaterialTheme.typography.bodyMedium
                         )
@@ -243,11 +368,14 @@ fun SolicitarTurnoScreen(
 
             if (selectedHora != null) {
                 Spacer(modifier = Modifier.height(16.dp))
-                Text(text = "Motivo de consulta (opcional)", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    text = if (tipo == TipoTurno.VETERINARIA) "Motivo de consulta (opcional)" else "Notas para el prestador (opcional)",
+                    style = MaterialTheme.typography.titleSmall
+                )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
-                    value = motivoConsulta,
-                    onValueChange = { motivoConsulta = it },
+                    value = notas,
+                    onValueChange = { notas = it },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = { Text("Ej: control anual, vacunación...") }
                 )
@@ -275,19 +403,29 @@ fun SolicitarTurnoScreen(
             Button(
                 onClick = {
                     val petId = selectedPetId
-                    val veterinariaId = selectedVeterinariaId
                     val hora = selectedHora
                     when {
+                        tipo == null -> formError = "Elegí el tipo de turno"
                         petId == null -> formError = "Elegí una mascota"
-                        veterinariaId == null -> formError = "Elegí una veterinaria"
+                        tipo == TipoTurno.VETERINARIA && selectedVeterinariaId == null ->
+                            formError = "Elegí una veterinaria"
+                        tipo != TipoTurno.VETERINARIA && selectedServicioId == null ->
+                            formError = "Elegí un prestador"
                         selectedFecha.isBlank() -> formError = "Elegí una fecha"
                         hora == null -> formError = "Elegí un horario"
-                        else -> onSolicitar(
+                        tipo == TipoTurno.VETERINARIA -> onSolicitarVeterinario(
                             petId,
-                            veterinariaId,
+                            selectedVeterinariaId!!,
                             selectedFecha,
                             hora,
-                            motivoConsulta.trim().ifBlank { null }
+                            notas.trim().ifBlank { null }
+                        )
+                        else -> onSolicitarServicio(
+                            petId,
+                            selectedServicioId!!,
+                            selectedFecha,
+                            hora,
+                            notas.trim().ifBlank { null }
                         )
                     }
                 },
@@ -401,7 +539,7 @@ private fun EmptyPetsCard() {
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = "Registrá una mascota para poder solicitar un turno veterinario.",
+                text = "Registrá una mascota para poder solicitar un turno.",
                 color = PetCareMuted,
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -482,8 +620,9 @@ private fun diaSemanaDe(fecha: String): String? {
 }
 
 private fun generarSlots(
-    disponibilidades: List<DisponibilidadTurnoResponse>,
-    fecha: String
+    disponibilidades: List<RangoDisponible>,
+    fecha: String,
+    slotMinutos: Int
 ): List<String> {
     val dia = diaSemanaDe(fecha) ?: return emptyList()
     return disponibilidades
@@ -491,8 +630,8 @@ private fun generarSlots(
         .flatMap { disponibilidad ->
             val inicio = horaToMinutos(disponibilidad.horaInicio)
             val fin = horaToMinutos(disponibilidad.horaFin)
-            generateSequence(inicio) { it + SLOT_MINUTES }
-                .takeWhile { it + SLOT_MINUTES <= fin }
+            generateSequence(inicio) { it + slotMinutos }
+                .takeWhile { it + slotMinutos <= fin }
                 .map { minutosToHora(it) }
         }
         .sorted()
