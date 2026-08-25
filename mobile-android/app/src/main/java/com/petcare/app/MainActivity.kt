@@ -1346,6 +1346,7 @@ class MainActivity : ComponentActivity() {
                             }
                         },
                         onSolicitudesRecibidasClick = {
+                            isViewingServicios = false
                             solicitudesServiciosError = null
                             isViewingSolicitudesServicios = true
                             loadSolicitudesServicios()
