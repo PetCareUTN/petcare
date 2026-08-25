@@ -11,9 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,33 +33,30 @@ import com.petcare.app.features.adopciones.data.remote.PublicacionAdopcionRespon
 import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMuted
 import com.petcare.app.ui.theme.PetCareSurfaceSoft
-import com.petcare.app.ui.theme.PetCareTeal
 import com.petcare.app.ui.theme.PetCareTealDark
 import com.petcare.app.ui.theme.PetCareTealSoft
 
 @Composable
-fun AdopcionDetalleScreen(
+fun MisPublicacionesAdopcionScreen(
     isLoading: Boolean,
     errorMessage: String?,
-    publicacion: PublicacionAdopcionResponse?,
-    isRequesting: Boolean,
-    requestError: String?,
-    requestSuccess: String?,
+    publicaciones: List<PublicacionAdopcionResponse>,
     onBack: () -> Unit,
-    onRetry: () -> Unit,
-    onSolicitarAdopcion: () -> Unit
+    onRetry: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .systemBarsPadding()
-            .verticalScroll(rememberScrollState())
             .padding(20.dp),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.Start
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             IconButton(onClick = onBack) {
                 Icon(
                     painter = painterResource(R.drawable.ic_arrow_back),
@@ -68,7 +64,14 @@ fun AdopcionDetalleScreen(
                     tint = PetCareTealDark
                 )
             }
-            Text(text = "Detalle de la publicación", style = MaterialTheme.typography.headlineSmall)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = "Mis publicaciones", style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    text = "Mascotas que publicaste en adopción",
+                    color = PetCareMuted,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(18.dp))
@@ -112,9 +115,7 @@ fun AdopcionDetalleScreen(
                 }
             }
 
-            publicacion != null -> {
-                val mascota = publicacion.mascota
-
+            publicaciones.isEmpty() -> {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -123,87 +124,25 @@ fun AdopcionDetalleScreen(
                 ) {
                     Column(
                         modifier = Modifier.padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Text(
-                            text = mascota.nombre,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.SemiBold
-                        )
-
-                        Surface(
-                            color = PetCareTealSoft,
-                            shape = MaterialTheme.shapes.large
-                        ) {
-                            Text(
-                                text = listOfNotNull(mascota.especie, mascota.raza).joinToString(" · "),
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                color = PetCareTealDark,
-                                style = MaterialTheme.typography.labelLarge
-                            )
-                        }
-
-                        DatoFila(etiqueta = "Sexo", valor = sexoLabel(mascota.sexo))
-                        mascota.fechaNacimiento?.let {
-                            DatoFila(etiqueta = "Fecha de nacimiento", valor = it)
-                        }
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Text(
-                            text = "Descripción",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold
+                            text = "Todavía no publicaste ninguna mascota",
+                            style = MaterialTheme.typography.titleMedium
                         )
                         Text(
-                            text = publicacion.descripcion,
+                            text = "Lo que publiques en adopción va a aparecer acá.",
                             color = PetCareMuted,
                             style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(18.dp))
-
-                if (requestSuccess != null) {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = PetCareTealSoft,
-                        shape = MaterialTheme.shapes.large
-                    ) {
-                        Text(
-                            text = requestSuccess,
-                            modifier = Modifier.padding(16.dp),
-                            color = PetCareTeal,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
-                } else {
-                    Button(
-                        onClick = onSolicitarAdopcion,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        enabled = !isRequesting,
-                        shape = MaterialTheme.shapes.large
-                    ) {
-                        if (isRequesting) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.height(22.dp),
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
-                        } else {
-                            Text("Solicitar adopción")
-                        }
-                    }
-
-                    if (requestError != null) {
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text(
-                            text = requestError,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+            else -> {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(publicaciones, key = { it.idPublicacion }) { publicacion ->
+                        MiPublicacionRow(publicacion = publicacion)
                     }
                 }
             }
@@ -212,18 +151,47 @@ fun AdopcionDetalleScreen(
 }
 
 @Composable
-private fun DatoFila(etiqueta: String, valor: String) {
-    Row(
+private fun MiPublicacionRow(publicacion: PublicacionAdopcionResponse) {
+    val mascota = publicacion.mascota
+    Card(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, PetCareLine),
+        shape = MaterialTheme.shapes.extraLarge
     ) {
-        Text(text = etiqueta, color = PetCareMuted, style = MaterialTheme.typography.bodyMedium)
-        Text(text = valor, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-    }
-}
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = mascota.nombre,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Surface(
+                    color = PetCareTealSoft,
+                    shape = MaterialTheme.shapes.large
+                ) {
+                    Text(
+                        text = listOfNotNull(mascota.especie, mascota.raza).joinToString(" · "),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        color = PetCareTealDark,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+            }
 
-private fun sexoLabel(sexo: String): String = when (sexo.lowercase()) {
-    "macho" -> "Macho"
-    "hembra" -> "Hembra"
-    else -> sexo
+            Text(
+                text = publicacion.descripcion,
+                color = PetCareMuted,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 3
+            )
+        }
+    }
 }

@@ -22,6 +22,9 @@ class AdopcionesController(
     suspend fun listar(): List<PublicacionAdopcionResponse> =
         adopcionesApi.listar()
 
+    suspend fun listarMias(): List<PublicacionAdopcionResponse> =
+        adopcionesApi.listarMias()
+
     suspend fun obtenerDetalle(idPublicacion: Int): PublicacionAdopcionResponse =
         adopcionesApi.obtenerDetalle(idPublicacion)
 }

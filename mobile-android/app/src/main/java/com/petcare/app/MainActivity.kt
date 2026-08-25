@@ -21,10 +21,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
 import com.petcare.app.features.adopciones.data.remote.PublicacionAdopcionResponse
+import com.petcare.app.features.adopciones.data.remote.SolicitudAdopcionResponse
 import com.petcare.app.features.adopciones.domain.AdopcionesController
+import com.petcare.app.features.adopciones.domain.SolicitudesAdopcionController
 import com.petcare.app.features.adopciones.ui.AdopcionDetalleScreen
 import com.petcare.app.features.adopciones.ui.AdopcionesListScreen
+import com.petcare.app.features.adopciones.ui.MisPublicacionesAdopcionScreen
 import com.petcare.app.features.adopciones.ui.PublicarAdopcionScreen
+import com.petcare.app.features.adopciones.ui.SolicitudesRecibidasScreen
 import com.petcare.app.features.auth.data.local.SessionManager
 import com.petcare.app.features.auth.data.remote.ForgotPasswordRequest
 import com.petcare.app.features.auth.data.remote.ResetPasswordRequest
@@ -132,6 +136,11 @@ class MainActivity : ComponentActivity() {
                 val adopcionesController = remember {
                     AdopcionesController(
                         adopcionesApi = RetrofitClient.adopcionesApi(sessionStore)
+                    )
+                }
+                val solicitudesAdopcionController = remember {
+                    SolicitudesAdopcionController(
+                        solicitudesAdopcionApi = RetrofitClient.solicitudesAdopcionApi(sessionStore)
                     )
                 }
                 val serviciosController = remember {
@@ -309,6 +318,42 @@ class MainActivity : ComponentActivity() {
                 var adopcionDetalleError by rememberSaveable {
                     mutableStateOf<String?>(null)
                 }
+                var isRequestingAdopcion by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var adopcionRequestError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var adopcionRequestSuccess by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var isViewingSolicitudesRecibidas by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isLoadingSolicitudesRecibidas by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var solicitudesRecibidasError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var solicitudesRecibidas by remember {
+                    mutableStateOf<List<SolicitudAdopcionResponse>>(emptyList())
+                }
+                var procesandoSolicitudId by rememberSaveable {
+                    mutableStateOf<Int?>(null)
+                }
+                var isViewingMisPublicaciones by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isLoadingMisPublicaciones by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var misPublicacionesError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var misPublicaciones by remember {
+                    mutableStateOf<List<PublicacionAdopcionResponse>>(emptyList())
+                }
                 var isViewingSettings by rememberSaveable {
                     mutableStateOf(false)
                 }
@@ -414,6 +459,18 @@ class MainActivity : ComponentActivity() {
                     selectedAdopcion = null
                     isLoadingAdopcionDetalle = false
                     adopcionDetalleError = null
+                    isRequestingAdopcion = false
+                    adopcionRequestError = null
+                    adopcionRequestSuccess = null
+                    isViewingSolicitudesRecibidas = false
+                    isLoadingSolicitudesRecibidas = false
+                    solicitudesRecibidasError = null
+                    solicitudesRecibidas = emptyList()
+                    procesandoSolicitudId = null
+                    isViewingMisPublicaciones = false
+                    isLoadingMisPublicaciones = false
+                    misPublicacionesError = null
+                    misPublicaciones = emptyList()
                     isViewingSettings = false
                     isViewingServicios = false
                     serviciosError = null
@@ -601,6 +658,54 @@ class MainActivity : ComponentActivity() {
                             adopcionDetalleError = "Ocurrio un error inesperado"
                         } finally {
                             isLoadingAdopcionDetalle = false
+                        }
+                    }
+                }
+
+                fun loadMisPublicaciones() {
+                    isLoadingMisPublicaciones = true
+                    misPublicacionesError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            misPublicaciones = adopcionesController.listarMias()
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                misPublicacionesError = "No se pudieron cargar tus publicaciones"
+                            }
+                        } catch (exception: IOException) {
+                            misPublicacionesError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            misPublicacionesError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingMisPublicaciones = false
+                        }
+                    }
+                }
+
+                fun loadSolicitudesRecibidas() {
+                    isLoadingSolicitudesRecibidas = true
+                    solicitudesRecibidasError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            solicitudesRecibidas = solicitudesAdopcionController.listarRecibidas()
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                solicitudesRecibidasError = "No se pudieron cargar las solicitudes recibidas"
+                            }
+                        } catch (exception: IOException) {
+                            solicitudesRecibidasError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            solicitudesRecibidasError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingSolicitudesRecibidas = false
                         }
                     }
                 }
@@ -834,14 +939,53 @@ class MainActivity : ComponentActivity() {
                         isLoading = isLoadingAdopcionDetalle,
                         errorMessage = adopcionDetalleError,
                         publicacion = selectedAdopcion,
+                        isRequesting = isRequestingAdopcion,
+                        requestError = adopcionRequestError,
+                        requestSuccess = adopcionRequestSuccess,
                         onBack = {
                             isViewingAdopcionDetalle = false
                             selectedAdopcionId = null
                             selectedAdopcion = null
                             adopcionDetalleError = null
+                            adopcionRequestError = null
+                            adopcionRequestSuccess = null
                         },
                         onRetry = {
                             selectedAdopcionId?.let { loadAdopcionDetalle(it) }
+                        },
+                        onSolicitarAdopcion = {
+                            val idPublicacion = selectedAdopcionId
+                            if (idPublicacion != null) {
+                                isRequestingAdopcion = true
+                                adopcionRequestError = null
+
+                                lifecycleScope.launch {
+                                    try {
+                                        solicitudesAdopcionController.solicitar(idPublicacion)
+                                        adopcionRequestSuccess =
+                                            "Tu solicitud fue enviada. El dueño va a revisarla."
+                                    } catch (exception: HttpException) {
+                                        adopcionRequestError = when (exception.code()) {
+                                            401 -> {
+                                                logout()
+                                                serverError =
+                                                    "La sesion expiro. Inicia sesion nuevamente"
+                                                null
+                                            }
+                                            403 -> "No podés solicitar la adopción de tu propia publicación"
+                                            404 -> "La publicación ya no está disponible"
+                                            409 -> "Ya tenés una solicitud pendiente para esta publicación"
+                                            else -> "No se pudo enviar la solicitud"
+                                        }
+                                    } catch (exception: IOException) {
+                                        adopcionRequestError = "No se pudo conectar con el servidor"
+                                    } catch (exception: Exception) {
+                                        adopcionRequestError = "Ocurrio un error inesperado"
+                                    } finally {
+                                        isRequestingAdopcion = false
+                                    }
+                                }
+                            }
                         }
                     )
                 } else if (loggedUserName != null && isPublishingAdopcion) {
@@ -894,6 +1038,85 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     )
+                } else if (loggedUserName != null && isViewingMisPublicaciones) {
+                    MisPublicacionesAdopcionScreen(
+                        isLoading = isLoadingMisPublicaciones,
+                        errorMessage = misPublicacionesError,
+                        publicaciones = misPublicaciones,
+                        onBack = {
+                            isViewingMisPublicaciones = false
+                            misPublicacionesError = null
+                        },
+                        onRetry = { loadMisPublicaciones() }
+                    )
+                } else if (loggedUserName != null && isViewingSolicitudesRecibidas) {
+                    SolicitudesRecibidasScreen(
+                        isLoading = isLoadingSolicitudesRecibidas,
+                        errorMessage = solicitudesRecibidasError,
+                        solicitudes = solicitudesRecibidas,
+                        processingId = procesandoSolicitudId,
+                        onBack = {
+                            isViewingSolicitudesRecibidas = false
+                            solicitudesRecibidasError = null
+                        },
+                        onRetry = { loadSolicitudesRecibidas() },
+                        onAceptar = { solicitud ->
+                            procesandoSolicitudId = solicitud.idSolicitud
+                            solicitudesRecibidasError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    val actualizada =
+                                        solicitudesAdopcionController.aceptar(solicitud.idSolicitud)
+                                    solicitudesRecibidas = solicitudesRecibidas.map {
+                                        if (it.idSolicitud == actualizada.idSolicitud) actualizada else it
+                                    }
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        solicitudesRecibidasError = "No se pudo aceptar la solicitud"
+                                    }
+                                } catch (exception: IOException) {
+                                    solicitudesRecibidasError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    solicitudesRecibidasError = "Ocurrio un error inesperado"
+                                } finally {
+                                    procesandoSolicitudId = null
+                                }
+                            }
+                        },
+                        onRechazar = { solicitud, motivo ->
+                            procesandoSolicitudId = solicitud.idSolicitud
+                            solicitudesRecibidasError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    val actualizada = solicitudesAdopcionController.rechazar(
+                                        solicitud.idSolicitud,
+                                        motivo,
+                                    )
+                                    solicitudesRecibidas = solicitudesRecibidas.map {
+                                        if (it.idSolicitud == actualizada.idSolicitud) actualizada else it
+                                    }
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        solicitudesRecibidasError = "No se pudo rechazar la solicitud"
+                                    }
+                                } catch (exception: IOException) {
+                                    solicitudesRecibidasError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    solicitudesRecibidasError = "Ocurrio un error inesperado"
+                                } finally {
+                                    procesandoSolicitudId = null
+                                }
+                            }
+                        }
+                    )
                 } else if (loggedUserName != null && isViewingAdopciones) {
                     AdopcionesListScreen(
                         isLoading = isLoadingAdopciones,
@@ -923,6 +1146,8 @@ class MainActivity : ComponentActivity() {
                             selectedAdopcionId = publicacion.idPublicacion
                             selectedAdopcion = null
                             adopcionDetalleError = null
+                            adopcionRequestError = null
+                            adopcionRequestSuccess = null
                             isViewingAdopcionDetalle = true
                             loadAdopcionDetalle(publicacion.idPublicacion)
                         },
@@ -930,6 +1155,16 @@ class MainActivity : ComponentActivity() {
                             adopcionError = null
                             adopcionSuccess = null
                             isPublishingAdopcion = true
+                        },
+                        onSolicitudesRecibidasClick = {
+                            solicitudesRecibidasError = null
+                            isViewingSolicitudesRecibidas = true
+                            loadSolicitudesRecibidas()
+                        },
+                        onMisPublicacionesClick = {
+                            misPublicacionesError = null
+                            isViewingMisPublicaciones = true
+                            loadMisPublicaciones()
                         }
                     )
                 } else if (loggedUserName != null && isViewingServicios) {

@@ -38,6 +38,9 @@ interface AdopcionesApi {
     @GET("adopciones")
     suspend fun listar(): List<PublicacionAdopcionResponse>
 
+    @GET("adopciones/mias")
+    suspend fun listarMias(): List<PublicacionAdopcionResponse>
+
     @GET("adopciones/{id}")
     suspend fun obtenerDetalle(
         @Path("id") idPublicacion: Int
