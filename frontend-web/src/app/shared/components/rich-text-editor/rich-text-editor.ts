@@ -28,11 +28,13 @@ import Quill from 'quill';
 })
 export class RichTextEditorComponent implements AfterViewInit, ControlValueAccessor, OnDestroy {
   readonly placeholder = input<string>('');
+  readonly maxLength = input<number>(250);
 
   @ViewChild('editorContainer', { static: true })
   private readonly editorContainer!: ElementRef<HTMLDivElement>;
 
   protected readonly isDisabled = signal(false);
+  protected readonly characterCount = signal(0);
 
   private quill: Quill | null = null;
   private pendingValue = '';
@@ -44,16 +46,22 @@ export class RichTextEditorComponent implements AfterViewInit, ControlValueAcces
       theme: 'snow',
       placeholder: this.placeholder(),
       modules: {
-        toolbar: [['bold', 'italic', 'underline'], [{ list: 'bullet' }, { list: 'ordered' }], ['clean']],
+        toolbar: [
+          ['bold', 'italic', 'underline'],
+          [{ list: 'bullet' }, { list: 'ordered' }],
+          ['clean'],
+        ],
       },
     });
 
     if (this.pendingValue) {
       this.quill.root.innerHTML = this.pendingValue;
     }
+    this.enforceMaxLength();
     this.quill.enable(!this.isDisabled());
 
     this.quill.on('text-change', () => {
+      this.enforceMaxLength();
       this.onChange(this.currentHtml());
     });
     this.quill.on('selection-change', (range) => {
@@ -68,6 +76,7 @@ export class RichTextEditorComponent implements AfterViewInit, ControlValueAcces
     if (this.quill) {
       if (this.currentHtml() !== html) {
         this.quill.root.innerHTML = html;
+        this.enforceMaxLength();
       }
     } else {
       this.pendingValue = html;
@@ -96,5 +105,18 @@ export class RichTextEditorComponent implements AfterViewInit, ControlValueAcces
       return '';
     }
     return this.quill.getText().trim() ? this.quill.root.innerHTML : '';
+  }
+
+  private enforceMaxLength(): void {
+    if (!this.quill) {
+      return;
+    }
+
+    const textLength = Math.max(0, this.quill.getLength() - 1);
+    const maxLength = this.maxLength();
+    if (textLength > maxLength) {
+      this.quill.deleteText(maxLength, textLength - maxLength, 'silent');
+    }
+    this.characterCount.set(Math.min(textLength, maxLength));
   }
 }

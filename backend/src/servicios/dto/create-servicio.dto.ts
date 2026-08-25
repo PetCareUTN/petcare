@@ -17,7 +17,7 @@ export class CreateServicioDto {
 
   @IsString()
   @IsOptional()
-  @MaxLength(1000)
+  @MaxLength(250)
   descripcion?: string;
 
   @IsArray()

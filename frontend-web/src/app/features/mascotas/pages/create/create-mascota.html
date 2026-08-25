@@ -58,6 +58,7 @@
             <input
               id="ownerDocument"
               type="text"
+              maxlength="20"
               inputmode="numeric"
               formControlName="documento"
               (input)="onOwnerSearchChanged()"
@@ -72,6 +73,7 @@
             <input
               id="ownerEmail"
               type="email"
+              maxlength="150"
               formControlName="email"
               (input)="onOwnerSearchChanged()"
             />
@@ -105,7 +107,7 @@
     <section class="form-grid">
       <div class="field">
         <label for="nombre">Nombre</label>
-        <input id="nombre" type="text" formControlName="nombre" />
+        <input id="nombre" type="text" maxlength="100" formControlName="nombre" />
         @if (form.controls.nombre.invalid && form.controls.nombre.touched) {
           <p class="field-error">El nombre es obligatorio.</p>
         }
@@ -145,6 +147,7 @@
           <input
             id="razaPersonalizada"
             type="text"
+            maxlength="80"
             formControlName="razaPersonalizada"
             placeholder="Ej: Border Collie"
           />

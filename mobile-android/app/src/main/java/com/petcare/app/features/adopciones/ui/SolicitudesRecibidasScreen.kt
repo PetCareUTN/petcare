@@ -299,7 +299,7 @@ private fun RechazarSolicitudDialog(
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
                     value = motivo,
-                    onValueChange = { motivo = it },
+                    onValueChange = { motivo = it.take(250) },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Motivo") },
                     singleLine = false

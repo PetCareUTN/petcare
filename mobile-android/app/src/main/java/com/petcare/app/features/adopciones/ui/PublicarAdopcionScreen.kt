@@ -135,7 +135,7 @@ fun PublicarAdopcionScreen(
             OutlinedTextField(
                 value = descripcion,
                 onValueChange = {
-                    descripcion = it
+                    descripcion = it.take(250)
                     formError = null
                 },
                 modifier = Modifier

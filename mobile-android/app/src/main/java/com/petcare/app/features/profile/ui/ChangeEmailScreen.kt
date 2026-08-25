@@ -83,7 +83,7 @@ fun ChangeEmailScreen(
             OutlinedTextField(
                 value = nuevoEmail,
                 onValueChange = {
-                    nuevoEmail = it
+                    nuevoEmail = it.take(150)
                     nuevoEmailError = null
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -128,7 +128,7 @@ fun ChangeEmailScreen(
             OutlinedTextField(
                 value = codigo,
                 onValueChange = {
-                    codigo = it
+                    codigo = it.take(250)
                     codigoError = null
                 },
                 modifier = Modifier.fillMaxWidth(),

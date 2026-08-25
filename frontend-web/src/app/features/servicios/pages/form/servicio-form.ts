@@ -45,7 +45,7 @@ export class ServicioFormPage implements OnInit {
 
   protected readonly form = this.formBuilder.group({
     categoria: ['paseador' as CategoriaServicio, [Validators.required]],
-    descripcion: ['', [Validators.maxLength(1000)]],
+    descripcion: ['', [Validators.maxLength(250)]],
     disponibilidades: this.formBuilder.array(
       [this.buildDisponibilidadGroup()],
       [Validators.required, Validators.minLength(1)],

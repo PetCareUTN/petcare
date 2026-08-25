@@ -67,7 +67,7 @@ export class CreateMascotaPage implements OnInit {
 
   protected readonly ownerSearchForm = this.formBuilder.group({
     documento: ['', [Validators.pattern(/^[0-9]*$/), Validators.maxLength(20)]],
-    email: ['', [Validators.email]],
+    email: ['', [Validators.email, Validators.maxLength(150)]],
   });
 
   protected readonly form = this.formBuilder.group({
@@ -153,7 +153,9 @@ export class CreateMascotaPage implements OnInit {
     const documento =
       mode === 'documento' ? (this.ownerSearchForm.controls.documento.value?.trim() ?? '') : '';
     const email =
-      mode === 'email' ? (this.ownerSearchForm.controls.email.value?.trim().toLowerCase() ?? '') : '';
+      mode === 'email'
+        ? (this.ownerSearchForm.controls.email.value?.trim().toLowerCase() ?? '')
+        : '';
 
     if (this.ownerSearchForm.invalid) {
       this.ownerSearchForm.markAllAsTouched();
@@ -178,17 +180,19 @@ export class CreateMascotaPage implements OnInit {
     this.errorMessage.set(null);
     this.isSearchingOwner.set(true);
 
-    this.mascotasService.findOwner({ documento: documento || undefined, email: email || undefined }).subscribe({
-      next: (owner) => {
-        this.isSearchingOwner.set(false);
-        this.selectedOwner.set(owner);
-        this.backQueryParams.set(this.buildBackQueryParams());
-      },
-      error: (error: ApiError) => {
-        this.isSearchingOwner.set(false);
-        this.ownerSearchMessage.set(error.mensaje ?? 'No se encontró un dueño con esos datos.');
-      },
-    });
+    this.mascotasService
+      .findOwner({ documento: documento || undefined, email: email || undefined })
+      .subscribe({
+        next: (owner) => {
+          this.isSearchingOwner.set(false);
+          this.selectedOwner.set(owner);
+          this.backQueryParams.set(this.buildBackQueryParams());
+        },
+        error: (error: ApiError) => {
+          this.isSearchingOwner.set(false);
+          this.ownerSearchMessage.set(error.mensaje ?? 'No se encontró un dueño con esos datos.');
+        },
+      });
   }
 
   onFileSelected(event: Event): void {
@@ -292,7 +296,8 @@ export class CreateMascotaPage implements OnInit {
     const ownerDocument =
       this.selectedOwner()?.numero_documento ??
       this.route.snapshot.queryParamMap.get('ownerDocument');
-    const ownerEmail = this.selectedOwner()?.email ?? this.route.snapshot.queryParamMap.get('ownerEmail');
+    const ownerEmail =
+      this.selectedOwner()?.email ?? this.route.snapshot.queryParamMap.get('ownerEmail');
     const selectedPetId = this.route.snapshot.queryParamMap.get('selectedPetId');
 
     if (ownerDocument) {

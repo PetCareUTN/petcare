@@ -72,10 +72,10 @@ export class HistoriaClinicaPage implements OnInit {
   protected readonly form = this.formBuilder.group({
     tipo: ['consulta' as ClinicalEventType, [Validators.required]],
     fecha: [this.today(), [Validators.required]],
-    descripcion: ['', [Validators.required, Validators.maxLength(2000)]],
-    diagnostico: ['', [Validators.maxLength(2000)]],
-    tratamiento: ['', [Validators.maxLength(2000)]],
-    observaciones: ['', [Validators.maxLength(2000)]],
+    descripcion: ['', [Validators.required]],
+    diagnostico: [''],
+    tratamiento: [''],
+    observaciones: [''],
   });
 
   ngOnInit(): void {
@@ -207,9 +207,7 @@ export class HistoriaClinicaPage implements OnInit {
       },
       error: (error: ApiError) => {
         this.isLoading.set(false);
-        this.errorMessage.set(
-          error.mensaje ?? 'No se pudo cargar la historia clínica.',
-        );
+        this.errorMessage.set(error.mensaje ?? 'No se pudo cargar la historia clínica.');
       },
     });
   }

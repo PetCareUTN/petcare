@@ -99,6 +99,7 @@
                 <textarea
                   [id]="'motivo-' + turno.idTurno"
                   rows="3"
+                  maxlength="250"
                   [ngModel]="rejectionReason()"
                   (ngModelChange)="rejectionReason.set($event)"
                 ></textarea>
@@ -194,6 +195,7 @@
                 <textarea
                   [id]="'motivo-servicio-' + turno.idTurno"
                   rows="3"
+                  maxlength="250"
                   [ngModel]="motivoCancelacion()"
                   (ngModelChange)="motivoCancelacion.set($event)"
                 ></textarea>

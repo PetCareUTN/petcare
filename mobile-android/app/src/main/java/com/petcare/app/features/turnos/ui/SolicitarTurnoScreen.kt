@@ -375,7 +375,7 @@ fun SolicitarTurnoScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = notas,
-                    onValueChange = { notas = it },
+                    onValueChange = { notas = it.take(250) },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = { Text("Ej: control anual, vacunación...") }
                 )

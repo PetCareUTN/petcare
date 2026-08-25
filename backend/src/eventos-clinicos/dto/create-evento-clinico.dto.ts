@@ -9,6 +9,7 @@ import {
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ClinicalEventType } from '../../common/enums/clinical-event-type.enum';
+import { MaxRichTextLength } from '../../common/validators/max-rich-text-length.validator';
 
 export class CreateEventoClinicoDto {
   @Transform(({ value }) => Number(value))
@@ -24,17 +25,21 @@ export class CreateEventoClinicoDto {
 
   @IsString()
   @IsNotEmpty()
+  @MaxRichTextLength(250)
   descripcion: string;
 
   @IsString()
   @IsOptional()
+  @MaxRichTextLength(250)
   diagnostico?: string;
 
   @IsString()
   @IsOptional()
+  @MaxRichTextLength(250)
   tratamiento?: string;
 
   @IsString()
   @IsOptional()
+  @MaxRichTextLength(250)
   observaciones?: string;
 }

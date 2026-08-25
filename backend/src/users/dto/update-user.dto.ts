@@ -1,4 +1,10 @@
-import { IsEmail, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 
 const NOMBRE_PATTERN = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ'\-\s]*$/;
 const TELEFONO_PATTERN = /^[0-9+\-\s()]+$/;
@@ -13,11 +19,14 @@ export class UpdateUserDto {
   @IsString()
   @IsOptional()
   @MaxLength(100)
-  @Matches(NOMBRE_PATTERN, { message: 'El apellido solo puede contener letras.' })
+  @Matches(NOMBRE_PATTERN, {
+    message: 'El apellido solo puede contener letras.',
+  })
   apellido?: string;
 
   @IsEmail()
   @IsOptional()
+  @MaxLength(150)
   email?: string;
 
   @IsString()
@@ -29,6 +38,8 @@ export class UpdateUserDto {
   @IsString()
   @IsOptional()
   @MaxLength(30)
-  @Matches(TELEFONO_PATTERN, { message: 'El teléfono solo puede contener números.' })
+  @Matches(TELEFONO_PATTERN, {
+    message: 'El teléfono solo puede contener números.',
+  })
   telefono?: string;
 }

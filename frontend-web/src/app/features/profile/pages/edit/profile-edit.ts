@@ -40,8 +40,11 @@ export class ProfileEditPage implements OnInit {
         Validators.pattern(ProfileEditPage.NOMBRE_PATTERN),
       ],
     ],
-    email: ['', [Validators.required, Validators.email]],
-    telefono: ['', [Validators.maxLength(30), Validators.pattern(ProfileEditPage.TELEFONO_PATTERN)]],
+    email: ['', [Validators.required, Validators.email, Validators.maxLength(150)]],
+    telefono: [
+      '',
+      [Validators.maxLength(30), Validators.pattern(ProfileEditPage.TELEFONO_PATTERN)],
+    ],
   });
 
   ngOnInit(): void {

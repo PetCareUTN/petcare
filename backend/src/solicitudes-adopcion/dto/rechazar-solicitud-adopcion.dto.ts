@@ -3,6 +3,6 @@ import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
 export class RechazarSolicitudAdopcionDto {
   @IsString()
   @IsNotEmpty()
-  @MaxLength(500)
+  @MaxLength(250)
   motivoRechazo: string;
 }

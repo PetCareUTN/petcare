@@ -19,8 +19,8 @@ export class LoginPage {
   protected readonly errorMessage = signal<string | null>(null);
 
   protected readonly form = this.formBuilder.group({
-    email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required]],
+    email: ['', [Validators.required, Validators.email, Validators.maxLength(150)]],
+    password: ['', [Validators.required, Validators.maxLength(250)]],
   });
 
   submit(): void {
@@ -39,9 +39,7 @@ export class LoginPage {
         this.isSubmitting.set(false);
         this.authService.saveToken(response.token);
         this.authService.saveRole(response.usuario.id_rol);
-        this.router.navigateByUrl(
-          this.authService.isVeterinario() ? '/eventos-clinicos' : '/',
-        );
+        this.router.navigateByUrl(this.authService.isVeterinario() ? '/eventos-clinicos' : '/');
       },
       error: (error: ApiError) => {
         this.isSubmitting.set(false);

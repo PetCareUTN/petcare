@@ -8,6 +8,7 @@
     <div class="search-bar">
       <input
         type="search"
+        maxlength="250"
         placeholder="Buscar por ID o nombre..."
         [ngModel]="searchQuery()"
         (ngModelChange)="searchQuery.set($event)"

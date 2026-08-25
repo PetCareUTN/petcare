@@ -1,4 +1,12 @@
-import { IsDateString, IsInt, IsOptional, IsString, Matches, MaxLength, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsInt,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 const HORA_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -20,6 +28,6 @@ export class CreateTurnoVeterinarioDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(500)
+  @MaxLength(250)
   motivoConsulta?: string;
 }

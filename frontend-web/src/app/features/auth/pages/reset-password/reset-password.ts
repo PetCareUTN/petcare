@@ -23,9 +23,12 @@ export class ResetPasswordPage {
 
   protected readonly form = this.formBuilder.group(
     {
-      codigo: ['', [Validators.required]],
-      nuevaContrasena: ['', [Validators.required, Validators.minLength(8)]],
-      confirmarContrasena: ['', [Validators.required]],
+      codigo: ['', [Validators.required, Validators.maxLength(250)]],
+      nuevaContrasena: [
+        '',
+        [Validators.required, Validators.minLength(8), Validators.maxLength(250)],
+      ],
+      confirmarContrasena: ['', [Validators.required, Validators.maxLength(250)]],
     },
     { validators: this.passwordMatchValidator },
   );

@@ -66,7 +66,7 @@ fun EditProfileScreen(
 
         OutlinedTextField(
             value = nombre,
-            onValueChange = { nombre = it },
+            onValueChange = { nombre = it.take(100) },
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Nombre") },
             isError = validation.nombreError != null,
@@ -76,7 +76,7 @@ fun EditProfileScreen(
 
         OutlinedTextField(
             value = apellido,
-            onValueChange = { apellido = it },
+            onValueChange = { apellido = it.take(100) },
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Apellido") },
             isError = validation.apellidoError != null,
@@ -105,7 +105,7 @@ fun EditProfileScreen(
 
         OutlinedTextField(
             value = telefono,
-            onValueChange = { telefono = it },
+            onValueChange = { telefono = it.take(30) },
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Teléfono") },
             isError = validation.telefonoError != null,

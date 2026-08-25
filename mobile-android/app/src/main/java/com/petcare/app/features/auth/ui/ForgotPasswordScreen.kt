@@ -83,7 +83,7 @@ fun ForgotPasswordScreen(
             OutlinedTextField(
                 value = email,
                 onValueChange = {
-                    email = it
+                    email = it.take(150)
                     emailError = null
                 },
                 modifier = Modifier.fillMaxWidth(),

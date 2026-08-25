@@ -53,10 +53,10 @@ export class CreateEventoClinicoPage implements OnInit {
     idMascota: [null as number | null, [Validators.required, Validators.min(1)]],
     tipo: ['consulta' as ClinicalEventType, [Validators.required]],
     fecha: [this.today(), [Validators.required]],
-    descripcion: ['', [Validators.required, Validators.maxLength(2000)]],
-    diagnostico: ['', [Validators.maxLength(2000)]],
-    tratamiento: ['', [Validators.maxLength(2000)]],
-    observaciones: ['', [Validators.maxLength(2000)]],
+    descripcion: ['', [Validators.required]],
+    diagnostico: [''],
+    tratamiento: [''],
+    observaciones: [''],
   });
 
   ngOnInit(): void {
@@ -110,9 +110,7 @@ export class CreateEventoClinicoPage implements OnInit {
         this.isSubmitting.set(false);
         this.createdEventId.set(evento.idEvento);
         this.archivosSubidos.set(evento.archivos);
-        this.successMessage.set(
-          `Evento clinico registrado en la historia #${evento.idHistoria}.`,
-        );
+        this.successMessage.set(`Evento clinico registrado en la historia #${evento.idHistoria}.`);
         this.form.reset({
           idMascota: evento.idMascota,
           tipo: 'consulta',

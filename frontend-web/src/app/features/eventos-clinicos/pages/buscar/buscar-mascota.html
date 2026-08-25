@@ -47,6 +47,7 @@
             DNI
             <input
               type="search"
+              maxlength="20"
               inputmode="numeric"
               placeholder="Ej: 30111222"
               [ngModel]="ownerDocument()"
@@ -58,6 +59,7 @@
             Email
             <input
               type="email"
+              maxlength="150"
               placeholder="cliente@email.com"
               [ngModel]="ownerEmail()"
               (ngModelChange)="ownerEmail.set($event)"

@@ -8,6 +8,6 @@ export class CreatePublicacionAdopcionDto {
 
   @IsString()
   @IsNotEmpty()
-  @MaxLength(1000)
+  @MaxLength(250)
   descripcion: string;
 }

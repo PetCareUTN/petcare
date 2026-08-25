@@ -11,6 +11,7 @@ import {
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { PetSex } from '../../common/enums/pet-sex.enum';
+import { MaxRichTextLength } from '../../common/validators/max-rich-text-length.validator';
 
 export class CreateMascotaDto {
   @IsString()
@@ -50,9 +51,11 @@ export class CreateMascotaDto {
 
   @IsString()
   @IsOptional()
+  @MaxRichTextLength(250)
   observaciones?: string;
 
   @IsString()
   @IsOptional()
+  @MaxRichTextLength(250)
   alergias?: string;
 }

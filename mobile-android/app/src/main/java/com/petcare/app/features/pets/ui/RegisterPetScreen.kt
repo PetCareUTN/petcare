@@ -185,7 +185,7 @@ fun RegisterPetScreen(
             ) {
                 OutlinedTextField(
                     value = name,
-                    onValueChange = { name = it },
+                    onValueChange = { name = it.take(100) },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Nombre") },
                     isError = validation.nameError != null,
@@ -228,7 +228,7 @@ fun RegisterPetScreen(
                     OutlinedTextField(
                         value = customBreed,
                         onValueChange = {
-                            customBreed = it
+                            customBreed = it.take(80)
                             customBreedError = null
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -287,7 +287,7 @@ fun RegisterPetScreen(
                     ) {
                         OutlinedTextField(
                             value = weight,
-                            onValueChange = { weight = it },
+                            onValueChange = { weight = it.take(20) },
                             modifier = Modifier.weight(1f),
                             label = { Text("Peso") },
                             isError = validation.weightError != null,
@@ -325,7 +325,7 @@ fun RegisterPetScreen(
 
                 OutlinedTextField(
                     value = allergies,
-                    onValueChange = { allergies = it },
+                    onValueChange = { allergies = it.take(250) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(100.dp),
@@ -334,7 +334,7 @@ fun RegisterPetScreen(
 
                 OutlinedTextField(
                     value = observations,
-                    onValueChange = { observations = it },
+                    onValueChange = { observations = it.take(250) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(120.dp),

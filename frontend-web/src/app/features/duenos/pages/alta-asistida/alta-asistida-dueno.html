@@ -27,7 +27,7 @@
       <form [formGroup]="form" (ngSubmit)="submit()" class="alta-form">
         <label>
           Nombre
-          <input type="text" formControlName="nombre" autocomplete="given-name" />
+          <input type="text" maxlength="100" formControlName="nombre" autocomplete="given-name" />
           @if (form.controls.nombre.touched && form.controls.nombre.invalid) {
             <span class="field-error">Ingresá un nombre de hasta 100 caracteres.</span>
           }
@@ -35,7 +35,7 @@
 
         <label>
           Apellido
-          <input type="text" formControlName="apellido" autocomplete="family-name" />
+          <input type="text" maxlength="100" formControlName="apellido" autocomplete="family-name" />
           @if (form.controls.apellido.touched && form.controls.apellido.invalid) {
             <span class="field-error">El apellido no puede superar los 100 caracteres.</span>
           }
@@ -43,7 +43,7 @@
 
         <label>
           DNI
-          <input type="text" formControlName="numeroDocumento" inputmode="numeric" autocomplete="off" />
+          <input type="text" maxlength="20" formControlName="numeroDocumento" inputmode="numeric" autocomplete="off" />
           @if (form.controls.numeroDocumento.touched && form.controls.numeroDocumento.invalid) {
             <span class="field-error">Ingresá un DNI válido, solo con números.</span>
           }
@@ -51,7 +51,7 @@
 
         <label>
           Email
-          <input type="email" formControlName="email" autocomplete="email" />
+          <input type="email" maxlength="150" formControlName="email" autocomplete="email" />
           @if (form.controls.email.touched && form.controls.email.invalid) {
             <span class="field-error">Ingresá un email valido.</span>
           }
@@ -59,7 +59,7 @@
 
         <label>
           Telefono
-          <input type="tel" formControlName="telefono" autocomplete="tel" />
+          <input type="tel" maxlength="30" formControlName="telefono" autocomplete="tel" />
           @if (form.controls.telefono.touched && form.controls.telefono.invalid) {
             <span class="field-error">El telefono no puede superar los 30 caracteres.</span>
           }

@@ -20,7 +20,7 @@ export class ForgotPasswordPage {
   protected readonly submittedEmail = signal<string | null>(null);
 
   protected readonly form = this.formBuilder.group({
-    email: ['', [Validators.required, Validators.email]],
+    email: ['', [Validators.required, Validators.email, Validators.maxLength(150)]],
   });
 
   submit(): void {
@@ -39,7 +39,10 @@ export class ForgotPasswordPage {
       next: (response) => {
         this.isSubmitting.set(false);
         this.submittedEmail.set(email);
-        this.successMessage.set(response.mensaje ?? 'Si el email está registrado, se ha enviado un código para restablecer la contraseña.');
+        this.successMessage.set(
+          response.mensaje ??
+            'Si el email está registrado, se ha enviado un código para restablecer la contraseña.',
+        );
       },
       error: (error: ApiError) => {
         this.isSubmitting.set(false);

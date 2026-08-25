@@ -1,4 +1,11 @@
-import { IsEmail, IsNotEmpty, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 const TELEFONO_PATTERN = /^[0-9+\-\s()]+$/;
 
@@ -6,25 +13,29 @@ export class RegisterVeterinarioDto {
   /** Nombre de la veterinaria o del profesional. */
   @IsString()
   @IsNotEmpty()
-  @MaxLength(150)
+  @MaxLength(100)
   nombre: string;
 
   @IsEmail()
+  @MaxLength(150)
   email: string;
 
   @IsString()
   @MinLength(8)
+  @MaxLength(250)
   password: string;
 
   @IsString()
   @IsNotEmpty()
   @MaxLength(30)
-  @Matches(TELEFONO_PATTERN, { message: 'El teléfono solo puede contener números.' })
+  @Matches(TELEFONO_PATTERN, {
+    message: 'El teléfono solo puede contener números.',
+  })
   telefono: string;
 
   @IsString()
   @IsNotEmpty()
-  @MaxLength(255)
+  @MaxLength(250)
   direccion: string;
 
   @IsString()

@@ -85,7 +85,7 @@ fun ResetPasswordScreen(
         OutlinedTextField(
             value = codigo,
             onValueChange = {
-                codigo = it
+                codigo = it.take(250)
                 codigoError = null
             },
             modifier = Modifier.fillMaxWidth(),
@@ -105,7 +105,7 @@ fun ResetPasswordScreen(
         OutlinedTextField(
             value = nuevaContrasena,
             onValueChange = {
-                nuevaContrasena = it
+                nuevaContrasena = it.take(250)
                 nuevaContrasenaError = null
             },
             modifier = Modifier
@@ -128,7 +128,7 @@ fun ResetPasswordScreen(
         OutlinedTextField(
             value = confirmarContrasena,
             onValueChange = {
-                confirmarContrasena = it
+                confirmarContrasena = it.take(250)
                 confirmarContrasenaError = null
             },
             modifier = Modifier

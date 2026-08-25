@@ -128,7 +128,7 @@ fun LoginScreen(
                     OutlinedTextField(
                         value = email,
                         onValueChange = {
-                            email = it
+                            email = it.take(150)
                             emailError = null
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -148,7 +148,7 @@ fun LoginScreen(
                     OutlinedTextField(
                         value = password,
                         onValueChange = {
-                            password = it
+                            password = it.take(250)
                             passwordError = null
                         },
                         modifier = Modifier.fillMaxWidth(),

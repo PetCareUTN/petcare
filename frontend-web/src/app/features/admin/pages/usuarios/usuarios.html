@@ -10,6 +10,7 @@
     <div class="busqueda-bar">
       <input
         type="text"
+        maxlength="250"
         placeholder="Buscar por nombre o email..."
         [value]="busqueda()"
         (input)="onBusquedaChange($any($event.target).value)"

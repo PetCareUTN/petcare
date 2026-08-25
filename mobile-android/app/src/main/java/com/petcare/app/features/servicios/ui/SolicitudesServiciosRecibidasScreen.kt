@@ -346,7 +346,7 @@ private fun CancelarDialog(
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedTextField(
                     value = motivo,
-                    onValueChange = { motivo = it },
+                    onValueChange = { motivo = it.take(250) },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Motivo (opcional)") },
                     singleLine = false

@@ -1,3 +1,8 @@
-<div class="rich-text-editor" [class.disabled]="isDisabled()">
-  <div #editorContainer></div>
+<div class="rich-text-editor-wrapper">
+  <div class="rich-text-editor" [class.disabled]="isDisabled()">
+    <div #editorContainer></div>
+  </div>
+  <span class="rich-text-editor-count" aria-live="polite">
+    {{ characterCount() }}/{{ maxLength() }}
+  </span>
 </div>

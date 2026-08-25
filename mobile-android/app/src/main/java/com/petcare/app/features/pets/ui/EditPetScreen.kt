@@ -83,7 +83,7 @@ fun EditPetScreen(
 
         OutlinedTextField(
             value = name,
-            onValueChange = { name = it },
+            onValueChange = { name = it.take(100) },
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Nombre") },
             isError = validation.nameError != null,
@@ -93,7 +93,7 @@ fun EditPetScreen(
 
         OutlinedTextField(
             value = species,
-            onValueChange = { species = it },
+            onValueChange = { species = it.take(50) },
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Especie") },
             isError = validation.speciesError != null,
@@ -103,7 +103,7 @@ fun EditPetScreen(
 
         OutlinedTextField(
             value = breed,
-            onValueChange = { breed = it },
+            onValueChange = { breed = it.take(80) },
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Raza") },
             singleLine = true
@@ -144,7 +144,7 @@ fun EditPetScreen(
 
         OutlinedTextField(
             value = birthDate,
-            onValueChange = { birthDate = it },
+            onValueChange = { birthDate = it.take(10) },
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Fecha de nacimiento") },
             placeholder = { Text("AAAA-MM-DD") },
@@ -155,7 +155,7 @@ fun EditPetScreen(
 
         OutlinedTextField(
             value = weight,
-            onValueChange = { weight = it },
+            onValueChange = { weight = it.take(20) },
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Peso") },
             isError = validation.weightError != null,
@@ -179,7 +179,7 @@ fun EditPetScreen(
 
         OutlinedTextField(
             value = allergies,
-            onValueChange = { allergies = it },
+            onValueChange = { allergies = it.take(250) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(100.dp),
@@ -188,7 +188,7 @@ fun EditPetScreen(
 
         OutlinedTextField(
             value = observations,
-            onValueChange = { observations = it },
+            onValueChange = { observations = it.take(250) },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(120.dp),

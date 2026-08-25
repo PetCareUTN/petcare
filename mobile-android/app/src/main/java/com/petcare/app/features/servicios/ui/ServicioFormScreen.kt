@@ -150,7 +150,7 @@ fun ServicioFormScreen(
 
                 OutlinedTextField(
                     value = descripcion,
-                    onValueChange = { descripcion = it },
+                    onValueChange = { descripcion = it.take(250) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(120.dp),

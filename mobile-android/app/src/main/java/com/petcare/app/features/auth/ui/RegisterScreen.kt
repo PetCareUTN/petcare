@@ -167,7 +167,7 @@ fun RegisterScreen(
                     OutlinedTextField(
                         value = nombre,
                         onValueChange = {
-                            nombre = it
+                            nombre = it.take(100)
                             nombreError = null
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -184,7 +184,7 @@ fun RegisterScreen(
                     OutlinedTextField(
                         value = apellido,
                         onValueChange = {
-                            apellido = it
+                            apellido = it.take(100)
                             apellidoError = null
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -201,7 +201,7 @@ fun RegisterScreen(
                     OutlinedTextField(
                         value = email,
                         onValueChange = {
-                            email = it
+                            email = it.take(150)
                             emailError = null
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -221,7 +221,7 @@ fun RegisterScreen(
                     OutlinedTextField(
                         value = password,
                         onValueChange = {
-                            password = it
+                            password = it.take(250)
                             passwordError = null
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -242,7 +242,7 @@ fun RegisterScreen(
                     OutlinedTextField(
                         value = confirmPassword,
                         onValueChange = {
-                            confirmPassword = it
+                            confirmPassword = it.take(250)
                             confirmPasswordError = null
                         },
                         modifier = Modifier.fillMaxWidth(),

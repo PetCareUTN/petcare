@@ -80,6 +80,7 @@
             <textarea
               id="motivo"
               rows="3"
+              maxlength="250"
               [value]="motivoRechazo()"
               (input)="onMotivoChange($any($event.target).value)"
             ></textarea>

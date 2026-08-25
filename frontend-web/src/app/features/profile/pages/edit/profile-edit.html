@@ -22,7 +22,7 @@
       <section class="form-grid">
         <div class="field">
           <label for="nombre">Nombre</label>
-          <input id="nombre" type="text" formControlName="nombre" />
+          <input id="nombre" type="text" maxlength="100" formControlName="nombre" />
           @if (form.controls.nombre.touched && form.controls.nombre.hasError('required')) {
             <p class="field-error">El nombre es obligatorio.</p>
           }
@@ -33,7 +33,7 @@
 
         <div class="field">
           <label for="apellido">Apellido</label>
-          <input id="apellido" type="text" formControlName="apellido" />
+          <input id="apellido" type="text" maxlength="100" formControlName="apellido" />
           @if (form.controls.apellido.touched && form.controls.apellido.hasError('required')) {
             <p class="field-error">El apellido es obligatorio.</p>
           }
@@ -44,7 +44,7 @@
 
         <div class="field field-wide">
           <label for="email">Email</label>
-          <input id="email" type="email" formControlName="email" />
+          <input id="email" type="email" maxlength="150" formControlName="email" />
           @if (form.controls.email.invalid && form.controls.email.touched) {
             <p class="field-error">Ingresá un email válido.</p>
           }
@@ -52,7 +52,7 @@
 
         <div class="field field-wide">
           <label for="telefono">Teléfono</label>
-          <input id="telefono" type="tel" formControlName="telefono" />
+          <input id="telefono" type="tel" maxlength="30" formControlName="telefono" />
           @if (form.controls.telefono.touched && form.controls.telefono.hasError('pattern')) {
             <p class="field-error">El teléfono solo puede contener números.</p>
           }

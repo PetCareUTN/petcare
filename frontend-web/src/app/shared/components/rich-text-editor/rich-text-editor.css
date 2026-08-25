@@ -1,3 +1,9 @@
+.rich-text-editor-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
 .rich-text-editor {
   display: flex;
   flex-direction: column;
@@ -5,7 +11,15 @@
   border-radius: var(--radius-sm);
   overflow: hidden;
   background-color: var(--surface);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.rich-text-editor-count {
+  align-self: flex-end;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
 }
 
 .rich-text-editor:focus-within {

@@ -65,13 +65,19 @@ export class RegisterPage {
 
   protected readonly form = this.formBuilder.group(
     {
-      nombre: ['', [Validators.required, Validators.maxLength(150)]],
-      email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(8)]],
-      confirmPassword: ['', [Validators.required]],
-      telefono: ['', [Validators.required, Validators.pattern(TELEFONO_PATTERN)]],
-      direccion: ['', [Validators.required, Validators.maxLength(255)]],
-      numeroDocumento: ['', [Validators.required, Validators.pattern(DOCUMENTO_PATTERN)]],
+      nombre: ['', [Validators.required, Validators.maxLength(100)]],
+      email: ['', [Validators.required, Validators.email, Validators.maxLength(150)]],
+      password: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(250)]],
+      confirmPassword: ['', [Validators.required, Validators.maxLength(250)]],
+      telefono: [
+        '',
+        [Validators.required, Validators.pattern(TELEFONO_PATTERN), Validators.maxLength(30)],
+      ],
+      direccion: ['', [Validators.required, Validators.maxLength(250)]],
+      numeroDocumento: [
+        '',
+        [Validators.required, Validators.pattern(DOCUMENTO_PATTERN), Validators.maxLength(30)],
+      ],
       numeroMatricula: ['', [Validators.required, Validators.maxLength(50)]],
       provinciaMatricula: ['', [Validators.required]],
     },
