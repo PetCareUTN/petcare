@@ -148,3 +148,6 @@ backend/uploads/matriculas/*
 
 # Configuración local de Claude Code (es propia de cada máquina)
 .claude/
+
+# Archivos que genera macOS
+.DS_Store
