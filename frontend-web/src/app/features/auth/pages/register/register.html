@@ -120,6 +120,19 @@
           <p class="file-name">{{ selectedFile()!.name }}</p>
         }
       </div>
+
+      <div class="field field-wide">
+        <label for="habilitacion">Certificado de habilitación (imagen o PDF)</label>
+        <input
+          id="habilitacion"
+          type="file"
+          accept=".jpg,.jpeg,.png,.pdf"
+          (change)="onHabilitacionSelected($event)"
+        />
+        @if (selectedHabilitacionFile()) {
+          <p class="file-name">{{ selectedHabilitacionFile()!.name }}</p>
+        }
+      </div>
     </div>
 
     <button type="submit" [disabled]="isSubmitting()">

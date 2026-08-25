@@ -62,6 +62,7 @@ export class RegisterPage {
   protected readonly successMessage = signal<string | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly selectedFile = signal<File | null>(null);
+  protected readonly selectedHabilitacionFile = signal<File | null>(null);
 
   protected readonly form = this.formBuilder.group(
     {
@@ -83,6 +84,11 @@ export class RegisterPage {
     this.selectedFile.set(input.files?.[0] ?? null);
   }
 
+  onHabilitacionSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.selectedHabilitacionFile.set(input.files?.[0] ?? null);
+  }
+
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -91,6 +97,11 @@ export class RegisterPage {
 
     if (!this.selectedFile()) {
       this.errorMessage.set('Debés adjuntar la matrícula habilitante.');
+      return;
+    }
+
+    if (!this.selectedHabilitacionFile()) {
+      this.errorMessage.set('Debés adjuntar el certificado de habilitación.');
       return;
     }
 
@@ -109,6 +120,7 @@ export class RegisterPage {
     formData.append('numeroMatricula', value.numeroMatricula!);
     formData.append('provinciaMatricula', value.provinciaMatricula!);
     formData.append('matricula', this.selectedFile()!);
+    formData.append('habilitacion', this.selectedHabilitacionFile()!);
 
     this.veterinariosService.registrar(formData).subscribe({
       next: () => {
@@ -118,6 +130,7 @@ export class RegisterPage {
         );
         this.form.reset();
         this.selectedFile.set(null);
+        this.selectedHabilitacionFile.set(null);
       },
       error: (error: ApiError) => {
         this.isSubmitting.set(false);

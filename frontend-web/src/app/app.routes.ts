@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { authGuard } from './features/auth/guards/auth.guard';
 
 export const routes: Routes = [
   {
@@ -13,6 +14,7 @@ export const routes: Routes = [
   {
     path: '',
     loadComponent: () => import('./shared/layout/app-layout').then((m) => m.AppLayout),
+    canActivate: [authGuard],
     children: [
       {
         path: '',
@@ -49,6 +51,7 @@ export const routes: Routes = [
   {
     path: 'eventos-clinicos',
     loadComponent: () => import('./shared/layout/vet-layout').then((m) => m.VetLayout),
+    canActivate: [authGuard],
     children: [
       {
         path: '',
@@ -120,6 +123,7 @@ export const routes: Routes = [
   {
     path: 'servicios',
     loadComponent: () => import('./shared/layout/vet-layout').then((m) => m.VetLayout),
+    canActivate: [authGuard],
     children: [
       {
         path: '',
@@ -150,10 +154,12 @@ export const routes: Routes = [
       import('./features/veterinarios/pages/estado-validacion/estado-validacion').then(
         (m) => m.EstadoValidacionPage,
       ),
+    canActivate: [authGuard],
   },
   {
     path: 'admin',
     loadComponent: () => import('./shared/layout/admin-layout').then((m) => m.AdminLayout),
+    canActivate: [authGuard],
     children: [
       {
         path: 'usuarios',

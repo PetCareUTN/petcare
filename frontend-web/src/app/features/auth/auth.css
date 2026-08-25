@@ -159,6 +159,37 @@
   color: var(--text-secondary);
 }
 
+.resend-info {
+  margin-top: var(--spacing-sm);
+  font-size: 0.85rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.btn-resend {
+  margin-top: var(--spacing-sm);
+  padding: 0.6rem;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-md);
+  background-color: transparent;
+  color: var(--primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.btn-resend:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+.btn-resend:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 @media (max-width: 480px) {
   .auth-card {
     padding: var(--spacing-lg);

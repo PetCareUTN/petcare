@@ -33,6 +33,9 @@ export class Veterinario {
   @Column({ type: 'text', name: 'matricula_url' })
   matriculaUrl: string;
 
+  @Column({ type: 'text', name: 'habilitacion_url', nullable: true })
+  habilitacionUrl: string | null;
+
   @Column({
     type: 'varchar',
     length: 20,
