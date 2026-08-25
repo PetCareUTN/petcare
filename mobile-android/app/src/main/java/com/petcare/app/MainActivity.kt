@@ -1173,9 +1173,23 @@ class MainActivity : ComponentActivity() {
                         errorMessage = serviciosError,
                         servicios = servicios,
                         deletingId = deletingServicioId,
-                        onBack = {
+                        onNavigateHome = {
                             isViewingServicios = false
                             serviciosError = null
+                        },
+                        onNavigateTurnos = {
+                            isViewingServicios = false
+                            serviciosError = null
+                            misTurnosError = null
+                            isViewingMisTurnos = true
+                            loadMisTurnos()
+                        },
+                        onNavigateAdopciones = {
+                            isViewingServicios = false
+                            serviciosError = null
+                            adopcionesListError = null
+                            isViewingAdopciones = true
+                            loadAdopciones()
                         },
                         onRetry = { loadServicios() },
                         onCreateServicio = {
@@ -1480,9 +1494,24 @@ class MainActivity : ComponentActivity() {
                         errorMessage = misTurnosError,
                         turnos = misTurnos,
                         onRetry = { loadMisTurnos() },
-                        onBack = {
+                        onNavigateHome = {
                             isViewingMisTurnos = false
                             misTurnosError = null
+                        },
+                        onNavigateServicios = {
+                            isViewingMisTurnos = false
+                            misTurnosError = null
+                            saveServicioError = null
+                            serviciosError = null
+                            isViewingServicios = true
+                            loadServicios()
+                        },
+                        onNavigateAdopciones = {
+                            isViewingMisTurnos = false
+                            misTurnosError = null
+                            adopcionesListError = null
+                            isViewingAdopciones = true
+                            loadAdopciones()
                         }
                     )
                 } else if (loggedUserName != null && isRequestingTurno) {
