@@ -230,63 +230,12 @@
 
             @if (turno.motivoNegativo) {
               <p class="appointment-rejection">
-                @if (turno.canceladoPor) {
-                  Cancelado por {{ turno.canceladoPor }}: {{ turno.motivoNegativo }}
-                } @else {
-                  Motivo de rechazo: {{ turno.motivoNegativo }}
-                }
+                Cancelado por {{ turno.canceladoPor }}: {{ turno.motivoNegativo }}
               </p>
             }
 
-            <!-- Acciones de turnos veterinarios -->
-            @if (turno.tipo === 'veterinaria' && turno.estado === 'pendiente') {
-              @if (isRejecting()) {
-                <div class="reject-box">
-                  <label [for]="'motivo-' + turno.clave">Motivo de rechazo</label>
-                  <textarea
-                    [id]="'motivo-' + turno.clave"
-                    rows="3"
-                    [ngModel]="rejectionReason()"
-                    (ngModelChange)="rejectionReason.set($event)"
-                  ></textarea>
-                  <div class="reject-actions">
-                    <button
-                      type="button"
-                      class="btn-danger"
-                      [disabled]="processingClave() === turno.clave"
-                      (click)="rechazar(turno)"
-                    >
-                      Confirmar rechazo
-                    </button>
-                    <button type="button" class="btn-secondary" (click)="cancelReject()">
-                      Cancelar
-                    </button>
-                  </div>
-                </div>
-              } @else {
-                <div class="appointment-actions">
-                  <button
-                    type="button"
-                    class="btn-primary"
-                    [disabled]="processingClave() === turno.clave"
-                    (click)="confirmar(turno)"
-                  >
-                    Confirmar
-                  </button>
-                  <button
-                    type="button"
-                    class="btn-secondary"
-                    [disabled]="processingClave() === turno.clave"
-                    (click)="startReject()"
-                  >
-                    Rechazar
-                  </button>
-                </div>
-              }
-            }
-
-            <!-- Acciones de turnos de servicios -->
-            @if (turno.tipo === 'servicio' && turno.estado === 'confirmado') {
+            <!-- Acciones de cancelacion -->
+            @if (turno.estado === 'confirmado') {
               @if (isCancelling()) {
                 <div class="reject-box">
                   <label [for]="'motivo-' + turno.clave">
@@ -303,7 +252,7 @@
                       type="button"
                       class="btn-danger"
                       [disabled]="processingClave() === turno.clave"
-                      (click)="cancelarTurnoServicio(turno)"
+                      (click)="cancelar(turno)"
                     >
                       Confirmar cancelación
                     </button>

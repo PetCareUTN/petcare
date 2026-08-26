@@ -6,7 +6,7 @@ import { ApiError } from '../../auth/models/user';
 import { AuthService } from '../../auth/services/auth-service';
 import {
   AppointmentStatus,
-  RechazarTurnoVeterinarioRequest,
+  CancelarTurnoVeterinarioRequest,
   TurnoVeterinarioResponse,
 } from '../models/turno-veterinario';
 
@@ -25,22 +25,12 @@ export class TurnosVeterinariosService {
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
   }
 
-  confirmar(idTurno: number): Observable<TurnoVeterinarioResponse> {
-    return this.http
-      .patch<TurnoVeterinarioResponse>(
-        `${this.baseUrl}/${idTurno}/confirmar`,
-        {},
-        { headers: this.authHeaders() },
-      )
-      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
-  }
-
-  rechazar(
+  cancelar(
     idTurno: number,
-    data: RechazarTurnoVeterinarioRequest,
+    data: CancelarTurnoVeterinarioRequest,
   ): Observable<TurnoVeterinarioResponse> {
     return this.http
-      .patch<TurnoVeterinarioResponse>(`${this.baseUrl}/${idTurno}/rechazar`, data, {
+      .patch<TurnoVeterinarioResponse>(`${this.baseUrl}/${idTurno}/cancelar`, data, {
         headers: this.authHeaders(),
       })
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));

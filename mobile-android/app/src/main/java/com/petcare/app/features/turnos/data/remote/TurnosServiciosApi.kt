@@ -5,6 +5,7 @@ import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 data class CreateTurnoServicioRequest(
     val idMascota: Int,
@@ -64,6 +65,12 @@ interface TurnosServiciosApi {
 
     @GET("turnos-servicios/mias")
     suspend fun getRecibidas(): List<ReservaServicioRecibidaResponse>
+
+    @GET("turnos-servicios/horarios-disponibles")
+    suspend fun getHorariosDisponibles(
+        @Query("idServicio") idServicio: Int,
+        @Query("fecha") fecha: String
+    ): List<String>
 
     @POST("turnos-servicios")
     suspend fun solicitar(

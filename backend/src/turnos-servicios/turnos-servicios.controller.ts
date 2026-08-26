@@ -38,6 +38,15 @@ export class TurnosServiciosController {
     return this.turnosServiciosService.solicitar(user.sub, dto);
   }
 
+  @Get('horarios-disponibles')
+  @UseGuards(JwtAuthGuard)
+  horariosDisponibles(
+    @Query('idServicio', ParseIntPipe) idServicio: number,
+    @Query('fecha') fecha: string,
+  ) {
+    return this.turnosServiciosService.horariosDisponibles(idServicio, fecha);
+  }
+
   @Get('mios')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleName.DUENO_MASCOTA)

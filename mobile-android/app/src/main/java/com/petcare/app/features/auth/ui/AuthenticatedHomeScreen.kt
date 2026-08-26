@@ -21,22 +21,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -44,7 +35,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,7 +53,6 @@ import com.petcare.app.ui.theme.PetCareSurfaceSoft
 import com.petcare.app.ui.theme.PetCareTeal
 import com.petcare.app.ui.theme.PetCareTealDark
 import com.petcare.app.ui.theme.PetCareTealSoft
-import kotlinx.coroutines.launch
 
 @Composable
 fun AuthenticatedHomeScreen(
@@ -77,184 +66,42 @@ fun AuthenticatedHomeScreen(
     onLogout: () -> Unit,
     onPetClick: (PetResponse) -> Unit = {},
     onProfileClick: () -> Unit = {},
-    onPublishAdoption: () -> Unit = {},
-    onViewAdopciones: () -> Unit = {},
-    onSettingsClick: () -> Unit = {},
-    onServiciosClick: () -> Unit = {},
-    onRequestTurno: () -> Unit = {},
-    onViewMisTurnos: () -> Unit = {}
+    onSettingsClick: () -> Unit = {}
 ) {
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-
-    // Ejecuta la accion del menu y lo cierra.
-    fun navegar(accion: () -> Unit) {
-        scope.launch { drawerState.close() }
-        accion()
-    }
-
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            MenuLateral(
-                userName = userName,
-                onCerrar = { scope.launch { drawerState.close() } },
-                onRegisterPet = { navegar(onRegisterPet) },
-                onPublishAdoption = { navegar(onPublishAdoption) },
-                onRequestTurno = { navegar(onRequestTurno) },
-                onViewMisTurnos = { navegar(onViewMisTurnos) },
-                onServiciosClick = { navegar(onServiciosClick) }
-            )
-        }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.Top,
+        horizontalAlignment = Alignment.Start
     ) {
-        Scaffold(
-            containerColor = MaterialTheme.colorScheme.background,
-            bottomBar = {
-                PetCareBottomBar(
-                    selectedItem = "Inicio",
-                    onServiciosClick = onServiciosClick,
-                    onTurnosClick = onViewMisTurnos,
-                    onAdopcionClick = onViewAdopciones
-                )
-            }
-        ) { innerPadding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background)
-                    .verticalScroll(rememberScrollState())
-                    .padding(innerPadding)
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.Top,
-                horizontalAlignment = Alignment.Start
-            ) {
-                HomeHeader(
-                    userName = userName,
-                    onLogout = onLogout,
-                    onProfileClick = onProfileClick,
-                    onSettingsClick = onSettingsClick,
-                    onOpenMenu = { scope.launch { drawerState.open() } }
-                )
+        HomeHeader(
+            userName = userName,
+            onLogout = onLogout,
+            onProfileClick = onProfileClick,
+            onSettingsClick = onSettingsClick
+        )
 
-                Spacer(modifier = Modifier.height(22.dp))
+        Spacer(modifier = Modifier.height(22.dp))
 
-                SectionHeader(title = "Mis mascotas")
+        SectionHeader(title = "Mis mascotas")
 
-                Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-                PetsContent(
-                    pets = pets,
-                    isLoadingPets = isLoadingPets,
-                    petsError = petsError,
-                    onRetryPets = onRetryPets,
-                    onRegisterPet = onRegisterPet,
-                    onEditPet = onEditPet,
-                    onPetClick = onPetClick
-                )
+        PetsContent(
+            pets = pets,
+            isLoadingPets = isLoadingPets,
+            petsError = petsError,
+            onRetryPets = onRetryPets,
+            onRegisterPet = onRegisterPet,
+            onEditPet = onEditPet,
+            onPetClick = onPetClick
+        )
 
-                Spacer(modifier = Modifier.height(18.dp))
-            }
-        }
+        Spacer(modifier = Modifier.height(18.dp))
     }
-}
-
-@Composable
-private fun MenuLateral(
-    userName: String,
-    onCerrar: () -> Unit,
-    onRegisterPet: () -> Unit,
-    onPublishAdoption: () -> Unit,
-    onRequestTurno: () -> Unit,
-    onViewMisTurnos: () -> Unit,
-    onServiciosClick: () -> Unit
-) {
-    ModalDrawerSheet(
-        drawerContainerColor = MaterialTheme.colorScheme.surface
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 16.dp, end = 8.dp, top = 20.dp, bottom = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "PetCare",
-                    color = PetCareTealDark,
-                    style = MaterialTheme.typography.titleLarge
-                )
-                Text(
-                    text = userName.ifBlank { "Tutor" },
-                    color = PetCareMuted,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-            IconButton(onClick = onCerrar) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_close),
-                    contentDescription = "Cerrar menú",
-                    tint = PetCareMuted
-                )
-            }
-        }
-
-        HorizontalDivider(color = PetCareLine)
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        MenuItem(
-            texto = "Registrar nueva mascota",
-            iconRes = R.drawable.ic_paw,
-            onClick = onRegisterPet
-        )
-        MenuItem(
-            texto = "Publicar mascota en adopción",
-            iconRes = R.drawable.ic_heart,
-            onClick = onPublishAdoption
-        )
-        MenuItem(
-            texto = "Nuevo turno",
-            iconRes = R.drawable.ic_add,
-            onClick = onRequestTurno
-        )
-        MenuItem(
-            texto = "Mis turnos",
-            iconRes = R.drawable.ic_calendar,
-            onClick = onViewMisTurnos
-        )
-        MenuItem(
-            texto = "Servicios",
-            iconRes = R.drawable.ic_services,
-            onClick = onServiciosClick
-        )
-    }
-}
-
-@Composable
-private fun MenuItem(
-    texto: String,
-    iconRes: Int,
-    onClick: () -> Unit
-) {
-    NavigationDrawerItem(
-        label = { Text(texto) },
-        selected = false,
-        onClick = onClick,
-        icon = {
-            Icon(
-                painter = painterResource(iconRes),
-                contentDescription = null,
-                modifier = Modifier.size(22.dp)
-            )
-        },
-        colors = NavigationDrawerItemDefaults.colors(
-            unselectedContainerColor = MaterialTheme.colorScheme.surface,
-            unselectedIconColor = PetCareTealDark,
-            unselectedTextColor = MaterialTheme.colorScheme.onSurface
-        ),
-        modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
-    )
 }
 
 @Composable
@@ -262,8 +109,7 @@ private fun HomeHeader(
     userName: String,
     onLogout: () -> Unit,
     onProfileClick: () -> Unit,
-    onSettingsClick: () -> Unit,
-    onOpenMenu: () -> Unit
+    onSettingsClick: () -> Unit
 ) {
     var isMenuExpanded by remember { mutableStateOf(false) }
     val displayName = userName.ifBlank { "Tutor" }
@@ -277,14 +123,6 @@ private fun HomeHeader(
             modifier = Modifier.weight(1f),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onOpenMenu) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_menu),
-                    contentDescription = "Abrir menú",
-                    tint = PetCareTealDark
-                )
-            }
-            Spacer(modifier = Modifier.height(0.dp))
             Column {
                 Text(
                     text = "Hola,",

@@ -104,9 +104,7 @@ export class GestionTurnosVeterinariosPage implements OnInit {
   private readonly turnosServiciosService = inject(TurnosServiciosService);
 
   protected readonly estados: EstadoOption[] = [
-    { value: 'pendiente', label: 'Pendientes' },
     { value: 'confirmado', label: 'Confirmados' },
-    { value: 'rechazado', label: 'Rechazados' },
     { value: 'cancelado', label: 'Cancelados' },
   ];
 
@@ -126,10 +124,7 @@ export class GestionTurnosVeterinariosPage implements OnInit {
   protected readonly vista = signal<VistaCalendario>('mes');
   /** Fecha de referencia (YYYY-MM-DD) sobre la que se arma la vista actual. */
   protected readonly fechaFoco = signal(this.claveDeHoy());
-  protected readonly estadosVisibles = signal<EstadoTurno[]>([
-    'pendiente',
-    'confirmado',
-  ]);
+  protected readonly estadosVisibles = signal<EstadoTurno[]>(['confirmado']);
   protected readonly tiposVisibles = signal<TipoTurno[]>(['veterinaria', 'servicio']);
 
   protected readonly turnos = signal<TurnoVeterinarioResponse[]>([]);
@@ -138,8 +133,6 @@ export class GestionTurnosVeterinariosPage implements OnInit {
   protected readonly isLoading = signal(true);
   protected readonly isLoadingServicios = signal(true);
   protected readonly processingClave = signal<string | null>(null);
-  protected readonly isRejecting = signal(false);
-  protected readonly rejectionReason = signal('');
   protected readonly isCancelling = signal(false);
   protected readonly motivoCancelacion = signal('');
   protected readonly errorMessage = signal<string | null>(null);
@@ -353,7 +346,6 @@ export class GestionTurnosVeterinariosPage implements OnInit {
 
   protected seleccionarTurno(turno: EventoTurno): void {
     this.turnoSeleccionadoClave.set(turno.clave);
-    this.cancelReject();
     this.cancelCancelacion();
     this.errorMessage.set(null);
     this.successMessage.set(null);
@@ -361,71 +353,7 @@ export class GestionTurnosVeterinariosPage implements OnInit {
 
   protected cerrarPanel(): void {
     this.turnoSeleccionadoClave.set(null);
-    this.cancelReject();
     this.cancelCancelacion();
-  }
-
-  protected confirmar(turno: EventoTurno): void {
-    if (!turno.veterinario) {
-      return;
-    }
-
-    this.errorMessage.set(null);
-    this.successMessage.set(null);
-    this.processingClave.set(turno.clave);
-
-    this.turnosService.confirmar(turno.idTurno).subscribe({
-      next: () => {
-        this.processingClave.set(null);
-        this.successMessage.set('Turno confirmado correctamente.');
-        this.loadTurnos();
-      },
-      error: (error: ApiError) => {
-        this.processingClave.set(null);
-        this.errorMessage.set(error.mensaje ?? 'No se pudo confirmar el turno.');
-      },
-    });
-  }
-
-  protected startReject(): void {
-    this.errorMessage.set(null);
-    this.successMessage.set(null);
-    this.isRejecting.set(true);
-    this.rejectionReason.set('');
-  }
-
-  protected cancelReject(): void {
-    this.isRejecting.set(false);
-    this.rejectionReason.set('');
-  }
-
-  protected rechazar(turno: EventoTurno): void {
-    if (!turno.veterinario) {
-      return;
-    }
-
-    const motivoRechazo = this.rejectionReason().trim();
-    if (!motivoRechazo) {
-      this.errorMessage.set('Ingresá un motivo de rechazo.');
-      return;
-    }
-
-    this.errorMessage.set(null);
-    this.successMessage.set(null);
-    this.processingClave.set(turno.clave);
-
-    this.turnosService.rechazar(turno.idTurno, { motivoRechazo }).subscribe({
-      next: () => {
-        this.processingClave.set(null);
-        this.cancelReject();
-        this.successMessage.set('Turno rechazado correctamente.');
-        this.loadTurnos();
-      },
-      error: (error: ApiError) => {
-        this.processingClave.set(null);
-        this.errorMessage.set(error.mensaje ?? 'No se pudo rechazar el turno.');
-      },
-    });
   }
 
   protected startCancelacion(): void {
@@ -440,29 +368,40 @@ export class GestionTurnosVeterinariosPage implements OnInit {
     this.motivoCancelacion.set('');
   }
 
-  protected cancelarTurnoServicio(turno: EventoTurno): void {
-    if (!turno.servicio) {
-      return;
-    }
-
+  protected cancelar(turno: EventoTurno): void {
     this.errorMessage.set(null);
     this.successMessage.set(null);
     this.processingClave.set(turno.clave);
 
     const motivoCancelacion = this.motivoCancelacion().trim() || undefined;
 
-    this.turnosServiciosService.cancelar(turno.idTurno, { motivoCancelacion }).subscribe({
-      next: () => {
-        this.processingClave.set(null);
-        this.cancelCancelacion();
-        this.successMessage.set('Turno cancelado correctamente.');
-        this.loadTurnosServicios();
-      },
-      error: (error: ApiError) => {
-        this.processingClave.set(null);
-        this.errorMessage.set(error.mensaje ?? 'No se pudo cancelar el turno.');
-      },
-    });
+    const onSuccess = () => {
+      this.processingClave.set(null);
+      this.cancelCancelacion();
+      this.successMessage.set('Turno cancelado correctamente.');
+    };
+    const onError = (error: ApiError) => {
+      this.processingClave.set(null);
+      this.errorMessage.set(error.mensaje ?? 'No se pudo cancelar el turno.');
+    };
+
+    if (turno.tipo === 'veterinaria') {
+      this.turnosService.cancelar(turno.idTurno, { motivoCancelacion }).subscribe({
+        next: () => {
+          onSuccess();
+          this.loadTurnos();
+        },
+        error: onError,
+      });
+    } else {
+      this.turnosServiciosService.cancelar(turno.idTurno, { motivoCancelacion }).subscribe({
+        next: () => {
+          onSuccess();
+          this.loadTurnosServicios();
+        },
+        error: onError,
+      });
+    }
   }
 
   protected formatDate(value: string): string {
@@ -527,8 +466,8 @@ export class GestionTurnosVeterinariosPage implements OnInit {
       telefonoDuenio: turno.telefonoDuenio,
       categoria: null,
       detalle: turno.motivoConsulta,
-      motivoNegativo: turno.motivoRechazo,
-      canceladoPor: null,
+      motivoNegativo: turno.motivoCancelacion,
+      canceladoPor: turno.canceladoPor,
       veterinario: turno,
       servicio: null,
     };

@@ -16,6 +16,9 @@ class TurnosServiciosController(
     suspend fun getRecibidas(): List<ReservaServicioRecibidaResponse> =
         turnosServiciosApi.getRecibidas()
 
+    suspend fun getHorariosDisponibles(idServicio: Int, fecha: String): List<String> =
+        turnosServiciosApi.getHorariosDisponibles(idServicio, fecha)
+
     suspend fun solicitar(request: CreateTurnoServicioRequest): ReservaServicioRecibidaResponse =
         turnosServiciosApi.solicitar(request)
 

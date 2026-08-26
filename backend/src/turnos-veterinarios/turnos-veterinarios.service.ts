@@ -13,17 +13,14 @@ import { DisponibilidadVeterinaria } from '../disponibilidades-veterinarias/enti
 import { Mascota } from '../mascotas/entities/mascota.entity';
 import { User } from '../users/entities/user.entity';
 import { Veterinario } from '../veterinarios/entities/veterinario.entity';
+import { CancelarTurnoVeterinarioDto } from './dto/cancelar-turno-veterinario.dto';
 import { CreateTurnoVeterinarioDto } from './dto/create-turno-veterinario.dto';
-import { RechazarTurnoVeterinarioDto } from './dto/rechazar-turno-veterinario.dto';
 import { TurnoDuenioResponseDto } from './dto/turno-duenio-response.dto';
 import { TurnoVeterinarioResponseDto } from './dto/turno-veterinario-response.dto';
 import { TurnoVeterinario } from './entities/turno-veterinario.entity';
 
 const DURACION_TURNO_MINUTOS = 30;
-const ESTADOS_QUE_OCUPAN_HORARIO = [
-  AppointmentStatus.PENDIENTE,
-  AppointmentStatus.CONFIRMADO,
-];
+const ESTADOS_QUE_OCUPAN_HORARIO = [AppointmentStatus.CONFIRMADO];
 const DIAS_POR_INDICE: DiaSemana[] = [
   DiaSemana.DOMINGO,
   DiaSemana.LUNES,
@@ -95,7 +92,7 @@ export class TurnosVeterinariosService {
       fecha: dto.fecha,
       hora: dto.hora,
       motivoConsulta: dto.motivoConsulta ?? null,
-      estado: AppointmentStatus.PENDIENTE,
+      estado: AppointmentStatus.CONFIRMADO,
     });
 
     const guardado = await this.turnosRepository.save(turno);
@@ -118,10 +115,12 @@ export class TurnosVeterinariosService {
       where: { veterinario: { idVeterinario }, diaSemana },
     });
 
+    const inicioMinutos = this.aMinutos(horaInicio);
+    const finMinutos = this.aMinutos(horaFin);
     const disponible = disponibilidades.some(
       (disponibilidad) =>
-        horaInicio >= disponibilidad.horaInicio &&
-        horaFin <= disponibilidad.horaFin,
+        inicioMinutos >= this.aMinutos(disponibilidad.horaInicio) &&
+        finMinutos <= this.aMinutos(disponibilidad.horaFin),
     );
 
     if (!disponible) {
@@ -142,15 +141,15 @@ export class TurnosVeterinariosService {
       where: { veterinario: { idVeterinario }, fecha },
     });
 
+    const inicioMinutos = this.aMinutos(horaInicio);
+    const finMinutos = this.aMinutos(horaFin);
     const ocupado = turnosDelDia.some((turno) => {
       if (!ESTADOS_QUE_OCUPAN_HORARIO.includes(turno.estado)) {
         return false;
       }
-      const finTurnoExistente = this.sumarMinutos(
-        turno.hora,
-        DURACION_TURNO_MINUTOS,
-      );
-      return horaInicio < finTurnoExistente && horaFin > turno.hora;
+      const inicioTurnoExistente = this.aMinutos(turno.hora);
+      const finTurnoExistente = inicioTurnoExistente + DURACION_TURNO_MINUTOS;
+      return inicioMinutos < finTurnoExistente && finMinutos > inicioTurnoExistente;
     });
 
     if (ocupado) {
@@ -159,6 +158,57 @@ export class TurnosVeterinariosService {
         mensaje: 'Ese horario ya está ocupado',
       });
     }
+  }
+
+  /**
+   * Horarios de inicio (HH:MM) todavía libres para ese veterinario en esa
+   * fecha: los que caen dentro de alguna franja configurada y no se solapan
+   * con un turno ya confirmado. Una vez asignado un turno, ese horario deja
+   * de aparecer para el resto de los dueños.
+   */
+  async horariosDisponibles(
+    idVeterinario: number,
+    fecha: string,
+  ): Promise<string[]> {
+    const diaSemana = this.obtenerDiaSemana(fecha);
+    const disponibilidades = await this.disponibilidadesRepository.find({
+      where: { veterinario: { idVeterinario }, diaSemana },
+    });
+
+    const turnosDelDia = await this.turnosRepository.find({
+      where: { veterinario: { idVeterinario }, fecha },
+    });
+
+    const ocupados = turnosDelDia
+      .filter((turno) => ESTADOS_QUE_OCUPAN_HORARIO.includes(turno.estado))
+      .map((turno) => this.deMinutos(this.aMinutos(turno.hora)));
+
+    const slots = new Set<string>();
+    for (const disponibilidad of disponibilidades) {
+      const inicio = this.aMinutos(disponibilidad.horaInicio);
+      const fin = this.aMinutos(disponibilidad.horaFin);
+      for (
+        let minuto = inicio;
+        minuto + DURACION_TURNO_MINUTOS <= fin;
+        minuto += DURACION_TURNO_MINUTOS
+      ) {
+        const hora = this.deMinutos(minuto);
+        if (!ocupados.includes(hora)) {
+          slots.add(hora);
+        }
+      }
+    }
+
+    return [...slots].sort();
+  }
+
+  private aMinutos(hora: string): number {
+    const [horas, mins] = hora.split(':').map(Number);
+    return horas * 60 + mins;
+  }
+
+  private deMinutos(minutos: number): string {
+    return `${String(Math.floor(minutos / 60)).padStart(2, '0')}:${String(minutos % 60).padStart(2, '0')}`;
   }
 
   private obtenerDiaSemana(fecha: string): DiaSemana {
@@ -211,39 +261,14 @@ export class TurnosVeterinariosService {
     return turnos.map((turno) => TurnoDuenioResponseDto.fromEntity(turno));
   }
 
-  async confirmar(
+  async cancelar(
     idUsuario: number,
     idTurno: number,
+    dto: CancelarTurnoVeterinarioDto,
   ): Promise<TurnoVeterinarioResponseDto> {
-    const turno = await this.findTurnoPropioPendiente(idUsuario, idTurno);
-    turno.estado = AppointmentStatus.CONFIRMADO;
-    turno.motivoRechazo = null;
-    return TurnoVeterinarioResponseDto.fromEntity(
-      await this.turnosRepository.save(turno),
-    );
-  }
-
-  async rechazar(
-    idUsuario: number,
-    idTurno: number,
-    dto: RechazarTurnoVeterinarioDto,
-  ): Promise<TurnoVeterinarioResponseDto> {
-    const turno = await this.findTurnoPropioPendiente(idUsuario, idTurno);
-    turno.estado = AppointmentStatus.RECHAZADO;
-    turno.motivoRechazo = dto.motivoRechazo.trim();
-    return TurnoVeterinarioResponseDto.fromEntity(
-      await this.turnosRepository.save(turno),
-    );
-  }
-
-  private async findTurnoPropioPendiente(
-    idUsuario: number,
-    idTurno: number,
-  ): Promise<TurnoVeterinario> {
-    const veterinario = await this.findVeterinarioValidado(idUsuario);
     const turno = await this.turnosRepository.findOne({
       where: { idTurno },
-      relations: ['veterinario', 'mascota', 'duenio'],
+      relations: ['veterinario', 'veterinario.usuario', 'mascota', 'duenio'],
     });
 
     if (!turno) {
@@ -253,21 +278,30 @@ export class TurnosVeterinariosService {
       });
     }
 
-    if (turno.veterinario.idVeterinario !== veterinario.idVeterinario) {
+    const esDuenio = turno.duenio.idUsuario === idUsuario;
+    const esVeterinario = turno.veterinario.usuario.idUsuario === idUsuario;
+
+    if (!esDuenio && !esVeterinario) {
       throw new ForbiddenException({
         codigoEstado: 403,
-        mensaje: 'No tiene permisos para gestionar este turno',
+        mensaje: 'No tiene permisos para cancelar este turno',
       });
     }
 
-    if (turno.estado !== AppointmentStatus.PENDIENTE) {
+    if (turno.estado !== AppointmentStatus.CONFIRMADO) {
       throw new BadRequestException({
         codigoEstado: 400,
-        mensaje: 'Solo se pueden gestionar turnos pendientes',
+        mensaje: 'Solo se pueden cancelar turnos confirmados',
       });
     }
 
-    return turno;
+    turno.estado = AppointmentStatus.CANCELADO;
+    turno.motivoCancelacion = dto.motivoCancelacion?.trim() || null;
+    turno.canceladoPor = esDuenio ? 'dueño' : 'veterinario';
+
+    return TurnoVeterinarioResponseDto.fromEntity(
+      await this.turnosRepository.save(turno),
+    );
   }
 
   private async findVeterinarioValidado(

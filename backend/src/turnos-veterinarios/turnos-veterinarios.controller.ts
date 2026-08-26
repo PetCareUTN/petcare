@@ -20,8 +20,8 @@ import { VeterinarioValidadoGuard } from '../auth/guards/veterinario-validado.gu
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { AppointmentStatus } from '../common/enums/appointment-status.enum';
 import { RoleName } from '../common/enums/role-name.enum';
+import { CancelarTurnoVeterinarioDto } from './dto/cancelar-turno-veterinario.dto';
 import { CreateTurnoVeterinarioDto } from './dto/create-turno-veterinario.dto';
-import { RechazarTurnoVeterinarioDto } from './dto/rechazar-turno-veterinario.dto';
 import { TurnoDuenioResponseDto } from './dto/turno-duenio-response.dto';
 import { TurnoVeterinarioResponseDto } from './dto/turno-veterinario-response.dto';
 import { TurnosVeterinariosService } from './turnos-veterinarios.service';
@@ -41,6 +41,15 @@ export class TurnosVeterinariosController {
     @Body() dto: CreateTurnoVeterinarioDto,
   ): Promise<TurnoVeterinarioResponseDto> {
     return this.turnosVeterinariosService.solicitar(user.sub, dto);
+  }
+
+  @Get('horarios-disponibles')
+  @UseGuards(JwtAuthGuard)
+  horariosDisponibles(
+    @Query('idVeterinario', ParseIntPipe) idVeterinario: number,
+    @Query('fecha') fecha: string,
+  ): Promise<string[]> {
+    return this.turnosVeterinariosService.horariosDisponibles(idVeterinario, fecha);
   }
 
   @Get('mia')
@@ -65,26 +74,15 @@ export class TurnosVeterinariosController {
     return this.turnosVeterinariosService.findMisTurnos(user.sub, estado);
   }
 
-  @Patch(':idTurno/confirmar')
-  @UseGuards(JwtAuthGuard, RolesGuard, VeterinarioValidadoGuard)
-  @Roles(RoleName.VETERINARIO)
+  @Patch(':idTurno/cancelar')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleName.DUENO_MASCOTA, RoleName.VETERINARIO)
   @HttpCode(HttpStatus.OK)
-  confirmar(
+  cancelar(
     @CurrentUser() user: JwtPayload,
     @Param('idTurno', ParseIntPipe) idTurno: number,
+    @Body() dto: CancelarTurnoVeterinarioDto,
   ): Promise<TurnoVeterinarioResponseDto> {
-    return this.turnosVeterinariosService.confirmar(user.sub, idTurno);
-  }
-
-  @Patch(':idTurno/rechazar')
-  @UseGuards(JwtAuthGuard, RolesGuard, VeterinarioValidadoGuard)
-  @Roles(RoleName.VETERINARIO)
-  @HttpCode(HttpStatus.OK)
-  rechazar(
-    @CurrentUser() user: JwtPayload,
-    @Param('idTurno', ParseIntPipe) idTurno: number,
-    @Body() dto: RechazarTurnoVeterinarioDto,
-  ): Promise<TurnoVeterinarioResponseDto> {
-    return this.turnosVeterinariosService.rechazar(user.sub, idTurno, dto);
+    return this.turnosVeterinariosService.cancelar(user.sub, idTurno, dto);
   }
 }

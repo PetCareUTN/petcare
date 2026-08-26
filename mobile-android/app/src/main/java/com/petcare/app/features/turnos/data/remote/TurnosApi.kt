@@ -2,8 +2,10 @@ package com.petcare.app.features.turnos.data.remote
 
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 data class VeterinariaResponse(
     val idVeterinario: Int,
@@ -36,7 +38,9 @@ data class TurnoResponse(
     val hora: String,
     val motivoConsulta: String?,
     val estado: String,
-    val motivoRechazo: String?
+    val motivoRechazo: String?,
+    val canceladoPor: String?,
+    val motivoCancelacion: String?
 )
 
 /** Turno visto por el dueño: la contraparte es la veterinaria. */
@@ -51,7 +55,13 @@ data class MiTurnoResponse(
     val hora: String,
     val motivoConsulta: String?,
     val estado: String,
-    val motivoRechazo: String?
+    val motivoRechazo: String?,
+    val canceladoPor: String?,
+    val motivoCancelacion: String?
+)
+
+data class CancelarTurnoVeterinarioRequest(
+    val motivoCancelacion: String?
 )
 
 interface TurnosApi {
@@ -67,8 +77,20 @@ interface TurnosApi {
         @Path("idVeterinario") idVeterinario: Int
     ): List<DisponibilidadTurnoResponse>
 
+    @GET("turnos-veterinarios/horarios-disponibles")
+    suspend fun getHorariosDisponibles(
+        @Query("idVeterinario") idVeterinario: Int,
+        @Query("fecha") fecha: String
+    ): List<String>
+
     @POST("turnos-veterinarios")
     suspend fun solicitarTurno(
         @Body request: CreateTurnoRequest
+    ): TurnoResponse
+
+    @PATCH("turnos-veterinarios/{idTurno}/cancelar")
+    suspend fun cancelar(
+        @Path("idTurno") idTurno: Int,
+        @Body request: CancelarTurnoVeterinarioRequest
     ): TurnoResponse
 }

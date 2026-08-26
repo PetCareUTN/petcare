@@ -159,6 +159,70 @@ export class TurnosServiciosService {
     }
   }
 
+  /**
+   * Horarios de inicio (HH:MM) todavía libres para ese servicio en esa
+   * fecha: los que caen dentro de alguna franja configurada y no se solapan
+   * con un turno ya confirmado. Una vez asignado un turno, ese horario deja
+   * de aparecer para el resto de los dueños.
+   */
+  async horariosDisponibles(idServicio: number, fecha: string): Promise<string[]> {
+    const servicio = await this.serviciosRepository.findOne({
+      where: { idServicio },
+      relations: ['usuario', 'disponibilidades'],
+    });
+
+    if (!servicio) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'No se encontró el servicio',
+      });
+    }
+
+    const duracionMinutos = DURACION_MINUTOS_POR_CATEGORIA[servicio.categoria];
+    const diaSemana = this.obtenerDiaSemana(fecha);
+
+    const turnosDelDia = await this.turnosRepository.find({
+      where: {
+        servicio: { usuario: { idUsuario: servicio.usuario.idUsuario } },
+        fecha,
+        estado: TurnoServicioEstado.CONFIRMADO,
+      },
+    });
+    const ocupados = turnosDelDia.map((turno) =>
+      this.deMinutos(this.aMinutos(turno.horaInicio)),
+    );
+
+    const slots = new Set<string>();
+    for (const disponibilidad of servicio.disponibilidades ?? []) {
+      if (disponibilidad.diaSemana !== diaSemana) {
+        continue;
+      }
+      const inicio = this.aMinutos(disponibilidad.horaInicio);
+      const fin = this.aMinutos(disponibilidad.horaFin);
+      for (
+        let minuto = inicio;
+        minuto + duracionMinutos <= fin;
+        minuto += duracionMinutos
+      ) {
+        const hora = this.deMinutos(minuto);
+        if (!ocupados.includes(hora)) {
+          slots.add(hora);
+        }
+      }
+    }
+
+    return [...slots].sort();
+  }
+
+  private aMinutos(hora: string): number {
+    const [horas, mins] = hora.split(':').map(Number);
+    return horas * 60 + mins;
+  }
+
+  private deMinutos(minutos: number): string {
+    return `${String(Math.floor(minutos / 60)).padStart(2, '0')}:${String(minutos % 60).padStart(2, '0')}`;
+  }
+
   private obtenerDiaSemana(fecha: string): DiaSemana {
     const [anio, mes, dia] = fecha.split('-').map(Number);
     return DIAS_POR_INDICE[new Date(Date.UTC(anio, mes - 1, dia)).getUTCDay()];

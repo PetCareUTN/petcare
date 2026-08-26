@@ -12,6 +12,8 @@ import { Mascota } from '../../mascotas/entities/mascota.entity';
 import { User } from '../../users/entities/user.entity';
 import { Veterinario } from '../../veterinarios/entities/veterinario.entity';
 
+export type CanceladoPor = 'dueño' | 'veterinario';
+
 @Entity('turnos_veterinarios')
 export class TurnoVeterinario {
   @PrimaryGeneratedColumn({ name: 'id_turno' })
@@ -47,6 +49,12 @@ export class TurnoVeterinario {
 
   @Column({ name: 'motivo_rechazo', type: 'text', nullable: true })
   motivoRechazo: string | null;
+
+  @Column({ name: 'cancelado_por', type: 'varchar', length: 20, nullable: true })
+  canceladoPor: CanceladoPor | null;
+
+  @Column({ name: 'motivo_cancelacion', type: 'text', nullable: true })
+  motivoCancelacion: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

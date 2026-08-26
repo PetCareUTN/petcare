@@ -1,4 +1,5 @@
-export type AppointmentStatus = 'pendiente' | 'confirmado' | 'rechazado' | 'cancelado';
+export type AppointmentStatus = 'confirmado' | 'cancelado';
+export type CanceladoPorVeterinaria = 'dueño' | 'veterinario';
 
 export interface TurnoVeterinarioResponse {
   idTurno: number;
@@ -14,8 +15,10 @@ export interface TurnoVeterinarioResponse {
   motivoConsulta: string | null;
   estado: AppointmentStatus;
   motivoRechazo: string | null;
+  canceladoPor: CanceladoPorVeterinaria | null;
+  motivoCancelacion: string | null;
 }
 
-export interface RechazarTurnoVeterinarioRequest {
-  motivoRechazo: string;
+export interface CancelarTurnoVeterinarioRequest {
+  motivoCancelacion?: string;
 }
