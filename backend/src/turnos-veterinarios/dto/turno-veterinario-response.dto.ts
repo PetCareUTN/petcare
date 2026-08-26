@@ -1,5 +1,5 @@
 import { AppointmentStatus } from '../../common/enums/appointment-status.enum';
-import { TurnoVeterinario } from '../entities/turno-veterinario.entity';
+import { CanceladoPor, TurnoVeterinario } from '../entities/turno-veterinario.entity';
 
 export class TurnoVeterinarioResponseDto {
   idTurno: number;
@@ -15,6 +15,8 @@ export class TurnoVeterinarioResponseDto {
   motivoConsulta: string | null;
   estado: AppointmentStatus;
   motivoRechazo: string | null;
+  canceladoPor: CanceladoPor | null;
+  motivoCancelacion: string | null;
 
   static fromEntity(turno: TurnoVeterinario): TurnoVeterinarioResponseDto {
     return {
@@ -33,6 +35,8 @@ export class TurnoVeterinarioResponseDto {
       motivoConsulta: turno.motivoConsulta,
       estado: turno.estado,
       motivoRechazo: turno.motivoRechazo,
+      canceladoPor: turno.canceladoPor,
+      motivoCancelacion: turno.motivoCancelacion,
     };
   }
 }

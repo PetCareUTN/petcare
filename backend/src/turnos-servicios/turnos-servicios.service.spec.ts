@@ -284,4 +284,31 @@ describe('TurnosServiciosService', () => {
       expect(result).toHaveLength(1);
     });
   });
+
+  describe('horariosDisponibles', () => {
+    it('devuelve los horarios libres excluyendo los ya confirmados', async () => {
+      serviciosRepository.findOne.mockResolvedValue(servicio);
+      // Postgres devuelve las columnas TIME con segundos (ej. "09:30:00").
+      turnosRepository.find.mockResolvedValue([
+        { horaInicio: '09:30:00', estado: TurnoServicioEstado.CONFIRMADO },
+      ]);
+
+      // 2026-09-07 es lunes; el servicio dura 30 min (paseador).
+      const result = await service.horariosDisponibles(8, '2026-09-07');
+
+      expect(serviciosRepository.findOne).toHaveBeenCalledWith({
+        where: { idServicio: 8 },
+        relations: ['usuario', 'disponibilidades'],
+      });
+      expect(result).toEqual(['09:00', '10:00', '10:30', '11:00', '11:30']);
+    });
+
+    it('rechaza cuando el servicio no existe', async () => {
+      serviciosRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.horariosDisponibles(999, '2026-09-07'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
 });

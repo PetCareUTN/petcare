@@ -52,7 +52,7 @@ describe('TurnosVeterinariosService', () => {
     nombre: 'Luna',
   } as Mascota;
 
-  const turnoPendiente = {
+  const turnoConfirmado = {
     idTurno: 30,
     veterinario,
     mascota,
@@ -60,7 +60,7 @@ describe('TurnosVeterinariosService', () => {
     fecha: '2026-09-01',
     hora: '10:00',
     motivoConsulta: 'Control anual',
-    estado: AppointmentStatus.PENDIENTE,
+    estado: AppointmentStatus.CONFIRMADO,
     motivoRechazo: null,
   } as TurnoVeterinario;
 
@@ -111,9 +111,9 @@ describe('TurnosVeterinariosService', () => {
 
   it('lista turnos de la veterinaria validada filtrando por estado', async () => {
     veterinariosRepository.findOne.mockResolvedValue(veterinario);
-    turnosRepository.find.mockResolvedValue([turnoPendiente]);
+    turnosRepository.find.mockResolvedValue([turnoConfirmado]);
 
-    const result = await service.findMine(99, AppointmentStatus.PENDIENTE);
+    const result = await service.findMine(99, AppointmentStatus.CONFIRMADO);
 
     expect(veterinariosRepository.findOne).toHaveBeenCalledWith({
       where: { usuario: { idUsuario: 99 } },
@@ -121,7 +121,7 @@ describe('TurnosVeterinariosService', () => {
     expect(turnosRepository.find).toHaveBeenCalledWith({
       where: {
         veterinario: { idVeterinario: 7 },
-        estado: AppointmentStatus.PENDIENTE,
+        estado: AppointmentStatus.CONFIRMADO,
       },
       relations: ['veterinario', 'mascota', 'duenio'],
       order: { fecha: 'ASC', hora: 'ASC', idTurno: 'ASC' },
@@ -139,68 +139,10 @@ describe('TurnosVeterinariosService', () => {
         fecha: '2026-09-01',
         hora: '10:00',
         motivoConsulta: 'Control anual',
-        estado: AppointmentStatus.PENDIENTE,
+        estado: AppointmentStatus.CONFIRMADO,
         motivoRechazo: null,
       },
     ]);
-  });
-
-  it('confirma un turno pendiente propio', async () => {
-    veterinariosRepository.findOne.mockResolvedValue(veterinario);
-    turnosRepository.findOne.mockResolvedValue({ ...turnoPendiente });
-    turnosRepository.save.mockImplementation((turno: TurnoVeterinario) =>
-      Promise.resolve(turno),
-    );
-
-    const result = await service.confirmar(99, 30);
-
-    expect(turnosRepository.save).toHaveBeenCalledWith({
-      ...turnoPendiente,
-      estado: AppointmentStatus.CONFIRMADO,
-      motivoRechazo: null,
-    });
-    expect(result.estado).toBe(AppointmentStatus.CONFIRMADO);
-  });
-
-  it('rechaza un turno pendiente propio con motivo', async () => {
-    veterinariosRepository.findOne.mockResolvedValue(veterinario);
-    turnosRepository.findOne.mockResolvedValue({ ...turnoPendiente });
-    turnosRepository.save.mockImplementation((turno: TurnoVeterinario) =>
-      Promise.resolve(turno),
-    );
-
-    const result = await service.rechazar(99, 30, {
-      motivoRechazo: '  Sin disponibilidad de box  ',
-    });
-
-    expect(result.estado).toBe(AppointmentStatus.RECHAZADO);
-    expect(result.motivoRechazo).toBe('Sin disponibilidad de box');
-  });
-
-  it('rechaza gestionar un turno ajeno a la veterinaria', async () => {
-    veterinariosRepository.findOne.mockResolvedValue(veterinario);
-    turnosRepository.findOne.mockResolvedValue({
-      ...turnoPendiente,
-      veterinario: { idVeterinario: 99 },
-    });
-
-    await expect(service.confirmar(99, 30)).rejects.toThrow(
-      ForbiddenException,
-    );
-    expect(turnosRepository.save).not.toHaveBeenCalled();
-  });
-
-  it('rechaza gestionar un turno que no esta pendiente', async () => {
-    veterinariosRepository.findOne.mockResolvedValue(veterinario);
-    turnosRepository.findOne.mockResolvedValue({
-      ...turnoPendiente,
-      estado: AppointmentStatus.CONFIRMADO,
-    });
-
-    await expect(service.rechazar(99, 30, { motivoRechazo: 'No' })).rejects.toThrow(
-      BadRequestException,
-    );
-    expect(turnosRepository.save).not.toHaveBeenCalled();
   });
 
   it('rechaza una veterinaria no validada', async () => {
@@ -211,15 +153,6 @@ describe('TurnosVeterinariosService', () => {
 
     await expect(service.findMine(99)).rejects.toThrow(ForbiddenException);
     expect(turnosRepository.find).not.toHaveBeenCalled();
-  });
-
-  it('rechaza un turno inexistente', async () => {
-    veterinariosRepository.findOne.mockResolvedValue(veterinario);
-    turnosRepository.findOne.mockResolvedValue(null);
-
-    await expect(service.confirmar(99, 999)).rejects.toThrow(
-      NotFoundException,
-    );
   });
 
   describe('solicitar', () => {
@@ -245,15 +178,15 @@ describe('TurnosVeterinariosService', () => {
       horaFin: '12:00',
     } as DisponibilidadVeterinaria;
 
-    it('crea un turno pendiente cuando el horario esta disponible', async () => {
+    it('crea un turno confirmado directamente cuando el horario esta disponible', async () => {
       mascotasRepository.findOne.mockResolvedValue(mascotaPropia);
       veterinariosRepository.findOne.mockResolvedValue(veterinario);
       disponibilidadesRepository.find.mockResolvedValue([disponibilidadLunes]);
       turnosRepository.find.mockResolvedValue([]);
-      const turnoCreado = { ...dto, estado: AppointmentStatus.PENDIENTE };
+      const turnoCreado = { ...dto, estado: AppointmentStatus.CONFIRMADO };
       turnosRepository.create.mockReturnValue(turnoCreado);
       turnosRepository.save.mockResolvedValue({ ...turnoCreado, idTurno: 30 });
-      turnosRepository.findOne.mockResolvedValue({ ...turnoPendiente, idTurno: 30 });
+      turnosRepository.findOne.mockResolvedValue({ ...turnoConfirmado, idTurno: 30 });
 
       const result = await service.solicitar(idDueno, dto);
 
@@ -270,10 +203,11 @@ describe('TurnosVeterinariosService', () => {
           mascota: mascotaPropia,
           fecha: dto.fecha,
           hora: dto.hora,
-          estado: AppointmentStatus.PENDIENTE,
+          estado: AppointmentStatus.CONFIRMADO,
         }),
       );
       expect(result.idTurno).toBe(30);
+      expect(result.estado).toBe(AppointmentStatus.CONFIRMADO);
     });
 
     it('rechaza cuando la mascota no existe', async () => {
@@ -307,6 +241,23 @@ describe('TurnosVeterinariosService', () => {
       );
     });
 
+    it('permite reservar justo en el horario de apertura de la franja', async () => {
+      mascotasRepository.findOne.mockResolvedValue(mascotaPropia);
+      veterinariosRepository.findOne.mockResolvedValue(veterinario);
+      // Postgres devuelve las columnas TIME con segundos (ej. "09:00:00").
+      disponibilidadesRepository.find.mockResolvedValue([
+        { ...disponibilidadLunes, horaInicio: '09:00:00', horaFin: '12:00:00' },
+      ]);
+      turnosRepository.find.mockResolvedValue([]);
+      turnosRepository.create.mockReturnValue({});
+      turnosRepository.save.mockResolvedValue({ idTurno: 31 });
+      turnosRepository.findOne.mockResolvedValue({ ...turnoConfirmado, idTurno: 31 });
+
+      const result = await service.solicitar(idDueno, { ...dto, hora: '09:00' });
+
+      expect(result.idTurno).toBe(31);
+    });
+
     it('rechaza un horario fuera de la disponibilidad configurada', async () => {
       mascotasRepository.findOne.mockResolvedValue(mascotaPropia);
       veterinariosRepository.findOne.mockResolvedValue(veterinario);
@@ -318,18 +269,56 @@ describe('TurnosVeterinariosService', () => {
       expect(turnosRepository.save).not.toHaveBeenCalled();
     });
 
-    it('rechaza un horario ya ocupado por otro turno', async () => {
+    it('rechaza un horario ya ocupado por otro turno confirmado', async () => {
       mascotasRepository.findOne.mockResolvedValue(mascotaPropia);
       veterinariosRepository.findOne.mockResolvedValue(veterinario);
       disponibilidadesRepository.find.mockResolvedValue([disponibilidadLunes]);
       turnosRepository.find.mockResolvedValue([
-        { hora: '10:15', estado: AppointmentStatus.PENDIENTE },
+        { hora: '10:15', estado: AppointmentStatus.CONFIRMADO },
       ]);
 
       await expect(service.solicitar(idDueno, dto)).rejects.toThrow(
         BadRequestException,
       );
       expect(turnosRepository.save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('horariosDisponibles', () => {
+    const disponibilidadLunes = {
+      diaSemana: DiaSemana.LUNES,
+      horaInicio: '09:00',
+      horaFin: '10:30',
+    } as DisponibilidadVeterinaria;
+
+    it('devuelve los horarios libres excluyendo los ya confirmados', async () => {
+      disponibilidadesRepository.find.mockResolvedValue([disponibilidadLunes]);
+      // Postgres devuelve las columnas TIME con segundos (ej. "09:30:00").
+      turnosRepository.find.mockResolvedValue([
+        { hora: '09:30:00', estado: AppointmentStatus.CONFIRMADO },
+        { hora: '10:00:00', estado: AppointmentStatus.CANCELADO },
+      ]);
+
+      // 2026-09-07 es lunes.
+      const result = await service.horariosDisponibles(7, '2026-09-07');
+
+      expect(disponibilidadesRepository.find).toHaveBeenCalledWith({
+        where: { veterinario: { idVeterinario: 7 }, diaSemana: DiaSemana.LUNES },
+      });
+      expect(turnosRepository.find).toHaveBeenCalledWith({
+        where: { veterinario: { idVeterinario: 7 }, fecha: '2026-09-07' },
+      });
+      // 09:30 esta confirmado y desaparece; 10:00 esta cancelado y sigue libre.
+      expect(result).toEqual(['09:00', '10:00']);
+    });
+
+    it('devuelve una lista vacia cuando no hay disponibilidad ese dia', async () => {
+      disponibilidadesRepository.find.mockResolvedValue([]);
+      turnosRepository.find.mockResolvedValue([]);
+
+      const result = await service.horariosDisponibles(7, '2026-09-07');
+
+      expect(result).toEqual([]);
     });
   });
 
@@ -345,7 +334,7 @@ describe('TurnosVeterinariosService', () => {
     } as Veterinario;
 
     const turnoDelDuenio = {
-      ...turnoPendiente,
+      ...turnoConfirmado,
       veterinario: veterinarioConUsuario,
     } as TurnoVeterinario;
 
@@ -370,7 +359,7 @@ describe('TurnosVeterinariosService', () => {
           fecha: '2026-09-01',
           hora: '10:00',
           motivoConsulta: 'Control anual',
-          estado: AppointmentStatus.PENDIENTE,
+          estado: AppointmentStatus.CONFIRMADO,
           motivoRechazo: null,
         },
       ]);
@@ -381,13 +370,13 @@ describe('TurnosVeterinariosService', () => {
 
       await service.findMisTurnos(
         duenio.idUsuario,
-        AppointmentStatus.CONFIRMADO,
+        AppointmentStatus.CANCELADO,
       );
 
       expect(turnosRepository.find).toHaveBeenCalledWith({
         where: {
           duenio: { idUsuario: duenio.idUsuario },
-          estado: AppointmentStatus.CONFIRMADO,
+          estado: AppointmentStatus.CANCELADO,
         },
         relations: ['veterinario', 'veterinario.usuario', 'mascota', 'duenio'],
         order: { fecha: 'ASC', hora: 'ASC', idTurno: 'ASC' },
@@ -400,6 +389,75 @@ describe('TurnosVeterinariosService', () => {
       const result = await service.findMisTurnos(duenio.idUsuario);
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('cancelar', () => {
+    const veterinarioConUsuario = {
+      idVeterinario: 7,
+      estadoValidacion: ValidationStatus.APROBADO,
+      usuario: { idUsuario: 3 },
+    } as Veterinario;
+
+    const turnoCancelable = {
+      ...turnoConfirmado,
+      veterinario: veterinarioConUsuario,
+    } as TurnoVeterinario;
+
+    it('permite cancelar al dueño del turno', async () => {
+      turnosRepository.findOne.mockResolvedValue({ ...turnoCancelable });
+      turnosRepository.save.mockImplementation((turno: TurnoVeterinario) =>
+        Promise.resolve(turno),
+      );
+
+      const result = await service.cancelar(duenio.idUsuario, 30, {
+        motivoCancelacion: '  Se enfermó el dueño  ',
+      });
+
+      expect(result.estado).toBe(AppointmentStatus.CANCELADO);
+      expect(result.canceladoPor).toBe('dueño');
+      expect(result.motivoCancelacion).toBe('Se enfermó el dueño');
+    });
+
+    it('permite cancelar al veterinario del turno', async () => {
+      turnosRepository.findOne.mockResolvedValue({ ...turnoCancelable });
+      turnosRepository.save.mockImplementation((turno: TurnoVeterinario) =>
+        Promise.resolve(turno),
+      );
+
+      const result = await service.cancelar(3, 30, {});
+
+      expect(result.estado).toBe(AppointmentStatus.CANCELADO);
+      expect(result.canceladoPor).toBe('veterinario');
+    });
+
+    it('rechaza cancelar a un usuario ajeno al turno', async () => {
+      turnosRepository.findOne.mockResolvedValue({ ...turnoCancelable });
+
+      await expect(service.cancelar(999, 30, {})).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(turnosRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('rechaza cancelar un turno que no esta confirmado', async () => {
+      turnosRepository.findOne.mockResolvedValue({
+        ...turnoCancelable,
+        estado: AppointmentStatus.CANCELADO,
+      });
+
+      await expect(service.cancelar(duenio.idUsuario, 30, {})).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(turnosRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('rechaza cancelar un turno inexistente', async () => {
+      turnosRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.cancelar(duenio.idUsuario, 999, {})).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });
