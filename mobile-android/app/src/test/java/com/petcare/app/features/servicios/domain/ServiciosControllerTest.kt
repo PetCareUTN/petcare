@@ -109,6 +109,8 @@ class ServiciosControllerTest {
             listOf(
                 ServicioResponse(
                     id = 1,
+                    idUsuario = 1,
+                    nombrePrestador = "Carla",
                     categoria = "paseador",
                     descripcion = "Paseos por el barrio",
                     disponibilidades = listOf(
@@ -122,16 +124,23 @@ class ServiciosControllerTest {
                 ),
                 ServicioResponse(
                     id = 2,
+                    idUsuario = 1,
+                    nombrePrestador = "Carla",
                     categoria = "guarderia",
                     descripcion = null,
                     disponibilidades = emptyList()
                 )
             )
 
+        override suspend fun getServicios(categoria: String?): List<ServicioResponse> =
+            getMyServicios().filter { categoria == null || it.categoria == categoria }
+
         override suspend fun createServicio(request: CreateServicioRequest): ServicioResponse {
             createdRequest = request
             return ServicioResponse(
                 id = 3,
+                idUsuario = 1,
+                nombrePrestador = "Carla",
                 categoria = request.categoria,
                 descripcion = request.descripcion,
                 disponibilidades = request.disponibilidades.mapIndexed { index, disponibilidad ->
@@ -150,6 +159,8 @@ class ServiciosControllerTest {
             updatedRequest = request
             return ServicioResponse(
                 id = id,
+                idUsuario = 1,
+                nombrePrestador = "Carla",
                 categoria = request.categoria,
                 descripcion = request.descripcion,
                 disponibilidades = request.disponibilidades.mapIndexed { index, disponibilidad ->

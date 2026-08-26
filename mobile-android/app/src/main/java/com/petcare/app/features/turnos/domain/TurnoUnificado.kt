@@ -6,9 +6,9 @@ import com.petcare.app.features.turnos.data.remote.MiTurnoResponse
 enum class TipoTurnoItem { VETERINARIA, PASEADOR, GUARDERIA, PELUQUERIA }
 
 /**
- * Vista unica que fusiona los turnos veterinarios (aceptar/rechazar) con los
- * turnos de servicios (confirmados automaticamente, solo se pueden cancelar)
- * para mostrarlos juntos en "Mis turnos".
+ * Vista unica que fusiona los turnos veterinarios y los turnos de servicios
+ * (ambos confirmados automaticamente, solo se pueden cancelar) para
+ * mostrarlos juntos en "Mis turnos".
  */
 data class TurnoUnificado(
     val idTurno: Int,
@@ -37,9 +37,9 @@ data class TurnoUnificado(
             contraparteDetalle = turno.direccionVeterinaria,
             nota = turno.motivoConsulta,
             estado = turno.estado,
-            motivoNegativo = turno.motivoRechazo,
-            canceladoPor = null,
-            puedeCancelar = false
+            motivoNegativo = turno.motivoCancelacion,
+            canceladoPor = turno.canceladoPor,
+            puedeCancelar = turno.estado == "confirmado"
         )
 
         fun fromServicio(turno: MiReservaServicioResponse): TurnoUnificado = TurnoUnificado(

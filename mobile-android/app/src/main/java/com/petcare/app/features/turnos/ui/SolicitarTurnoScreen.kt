@@ -41,7 +41,6 @@ import androidx.compose.ui.unit.dp
 import com.petcare.app.features.pets.data.remote.PetResponse
 import com.petcare.app.features.servicios.data.remote.ServicioResponse
 import com.petcare.app.features.servicios.ui.categoriaLabel
-import com.petcare.app.features.turnos.data.remote.DisponibilidadTurnoResponse
 import com.petcare.app.features.turnos.data.remote.VeterinariaResponse
 import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMint
@@ -52,10 +51,6 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import java.util.TimeZone
-
-private val DIAS_SEMANA = listOf(
-    "domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"
-)
 
 private enum class TipoTurno { VETERINARIA, PASEADOR, GUARDERIA, PELUQUERIA }
 
@@ -73,24 +68,20 @@ private fun TipoTurno.categoria(): String? = when (this) {
     TipoTurno.PELUQUERIA -> "peluqueria"
 }
 
-private fun TipoTurno.slotMinutos(): Int = if (this == TipoTurno.GUARDERIA) 60 else 30
-
-private data class RangoDisponible(val diaSemana: String, val horaInicio: String, val horaFin: String)
-
 @Composable
 fun SolicitarTurnoScreen(
     pets: List<PetResponse>,
     veterinarias: List<VeterinariaResponse>,
     isLoadingVeterinarias: Boolean,
-    disponibilidadesVeterinaria: List<DisponibilidadTurnoResponse>,
-    isLoadingDisponibilidadesVeterinaria: Boolean,
     serviciosPorCategoria: List<ServicioResponse>,
     isLoadingServiciosPorCategoria: Boolean,
+    horariosDisponibles: List<String>,
+    isLoadingHorariosDisponibles: Boolean,
     isSaving: Boolean,
     errorMessage: String?,
     successMessage: String?,
-    onSelectVeterinaria: (idVeterinario: Int) -> Unit,
     onSelectCategoria: (categoria: String) -> Unit,
+    onCargarHorarios: (idProveedor: Int, fecha: String, esServicio: Boolean) -> Unit,
     onSolicitarVeterinario: (
         idMascota: Int,
         idVeterinario: Int,
@@ -115,8 +106,6 @@ fun SolicitarTurnoScreen(
     var selectedHora by rememberSaveable { mutableStateOf<String?>(null) }
     var notas by rememberSaveable { mutableStateOf("") }
     var formError by rememberSaveable { mutableStateOf<String?>(null) }
-
-    val selectedServicio = serviciosPorCategoria.find { it.id == selectedServicioId }
 
     Column(
         modifier = Modifier
@@ -239,7 +228,6 @@ fun SolicitarTurnoScreen(
                                     selectedFecha = ""
                                     selectedHora = null
                                     formError = null
-                                    onSelectVeterinaria(veterinaria.idVeterinario)
                                 }
                             )
                             Spacer(modifier = Modifier.height(8.dp))
@@ -297,10 +285,18 @@ fun SolicitarTurnoScreen(
                 Spacer(modifier = Modifier.height(12.dp))
                 TurnoDatePickerField(
                     selectedDate = selectedFecha,
-                    onDateSelected = {
-                        selectedFecha = it
+                    onDateSelected = { fecha ->
+                        selectedFecha = fecha
                         selectedHora = null
                         formError = null
+                        val idProveedor = if (tipo == TipoTurno.VETERINARIA) {
+                            selectedVeterinariaId
+                        } else {
+                            selectedServicioId
+                        }
+                        if (idProveedor != null) {
+                            onCargarHorarios(idProveedor, fecha, tipo != TipoTurno.VETERINARIA)
+                        }
                     }
                 )
             }
@@ -310,58 +306,41 @@ fun SolicitarTurnoScreen(
                 Text(text = "Horario disponible", style = MaterialTheme.typography.titleSmall)
                 Spacer(modifier = Modifier.height(8.dp))
 
-                val cargandoDisponibilidad =
-                    tipo == TipoTurno.VETERINARIA && isLoadingDisponibilidadesVeterinaria
-
-                if (cargandoDisponibilidad) {
+                if (isLoadingHorariosDisponibles) {
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         CircularProgressIndicator()
                     }
+                } else if (horariosDisponibles.isEmpty()) {
+                    Text(
+                        text = "No hay horarios disponibles para ese día",
+                        color = PetCareMuted,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 } else {
-                    val rangos = if (tipo == TipoTurno.VETERINARIA) {
-                        disponibilidadesVeterinaria.map {
-                            RangoDisponible(it.diaSemana, it.horaInicio, it.horaFin)
-                        }
-                    } else {
-                        (selectedServicio?.disponibilidades ?: emptyList()).map {
-                            RangoDisponible(it.diaSemana, it.horaInicio, it.horaFin)
-                        }
-                    }
-                    val slotMinutos = tipo?.slotMinutos() ?: 30
-                    val slots = generarSlots(rangos, selectedFecha, slotMinutos)
-
-                    if (slots.isEmpty()) {
-                        Text(
-                            text = "No hay horarios configurados para ese día",
-                            color = PetCareMuted,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    } else {
-                        slots.chunked(3).forEach { fila ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                fila.forEach { hora ->
-                                    SlotChip(
-                                        label = hora,
-                                        selected = hora == selectedHora,
-                                        modifier = Modifier.weight(1f),
-                                        onClick = {
-                                            selectedHora = hora
-                                            formError = null
-                                        }
-                                    )
-                                }
-                                repeat(3 - fila.size) {
-                                    Spacer(modifier = Modifier.weight(1f))
-                                }
+                    horariosDisponibles.chunked(3).forEach { fila ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            fila.forEach { hora ->
+                                SlotChip(
+                                    label = hora,
+                                    selected = hora == selectedHora,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        selectedHora = hora
+                                        formError = null
+                                    }
+                                )
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
+                            repeat(3 - fila.size) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
                         }
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
             }
@@ -602,39 +581,6 @@ private fun TurnoDatePickerField(
             DatePicker(state = datePickerState)
         }
     }
-}
-
-private fun horaToMinutos(hora: String): Int {
-    val partes = hora.split(":")
-    return partes[0].toInt() * 60 + partes[1].toInt()
-}
-
-private fun minutosToHora(minutos: Int): String =
-    "%02d:%02d".format(minutos / 60, minutos % 60)
-
-private fun diaSemanaDe(fecha: String): String? {
-    val millis = fecha.toFechaMillis() ?: return null
-    val calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
-    calendar.timeInMillis = millis
-    return DIAS_SEMANA[calendar.get(Calendar.DAY_OF_WEEK) - 1]
-}
-
-private fun generarSlots(
-    disponibilidades: List<RangoDisponible>,
-    fecha: String,
-    slotMinutos: Int
-): List<String> {
-    val dia = diaSemanaDe(fecha) ?: return emptyList()
-    return disponibilidades
-        .filter { it.diaSemana == dia }
-        .flatMap { disponibilidad ->
-            val inicio = horaToMinutos(disponibilidad.horaInicio)
-            val fin = horaToMinutos(disponibilidad.horaFin)
-            generateSequence(inicio) { it + slotMinutos }
-                .takeWhile { it + slotMinutos <= fin }
-                .map { minutosToHora(it) }
-        }
-        .sorted()
 }
 
 private fun fechaFormatter(): SimpleDateFormat =
