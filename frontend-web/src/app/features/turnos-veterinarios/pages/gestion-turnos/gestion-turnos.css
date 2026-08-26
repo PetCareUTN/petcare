@@ -1,3 +1,14 @@
+:host {
+  /* --success no está definido en styles.css, así que los estados se resuelven acá. */
+  --estado-pendiente: #c9862e;
+  --estado-confirmado: #3f8f6b;
+  --estado-rechazado: var(--danger);
+  --estado-cancelado: #8a9a95;
+
+  --tipo-veterinaria: var(--primary);
+  --tipo-servicio: #6f63b8;
+}
+
 .appointments-page {
   min-height: 100%;
   padding: var(--spacing-xl) var(--spacing-lg);
@@ -6,7 +17,7 @@
 }
 
 .appointments-panel {
-  width: min(100%, 980px);
+  width: min(100%, 1240px);
   margin: 0 auto;
   padding: var(--spacing-xl);
   border: 1px solid var(--border);
@@ -31,7 +42,7 @@
 .appointments-header p,
 .appointment-owner,
 .status-text,
-.empty-state {
+.detail-placeholder {
   color: var(--text-secondary);
 }
 
@@ -39,20 +50,32 @@
   margin: var(--spacing-xs) 0 0;
 }
 
-.status-tabs,
-.vista-tabs {
+/* Barra de navegación del período */
+
+.calendar-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-xs);
-  margin-bottom: var(--spacing-lg);
-}
-
-.vista-tabs {
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-md);
   margin-bottom: var(--spacing-md);
 }
 
-.status-tabs button,
-.vista-tabs button,
+.period-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.period-title {
+  margin: 0 0 0 var(--spacing-sm);
+  font-size: 1.15rem;
+}
+
+.nav-button,
+.today-button,
+.view-switch button,
+.status-filter,
 .btn-primary,
 .btn-secondary,
 .btn-danger {
@@ -62,39 +85,444 @@
   cursor: pointer;
 }
 
-.status-tabs button,
-.vista-tabs button {
-  padding: 0.55rem 0.85rem;
+.nav-button,
+.today-button,
+.view-switch button {
   border: 1px solid var(--border);
   background-color: var(--surface);
   color: var(--text-primary);
 }
 
-.status-tabs button.active,
-.vista-tabs button.active {
+.nav-button {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.today-button {
+  padding: 0.4rem 0.8rem;
+}
+
+.view-switch {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.view-switch button {
+  padding: 0.45rem 0.9rem;
+}
+
+.view-switch button.active {
   border-color: var(--primary);
   background-color: var(--primary);
   color: #ffffff;
 }
 
-.appointments-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
+.nav-button:hover,
+.today-button:hover,
+.view-switch button:not(.active):hover {
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
-.appointment-card {
+/* Filtros por tipo y por estado */
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
+.filter-group + .filter-group {
+  padding-left: var(--spacing-md);
+  border-left: 1px solid var(--border);
+}
+
+.status-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  opacity: 0.55;
+}
+
+.status-filter.active {
+  color: var(--text-primary);
+  opacity: 1;
+}
+
+.status-count {
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background-color: var(--background);
+  font-size: 0.78rem;
+}
+
+.status-dot,
+.tipo-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background-color: var(--estado-pendiente);
+}
+
+.status-dot.confirmado {
+  background-color: var(--estado-confirmado);
+}
+
+.status-dot.rechazado {
+  background-color: var(--estado-rechazado);
+}
+
+.status-dot.cancelado {
+  background-color: var(--estado-cancelado);
+}
+
+.tipo-dot.veterinaria {
+  background-color: var(--tipo-veterinaria);
+}
+
+/* El cuadrado distingue servicios del círculo de veterinaria sin depender del color. */
+.tipo-dot.servicio {
+  border-radius: 2px;
+  background-color: var(--tipo-servicio);
+}
+
+/* Layout calendario + panel de detalle */
+
+.calendar-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-lg);
+}
+
+@media (min-width: 1100px) {
+  .calendar-layout {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    align-items: start;
+  }
+}
+
+.calendar-area {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+/* Vista mes */
+
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(6rem, 1fr));
+  gap: 1px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--border);
+  overflow: hidden;
+}
+
+.weekday-head {
+  padding: 0.5rem;
+  background-color: var(--background);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.month-day {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-height: 6.5rem;
+  padding: 0.35rem;
+  background-color: var(--surface);
+}
+
+.month-day.outside {
+  background-color: var(--background);
+}
+
+.month-day.outside .day-number {
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+.month-day.today .day-number {
+  background-color: var(--primary);
+  color: #ffffff;
+}
+
+.day-number {
+  align-self: flex-start;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background-color: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.day-number:hover {
+  background-color: var(--primary-light);
+}
+
+.day-events {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+/* Turnos: chip en vista mes, bloque en vistas semana y día */
+
+.event-chip,
+.event-block {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid transparent;
+  border-left-width: 3px;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 0.78rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.event-block {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: 0.35rem 0.5rem;
+}
+
+/* El borde punteado marca los turnos de servicios sin depender del color. */
+.event-chip.tipo-servicio,
+.event-block.tipo-servicio {
+  border-left-style: dashed;
+}
+
+.event-time {
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.event-time-end {
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.event-pet {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.event-chip.pendiente,
+.event-block.pendiente {
+  border-left-color: var(--estado-pendiente);
+  background-color: color-mix(in srgb, var(--estado-pendiente) 14%, white);
+  color: var(--estado-pendiente);
+}
+
+.event-chip.confirmado,
+.event-block.confirmado {
+  border-left-color: var(--estado-confirmado);
+  background-color: color-mix(in srgb, var(--estado-confirmado) 14%, white);
+  color: var(--estado-confirmado);
+}
+
+.event-chip.rechazado,
+.event-block.rechazado {
+  border-left-color: var(--estado-rechazado);
+  background-color: color-mix(in srgb, var(--estado-rechazado) 14%, white);
+  color: var(--estado-rechazado);
+}
+
+.event-chip.cancelado,
+.event-block.cancelado {
+  border-left-color: var(--estado-cancelado);
+  background-color: color-mix(in srgb, var(--estado-cancelado) 16%, white);
+  color: var(--estado-cancelado);
+  text-decoration: line-through;
+}
+
+.event-chip.selected,
+.event-block.selected {
+  border-color: var(--text-primary);
+  border-left-color: var(--text-primary);
+}
+
+/* Vistas semana y día */
+
+.time-grid {
+  --hour-gutter-width: 3.5rem;
+  min-width: 42rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.time-grid.single-day {
+  min-width: 0;
+}
+
+.time-grid-head,
+.time-row {
+  display: grid;
+  grid-template-columns: var(--hour-gutter-width) repeat(7, minmax(0, 1fr));
+}
+
+.time-grid.single-day .time-grid-head,
+.time-grid.single-day .time-row {
+  grid-template-columns: var(--hour-gutter-width) minmax(0, 1fr);
+}
+
+.time-grid-head {
+  position: sticky;
+  top: 0;
+  background-color: var(--background);
+  border-bottom: 1px solid var(--border);
+}
+
+.time-day-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.45rem 0.25rem;
+  border: none;
+  border-left: 1px solid var(--border);
+  background-color: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.time-day-name {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.time-day-number {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.time-day-head.today .time-day-number {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background-color: var(--primary);
+  color: #ffffff;
+}
+
+.time-row {
+  border-top: 1px solid var(--border);
+}
+
+.time-row:first-of-type {
+  border-top: none;
+}
+
+.hour-gutter {
+  padding: 0.35rem 0.4rem;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+.time-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-height: 3rem;
+  min-width: 0;
+  padding: 0.2rem;
+  border-left: 1px solid var(--border);
+  background-color: var(--surface);
+}
+
+/* Panel de detalle */
+
+.detail-panel {
   padding: var(--spacing-lg);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background-color: var(--background);
 }
 
-.appointment-main {
+.detail-head {
   display: flex;
   justify-content: space-between;
-  gap: var(--spacing-md);
   align-items: flex-start;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+}
+
+.detail-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}
+
+.close-button {
+  border: none;
+  background-color: transparent;
+  color: var(--text-secondary);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.detail-panel h3 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.detail-categoria {
+  margin: var(--spacing-xs) 0 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--tipo-servicio);
+}
+
+.detail-label {
+  margin: var(--spacing-md) 0 var(--spacing-xs);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-secondary);
+}
+
+.detail-placeholder {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
 }
 
 .appointment-date {
@@ -104,44 +532,60 @@
   color: var(--primary);
 }
 
-.appointment-card h2 {
-  margin: 0;
-  font-size: 1.15rem;
-}
-
 .appointment-owner {
   margin: var(--spacing-xs) 0 0;
   font-size: 0.92rem;
+  overflow-wrap: anywhere;
 }
 
-.status-badge {
+.status-badge,
+.tipo-badge {
   flex-shrink: 0;
   padding: 0.35rem 0.65rem;
   border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 800;
-  background-color: var(--primary-light);
-  color: var(--primary);
+}
+
+.status-badge {
+  background-color: color-mix(in srgb, var(--estado-pendiente) 16%, white);
+  color: var(--estado-pendiente);
 }
 
 .status-badge.confirmado {
-  background-color: color-mix(in srgb, var(--success) 16%, white);
-  color: var(--success);
+  background-color: color-mix(in srgb, var(--estado-confirmado) 16%, white);
+  color: var(--estado-confirmado);
 }
 
-.status-badge.rechazado,
+.status-badge.rechazado {
+  background-color: color-mix(in srgb, var(--estado-rechazado) 14%, white);
+  color: var(--estado-rechazado);
+}
+
 .status-badge.cancelado {
-  background-color: color-mix(in srgb, var(--danger) 14%, white);
-  color: var(--danger);
+  background-color: color-mix(in srgb, var(--estado-cancelado) 18%, white);
+  color: var(--estado-cancelado);
+}
+
+.tipo-badge.veterinaria {
+  background-color: color-mix(in srgb, var(--tipo-veterinaria) 16%, white);
+  color: var(--tipo-veterinaria);
+}
+
+.tipo-badge.servicio {
+  background-color: color-mix(in srgb, var(--tipo-servicio) 16%, white);
+  color: var(--tipo-servicio);
 }
 
 .appointment-reason,
 .appointment-rejection {
-  margin: var(--spacing-md) 0 0;
+  margin: 0;
   line-height: 1.45;
+  font-size: 0.92rem;
 }
 
 .appointment-rejection {
+  margin-top: var(--spacing-md);
   color: var(--danger);
 }
 
@@ -210,8 +654,7 @@
 }
 
 .banner,
-.status-text,
-.empty-state {
+.status-text {
   margin: 0 0 var(--spacing-md);
   font-size: 0.92rem;
 }
@@ -232,13 +675,26 @@
 }
 
 @media (max-width: 720px) {
-  .appointments-panel,
-  .appointment-card {
+  .appointments-panel {
     padding: var(--spacing-lg);
   }
 
-  .appointment-main {
-    flex-direction: column;
+  .calendar-toolbar {
+    align-items: flex-start;
+  }
+
+  .period-title {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .filter-group + .filter-group {
+    padding-left: 0;
+    border-left: none;
+  }
+
+  .month-grid {
+    min-width: 40rem;
   }
 
   .appointment-actions,

@@ -3,18 +3,79 @@
     <header class="appointments-header">
       <div>
         <h1>Turnos</h1>
-        <p>Gestioná las solicitudes de turnos recibidas.</p>
+        <p>Organizá tu agenda de veterinaria y de servicios en un solo calendario.</p>
       </div>
     </header>
 
-    <nav class="vista-tabs" aria-label="Tipo de turno">
-      <button type="button" [class.active]="vista() === 'veterinaria'" (click)="setVista('veterinaria')">
-        Veterinaria
-      </button>
-      <button type="button" [class.active]="vista() === 'servicios'" (click)="setVista('servicios')">
-        Mis servicios
-      </button>
-    </nav>
+    <div class="calendar-toolbar">
+      <div class="period-nav">
+        <button
+          type="button"
+          class="nav-button"
+          aria-label="Período anterior"
+          (click)="desplazar(-1)"
+        >
+          ‹
+        </button>
+        <button
+          type="button"
+          class="nav-button"
+          aria-label="Período siguiente"
+          (click)="desplazar(1)"
+        >
+          ›
+        </button>
+        <button type="button" class="today-button" (click)="irAHoy()">Hoy</button>
+        <h2 class="period-title">{{ tituloPeriodo() }}</h2>
+      </div>
+
+      <nav class="view-switch" aria-label="Nivel de detalle del calendario">
+        @for (opcion of vistas; track opcion.value) {
+          <button
+            type="button"
+            [class.active]="vista() === opcion.value"
+            [attr.aria-pressed]="vista() === opcion.value"
+            (click)="setVista(opcion.value)"
+          >
+            {{ opcion.label }}
+          </button>
+        }
+      </nav>
+    </div>
+
+    <div class="filters">
+      <nav class="filter-group" aria-label="Tipo de turno">
+        @for (tipo of tipos; track tipo.value) {
+          <button
+            type="button"
+            class="status-filter"
+            [class.active]="esTipoVisible(tipo.value)"
+            [attr.aria-pressed]="esTipoVisible(tipo.value)"
+            (click)="toggleTipo(tipo.value)"
+          >
+            <span class="tipo-dot" [class]="tipo.value"></span>
+            {{ tipo.label }}
+            <span class="status-count">{{ conteoTipo(tipo.value) }}</span>
+          </button>
+        }
+      </nav>
+
+      <nav class="filter-group" aria-label="Estados visibles en el calendario">
+        @for (estado of estados; track estado.value) {
+          <button
+            type="button"
+            class="status-filter"
+            [class.active]="esEstadoVisible(estado.value)"
+            [attr.aria-pressed]="esEstadoVisible(estado.value)"
+            (click)="toggleEstado(estado.value)"
+          >
+            <span class="status-dot" [class]="estado.value"></span>
+            {{ estado.label }}
+            <span class="status-count">{{ conteo(estado.value) }}</span>
+          </button>
+        }
+      </nav>
+    </div>
 
     @if (successMessage()) {
       <p class="banner banner-success">{{ successMessage() }}</p>
@@ -24,199 +85,257 @@
       <p class="banner banner-error">{{ errorMessage() }}</p>
     }
 
-    @if (vista() === 'veterinaria') {
-
-    <nav class="status-tabs" aria-label="Estado de turnos">
-      @for (estado of estados; track estado.value) {
-        <button
-          type="button"
-          [class.active]="filtroEstado() === estado.value"
-          (click)="setFiltroEstado(estado.value)"
-        >
-          {{ estado.label }}
-        </button>
-      }
-    </nav>
-
-    @if (isLoading()) {
+    @if (cargando()) {
       <p class="status-text">Cargando turnos...</p>
-    } @else if (!hasTurnos()) {
-      <p class="empty-state">No hay turnos {{ estadoLabel(filtroEstado()).toLowerCase() }}.</p>
     } @else {
-      <div class="appointments-list">
-        @for (turno of turnos(); track turno.idTurno) {
-          <article class="appointment-card">
-            <div class="appointment-main">
-              <div>
-                <p class="appointment-date">
-                  {{ formatDate(turno.fecha) }} · {{ formatTime(turno.hora) }}
-                </p>
-                <h2>{{ turno.nombreMascota }}</h2>
-                <p class="appointment-owner">
-                  {{ turno.nombreDuenio }} · {{ turno.emailDuenio }}
-                </p>
-                @if (turno.telefonoDuenio) {
-                  <p class="appointment-owner">Tel. {{ turno.telefonoDuenio }}</p>
+      <div class="calendar-layout">
+        <div class="calendar-area">
+          @switch (vista()) {
+            @case ('mes') {
+              <div class="month-grid" role="grid">
+                @for (dia of diasSemana; track dia) {
+                  <div class="weekday-head" role="columnheader">{{ dia }}</div>
                 }
-              </div>
-              <span class="status-badge" [class]="turno.estado">
-                {{ estadoLabel(turno.estado) }}
-              </span>
-            </div>
 
-            @if (turno.motivoConsulta) {
-              <p class="appointment-reason">{{ turno.motivoConsulta }}</p>
-            }
-
-            @if (turno.motivoRechazo) {
-              <p class="appointment-rejection">Motivo de rechazo: {{ turno.motivoRechazo }}</p>
-            }
-
-            @if (turno.estado === 'pendiente') {
-              <div class="appointment-actions">
-                <button
-                  type="button"
-                  class="btn-primary"
-                  [disabled]="processingTurnoId() === turno.idTurno"
-                  (click)="confirmar(turno)"
-                >
-                  Confirmar
-                </button>
-                <button
-                  type="button"
-                  class="btn-secondary"
-                  [disabled]="processingTurnoId() === turno.idTurno"
-                  (click)="startReject(turno)"
-                >
-                  Rechazar
-                </button>
-              </div>
-            }
-
-            @if (rejectTurnoId() === turno.idTurno) {
-              <div class="reject-box">
-                <label [for]="'motivo-' + turno.idTurno">Motivo de rechazo</label>
-                <textarea
-                  [id]="'motivo-' + turno.idTurno"
-                  rows="3"
-                  [ngModel]="rejectionReason()"
-                  (ngModelChange)="rejectionReason.set($event)"
-                ></textarea>
-                <div class="reject-actions">
-                  <button
-                    type="button"
-                    class="btn-danger"
-                    [disabled]="processingTurnoId() === turno.idTurno"
-                    (click)="rechazar(turno)"
+                @for (dia of gridMes(); track dia.fecha) {
+                  <div
+                    class="month-day"
+                    [class.outside]="!dia.esDelMesActual"
+                    [class.today]="dia.esHoy"
+                    role="gridcell"
                   >
-                    Confirmar rechazo
-                  </button>
-                  <button type="button" class="btn-secondary" (click)="cancelReject()">
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            }
-          </article>
-        }
-      </div>
-    }
+                    <button
+                      type="button"
+                      class="day-number"
+                      [attr.aria-label]="'Ver el día ' + formatDate(dia.fecha)"
+                      (click)="verDetalleDelDia(dia.fecha)"
+                    >
+                      {{ dia.numero }}
+                    </button>
 
-    } @else {
-
-    <nav class="status-tabs" aria-label="Estado de turnos de servicios">
-      @for (estado of estadosServicios; track estado.value) {
-        <button
-          type="button"
-          [class.active]="filtroEstadoServicio() === estado.value"
-          (click)="setFiltroEstadoServicio(estado.value)"
-        >
-          {{ estado.label }}
-        </button>
-      }
-    </nav>
-
-    @if (isLoadingServicios()) {
-      <p class="status-text">Cargando turnos...</p>
-    } @else if (!hasTurnosServicios()) {
-      <p class="empty-state">
-        No hay turnos {{ estadoServicioLabel(filtroEstadoServicio()).toLowerCase() }}.
-      </p>
-    } @else {
-      <div class="appointments-list">
-        @for (turno of turnosServicios(); track turno.idTurno) {
-          <article class="appointment-card">
-            <div class="appointment-main">
-              <div>
-                <p class="appointment-date">
-                  {{ formatDate(turno.fecha) }} · {{ formatTime(turno.horaInicio) }} a
-                  {{ formatTime(turno.horaFin) }}
-                </p>
-                <h2>{{ turno.nombreMascota }} · {{ categoriaLabel(turno.categoria) }}</h2>
-                <p class="appointment-owner">
-                  {{ turno.nombreDuenio }} · {{ turno.emailDuenio }}
-                </p>
-                @if (turno.telefonoDuenio) {
-                  <p class="appointment-owner">Tel. {{ turno.telefonoDuenio }}</p>
+                    <div class="day-events">
+                      @for (turno of dia.turnos; track turno.clave) {
+                        <button
+                          type="button"
+                          [class]="'event-chip ' + turno.estado + ' tipo-' + turno.tipo"
+                          [class.selected]="turnoSeleccionadoClave() === turno.clave"
+                          [attr.aria-label]="
+                            tipoLabel(turno.tipo) + ' ' + formatTime(turno.hora) + ' ' +
+                            etiquetaCorta(turno)
+                          "
+                          (click)="seleccionarTurno(turno)"
+                        >
+                          <span class="event-time">{{ formatTime(turno.hora) }}</span>
+                          <span class="event-pet">{{ etiquetaCorta(turno) }}</span>
+                        </button>
+                      }
+                    </div>
+                  </div>
                 }
               </div>
-              <span class="status-badge" [class]="turno.estado">
-                {{ estadoServicioLabel(turno.estado) }}
-              </span>
-            </div>
-
-            @if (turno.notas) {
-              <p class="appointment-reason">{{ turno.notas }}</p>
             }
 
-            @if (turno.motivoCancelacion) {
+            @default {
+              <div class="time-grid" [class.single-day]="vista() === 'dia'">
+                <div class="time-grid-head">
+                  <div class="hour-gutter"></div>
+                  @for (dia of diasDeGrillaHoraria(); track dia.fecha) {
+                    <button
+                      type="button"
+                      class="time-day-head"
+                      [class.today]="dia.esHoy"
+                      (click)="verDetalleDelDia(dia.fecha)"
+                    >
+                      <span class="time-day-name">{{ nombreCortoDia(dia.fecha) }}</span>
+                      <span class="time-day-number">{{ dia.numero }}</span>
+                    </button>
+                  }
+                </div>
+
+                @for (fila of filasHorarias(); track fila.hora) {
+                  <div class="time-row">
+                    <div class="hour-gutter">{{ fila.etiqueta }}</div>
+                    @for (celda of fila.celdas; track celda.fecha) {
+                      <div class="time-cell">
+                        @for (turno of celda.turnos; track turno.clave) {
+                          <button
+                            type="button"
+                            [class]="'event-block ' + turno.estado + ' tipo-' + turno.tipo"
+                            [class.selected]="turnoSeleccionadoClave() === turno.clave"
+                            (click)="seleccionarTurno(turno)"
+                          >
+                            <span class="event-time">
+                              {{ formatTime(turno.hora) }}
+                              @if (turno.horaFin) {
+                                <span class="event-time-end">
+                                  – {{ formatTime(turno.horaFin) }}
+                                </span>
+                              }
+                            </span>
+                            <span class="event-pet">{{ etiquetaCorta(turno) }}</span>
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          }
+        </div>
+
+        <aside class="detail-panel" aria-live="polite">
+          @if (turnoSeleccionado(); as turno) {
+            <div class="detail-head">
+              <div class="detail-badges">
+                <span class="tipo-badge" [class]="turno.tipo">
+                  {{ tipoLabel(turno.tipo) }}
+                </span>
+                <span class="status-badge" [class]="turno.estado">
+                  {{ estadoLabelSingular(turno.estado) }}
+                </span>
+              </div>
+              <button
+                type="button"
+                class="close-button"
+                aria-label="Cerrar detalle"
+                (click)="cerrarPanel()"
+              >
+                ×
+              </button>
+            </div>
+
+            <p class="appointment-date">
+              {{ formatDate(turno.fecha) }} · {{ formatTime(turno.hora) }}
+              @if (turno.horaFin) {
+                a {{ formatTime(turno.horaFin) }}
+              }
+            </p>
+            <h3>{{ turno.nombreMascota }}</h3>
+            @if (turno.categoria) {
+              <p class="detail-categoria">{{ categoriaLabel(turno.categoria) }}</p>
+            }
+            <p class="appointment-owner">{{ turno.nombreDuenio }}</p>
+            <p class="appointment-owner">{{ turno.emailDuenio }}</p>
+            @if (turno.telefonoDuenio) {
+              <p class="appointment-owner">Tel. {{ turno.telefonoDuenio }}</p>
+            }
+
+            @if (turno.detalle) {
+              <p class="detail-label">
+                {{ turno.tipo === 'veterinaria' ? 'Motivo de consulta' : 'Notas' }}
+              </p>
+              <p class="appointment-reason">{{ turno.detalle }}</p>
+            }
+
+            @if (turno.motivoNegativo) {
               <p class="appointment-rejection">
-                Cancelado por {{ turno.canceladoPor }}: {{ turno.motivoCancelacion }}
+                @if (turno.canceladoPor) {
+                  Cancelado por {{ turno.canceladoPor }}: {{ turno.motivoNegativo }}
+                } @else {
+                  Motivo de rechazo: {{ turno.motivoNegativo }}
+                }
               </p>
             }
 
-            @if (turno.estado === 'confirmado') {
-              <div class="appointment-actions">
-                <button
-                  type="button"
-                  class="btn-danger"
-                  [disabled]="processingTurnoServicioId() === turno.idTurno"
-                  (click)="startCancelacion(turno)"
-                >
-                  Cancelar
-                </button>
-              </div>
+            <!-- Acciones de turnos veterinarios -->
+            @if (turno.tipo === 'veterinaria' && turno.estado === 'pendiente') {
+              @if (isRejecting()) {
+                <div class="reject-box">
+                  <label [for]="'motivo-' + turno.clave">Motivo de rechazo</label>
+                  <textarea
+                    [id]="'motivo-' + turno.clave"
+                    rows="3"
+                    [ngModel]="rejectionReason()"
+                    (ngModelChange)="rejectionReason.set($event)"
+                  ></textarea>
+                  <div class="reject-actions">
+                    <button
+                      type="button"
+                      class="btn-danger"
+                      [disabled]="processingClave() === turno.clave"
+                      (click)="rechazar(turno)"
+                    >
+                      Confirmar rechazo
+                    </button>
+                    <button type="button" class="btn-secondary" (click)="cancelReject()">
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              } @else {
+                <div class="appointment-actions">
+                  <button
+                    type="button"
+                    class="btn-primary"
+                    [disabled]="processingClave() === turno.clave"
+                    (click)="confirmar(turno)"
+                  >
+                    Confirmar
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-secondary"
+                    [disabled]="processingClave() === turno.clave"
+                    (click)="startReject()"
+                  >
+                    Rechazar
+                  </button>
+                </div>
+              }
             }
 
-            @if (cancelTurnoServicioId() === turno.idTurno) {
-              <div class="reject-box">
-                <label [for]="'motivo-servicio-' + turno.idTurno">Motivo de cancelación (opcional)</label>
-                <textarea
-                  [id]="'motivo-servicio-' + turno.idTurno"
-                  rows="3"
-                  [ngModel]="motivoCancelacion()"
-                  (ngModelChange)="motivoCancelacion.set($event)"
-                ></textarea>
-                <div class="reject-actions">
+            <!-- Acciones de turnos de servicios -->
+            @if (turno.tipo === 'servicio' && turno.estado === 'confirmado') {
+              @if (isCancelling()) {
+                <div class="reject-box">
+                  <label [for]="'motivo-' + turno.clave">
+                    Motivo de cancelación (opcional)
+                  </label>
+                  <textarea
+                    [id]="'motivo-' + turno.clave"
+                    rows="3"
+                    [ngModel]="motivoCancelacion()"
+                    (ngModelChange)="motivoCancelacion.set($event)"
+                  ></textarea>
+                  <div class="reject-actions">
+                    <button
+                      type="button"
+                      class="btn-danger"
+                      [disabled]="processingClave() === turno.clave"
+                      (click)="cancelarTurnoServicio(turno)"
+                    >
+                      Confirmar cancelación
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-secondary"
+                      (click)="cancelCancelacion()"
+                    >
+                      Volver
+                    </button>
+                  </div>
+                </div>
+              } @else {
+                <div class="appointment-actions">
                   <button
                     type="button"
                     class="btn-danger"
-                    [disabled]="processingTurnoServicioId() === turno.idTurno"
-                    (click)="cancelarTurnoServicio(turno)"
+                    [disabled]="processingClave() === turno.clave"
+                    (click)="startCancelacion()"
                   >
-                    Confirmar cancelación
-                  </button>
-                  <button type="button" class="btn-secondary" (click)="cancelCancelacion()">
-                    Volver
+                    Cancelar turno
                   </button>
                 </div>
-              </div>
+              }
             }
-          </article>
-        }
+          } @else {
+            <p class="detail-placeholder">
+              Seleccioná un turno del calendario para ver el detalle y gestionarlo.
+            </p>
+          }
+        </aside>
       </div>
-    }
-
     }
   </section>
 </main>
