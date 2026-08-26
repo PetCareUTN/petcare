@@ -1,5 +1,6 @@
 export type TurnoServicioEstado = 'confirmado' | 'cancelado';
-export type CanceladoPor = 'dueño' | 'prestador';
+/** Unificado entre turnos de servicio (prestador) y turnos veterinarios (veterinario). */
+export type CanceladoPor = 'dueño' | 'prestador' | 'veterinario';
 
 export interface TurnoServicioResponse {
   idTurno: number;
