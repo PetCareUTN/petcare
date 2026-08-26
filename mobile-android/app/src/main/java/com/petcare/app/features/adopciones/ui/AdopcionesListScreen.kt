@@ -28,7 +28,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.petcare.app.features.adopciones.data.remote.PublicacionAdopcionResponse
-import com.petcare.app.features.auth.ui.PetCareBottomBar
 import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMuted
 import com.petcare.app.ui.theme.PetCareSurfaceSoft
@@ -40,9 +39,6 @@ fun AdopcionesListScreen(
     isLoading: Boolean,
     errorMessage: String?,
     publicaciones: List<PublicacionAdopcionResponse>,
-    onNavigateHome: () -> Unit,
-    onNavigateServicios: () -> Unit,
-    onNavigateTurnos: () -> Unit,
     onRetry: () -> Unit,
     onPublicacionClick: (PublicacionAdopcionResponse) -> Unit,
     onAddClick: () -> Unit,
@@ -50,16 +46,7 @@ fun AdopcionesListScreen(
     onMisPublicacionesClick: () -> Unit
 ) {
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        bottomBar = {
-            PetCareBottomBar(
-                selectedItem = "Adopción",
-                onInicioClick = onNavigateHome,
-                onServiciosClick = onNavigateServicios,
-                onTurnosClick = onNavigateTurnos,
-                onAdopcionClick = {}
-            )
-        }
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Column(
             modifier = Modifier

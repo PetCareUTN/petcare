@@ -33,7 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.petcare.app.features.servicios.data.remote.ServicioResponse
-import com.petcare.app.features.auth.ui.PetCareBottomBar
 import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMuted
 import com.petcare.app.ui.theme.PetCareSurfaceSoft
@@ -46,9 +45,6 @@ fun ServiciosListScreen(
     errorMessage: String?,
     servicios: List<ServicioResponse>,
     deletingId: Int?,
-    onNavigateHome: () -> Unit,
-    onNavigateTurnos: () -> Unit,
-    onNavigateAdopciones: () -> Unit,
     onRetry: () -> Unit,
     onCreateServicio: () -> Unit,
     onEditServicio: (ServicioResponse) -> Unit,
@@ -58,16 +54,7 @@ fun ServiciosListScreen(
     var servicioToDelete by remember { mutableStateOf<ServicioResponse?>(null) }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        bottomBar = {
-            PetCareBottomBar(
-                selectedItem = "Servicios",
-                onInicioClick = onNavigateHome,
-                onServiciosClick = {},
-                onTurnosClick = onNavigateTurnos,
-                onAdopcionClick = onNavigateAdopciones
-            )
-        }
+        containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
     Column(
         modifier = Modifier

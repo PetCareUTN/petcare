@@ -6,19 +6,34 @@ import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.petcare.app.features.adopciones.data.remote.PublicacionAdopcionResponse
 import com.petcare.app.features.adopciones.data.remote.SolicitudAdopcionResponse
@@ -38,6 +53,8 @@ import com.petcare.app.features.auth.ui.ForgotPasswordScreen
 import com.petcare.app.features.auth.ui.LoginScreen
 import com.petcare.app.features.auth.ui.ResetPasswordScreen
 import com.petcare.app.features.auth.ui.AuthenticatedHomeScreen
+import com.petcare.app.features.auth.ui.MenuLateral
+import com.petcare.app.features.auth.ui.PetCareBottomBar
 import com.petcare.app.features.auth.ui.RegisterScreen
 import com.petcare.app.features.historiaclinica.data.remote.EventoClinicoResponse
 import com.petcare.app.features.historiaclinica.domain.HistoriaClinicaController
@@ -70,16 +87,17 @@ import com.petcare.app.features.servicios.ui.ServiciosListScreen
 import com.petcare.app.features.servicios.ui.SolicitudesServiciosRecibidasScreen
 import com.petcare.app.features.turnos.data.remote.CreateTurnoRequest
 import com.petcare.app.features.turnos.data.remote.CreateTurnoServicioRequest
-import com.petcare.app.features.turnos.data.remote.DisponibilidadTurnoResponse
 import com.petcare.app.features.turnos.data.remote.MiReservaServicioResponse
 import com.petcare.app.features.turnos.data.remote.MiTurnoResponse
 import com.petcare.app.features.turnos.data.remote.ReservaServicioRecibidaResponse
 import com.petcare.app.features.turnos.data.remote.VeterinariaResponse
+import com.petcare.app.features.turnos.domain.TipoTurnoItem
 import com.petcare.app.features.turnos.domain.TurnoUnificado
 import com.petcare.app.features.turnos.domain.TurnosController
 import com.petcare.app.features.turnos.domain.TurnosServiciosController
 import com.petcare.app.features.turnos.ui.MisTurnosScreen
 import com.petcare.app.features.turnos.ui.SolicitarTurnoScreen
+import com.petcare.app.ui.theme.PetCareTealDark
 import com.petcare.app.ui.theme.PetCareTheme
 import java.io.IOException
 import java.net.URLConnection
@@ -404,11 +422,11 @@ class MainActivity : ComponentActivity() {
                 var veterinariasTurno by remember {
                     mutableStateOf<List<VeterinariaResponse>>(emptyList())
                 }
-                var isLoadingDisponibilidadesTurno by rememberSaveable {
+                var isLoadingHorariosTurno by rememberSaveable {
                     mutableStateOf(false)
                 }
-                var disponibilidadesTurno by remember {
-                    mutableStateOf<List<DisponibilidadTurnoResponse>>(emptyList())
+                var horariosDisponiblesTurno by remember {
+                    mutableStateOf<List<String>>(emptyList())
                 }
                 var isSavingTurno by rememberSaveable {
                     mutableStateOf(false)
@@ -519,7 +537,7 @@ class MainActivity : ComponentActivity() {
                     deletingServicioId = null
                     isRequestingTurno = false
                     veterinariasTurno = emptyList()
-                    disponibilidadesTurno = emptyList()
+                    horariosDisponiblesTurno = emptyList()
                     turnoError = null
                     turnoSuccess = null
                     isViewingMisTurnos = false
@@ -535,6 +553,31 @@ class MainActivity : ComponentActivity() {
                     solicitudesServiciosError = null
                     solicitudesServicios = emptyList()
                     procesandoSolicitudServicioId = null
+                }
+
+                fun volverAInicio() {
+                    isRegisteringPet = false
+                    editingPet = null
+                    selectedPetId = null
+                    selectedPet = null
+                    isViewingHistoria = false
+                    isViewingProfile = false
+                    isEditingProfile = false
+                    isChangingEmail = false
+                    isPublishingAdopcion = false
+                    isViewingAdopciones = false
+                    isViewingAdopcionDetalle = false
+                    selectedAdopcionId = null
+                    selectedAdopcion = null
+                    isViewingSolicitudesRecibidas = false
+                    isViewingMisPublicaciones = false
+                    isViewingSettings = false
+                    isViewingServicios = false
+                    isCreatingServicio = false
+                    editingServicio = null
+                    isRequestingTurno = false
+                    isViewingMisTurnos = false
+                    isViewingSolicitudesServicios = false
                 }
 
                 fun loadPets() {
@@ -877,25 +920,29 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                fun loadDisponibilidadesTurno(idVeterinario: Int) {
-                    isLoadingDisponibilidadesTurno = true
+                fun loadHorariosDisponibles(idProveedor: Int, fecha: String, esServicio: Boolean) {
+                    isLoadingHorariosTurno = true
 
                     lifecycleScope.launch {
                         try {
-                            disponibilidadesTurno = turnosController.getDisponibilidades(idVeterinario)
+                            horariosDisponiblesTurno = if (esServicio) {
+                                turnosServiciosController.getHorariosDisponibles(idProveedor, fecha)
+                            } else {
+                                turnosController.getHorariosDisponibles(idProveedor, fecha)
+                            }
                         } catch (exception: HttpException) {
                             if (exception.code() == 401) {
                                 logout()
                                 serverError = "La sesion expiro. Inicia sesion nuevamente"
                             } else {
-                                turnoError = "No se pudo cargar la disponibilidad de la veterinaria"
+                                turnoError = "No se pudieron cargar los horarios disponibles"
                             }
                         } catch (exception: IOException) {
                             turnoError = "No se pudo conectar con el servidor"
                         } catch (exception: Exception) {
                             turnoError = "Ocurrio un error inesperado"
                         } finally {
-                            isLoadingDisponibilidadesTurno = false
+                            isLoadingHorariosTurno = false
                         }
                     }
                 }
@@ -918,7 +965,107 @@ class MainActivity : ComponentActivity() {
                     ) {
                         CircularProgressIndicator()
                     }
-                } else if (loggedUserName != null && isRegisteringPet) {
+                } else if (loggedUserName != null) {
+                    val drawerState = rememberDrawerState(DrawerValue.Closed)
+                    val scope = rememberCoroutineScope()
+                    val seccionActual = when {
+                        isViewingServicios || isCreatingServicio || editingServicio != null || isViewingSolicitudesServicios -> "Servicios"
+                        isViewingMisTurnos || isRequestingTurno -> "Turnos"
+                        isViewingAdopciones || isPublishingAdopcion || isViewingAdopcionDetalle || isViewingMisPublicaciones || isViewingSolicitudesRecibidas -> "Adopción"
+                        else -> "Inicio"
+                    }
+
+                    ModalNavigationDrawer(
+                        drawerState = drawerState,
+                        drawerContent = {
+                            MenuLateral(
+                                userName = loggedUserName.orEmpty(),
+                                onCerrar = { scope.launch { drawerState.close() } },
+                                onRegisterPet = {
+                                    scope.launch { drawerState.close() }
+                                    volverAInicio()
+                                    savePetError = null
+                                    isRegisteringPet = true
+                                },
+                                onPublishAdoption = {
+                                    scope.launch { drawerState.close() }
+                                    volverAInicio()
+                                    adopcionError = null
+                                    adopcionSuccess = null
+                                    isPublishingAdopcion = true
+                                },
+                                onRequestTurno = {
+                                    scope.launch { drawerState.close() }
+                                    volverAInicio()
+                                    turnoError = null
+                                    turnoSuccess = null
+                                    isRequestingTurno = true
+                                    loadVeterinariasTurno()
+                                },
+                                onViewMisTurnos = {
+                                    scope.launch { drawerState.close() }
+                                    volverAInicio()
+                                    misTurnosError = null
+                                    isViewingMisTurnos = true
+                                    loadMisTurnos()
+                                },
+                                onServiciosClick = {
+                                    scope.launch { drawerState.close() }
+                                    volverAInicio()
+                                    saveServicioError = null
+                                    serviciosError = null
+                                    isViewingServicios = true
+                                    loadServicios()
+                                }
+                            )
+                        }
+                    ) {
+                        Scaffold(
+                            containerColor = MaterialTheme.colorScheme.background,
+                            topBar = {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(MaterialTheme.colorScheme.background)
+                                        .padding(start = 8.dp, top = 18.dp, bottom = 2.dp)
+                                ) {
+                                    IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_menu),
+                                            contentDescription = "Abrir menú",
+                                            tint = PetCareTealDark
+                                        )
+                                    }
+                                }
+                            },
+                            bottomBar = {
+                                PetCareBottomBar(
+                                    selectedItem = seccionActual,
+                                    onInicioClick = { volverAInicio() },
+                                    onServiciosClick = {
+                                        volverAInicio()
+                                        saveServicioError = null
+                                        serviciosError = null
+                                        isViewingServicios = true
+                                        loadServicios()
+                                    },
+                                    onTurnosClick = {
+                                        volverAInicio()
+                                        misTurnosError = null
+                                        isViewingMisTurnos = true
+                                        loadMisTurnos()
+                                    },
+                                    onAdopcionClick = {
+                                        volverAInicio()
+                                        adopcionesListError = null
+                                        isViewingAdopciones = true
+                                        loadAdopciones()
+                                    }
+                                )
+                            }
+                        ) { innerPadding ->
+                        Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+                        if (isRegisteringPet) {
                     RegisterPetScreen(
                         isSaving = isSavingPet,
                         saveError = savePetError,
@@ -1242,25 +1389,6 @@ class MainActivity : ComponentActivity() {
                         isLoading = isLoadingAdopciones,
                         errorMessage = adopcionesListError,
                         publicaciones = adopciones,
-                        onNavigateHome = {
-                            isViewingAdopciones = false
-                            adopcionesListError = null
-                        },
-                        onNavigateServicios = {
-                            isViewingAdopciones = false
-                            adopcionesListError = null
-                            saveServicioError = null
-                            serviciosError = null
-                            isViewingServicios = true
-                            loadServicios()
-                        },
-                        onNavigateTurnos = {
-                            isViewingAdopciones = false
-                            adopcionesListError = null
-                            misTurnosError = null
-                            isViewingMisTurnos = true
-                            loadMisTurnos()
-                        },
                         onRetry = { loadAdopciones() },
                         onPublicacionClick = { publicacion ->
                             selectedAdopcionId = publicacion.idPublicacion
@@ -1293,24 +1421,6 @@ class MainActivity : ComponentActivity() {
                         errorMessage = serviciosError,
                         servicios = servicios,
                         deletingId = deletingServicioId,
-                        onNavigateHome = {
-                            isViewingServicios = false
-                            serviciosError = null
-                        },
-                        onNavigateTurnos = {
-                            isViewingServicios = false
-                            serviciosError = null
-                            misTurnosError = null
-                            isViewingMisTurnos = true
-                            loadMisTurnos()
-                        },
-                        onNavigateAdopciones = {
-                            isViewingServicios = false
-                            serviciosError = null
-                            adopcionesListError = null
-                            isViewingAdopciones = true
-                            loadAdopciones()
-                        },
                         onRetry = { loadServicios() },
                         onCreateServicio = {
                             saveServicioError = null
@@ -1658,24 +1768,12 @@ class MainActivity : ComponentActivity() {
                             misReservasServicios.map { TurnoUnificado.fromServicio(it) },
                         cancelandoId = cancelandoTurnoServicioId,
                         onRetry = { loadMisTurnos() },
-                        onNavigateHome = {
+                        onNuevoTurno = {
                             isViewingMisTurnos = false
-                            misTurnosError = null
-                        },
-                        onNavigateServicios = {
-                            isViewingMisTurnos = false
-                            misTurnosError = null
-                            saveServicioError = null
-                            serviciosError = null
-                            isViewingServicios = true
-                            loadServicios()
-                        },
-                        onNavigateAdopciones = {
-                            isViewingMisTurnos = false
-                            misTurnosError = null
-                            adopcionesListError = null
-                            isViewingAdopciones = true
-                            loadAdopciones()
+                            turnoError = null
+                            turnoSuccess = null
+                            isRequestingTurno = true
+                            loadVeterinariasTurno()
                         },
                         onCancelar = { turno, motivo ->
                             cancelandoTurnoServicioId = turno.idTurno
@@ -1683,8 +1781,13 @@ class MainActivity : ComponentActivity() {
 
                             lifecycleScope.launch {
                                 try {
-                                    turnosServiciosController.cancelar(turno.idTurno, motivo)
-                                    misReservasServicios = turnosServiciosController.getMisReservas()
+                                    if (turno.tipo == TipoTurnoItem.VETERINARIA) {
+                                        turnosController.cancelar(turno.idTurno, motivo)
+                                        misTurnos = turnosController.getMisTurnos()
+                                    } else {
+                                        turnosServiciosController.cancelar(turno.idTurno, motivo)
+                                        misReservasServicios = turnosServiciosController.getMisReservas()
+                                    }
                                 } catch (exception: HttpException) {
                                     if (exception.code() == 401) {
                                         logout()
@@ -1707,20 +1810,21 @@ class MainActivity : ComponentActivity() {
                         pets = pets,
                         veterinarias = veterinariasTurno,
                         isLoadingVeterinarias = isLoadingVeterinariasTurno,
-                        disponibilidadesVeterinaria = disponibilidadesTurno,
-                        isLoadingDisponibilidadesVeterinaria = isLoadingDisponibilidadesTurno,
                         serviciosPorCategoria = serviciosTurno,
                         isLoadingServiciosPorCategoria = isLoadingServiciosTurno,
+                        horariosDisponibles = horariosDisponiblesTurno,
+                        isLoadingHorariosDisponibles = isLoadingHorariosTurno,
                         isSaving = isSavingTurno,
                         errorMessage = turnoError,
                         successMessage = turnoSuccess,
-                        onSelectVeterinaria = { idVeterinario ->
-                            turnoError = null
-                            loadDisponibilidadesTurno(idVeterinario)
-                        },
                         onSelectCategoria = { categoria ->
                             turnoError = null
                             loadServiciosTurno(categoria)
+                        },
+                        onCargarHorarios = { idProveedor, fecha, esServicio ->
+                            turnoError = null
+                            horariosDisponiblesTurno = emptyList()
+                            loadHorariosDisponibles(idProveedor, fecha, esServicio)
                         },
                         onSolicitarVeterinario = { idMascota, idVeterinario, fecha, hora, motivoConsulta ->
                             isSavingTurno = true
@@ -1737,7 +1841,7 @@ class MainActivity : ComponentActivity() {
                                             motivoConsulta = motivoConsulta
                                         )
                                     )
-                                    turnoSuccess = "Tu turno quedó pendiente de confirmación"
+                                    turnoSuccess = "Tu turno quedó confirmado"
                                 } catch (exception: HttpException) {
                                     turnoError = when (exception.code()) {
                                         401 -> {
@@ -1802,7 +1906,7 @@ class MainActivity : ComponentActivity() {
                             turnoSuccess = null
                         }
                     )
-                } else if (loggedUserName != null) {
+                        } else {
                     AuthenticatedHomeScreen(
                         userName = loggedUserName.orEmpty(),
                         pets = pets,
@@ -1829,35 +1933,12 @@ class MainActivity : ComponentActivity() {
                             isViewingProfile = true
                             loadProfile()
                         },
-                        onPublishAdoption = {
-                            adopcionError = null
-                            adopcionSuccess = null
-                            isPublishingAdopcion = true
-                        },
-                        onViewAdopciones = {
-                            adopcionesListError = null
-                            isViewingAdopciones = true
-                            loadAdopciones()
-                        },
-                        onSettingsClick = { isViewingSettings = true },
-                        onServiciosClick = {
-                            saveServicioError = null
-                            serviciosError = null
-                            isViewingServicios = true
-                            loadServicios()
-                        },
-                        onRequestTurno = {
-                            turnoError = null
-                            turnoSuccess = null
-                            isRequestingTurno = true
-                            loadVeterinariasTurno()
-                        },
-                        onViewMisTurnos = {
-                            misTurnosError = null
-                            isViewingMisTurnos = true
-                            loadMisTurnos()
-                        }
+                        onSettingsClick = { isViewingSettings = true }
                     )
+                        }
+                        }
+                    }
+                    }
                 } else if (isRegisteringUser) {
                     RegisterScreen(
                         isLoading = isRegisterLoading,
