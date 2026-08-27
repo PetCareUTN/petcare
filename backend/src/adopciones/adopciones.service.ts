@@ -144,4 +144,36 @@ export class AdopcionesService {
 
     return PublicacionAdopcionResponseDto.fromEntity(publicacion);
   }
+
+  /**
+   * Permite al dueño cancelar/retirar su propia publicación de adopción.
+   * Solo posible si la publicación está ACTIVA.
+   */
+  async cancelar(
+    idUsuario: number,
+    idPublicacion: number,
+  ): Promise<PublicacionAdopcionResponseDto> {
+    const publicacion = await this.publicacionesRepository.findOne({
+      where: { idPublicacion, usuario: { idUsuario } },
+      relations: ['mascota'],
+    });
+
+    if (!publicacion) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Publicación de adopción no encontrada',
+      });
+    }
+
+    if (publicacion.estado !== AdopcionStatus.ACTIVA) {
+      throw new ConflictException({
+        codigoEstado: 409,
+        mensaje: 'Solo se pueden cancelar publicaciones activas',
+      });
+    }
+
+    publicacion.estado = AdopcionStatus.CANCELADA;
+    const guardada = await this.publicacionesRepository.save(publicacion);
+    return PublicacionAdopcionResponseDto.fromEntity(guardada);
+  }
 }
