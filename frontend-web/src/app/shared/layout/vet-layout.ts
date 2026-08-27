@@ -3,10 +3,11 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter, map, startWith } from 'rxjs';
 import { AuthService } from '../../features/auth/services/auth-service';
+import { NotificationBellComponent } from '../../features/notificaciones/components/notification-bell/notification-bell';
 
 @Component({
   selector: 'vet-layout',
-  imports: [RouterOutlet, RouterLink],
+  imports: [RouterOutlet, RouterLink, NotificationBellComponent],
   templateUrl: './vet-layout.html',
   styleUrl: './vet-layout.css',
 })

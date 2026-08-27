@@ -9,6 +9,7 @@ import { CategoriaServicio } from '../common/enums/categoria-servicio.enum';
 import { DiaSemana } from '../common/enums/dia-semana.enum';
 import { TurnoServicioEstado } from '../common/enums/turno-servicio-estado.enum';
 import { Mascota } from '../mascotas/entities/mascota.entity';
+import { NotificacionesTurnosService } from '../notificaciones/notificaciones-turnos.service';
 import { Servicio } from '../servicios/entities/servicio.entity';
 import { User } from '../users/entities/user.entity';
 import { CreateTurnoServicioDto } from './dto/create-turno-servicio.dto';
@@ -28,6 +29,10 @@ describe('TurnosServiciosService', () => {
   };
   let mascotasRepository: {
     findOne: jest.Mock;
+  };
+  let notificacionesTurnosService: {
+    notificarTurnoConfirmado: jest.Mock;
+    notificarTurnoCancelado: jest.Mock;
   };
 
   const prestador = {
@@ -75,9 +80,18 @@ describe('TurnosServiciosService', () => {
   } as TurnoServicio;
 
   beforeEach(async () => {
+    notificacionesTurnosService = {
+      notificarTurnoConfirmado: jest.fn(),
+      notificarTurnoCancelado: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TurnosServiciosService,
+        {
+          provide: NotificacionesTurnosService,
+          useValue: notificacionesTurnosService,
+        },
         {
           provide: getRepositoryToken(TurnoServicio),
           useValue: { find: jest.fn(), findOne: jest.fn(), save: jest.fn(), create: jest.fn() },
@@ -138,6 +152,28 @@ describe('TurnosServiciosService', () => {
         }),
       );
       expect(result.idTurno).toBe(30);
+    });
+
+    it('notifica al dueño y al prestador al confirmar el turno', async () => {
+      mascotasRepository.findOne.mockResolvedValue(mascotaPropia);
+      serviciosRepository.findOne.mockResolvedValue(servicio);
+      turnosRepository.find.mockResolvedValue([]);
+      turnosRepository.create.mockReturnValue({});
+      turnosRepository.save.mockResolvedValue({ idTurno: 30 });
+      turnosRepository.findOne.mockResolvedValue({ ...turnoConfirmado, idTurno: 30 });
+
+      await service.solicitar(idDueno, dto);
+
+      expect(
+        notificacionesTurnosService.notificarTurnoConfirmado,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          idDuenio: duenio.idUsuario,
+          idPrestador: prestador.idUsuario,
+          nombreMascota: mascota.nombre,
+          servicio: 'paseo',
+        }),
+      );
     });
 
     it('usa una duracion de 60 minutos para guarderia', async () => {
@@ -227,6 +263,26 @@ describe('TurnosServiciosService', () => {
       expect(result.estado).toBe(TurnoServicioEstado.CANCELADO);
       expect((result as any).motivoCancelacion).toBe('No voy a poder atenderlo');
       expect((result as any).canceladoPor).toBe('prestador');
+    });
+
+    it('notifica la cancelación a la contraparte', async () => {
+      turnosRepository.findOne.mockResolvedValue({ ...turnoConfirmado });
+      turnosRepository.save.mockImplementation((turno) => Promise.resolve(turno));
+
+      await service.cancelar(prestador.idUsuario, 30, {
+        motivoCancelacion: 'No voy a poder atenderlo',
+      });
+
+      expect(
+        notificacionesTurnosService.notificarTurnoCancelado,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          idDuenio: duenio.idUsuario,
+          idPrestador: prestador.idUsuario,
+        }),
+        'prestador',
+        'No voy a poder atenderlo',
+      );
     });
 
     it('rechaza cancelar a un tercero ajeno al turno', async () => {
