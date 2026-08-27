@@ -56,6 +56,7 @@ describe('SolicitudesAdopcionService', () => {
     };
     publicacionesRepository = {
       findOne: jest.fn(),
+      save: jest.fn(),
     };
     usersRepository = {
       findOne: jest.fn(),

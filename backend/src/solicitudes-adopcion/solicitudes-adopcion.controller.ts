@@ -42,6 +42,14 @@ export class SolicitudesAdopcionController {
     return this.solicitudesAdopcionService.findRecibidas(user.sub);
   }
 
+  @Get('mis-solicitudes')
+  @UseGuards(JwtAuthGuard)
+  findMisSolicitudes(
+    @CurrentUser() user: JwtPayload,
+  ): Promise<SolicitudAdopcionResponseDto[]> {
+    return this.solicitudesAdopcionService.findMisSolicitudes(user.sub);
+  }
+
   @Patch(':id/aceptar')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)

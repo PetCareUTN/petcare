@@ -109,6 +109,24 @@ export class SolicitudesAdopcionService {
     );
   }
 
+  /**
+   * Solicitudes realizadas por el usuario autenticado, para que pueda
+   * ver el estado de cada una (PENDIENTE/ACEPTADA/RECHAZADA).
+   */
+  async findMisSolicitudes(
+    idUsuario: number,
+  ): Promise<SolicitudAdopcionResponseDto[]> {
+    const solicitudes = await this.solicitudesRepository.find({
+      where: { solicitante: { idUsuario } },
+      relations: ['publicacion', 'publicacion.mascota', 'publicacion.usuario', 'solicitante'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return solicitudes.map((solicitud) =>
+      SolicitudAdopcionResponseDto.fromEntity(solicitud),
+    );
+  }
+
   async aceptar(
     idUsuario: number,
     idSolicitud: number,
@@ -119,6 +137,12 @@ export class SolicitudesAdopcionService {
     );
     solicitud.estado = SolicitudAdopcionEstado.ACEPTADA;
     solicitud.motivoRechazo = null;
+
+    // Cerrar la publicación asociada (adopción completada)
+    const publicacion = solicitud.publicacion;
+    publicacion.estado = AdopcionStatus.CERRADA;
+    await this.publicacionesRepository.save(publicacion);
+
     return SolicitudAdopcionResponseDto.fromEntity(
       await this.solicitudesRepository.save(solicitud),
     );
