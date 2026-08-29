@@ -49,7 +49,11 @@
 
       <div class="field field-wide">
         <label for="descripcion">{{ esVacuna() ? 'Nombre de la vacuna' : 'Descripcion' }}</label>
-        <app-rich-text-editor id="descripcion" formControlName="descripcion" />
+        <app-rich-text-editor
+          id="descripcion"
+          formControlName="descripcion"
+          [maxLength]="descripcionMaxLength"
+        />
         @if (form.controls.descripcion.invalid && form.controls.descripcion.touched) {
           <p class="field-error">
             {{ esVacuna() ? 'El nombre de la vacuna es obligatorio.' : 'La descripcion es obligatoria.' }}
@@ -59,17 +63,29 @@
 
       <div class="field field-wide">
         <label for="diagnostico">Diagnostico</label>
-        <app-rich-text-editor id="diagnostico" formControlName="diagnostico" />
+        <app-rich-text-editor
+          id="diagnostico"
+          formControlName="diagnostico"
+          [maxLength]="campoCortoMaxLength"
+        />
       </div>
 
       <div class="field field-wide">
         <label for="tratamiento">Tratamiento</label>
-        <app-rich-text-editor id="tratamiento" formControlName="tratamiento" />
+        <app-rich-text-editor
+          id="tratamiento"
+          formControlName="tratamiento"
+          [maxLength]="campoCortoMaxLength"
+        />
       </div>
 
       <div class="field field-wide">
         <label for="observaciones">Observaciones</label>
-        <app-rich-text-editor id="observaciones" formControlName="observaciones" />
+        <app-rich-text-editor
+          id="observaciones"
+          formControlName="observaciones"
+          [maxLength]="campoCortoMaxLength"
+        />
       </div>
     </section>
 

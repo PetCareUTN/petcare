@@ -1,3 +1,8 @@
 <div class="rich-text-editor" [class.disabled]="isDisabled()">
   <div #editorContainer></div>
+  @if (maxLength(); as max) {
+    <span class="char-count" [class.char-count-limit]="charCount() >= max">
+      {{ charCount() }} / {{ max }}
+    </span>
+  }
 </div>
