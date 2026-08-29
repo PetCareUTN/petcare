@@ -4,6 +4,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
@@ -616,6 +617,100 @@ class MainActivity : ComponentActivity() {
                     isViewingNotificaciones = false
                 }
 
+                fun navigateBackInApp() {
+                    when {
+                        isViewingNotificaciones -> isViewingNotificaciones = false
+                        isRegisteringPet -> {
+                            savePetError = null
+                            isRegisteringPet = false
+                        }
+                        editingPet != null -> {
+                            updatePetError = null
+                            editingPet = null
+                        }
+                        isCreatingServicio || editingServicio != null -> {
+                            saveServicioError = null
+                            isCreatingServicio = false
+                            editingServicio = null
+                        }
+                        isViewingAdopcionDetalle -> {
+                            isViewingAdopcionDetalle = false
+                            selectedAdopcionId = null
+                            selectedAdopcion = null
+                            adopcionDetalleError = null
+                            adopcionRequestError = null
+                            adopcionRequestSuccess = null
+                        }
+                        isPublishingAdopcion -> {
+                            isPublishingAdopcion = false
+                            adopcionError = null
+                            adopcionSuccess = null
+                        }
+                        isViewingMisPublicaciones -> {
+                            isViewingMisPublicaciones = false
+                            misPublicacionesError = null
+                        }
+                        isViewingSolicitudesRecibidas -> {
+                            isViewingSolicitudesRecibidas = false
+                            solicitudesRecibidasError = null
+                        }
+                        isViewingAdopciones -> isViewingAdopciones = false
+                        isViewingSolicitudesServicios -> {
+                            isViewingSolicitudesServicios = false
+                            solicitudesServiciosError = null
+                            isViewingServicios = true
+                        }
+                        isViewingServicios -> isViewingServicios = false
+                        isChangingEmail -> {
+                            isChangingEmail = false
+                            isEmailCodeSent = false
+                            emailChangeError = null
+                            isEditingProfile = true
+                        }
+                        isEditingProfile -> {
+                            saveProfileError = null
+                            isEditingProfile = false
+                        }
+                        isViewingProfile -> {
+                            isViewingProfile = false
+                            profileError = null
+                        }
+                        isViewingHistoria -> {
+                            isViewingHistoria = false
+                            historiaError = null
+                            historiaEventos = emptyList()
+                            exportHistoriaMessage = null
+                        }
+                        selectedPetId != null -> {
+                            selectedPetId = null
+                            selectedPet = null
+                            petProfileError = null
+                        }
+                        isViewingSettings -> isViewingSettings = false
+                        isViewingMisTurnos -> isViewingMisTurnos = false
+                        isRequestingTurno -> {
+                            isRequestingTurno = false
+                            turnoError = null
+                            turnoSuccess = null
+                        }
+                        isRegisteringUser -> {
+                            isRegisteringUser = false
+                            registerError = null
+                            registerSuccessMessage = null
+                        }
+                        currentScreen == AuthScreen.RESET_PASSWORD -> {
+                            currentScreen = AuthScreen.FORGOT_PASSWORD
+                            serverError = null
+                            resetPasswordSuccess = null
+                        }
+                        currentScreen == AuthScreen.FORGOT_PASSWORD -> {
+                            currentScreen = AuthScreen.LOGIN
+                            serverError = null
+                            forgotPasswordSuccess = null
+                        }
+                    }
+                }
+
                 fun loadPets() {
                     isLoadingPets = true
                     petsError = null
@@ -1059,6 +1154,34 @@ class MainActivity : ComponentActivity() {
                             isLoadingHorariosTurno = false
                         }
                     }
+                }
+
+                val canNavigateBackInApp =
+                    isViewingNotificaciones ||
+                        isRegisteringPet ||
+                        editingPet != null ||
+                        isCreatingServicio ||
+                        editingServicio != null ||
+                        isViewingAdopcionDetalle ||
+                        isPublishingAdopcion ||
+                        isViewingMisPublicaciones ||
+                        isViewingSolicitudesRecibidas ||
+                        isViewingAdopciones ||
+                        isViewingSolicitudesServicios ||
+                        isViewingServicios ||
+                        isChangingEmail ||
+                        isEditingProfile ||
+                        isViewingProfile ||
+                        isViewingHistoria ||
+                        selectedPetId != null ||
+                        isViewingSettings ||
+                        isViewingMisTurnos ||
+                        isRequestingTurno ||
+                        isRegisteringUser ||
+                        currentScreen != AuthScreen.LOGIN
+
+                BackHandler(enabled = canNavigateBackInApp) {
+                    navigateBackInApp()
                 }
 
                 LaunchedEffect(Unit) {
@@ -1653,6 +1776,7 @@ class MainActivity : ComponentActivity() {
                         onBack = {
                             isViewingSolicitudesServicios = false
                             solicitudesServiciosError = null
+                            isViewingServicios = true
                         },
                         onRetry = { loadSolicitudesServicios() },
                         onCancelar = { turno, motivo ->
@@ -2126,7 +2250,7 @@ class MainActivity : ComponentActivity() {
                         isLoading = isRegisterLoading,
                         serverError = registerError,
                         successMessage = registerSuccessMessage,
-                        onRegister = { nombre, apellido, email, password ->
+                        onRegister = { nombre, apellido, dni, email, password ->
                             isRegisterLoading = true
                             registerError = null
 
@@ -2135,6 +2259,7 @@ class MainActivity : ComponentActivity() {
                                     sessionController.register(
                                         nombre = nombre,
                                         apellido = apellido,
+                                        numeroDocumento = dni,
                                         email = email,
                                         password = password
                                     )
@@ -2143,7 +2268,7 @@ class MainActivity : ComponentActivity() {
                                         "Cuenta creada correctamente. Ya podes iniciar sesion."
                                 } catch (exception: HttpException) {
                                     registerError = when (exception.code()) {
-                                        409 -> "Ese correo ya esta registrado"
+                                        409 -> "Ese correo o DNI ya está registrado"
                                         400 -> "Revisa los datos ingresados"
                                         500 -> "Ocurrio un error en el servidor"
                                         else -> "No se pudo completar el registro"

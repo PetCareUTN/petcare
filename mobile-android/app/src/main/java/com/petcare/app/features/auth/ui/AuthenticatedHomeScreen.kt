@@ -38,7 +38,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
@@ -46,13 +45,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.petcare.app.R
 import com.petcare.app.features.pets.data.remote.PetResponse
+import com.petcare.app.features.pets.ui.PetAvatar
 import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMint
 import com.petcare.app.ui.theme.PetCareMuted
 import com.petcare.app.ui.theme.PetCareSurfaceSoft
 import com.petcare.app.ui.theme.PetCareTeal
 import com.petcare.app.ui.theme.PetCareTealDark
-import com.petcare.app.ui.theme.PetCareTealSoft
 
 @Composable
 fun AuthenticatedHomeScreen(
@@ -316,24 +315,11 @@ private fun PetRow(pet: PetResponse, onClick: () -> Unit, onEdit: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Surface(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape),
-                color = PetCareTealSoft
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = pet.nombre.firstOrNull()?.uppercase() ?: "M",
-                        color = PetCareTealDark,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-            }
+            PetAvatar(
+                petName = pet.nombre,
+                photoPath = pet.foto,
+                modifier = Modifier.size(48.dp)
+            )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = pet.nombre,

@@ -1,8 +1,6 @@
 package com.petcare.app.features.pets.ui
 
 import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -59,11 +57,6 @@ fun EditPetScreen(
         mutableStateOf(PetRegistrationValidationResult())
     }
     val photoUri = photoUriText?.let(Uri::parse)
-    val photoPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
-        photoUriText = uri?.toString()
-    }
 
     Column(
         modifier = Modifier
@@ -155,9 +148,11 @@ fun EditPetScreen(
 
         OutlinedTextField(
             value = weight,
-            onValueChange = { weight = it },
+            onValueChange = { weight = normalizeWeightInput(it) },
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Peso") },
+            placeholder = { Text("Ej.: 12,5") },
+            suffix = { Text("kg") },
             isError = validation.weightError != null,
             supportingText = validation.weightError?.let { { Text(it) } },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
@@ -195,23 +190,11 @@ fun EditPetScreen(
             label = { Text("Observaciones") }
         )
 
-        OutlinedButton(
-            onClick = { photoPicker.launch("image/*") },
+        PetPhotoField(
+            photoUri = photoUri,
             enabled = !isSaving,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp)
-        ) {
-            Text("Cambiar foto")
-        }
-
-        photoUri?.let {
-            Text(
-                text = "Foto seleccionada",
-                modifier = Modifier.padding(top = 4.dp),
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
+            onPhotoAdjusted = { photoUriText = it.toString() }
+        )
 
         saveError?.let {
             Text(

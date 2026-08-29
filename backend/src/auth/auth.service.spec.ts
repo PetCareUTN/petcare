@@ -50,6 +50,7 @@ describe('AuthService', () => {
   const registerDto: RegisterDto = {
     nombre: 'Simon',
     apellido: 'Breitkopf',
+    numeroDocumento: '30111222',
     email: 'simon@petcare.test',
     password: 'ClaveSegura123',
   };
@@ -113,6 +114,7 @@ describe('AuthService', () => {
 
   it('registers a user with the default role and a hashed password', async () => {
     usersService.findByEmail.mockResolvedValue(null);
+    usersService.findByDocument.mockResolvedValue(null);
     rolesRepository.findOne.mockResolvedValue(defaultRole);
 
     const savedUser: User = {
@@ -120,7 +122,7 @@ describe('AuthService', () => {
       nombre: registerDto.nombre,
       apellido: registerDto.apellido,
       email: registerDto.email,
-      numeroDocumento: null,
+      numeroDocumento: registerDto.numeroDocumento,
       telefono: null,
       direccion: null,
       password: 'hashed-password',
@@ -149,6 +151,7 @@ describe('AuthService', () => {
         nombre: registerDto.nombre,
         apellido: registerDto.apellido,
         email: registerDto.email,
+        numeroDocumento: registerDto.numeroDocumento,
         idRol: defaultRole.idRol,
       }),
     );
@@ -175,6 +178,16 @@ describe('AuthService', () => {
 
   it('rejects registration when the email is already in use', async () => {
     usersService.findByEmail.mockResolvedValue({} as User);
+
+    await expect(service.register(registerDto)).rejects.toThrow(
+      ConflictException,
+    );
+    expect(usersService.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects registration when the DNI is already in use', async () => {
+    usersService.findByEmail.mockResolvedValue(null);
+    usersService.findByDocument.mockResolvedValue({} as User);
 
     await expect(service.register(registerDto)).rejects.toThrow(
       ConflictException,

@@ -51,6 +51,7 @@ describe('AuthController', () => {
     const dto: RegisterDto = {
       nombre: 'Simon',
       apellido: 'Breitkopf',
+      numeroDocumento: '30111227',
       email: 'simon@petcare.test',
       password: 'ClaveSegura123',
     };

@@ -12,6 +12,7 @@ import { AppModule } from './../src/app.module';
 const ownerPayload = {
   nombre: 'Ignacio',
   apellido: 'Aldao',
+  numeroDocumento: '30111225',
   email: 'ignacio.perfil@petcare.test',
   password: 'ClaveSegura123',
 };
@@ -19,6 +20,7 @@ const ownerPayload = {
 const otherOwnerPayload = {
   nombre: 'Sofia',
   apellido: 'Munoz',
+  numeroDocumento: '30111226',
   email: 'sofia.perfil@petcare.test',
   password: 'ClaveSegura123',
 };

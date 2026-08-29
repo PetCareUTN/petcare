@@ -1,8 +1,6 @@
 package com.petcare.app.features.pets.ui
 
 import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -49,7 +47,6 @@ import com.petcare.app.features.pets.data.remote.CreatePetRequest
 import com.petcare.app.features.pets.domain.PetRegistrationValidationResult
 import com.petcare.app.features.pets.domain.PetRegistrationValidator
 import com.petcare.app.ui.theme.PetCareLine
-import com.petcare.app.ui.theme.PetCareMint
 import com.petcare.app.ui.theme.PetCareMuted
 import com.petcare.app.ui.theme.PetCareSurfaceSoft
 import com.petcare.app.ui.theme.PetCareTealDark
@@ -115,11 +112,6 @@ fun RegisterPetScreen(
         mutableStateOf(PetRegistrationValidationResult())
     }
     val photoUri = photoUriText?.let(Uri::parse)
-    val photoPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
-        photoUriText = uri?.toString()
-    }
 
     Column(
         modifier = Modifier
@@ -270,38 +262,27 @@ fun RegisterPetScreen(
                     }
                 }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    BirthDatePickerField(
-                        selectedDate = birthDate,
-                        modifier = Modifier.weight(1f),
-                        enabled = !isSaving,
-                        isError = validation.birthDateError != null,
-                        supportingText = validation.birthDateError,
-                        onDateSelected = { birthDate = it }
-                    )
+                BirthDatePickerField(
+                    selectedDate = birthDate,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isSaving,
+                    isError = validation.birthDateError != null,
+                    supportingText = validation.birthDateError,
+                    onDateSelected = { birthDate = it }
+                )
 
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        OutlinedTextField(
-                            value = weight,
-                            onValueChange = { weight = it },
-                            modifier = Modifier.weight(1f),
-                            label = { Text("Peso") },
-                            isError = validation.weightError != null,
-                            supportingText = validation.weightError?.let { { Text(it) } },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                            singleLine = true
-                        )
-                        Text(
-                            text = "kg",
-                            color = PetCareMuted,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
+                OutlinedTextField(
+                    value = weight,
+                    onValueChange = { weight = normalizeWeightInput(it) },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Peso") },
+                    placeholder = { Text("Ej.: 12,5") },
+                    suffix = { Text("kg") },
+                    isError = validation.weightError != null,
+                    supportingText = validation.weightError?.let { { Text(it) } },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true
+                )
 
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -341,41 +322,11 @@ fun RegisterPetScreen(
                     label = { Text("Observaciones") }
                 )
 
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = PetCareMint,
-                    shape = MaterialTheme.shapes.extraLarge,
-                    border = BorderStroke(1.dp, PetCareLine)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(14.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = if (photoUri == null) "Foto opcional" else "Foto seleccionada",
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                text = if (photoUri == null) {
-                                    "JPG, PNG o WEBP hasta 2 MB"
-                                } else {
-                                    "Se enviara junto con el alta"
-                                },
-                                color = PetCareMuted,
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                        OutlinedButton(
-                            onClick = { photoPicker.launch("image/*") },
-                            enabled = !isSaving,
-                            shape = MaterialTheme.shapes.large
-                        ) {
-                            Text(if (photoUri == null) "Elegir" else "Cambiar")
-                        }
-                    }
-                }
+                PetPhotoField(
+                    photoUri = photoUri,
+                    enabled = !isSaving,
+                    onPhotoAdjusted = { photoUriText = it.toString() }
+                )
 
                 saveError?.let {
                     Surface(

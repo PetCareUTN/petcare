@@ -18,6 +18,19 @@ object RegisterValidator {
         return null
     }
 
+    fun validateDni(dni: String): String? {
+        val normalizedDni = dni.trim()
+        if (normalizedDni.isBlank()) {
+            return "El DNI es obligatorio"
+        }
+
+        if (!normalizedDni.matches(Regex("^[0-9]{7,8}$"))) {
+            return "Ingresá un DNI válido de 7 u 8 números"
+        }
+
+        return null
+    }
+
     fun validateEmail(email: String): String? = LoginValidator.validateEmail(email)
 
     fun validatePassword(password: String): String? {

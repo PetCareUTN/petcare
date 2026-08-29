@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -23,7 +22,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -35,7 +33,6 @@ import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMuted
 import com.petcare.app.R
 import com.petcare.app.ui.theme.PetCareTealDark
-import com.petcare.app.ui.theme.PetCareTealSoft
 
 @Composable
 fun PetProfileScreen(
@@ -125,23 +122,12 @@ fun PetProfileScreen(
 @Composable
 private fun PetProfileContent(pet: PetResponse, onViewHistoria: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Surface(
+        PetAvatar(
+            petName = pet.nombre,
+            photoPath = pet.foto,
             modifier = Modifier.size(84.dp),
-            shape = CircleShape,
-            color = PetCareTealSoft
-        ) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = pet.nombre.firstOrNull()?.uppercase() ?: "M",
-                    color = PetCareTealDark,
-                    style = MaterialTheme.typography.headlineMedium
-                )
-            }
-        }
+            textStyle = MaterialTheme.typography.headlineMedium
+        )
 
         Spacer(modifier = Modifier.height(12.dp))
 
