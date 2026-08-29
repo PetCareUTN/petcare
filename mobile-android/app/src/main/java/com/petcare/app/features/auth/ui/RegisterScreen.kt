@@ -49,16 +49,24 @@ fun RegisterScreen(
     isLoading: Boolean = false,
     serverError: String? = null,
     successMessage: String? = null,
-    onRegister: (nombre: String, apellido: String, email: String, password: String) -> Unit,
+    onRegister: (
+        nombre: String,
+        apellido: String,
+        dni: String,
+        email: String,
+        password: String
+    ) -> Unit,
     onNavigateToLogin: () -> Unit
 ) {
     var nombre by rememberSaveable { mutableStateOf("") }
     var apellido by rememberSaveable { mutableStateOf("") }
+    var dni by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var confirmPassword by rememberSaveable { mutableStateOf("") }
     var nombreError by rememberSaveable { mutableStateOf<String?>(null) }
     var apellidoError by rememberSaveable { mutableStateOf<String?>(null) }
+    var dniError by rememberSaveable { mutableStateOf<String?>(null) }
     var emailError by rememberSaveable { mutableStateOf<String?>(null) }
     var passwordError by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmPasswordError by rememberSaveable { mutableStateOf<String?>(null) }
@@ -199,6 +207,27 @@ fun RegisterScreen(
                     )
 
                     OutlinedTextField(
+                        value = dni,
+                        onValueChange = {
+                            dni = it.filter { character -> character.isDigit() }.take(8)
+                            dniError = null
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("DNI") },
+                        placeholder = { Text("Sin puntos ni espacios") },
+                        singleLine = true,
+                        enabled = !isLoading,
+                        isError = dniError != null,
+                        supportingText = {
+                            dniError?.let { Text(it) }
+                        },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Next
+                        )
+                    )
+
+                    OutlinedTextField(
                         value = email,
                         onValueChange = {
                             email = it
@@ -279,6 +308,7 @@ fun RegisterScreen(
                         onClick = {
                             nombreError = RegisterValidator.validateNombre(nombre)
                             apellidoError = RegisterValidator.validateApellido(apellido)
+                            dniError = RegisterValidator.validateDni(dni)
                             emailError = RegisterValidator.validateEmail(email)
                             passwordError = RegisterValidator.validatePassword(password)
                             confirmPasswordError = RegisterValidator.validateConfirmPassword(
@@ -289,6 +319,7 @@ fun RegisterScreen(
                             val hasErrors = listOf(
                                 nombreError,
                                 apellidoError,
+                                dniError,
                                 emailError,
                                 passwordError,
                                 confirmPasswordError
@@ -298,6 +329,7 @@ fun RegisterScreen(
                                 onRegister(
                                     nombre.trim(),
                                     apellido.trim(),
+                                    dni.trim(),
                                     email.trim(),
                                     password
                                 )

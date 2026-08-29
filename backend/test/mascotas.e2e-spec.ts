@@ -12,6 +12,7 @@ import { AppModule } from './../src/app.module';
 const ownerPayload = {
   nombre: 'Ignacio',
   apellido: 'Aldao',
+  numeroDocumento: '30111223',
   email: 'ignacio.mascotas@petcare.test',
   password: 'ClaveSegura123',
 };
@@ -260,6 +261,7 @@ describe('POST /mascotas (contract)', () => {
 const otherOwnerPayload = {
   nombre: 'Sofia',
   apellido: 'Munoz',
+  numeroDocumento: '30111224',
   email: 'sofia.mascotas@petcare.test',
   password: 'ClaveSegura123',
 };

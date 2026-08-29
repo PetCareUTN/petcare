@@ -35,6 +35,24 @@ class RegisterValidatorTest {
     }
 
     @Test
+    fun `dni vacio devuelve error`() {
+        assertEquals("El DNI es obligatorio", RegisterValidator.validateDni(""))
+    }
+
+    @Test
+    fun `dni con letras devuelve error`() {
+        assertEquals(
+            "Ingresá un DNI válido de 7 u 8 números",
+            RegisterValidator.validateDni("30A11222")
+        )
+    }
+
+    @Test
+    fun `dni valido no devuelve error`() {
+        assertNull(RegisterValidator.validateDni("30111222"))
+    }
+
+    @Test
     fun `email invalido devuelve error`() {
         val result = RegisterValidator.validateEmail("correo-invalido")
 

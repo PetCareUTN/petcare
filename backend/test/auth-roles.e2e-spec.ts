@@ -17,6 +17,7 @@ import { User } from './../src/users/entities/user.entity';
 const ownerPayload = {
   nombre: 'Ignacio',
   apellido: 'Aldao',
+  numeroDocumento: '30111222',
   email: 'ignacio.roles.owner@petcare.test',
   password: 'ClaveSegura123',
 };

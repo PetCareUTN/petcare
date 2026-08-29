@@ -12,6 +12,7 @@ import { AppModule } from './../src/app.module';
 const validRegisterPayload = {
   nombre: 'Ignacio',
   apellido: 'Aldao',
+  numeroDocumento: '30111220',
   email: 'ignacio.login@petcare.test',
   password: 'ClaveSegura123',
 };

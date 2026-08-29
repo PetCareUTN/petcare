@@ -15,6 +15,7 @@ import { User } from './../src/users/entities/user.entity';
 const validRegisterPayload = {
   nombre: 'Ignacio',
   apellido: 'Aldao',
+  numeroDocumento: '30111221',
   email: 'ignacio.owner@petcare.test',
   password: 'ClaveSegura123',
 };
@@ -124,6 +125,40 @@ describe('POST /auth/register (contract)', () => {
       .post('/auth/register')
       .send({ ...validRegisterPayload, nombre: '' })
       .expect(400);
+  });
+
+  it('REG-05B rejects a missing DNI', async () => {
+    const payloadWithoutDni: Partial<typeof validRegisterPayload> = {
+      ...validRegisterPayload,
+    };
+    delete payloadWithoutDni.numeroDocumento;
+
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send(payloadWithoutDni)
+      .expect(400);
+  });
+
+  it('REG-05C rejects an invalid DNI', async () => {
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ ...validRegisterPayload, numeroDocumento: '12A' })
+      .expect(400);
+  });
+
+  it('REG-05D rejects a duplicated DNI', async () => {
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send(validRegisterPayload)
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        ...validRegisterPayload,
+        email: 'otro.owner@petcare.test',
+      })
+      .expect(409);
   });
 
   it('REG-06 rejects unknown fields such as rol', async () => {

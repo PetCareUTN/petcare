@@ -26,6 +26,7 @@ class AuthSessionController(
     suspend fun register(
         nombre: String,
         apellido: String,
+        numeroDocumento: String,
         email: String,
         password: String
     ): RegisterResponse =
@@ -33,6 +34,7 @@ class AuthSessionController(
             RegisterRequest(
                 nombre = nombre,
                 apellido = apellido,
+                numeroDocumento = numeroDocumento,
                 email = email,
                 password = password
             )

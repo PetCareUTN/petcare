@@ -30,6 +30,7 @@ class AuthSessionControllerTest {
             val response = controller.register(
                 nombre = "Sofia",
                 apellido = "Muñoz",
+                numeroDocumento = "30111222",
                 email = "sofia@petcare.com",
                 password = "ClaveSegura123"
             )
