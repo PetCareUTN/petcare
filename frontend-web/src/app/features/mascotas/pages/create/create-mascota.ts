@@ -249,8 +249,25 @@ export class CreateMascotaPage implements OnInit {
     createRequest.subscribe({
       next: (mascota) => {
         this.isSubmitting.set(false);
-        this.successMessage.set(`Mascota ${mascota.nombre} registrada con exito.`);
         this.selectedFile.set(null);
+
+        if (this.isVeterinaryFlow) {
+          // Vuelve a la atención con la mascota recién creada ya
+          // seleccionada, para seguir directo con el evento clínico en vez
+          // de dejar a la veterinaria varada en este formulario.
+          this.router.navigate(['/eventos-clinicos'], {
+            queryParams: {
+              ...this.profileQueryParams(mascota.idMascota),
+              // Cartel temporal: buscar-mascota lo muestra y lo hace
+              // desaparecer solo, así se sabe que el alta salió bien sin
+              // dejar al usuario varado en este formulario.
+              mascotaCreada: mascota.nombre,
+            },
+          });
+          return;
+        }
+
+        this.successMessage.set(`Mascota ${mascota.nombre} registrada con exito.`);
         this.createdPetId.set(mascota.idMascota);
         this.form.reset({
           nombre: '',

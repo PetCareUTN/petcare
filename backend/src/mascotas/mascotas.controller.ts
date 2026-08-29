@@ -82,6 +82,16 @@ export class MascotasController {
     return this.mascotasService.findOwner(email, documento);
   }
 
+  @Get('duenos')
+  @UseGuards(JwtAuthGuard, RolesGuard, VeterinarioValidadoGuard)
+  @Roles(RoleName.VETERINARIO)
+  findAllOwners(
+    @Query('nombre') nombre?: string,
+    @Query('apellido') apellido?: string,
+  ): Promise<UserPublicDto[]> {
+    return this.mascotasService.findAllOwners(nombre, apellido);
+  }
+
   @Get('duenos/:idUsuario')
   @UseGuards(JwtAuthGuard, RolesGuard, VeterinarioValidadoGuard)
   @Roles(RoleName.VETERINARIO)

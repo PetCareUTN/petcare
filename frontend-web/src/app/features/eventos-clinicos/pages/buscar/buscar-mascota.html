@@ -1,4 +1,8 @@
 <main class="historia-page">
+  @if (toastMessage(); as mensaje) {
+    <p class="toast toast-success">{{ mensaje }}</p>
+  }
+
   <header class="historia-header">
     <h1>Atención veterinaria</h1>
     <p class="page-subtitle">Buscá el cliente, seleccioná una mascota y registrá el evento clínico.</p>
@@ -69,6 +73,10 @@
           {{ isSearchingOwner() ? 'Buscando...' : 'Buscar cliente' }}
         </button>
       </div>
+
+      <button type="button" class="btn-link" (click)="abrirListaClientes()">
+        Ver todos los clientes
+      </button>
 
       @if (ownerSearchMessage()) {
         <p class="banner banner-error">{{ ownerSearchMessage() }}</p>
@@ -185,4 +193,11 @@
       }
     </section>
   </div>
+
+  @if (isListaClientesOpen()) {
+    <app-lista-clientes
+      (cerrar)="isListaClientesOpen.set(false)"
+      (seleccionar)="seleccionarClienteDeLista($event)"
+    />
+  }
 </main>

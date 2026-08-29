@@ -1,0 +1,52 @@
+<div class="backdrop" (click)="cerrar.emit()">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Lista de clientes" (click)="$event.stopPropagation()">
+    <header class="modal-header">
+      <h2>Clientes de la veterinaria</h2>
+      <button type="button" class="btn-close" (click)="cerrar.emit()" aria-label="Cerrar">✕</button>
+    </header>
+
+    <form class="filters" (ngSubmit)="filtrar()">
+      <label>
+        Nombre
+        <input type="text" [ngModel]="nombre()" (ngModelChange)="nombre.set($event)" name="nombre" placeholder="Ej: Sofía" />
+      </label>
+      <label>
+        Apellido
+        <input type="text" [ngModel]="apellido()" (ngModelChange)="apellido.set($event)" name="apellido" placeholder="Ej: Muñoz" />
+      </label>
+      <div class="filter-actions">
+        <button type="submit" class="btn-primary" [disabled]="isLoading()">
+          {{ isLoading() ? 'Buscando...' : 'Filtrar' }}
+        </button>
+        <button type="button" class="btn-secondary" (click)="limpiarFiltros()">Limpiar</button>
+      </div>
+    </form>
+
+    @if (errorMessage()) {
+      <p class="banner banner-error">{{ errorMessage() }}</p>
+    }
+
+    @if (!errorMessage() && !isLoading() && clientes().length === 0) {
+      <p class="status-text">No se encontraron clientes con ese filtro.</p>
+    }
+
+    <ul class="cliente-list">
+      @for (cliente of clientes(); track cliente.id_usuario) {
+        <li class="cliente-item">
+          <div class="cliente-info">
+            <span class="cliente-name">{{ ownerDisplayName(cliente) }}</span>
+            <span class="cliente-meta">
+              @if (cliente.numero_documento) {
+                DNI {{ cliente.numero_documento }} &middot;
+              }
+              {{ cliente.email }}
+            </span>
+          </div>
+          <button type="button" class="btn-secondary" (click)="seleccionar.emit(cliente)">
+            Seleccionar
+          </button>
+        </li>
+      }
+    </ul>
+  </div>
+</div>

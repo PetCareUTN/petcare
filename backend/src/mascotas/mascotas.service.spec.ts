@@ -25,6 +25,7 @@ describe('MascotasService', () => {
   };
   let usersRepository: {
     findOne: jest.Mock;
+    find: jest.Mock;
   };
   let veterinariosRepository: {
     findOne: jest.Mock;
@@ -102,6 +103,7 @@ describe('MascotasService', () => {
           provide: getRepositoryToken(User),
           useValue: {
             findOne: jest.fn(),
+            find: jest.fn(),
           },
         },
         {
@@ -215,6 +217,45 @@ describe('MascotasService', () => {
       await expect(
         service.findOwnerByEmail('vet@petcare.test'),
       ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('findAllOwners', () => {
+    it('lista los dueños filtrando por nombre y apellido', async () => {
+      usersRepository.find.mockResolvedValue([duenio]);
+
+      const result = await service.findAllOwners('sof', 'mun');
+
+      expect(usersRepository.find).toHaveBeenCalledWith({
+        where: {
+          rol: { nombre: RoleName.DUENO_MASCOTA },
+          nombre: expect.anything(),
+          apellido: expect.anything(),
+        },
+        order: { apellido: 'ASC', nombre: 'ASC' },
+      });
+      expect(result).toEqual([
+        expect.objectContaining({ id_usuario: duenio.idUsuario, email: duenio.email }),
+      ]);
+    });
+
+    it('lista todos los dueños cuando no se pasa ningún filtro', async () => {
+      usersRepository.find.mockResolvedValue([duenio]);
+
+      await service.findAllOwners();
+
+      expect(usersRepository.find).toHaveBeenCalledWith({
+        where: { rol: { nombre: RoleName.DUENO_MASCOTA } },
+        order: { apellido: 'ASC', nombre: 'ASC' },
+      });
+    });
+
+    it('devuelve una lista vacía cuando no hay coincidencias', async () => {
+      usersRepository.find.mockResolvedValue([]);
+
+      const result = await service.findAllOwners('inexistente');
+
+      expect(result).toEqual([]);
     });
   });
 
