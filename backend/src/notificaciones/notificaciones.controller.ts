@@ -23,6 +23,14 @@ export class NotificacionesController {
     return this.notificacionesService.listarPorUsuario(user.sub);
   }
 
+  /** Va antes de ':id/leer' para que 'leer-todas' no entre como id. */
+  @Patch('leer-todas')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  marcarTodasLeidas(@CurrentUser() user: JwtPayload) {
+    return this.notificacionesService.marcarTodasLeidas(user.sub);
+  }
+
   @Patch(':id/leer')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)

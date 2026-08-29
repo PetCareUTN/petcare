@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Icon
@@ -22,6 +24,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -62,6 +65,9 @@ import com.petcare.app.features.historiaclinica.export.ExportStorage
 import com.petcare.app.features.historiaclinica.export.HistoriaClinicaPdfGenerator
 import com.petcare.app.features.historiaclinica.export.MedicalFilesDownloader
 import com.petcare.app.features.historiaclinica.ui.HistoriaClinicaScreen
+import com.petcare.app.features.notificaciones.data.remote.NotificacionResponse
+import com.petcare.app.features.notificaciones.domain.NotificacionesController
+import com.petcare.app.features.notificaciones.ui.NotificacionesDropdown
 import com.petcare.app.features.pets.data.remote.CreatePetRequest
 import com.petcare.app.features.pets.data.remote.PetResponse
 import com.petcare.app.features.pets.data.remote.UpdatePetRequest
@@ -180,6 +186,11 @@ class MainActivity : ComponentActivity() {
                 val turnosServiciosController = remember {
                     TurnosServiciosController(
                         turnosServiciosApi = RetrofitClient.turnosServiciosApi(sessionStore)
+                    )
+                }
+                val notificacionesController = remember {
+                    NotificacionesController(
+                        notificacionesApi = RetrofitClient.notificacionesApi(sessionStore)
                     )
                 }
                 var isLoading by rememberSaveable {
@@ -440,6 +451,24 @@ class MainActivity : ComponentActivity() {
                 var isViewingMisTurnos by rememberSaveable {
                     mutableStateOf(false)
                 }
+                var isViewingNotificaciones by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isLoadingNotificaciones by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var notificacionesError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var notificaciones by remember {
+                    mutableStateOf<List<NotificacionResponse>>(emptyList())
+                }
+                var marcandoLeidaId by rememberSaveable {
+                    mutableStateOf<Int?>(null)
+                }
+                var isMarcandoTodasLeidas by rememberSaveable {
+                    mutableStateOf(false)
+                }
                 var isLoadingMisTurnos by rememberSaveable {
                     mutableStateOf(false)
                 }
@@ -553,6 +582,12 @@ class MainActivity : ComponentActivity() {
                     solicitudesServiciosError = null
                     solicitudesServicios = emptyList()
                     procesandoSolicitudServicioId = null
+                    isViewingNotificaciones = false
+                    isLoadingNotificaciones = false
+                    notificacionesError = null
+                    notificaciones = emptyList()
+                    marcandoLeidaId = null
+                    isMarcandoTodasLeidas = false
                 }
 
                 fun volverAInicio() {
@@ -578,6 +613,7 @@ class MainActivity : ComponentActivity() {
                     isRequestingTurno = false
                     isViewingMisTurnos = false
                     isViewingSolicitudesServicios = false
+                    isViewingNotificaciones = false
                 }
 
                 fun loadPets() {
@@ -800,6 +836,84 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                fun loadNotificaciones() {
+                    isLoadingNotificaciones = true
+                    notificacionesError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            notificaciones = notificacionesController.getMisNotificaciones()
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                notificacionesError = "No se pudieron cargar tus notificaciones"
+                            }
+                        } catch (exception: IOException) {
+                            notificacionesError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            notificacionesError = "Ocurrio un error inesperado"
+                        }
+
+                        isLoadingNotificaciones = false
+                    }
+                }
+
+                fun marcarNotificacionLeida(notificacion: NotificacionResponse) {
+                    marcandoLeidaId = notificacion.idNotificacion
+
+                    lifecycleScope.launch {
+                        try {
+                            notificacionesController.marcarLeida(notificacion.idNotificacion)
+                            notificaciones = notificaciones.map {
+                                if (it.idNotificacion == notificacion.idNotificacion) {
+                                    it.copy(leida = true)
+                                } else {
+                                    it
+                                }
+                            }
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                notificacionesError = "No se pudo marcar la notificacion como leida"
+                            }
+                        } catch (exception: IOException) {
+                            notificacionesError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            notificacionesError = "Ocurrio un error inesperado"
+                        }
+
+                        marcandoLeidaId = null
+                    }
+                }
+
+                fun marcarTodasLeidas() {
+                    isMarcandoTodasLeidas = true
+
+                    lifecycleScope.launch {
+                        try {
+                            notificacionesController.marcarTodasLeidas()
+                            notificaciones = notificaciones.map { it.copy(leida = true) }
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                notificacionesError = "No se pudieron marcar las notificaciones"
+                            }
+                        } catch (exception: IOException) {
+                            notificacionesError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            notificacionesError = "Ocurrio un error inesperado"
+                        }
+
+                        isMarcandoTodasLeidas = false
+                    }
+                }
+
                 fun loadMisTurnos() {
                     isLoadingMisTurnos = true
                     misTurnosError = null
@@ -954,6 +1068,8 @@ class MainActivity : ComponentActivity() {
 
                     if (restoredSession != null) {
                         loadPets()
+                        // Para que el menú lateral ya muestre el contador de no leídas.
+                        loadNotificaciones()
                     }
                 }
 
@@ -1027,13 +1143,79 @@ class MainActivity : ComponentActivity() {
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .background(MaterialTheme.colorScheme.background)
-                                        .padding(start = 8.dp, top = 18.dp, bottom = 2.dp)
+                                        .padding(start = 8.dp, end = 8.dp, top = 18.dp, bottom = 2.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     IconButton(onClick = { scope.launch { drawerState.open() } }) {
                                         Icon(
                                             painter = painterResource(R.drawable.ic_menu),
                                             contentDescription = "Abrir menú",
                                             tint = PetCareTealDark
+                                        )
+                                    }
+
+                                    // Campana fija: visible en toda la app, no solo en el menú.
+                                    val noLeidas = notificaciones.count { !it.leida }
+                                    /*
+                                     * Al tocar la campana con el panel abierto, el popup se cierra
+                                     * por el toque de afuera y ese mismo toque vuelve a llegar al
+                                     * botón, que lo reabriría. Ignoramos el clic inmediatamente
+                                     * posterior al cierre para que la campana funcione como toggle.
+                                     */
+                                    var cerradoEnMs by remember { mutableStateOf(0L) }
+                                    Box {
+                                        IconButton(
+                                            onClick = {
+                                                val ahora = System.currentTimeMillis()
+                                                if (isViewingNotificaciones) {
+                                                    isViewingNotificaciones = false
+                                                    cerradoEnMs = ahora
+                                                } else if (ahora - cerradoEnMs > 300) {
+                                                    notificacionesError = null
+                                                    isViewingNotificaciones = true
+                                                    loadNotificaciones()
+                                                }
+                                            }
+                                        ) {
+                                            BadgedBox(
+                                                badge = {
+                                                    if (noLeidas > 0) {
+                                                        Badge {
+                                                            Text(
+                                                                text = if (noLeidas > 99) "99+"
+                                                                else noLeidas.toString()
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            ) {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.ic_bell),
+                                                    contentDescription = if (noLeidas > 0) {
+                                                        "Notificaciones, $noLeidas sin leer"
+                                                    } else {
+                                                        "Notificaciones"
+                                                    },
+                                                    tint = PetCareTealDark
+                                                )
+                                            }
+                                        }
+
+                                        NotificacionesDropdown(
+                                            expanded = isViewingNotificaciones,
+                                            isLoading = isLoadingNotificaciones,
+                                            errorMessage = notificacionesError,
+                                            notificaciones = notificaciones,
+                                            marcandoLeidaId = marcandoLeidaId,
+                                            isMarcandoTodas = isMarcandoTodasLeidas,
+                                            onDismiss = {
+                                                isViewingNotificaciones = false
+                                                cerradoEnMs = System.currentTimeMillis()
+                                            },
+                                            onRetry = { loadNotificaciones() },
+                                            onMarcarLeida = { marcarNotificacionLeida(it) },
+                                            onMarcarTodasLeidas = { marcarTodasLeidas() }
                                         )
                                     }
                                 }
@@ -2002,6 +2184,7 @@ class MainActivity : ComponentActivity() {
 
                                             loggedUserName = session.userName
                                             loadPets()
+                                            loadNotificaciones()
                                         } catch (exception: HttpException) {
                                             serverError = when (exception.code()) {
                                                 400, 401 -> "Correo o contraseña incorrectos"

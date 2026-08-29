@@ -19,6 +19,17 @@ export class NotificacionesService {
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
   }
 
+  marcarTodasLeidas(): Observable<{ mensaje: string; cantidad: number }> {
+    const headers = this.getAuthHeaders();
+    return this.http
+      .patch<{ mensaje: string; cantidad: number }>(
+        `${this.baseUrl}/leer-todas`,
+        {},
+        { headers },
+      )
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
   marcarLeida(id: number): Observable<{ mensaje: string }> {
     const headers = this.getAuthHeaders();
     return this.http

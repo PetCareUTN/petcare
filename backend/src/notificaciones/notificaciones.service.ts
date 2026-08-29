@@ -39,6 +39,19 @@ export class NotificacionesService {
     return notificaciones.map((n) => NotificacionResponseDto.fromEntity(n));
   }
 
+  /** Marca como leídas todas las notificaciones sin leer del usuario. */
+  async marcarTodasLeidas(idUsuario: number) {
+    const { affected } = await this.notificacionesRepository.update(
+      { usuario: { idUsuario }, leida: false },
+      { leida: true },
+    );
+
+    return {
+      mensaje: 'Notificaciones marcadas como leídas',
+      cantidad: affected ?? 0,
+    };
+  }
+
   async marcarLeida(idNotificacion: number, idUsuario: number) {
     const notificacion = await this.notificacionesRepository.findOne({
       where: { idNotificacion, usuario: { idUsuario } },

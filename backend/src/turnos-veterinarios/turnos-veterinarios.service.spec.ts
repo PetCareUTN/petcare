@@ -10,6 +10,7 @@ import { DiaSemana } from '../common/enums/dia-semana.enum';
 import { ValidationStatus } from '../common/enums/validation-status.enum';
 import { DisponibilidadVeterinaria } from '../disponibilidades-veterinarias/entities/disponibilidad-veterinaria.entity';
 import { Mascota } from '../mascotas/entities/mascota.entity';
+import { NotificacionesTurnosService } from '../notificaciones/notificaciones-turnos.service';
 import { User } from '../users/entities/user.entity';
 import { Veterinario } from '../veterinarios/entities/veterinario.entity';
 import { CreateTurnoVeterinarioDto } from './dto/create-turno-veterinario.dto';
@@ -34,9 +35,21 @@ describe('TurnosVeterinariosService', () => {
     find: jest.Mock;
   };
 
+  let notificacionesTurnosService: {
+    notificarTurnoConfirmado: jest.Mock;
+    notificarTurnoCancelado: jest.Mock;
+  };
+
+  const usuarioVeterinario = {
+    idUsuario: 99,
+    nombre: 'Clinica',
+    apellido: 'San Roque',
+  } as User;
+
   const veterinario = {
     idVeterinario: 7,
     estadoValidacion: ValidationStatus.APROBADO,
+    usuario: usuarioVeterinario,
   } as Veterinario;
 
   const duenio = {
@@ -65,9 +78,18 @@ describe('TurnosVeterinariosService', () => {
   } as TurnoVeterinario;
 
   beforeEach(async () => {
+    notificacionesTurnosService = {
+      notificarTurnoConfirmado: jest.fn(),
+      notificarTurnoCancelado: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TurnosVeterinariosService,
+        {
+          provide: NotificacionesTurnosService,
+          useValue: notificacionesTurnosService,
+        },
         {
           provide: getRepositoryToken(TurnoVeterinario),
           useValue: {
@@ -208,6 +230,29 @@ describe('TurnosVeterinariosService', () => {
       );
       expect(result.idTurno).toBe(30);
       expect(result.estado).toBe(AppointmentStatus.CONFIRMADO);
+    });
+
+    it('notifica a las dos partes al confirmar el turno', async () => {
+      mascotasRepository.findOne.mockResolvedValue(mascotaPropia);
+      veterinariosRepository.findOne.mockResolvedValue(veterinario);
+      disponibilidadesRepository.find.mockResolvedValue([disponibilidadLunes]);
+      turnosRepository.find.mockResolvedValue([]);
+      turnosRepository.create.mockReturnValue({});
+      turnosRepository.save.mockResolvedValue({ idTurno: 30 });
+      turnosRepository.findOne.mockResolvedValue({ ...turnoConfirmado, idTurno: 30 });
+
+      await service.solicitar(idDueno, dto);
+
+      expect(
+        notificacionesTurnosService.notificarTurnoConfirmado,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          idDuenio: duenio.idUsuario,
+          idPrestador: usuarioVeterinario.idUsuario,
+          nombreMascota: mascota.nombre,
+          servicio: 'consulta veterinaria',
+        }),
+      );
     });
 
     it('rechaza cuando la mascota no existe', async () => {
@@ -429,6 +474,25 @@ describe('TurnosVeterinariosService', () => {
 
       expect(result.estado).toBe(AppointmentStatus.CANCELADO);
       expect(result.canceladoPor).toBe('veterinario');
+    });
+
+    it('notifica la cancelación indicando quién la hizo', async () => {
+      turnosRepository.findOne.mockResolvedValue({ ...turnoCancelable });
+      turnosRepository.save.mockImplementation((turno: TurnoVeterinario) =>
+        Promise.resolve(turno),
+      );
+
+      await service.cancelar(duenio.idUsuario, 30, {
+        motivoCancelacion: 'Se enfermó el dueño',
+      });
+
+      expect(
+        notificacionesTurnosService.notificarTurnoCancelado,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ idDuenio: duenio.idUsuario, idPrestador: 3 }),
+        'duenio',
+        'Se enfermó el dueño',
+      );
     });
 
     it('rechaza cancelar a un usuario ajeno al turno', async () => {

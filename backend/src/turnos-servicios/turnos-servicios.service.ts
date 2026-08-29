@@ -10,6 +10,10 @@ import { CategoriaServicio } from '../common/enums/categoria-servicio.enum';
 import { DiaSemana } from '../common/enums/dia-semana.enum';
 import { TurnoServicioEstado } from '../common/enums/turno-servicio-estado.enum';
 import { Mascota } from '../mascotas/entities/mascota.entity';
+import {
+  DatosTurno,
+  NotificacionesTurnosService,
+} from '../notificaciones/notificaciones-turnos.service';
 import { Servicio } from '../servicios/entities/servicio.entity';
 import { User } from '../users/entities/user.entity';
 import { CancelarTurnoServicioDto } from './dto/cancelar-turno-servicio.dto';
@@ -22,6 +26,13 @@ const DURACION_MINUTOS_POR_CATEGORIA: Record<CategoriaServicio, number> = {
   [CategoriaServicio.PASEADOR]: 30,
   [CategoriaServicio.PELUQUERIA]: 30,
   [CategoriaServicio.GUARDERIA]: 60,
+};
+
+/** Texto legible de cada categoría para los mensajes de notificación. */
+const NOMBRE_POR_CATEGORIA: Record<CategoriaServicio, string> = {
+  [CategoriaServicio.PASEADOR]: 'paseo',
+  [CategoriaServicio.PELUQUERIA]: 'peluquería',
+  [CategoriaServicio.GUARDERIA]: 'guardería',
 };
 
 const DIAS_POR_INDICE: DiaSemana[] = [
@@ -43,6 +54,7 @@ export class TurnosServiciosService {
     private readonly serviciosRepository: Repository<Servicio>,
     @InjectRepository(Mascota)
     private readonly mascotasRepository: Repository<Mascota>,
+    private readonly notificacionesTurnosService: NotificacionesTurnosService,
   ) {}
 
   async solicitar(
@@ -107,6 +119,10 @@ export class TurnosServiciosService {
       where: { idTurno: guardado.idTurno },
       relations: ['servicio', 'servicio.usuario', 'mascota', 'duenio'],
     });
+
+    await this.notificacionesTurnosService.notificarTurnoConfirmado(
+      this.aDatosTurno(turnoCompleto!),
+    );
 
     return TurnoServicioPrestadorResponseDto.fromEntity(turnoCompleto!);
   }
@@ -308,8 +324,32 @@ export class TurnosServiciosService {
 
     const guardado = await this.turnosRepository.save(turno);
 
+    await this.notificacionesTurnosService.notificarTurnoCancelado(
+      this.aDatosTurno(guardado),
+      esDuenio ? 'duenio' : 'prestador',
+      guardado.motivoCancelacion,
+    );
+
     return esDuenio
       ? TurnoServicioDuenioResponseDto.fromEntity(guardado)
       : TurnoServicioPrestadorResponseDto.fromEntity(guardado);
+  }
+
+  /** Datos del turno que necesitan las notificaciones de la US-22. */
+  private aDatosTurno(turno: TurnoServicio): DatosTurno {
+    return {
+      idDuenio: turno.duenio.idUsuario,
+      idPrestador: turno.servicio.usuario.idUsuario,
+      nombreDuenio: this.nombreCompleto(turno.duenio),
+      nombrePrestador: this.nombreCompleto(turno.servicio.usuario),
+      nombreMascota: turno.mascota.nombre,
+      fecha: turno.fecha,
+      hora: turno.horaInicio,
+      servicio: NOMBRE_POR_CATEGORIA[turno.servicio.categoria],
+    };
+  }
+
+  private nombreCompleto(usuario: User): string {
+    return `${usuario.nombre} ${usuario.apellido ?? ''}`.trim();
   }
 }

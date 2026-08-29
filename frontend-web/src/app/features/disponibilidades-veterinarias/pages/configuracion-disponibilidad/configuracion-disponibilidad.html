@@ -24,7 +24,7 @@
 
     @if (!isLoading()) {
       <section class="availability-list" formArrayName="disponibilidades">
-        @for (grupo of disponibilidades.controls; track $index; let i = $index) {
+        @for (grupo of disponibilidades.controls; track grupo; let i = $index) {
           <div class="availability-row" [formGroupName]="i">
             <div class="field">
               <label [for]="'dia-' + i">Día</label>

@@ -29,6 +29,17 @@
   border-radius: 50%;
 }
 
+/* Barra fija del contenido: sostiene la campana pegada al borde derecho. */
+.vet-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--spacing-sm) var(--spacing-lg) 0;
+  background-color: var(--background);
+}
+
 .vet-brand-title {
   margin: 0;
   font-size: 0.95rem;

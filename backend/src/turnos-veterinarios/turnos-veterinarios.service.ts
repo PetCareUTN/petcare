@@ -11,6 +11,10 @@ import { DiaSemana } from '../common/enums/dia-semana.enum';
 import { ValidationStatus } from '../common/enums/validation-status.enum';
 import { DisponibilidadVeterinaria } from '../disponibilidades-veterinarias/entities/disponibilidad-veterinaria.entity';
 import { Mascota } from '../mascotas/entities/mascota.entity';
+import {
+  DatosTurno,
+  NotificacionesTurnosService,
+} from '../notificaciones/notificaciones-turnos.service';
 import { User } from '../users/entities/user.entity';
 import { Veterinario } from '../veterinarios/entities/veterinario.entity';
 import { CancelarTurnoVeterinarioDto } from './dto/cancelar-turno-veterinario.dto';
@@ -42,6 +46,7 @@ export class TurnosVeterinariosService {
     private readonly mascotasRepository: Repository<Mascota>,
     @InjectRepository(DisponibilidadVeterinaria)
     private readonly disponibilidadesRepository: Repository<DisponibilidadVeterinaria>,
+    private readonly notificacionesTurnosService: NotificacionesTurnosService,
   ) {}
 
   async solicitar(
@@ -100,6 +105,10 @@ export class TurnosVeterinariosService {
       where: { idTurno: guardado.idTurno },
       relations: ['veterinario', 'mascota', 'duenio'],
     });
+
+    await this.notificacionesTurnosService.notificarTurnoConfirmado(
+      this.aDatosTurno(turnoCompleto!),
+    );
 
     return TurnoVeterinarioResponseDto.fromEntity(turnoCompleto!);
   }
@@ -299,9 +308,33 @@ export class TurnosVeterinariosService {
     turno.motivoCancelacion = dto.motivoCancelacion?.trim() || null;
     turno.canceladoPor = esDuenio ? 'dueño' : 'veterinario';
 
-    return TurnoVeterinarioResponseDto.fromEntity(
-      await this.turnosRepository.save(turno),
+    const guardado = await this.turnosRepository.save(turno);
+
+    await this.notificacionesTurnosService.notificarTurnoCancelado(
+      this.aDatosTurno(guardado),
+      esDuenio ? 'duenio' : 'prestador',
+      guardado.motivoCancelacion,
     );
+
+    return TurnoVeterinarioResponseDto.fromEntity(guardado);
+  }
+
+  /** Datos del turno que necesitan las notificaciones de la US-22. */
+  private aDatosTurno(turno: TurnoVeterinario): DatosTurno {
+    return {
+      idDuenio: turno.duenio.idUsuario,
+      idPrestador: turno.veterinario.usuario.idUsuario,
+      nombreDuenio: this.nombreCompleto(turno.duenio),
+      nombrePrestador: this.nombreCompleto(turno.veterinario.usuario),
+      nombreMascota: turno.mascota.nombre,
+      fecha: turno.fecha,
+      hora: turno.hora,
+      servicio: 'consulta veterinaria',
+    };
+  }
+
+  private nombreCompleto(usuario: User): string {
+    return `${usuario.nombre} ${usuario.apellido ?? ''}`.trim();
   }
 
   private async findVeterinarioValidado(

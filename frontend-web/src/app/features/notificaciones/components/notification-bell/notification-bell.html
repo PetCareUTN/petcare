@@ -13,20 +13,32 @@
     <div class="dropdown" (click)="$event.stopPropagation()">
       <div class="dropdown-header">
         <span>Notificaciones</span>
+        @if (unreadCount > 0) {
+          <button
+            type="button"
+            class="btn-leer-todas"
+            [disabled]="isMarcandoTodas()"
+            (click)="marcarTodasLeidas()"
+          >
+            {{ isMarcandoTodas() ? 'Marcando...' : 'Marcar todo como leído' }}
+          </button>
+        }
       </div>
 
       @if (notificaciones().length === 0) {
-        <div class="dropdown-empty">No tenés notificaciones nuevas</div>
+        <div class="dropdown-empty">No tenés notificaciones</div>
       }
 
       @for (notificacion of notificaciones(); track notificacion.idNotificacion) {
-        <div class="notification-item">
+        <div class="notification-item" [class.no-leida]="!notificacion.leida">
           <div class="notification-content">
             <span class="notification-titulo">{{ notificacion.titulo }}</span>
             <span class="notification-cuerpo">{{ notificacion.cuerpo }}</span>
             <span class="notification-fecha">{{ notificacion.fechaEnvio | date:'dd/MM/yyyy HH:mm' }}</span>
           </div>
-          <button class="btn-leer" (click)="marcarLeida(notificacion)">Marcar leída</button>
+          @if (!notificacion.leida) {
+            <button class="btn-leer" (click)="marcarLeida(notificacion)">Marcar leída</button>
+          }
         </div>
       }
     </div>

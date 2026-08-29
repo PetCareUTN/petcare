@@ -12,6 +12,7 @@ describe('NotificacionesService', () => {
     find: jest.Mock;
     create: jest.Mock;
     save: jest.Mock;
+    update: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -20,6 +21,7 @@ describe('NotificacionesService', () => {
       find: jest.fn(),
       create: jest.fn(),
       save: jest.fn(),
+      update: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -105,6 +107,28 @@ describe('NotificacionesService', () => {
       repository.findOne.mockResolvedValue(null);
 
       await expect(service.marcarLeida(999, 1)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('marcarTodasLeidas', () => {
+    it('debería marcar solo las no leídas del usuario autenticado', async () => {
+      repository.update.mockResolvedValue({ affected: 3 });
+
+      const result = await service.marcarTodasLeidas(7);
+
+      expect(repository.update).toHaveBeenCalledWith(
+        { usuario: { idUsuario: 7 }, leida: false },
+        { leida: true },
+      );
+      expect(result.cantidad).toBe(3);
+    });
+
+    it('debería devolver cantidad 0 cuando no había ninguna sin leer', async () => {
+      repository.update.mockResolvedValue({ affected: 0 });
+
+      const result = await service.marcarTodasLeidas(7);
+
+      expect(result.cantidad).toBe(0);
     });
   });
 });
