@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -52,5 +53,15 @@ export class AdopcionesController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<PublicacionAdopcionResponseDto> {
     return this.adopcionesService.findOne(id);
+  }
+
+  @Patch(':id/cancelar')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  cancelar(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<PublicacionAdopcionResponseDto> {
+    return this.adopcionesService.cancelar(user.sub, id);
   }
 }
