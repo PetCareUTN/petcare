@@ -16,6 +16,15 @@ type EventTypeOption = {
   label: string;
 };
 
+/**
+ * Límites de caracteres visibles (sin contar el markup HTML del editor) para
+ * los campos de texto libre del evento clínico. La descripción es la
+ * narrativa principal de la consulta, por eso tiene más margen; los otros
+ * tres suelen ser más acotados en la práctica.
+ */
+const DESCRIPCION_MAX_LENGTH = 1000;
+const CAMPO_CORTO_MAX_LENGTH = 500;
+
 @Component({
   selector: 'app-create-evento-clinico',
   imports: [ReactiveFormsModule, RouterLink, RichTextEditorComponent],
@@ -49,14 +58,17 @@ export class CreateEventoClinicoPage implements OnInit {
   protected readonly uploadError = signal<string | null>(null);
   protected readonly backQueryParams = signal<Record<string, string | number>>({});
 
+  protected readonly descripcionMaxLength = DESCRIPCION_MAX_LENGTH;
+  protected readonly campoCortoMaxLength = CAMPO_CORTO_MAX_LENGTH;
+
   protected readonly form = this.formBuilder.group({
     idMascota: [null as number | null, [Validators.required, Validators.min(1)]],
     tipo: ['consulta' as ClinicalEventType, [Validators.required]],
     fecha: [this.today(), [Validators.required]],
-    descripcion: ['', [Validators.required, Validators.maxLength(2000)]],
-    diagnostico: ['', [Validators.maxLength(2000)]],
-    tratamiento: ['', [Validators.maxLength(2000)]],
-    observaciones: ['', [Validators.maxLength(2000)]],
+    descripcion: ['', [Validators.required]],
+    diagnostico: [''],
+    tratamiento: [''],
+    observaciones: [''],
   });
 
   ngOnInit(): void {

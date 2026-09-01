@@ -17,6 +17,18 @@
   opacity: 0.6;
 }
 
+.char-count {
+  align-self: flex-end;
+  padding: 0.15rem 0.6rem 0.4rem;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.char-count-limit {
+  color: var(--danger, #c0392b);
+  font-weight: 700;
+}
+
 .rich-text-editor .ql-toolbar.ql-snow {
   border: none;
   border-bottom: 1px solid var(--border);

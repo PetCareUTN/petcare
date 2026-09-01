@@ -37,6 +37,18 @@ export class MascotasService {
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
   }
 
+  findAllOwners(query: { nombre?: string; apellido?: string } = {}): Observable<MascotaOwner[]> {
+    return this.http
+      .get<MascotaOwner[]>(`${this.baseUrl}/duenos`, {
+        headers: this.authHeaders(),
+        params: {
+          ...(query.nombre ? { nombre: query.nombre } : {}),
+          ...(query.apellido ? { apellido: query.apellido } : {}),
+        },
+      })
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
   findByOwner(idUsuario: number): Observable<MascotaResponse[]> {
     return this.http
       .get<MascotaResponse[]>(`${this.baseUrl}/duenos/${idUsuario}`, {

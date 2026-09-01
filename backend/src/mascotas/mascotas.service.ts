@@ -8,7 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { mkdir, writeFile } from 'fs/promises';
 import { extname, join } from 'path';
-import { Raw, Repository } from 'typeorm';
+import { ILike, Raw, Repository } from 'typeorm';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { RoleName } from '../common/enums/role-name.enum';
 import { ValidationStatus } from '../common/enums/validation-status.enum';
@@ -84,6 +84,32 @@ export class MascotasService {
 
   findOwnerByEmail(email?: string): Promise<UserPublicDto> {
     return this.findOwner(email);
+  }
+
+  /**
+   * Directorio de clientes (dueños) para que la veterinaria elija uno sin
+   * saber de memoria un DNI o email exacto. Filtra por coincidencia parcial
+   * de nombre y/o apellido, sin distinguir mayúsculas.
+   */
+  async findAllOwners(
+    nombre?: string,
+    apellido?: string,
+  ): Promise<UserPublicDto[]> {
+    const normalizedNombre = nombre?.trim();
+    const normalizedApellido = apellido?.trim();
+
+    const duenios = await this.usersRepository.find({
+      where: {
+        rol: { nombre: RoleName.DUENO_MASCOTA },
+        ...(normalizedNombre ? { nombre: ILike(`%${normalizedNombre}%`) } : {}),
+        ...(normalizedApellido
+          ? { apellido: ILike(`%${normalizedApellido}%`) }
+          : {}),
+      },
+      order: { apellido: 'ASC', nombre: 'ASC' },
+    });
+
+    return duenios.map((duenio) => UserPublicDto.fromEntity(duenio));
   }
 
   async createForExistingOwner(

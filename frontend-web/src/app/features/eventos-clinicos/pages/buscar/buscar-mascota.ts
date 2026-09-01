@@ -1,22 +1,30 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiError } from '../../../auth/models/user';
 import { MascotaOwner, MascotaResponse } from '../../../mascotas/models/mascota';
 import { MascotasService } from '../../../mascotas/services/mascotas-service';
+import { ListaClientesModal } from '../../components/lista-clientes/lista-clientes';
 
 type AttentionStep = 'cliente' | 'mascota' | 'evento';
 type OwnerSearchMode = 'documento' | 'email';
 
+/** Cuánto queda visible el cartel temporal de "mascota registrada". */
+const TOAST_DURATION_MS = 4000;
+
 @Component({
   selector: 'app-buscar-mascota',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, ListaClientesModal],
   templateUrl: './buscar-mascota.html',
   styleUrl: './buscar-mascota.css',
 })
 export class BuscarMascotaPage implements OnInit {
   protected readonly mascotasService = inject(MascotasService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+
+  protected readonly toastMessage = signal<string | null>(null);
+  protected readonly isListaClientesOpen = signal(false);
 
   protected readonly isSearchingOwner = signal(false);
   protected readonly isLoadingOwnerPets = signal(false);
@@ -44,13 +52,30 @@ export class BuscarMascotaPage implements OnInit {
     return [owner.nombre, owner.apellido].filter(Boolean).join(' ');
   }
 
+  private mostrarToast(mensaje: string): void {
+    this.toastMessage.set(mensaje);
+    setTimeout(() => this.toastMessage.set(null), TOAST_DURATION_MS);
+  }
+
   ngOnInit(): void {
     const ownerDocument = this.route.snapshot.queryParamMap.get('ownerDocument')?.trim() ?? '';
     const ownerEmail = this.route.snapshot.queryParamMap.get('ownerEmail')?.trim() ?? '';
     const selectedPetId = Number(this.route.snapshot.queryParamMap.get('selectedPetId'));
+    const mascotaCreada = this.route.snapshot.queryParamMap.get('mascotaCreada');
 
     if (Number.isInteger(selectedPetId) && selectedPetId > 0) {
       this.petIdToRestore.set(selectedPetId);
+    }
+
+    if (mascotaCreada) {
+      this.mostrarToast(`Mascota ${mascotaCreada} registrada con éxito.`);
+      // Se saca de la URL para que un refresh no vuelva a mostrar el cartel.
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { mascotaCreada: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
     }
 
     if (ownerDocument) {
@@ -125,6 +150,20 @@ export class BuscarMascotaPage implements OnInit {
           this.ownerSearchMessage.set(error.mensaje ?? 'No se encontró un cliente con esos datos.');
         },
       });
+  }
+
+  protected abrirListaClientes(): void {
+    this.isListaClientesOpen.set(true);
+  }
+
+  protected seleccionarClienteDeLista(owner: MascotaOwner): void {
+    this.isListaClientesOpen.set(false);
+    this.ownerSearchMessage.set(null);
+    this.errorMessage.set(null);
+    this.selectedPet.set(null);
+    this.petIdToRestore.set(null);
+    this.selectedOwner.set(owner);
+    this.loadOwnerPets(owner.id_usuario);
   }
 
   protected selectPet(pet: MascotaResponse): void {

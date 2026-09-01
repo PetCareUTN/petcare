@@ -28,11 +28,18 @@ import Quill from 'quill';
 })
 export class RichTextEditorComponent implements AfterViewInit, ControlValueAccessor, OnDestroy {
   readonly placeholder = input<string>('');
+  /**
+   * Límite de caracteres de texto visible (sin contar el markup HTML que
+   * agrega el formato). Sin esto, un campo "sin límite" en la UI podía
+   * superar ampliamente el límite real que valida el backend.
+   */
+  readonly maxLength = input<number | null>(null);
 
   @ViewChild('editorContainer', { static: true })
   private readonly editorContainer!: ElementRef<HTMLDivElement>;
 
   protected readonly isDisabled = signal(false);
+  protected readonly charCount = signal(0);
 
   private quill: Quill | null = null;
   private pendingValue = '';
@@ -52,9 +59,10 @@ export class RichTextEditorComponent implements AfterViewInit, ControlValueAcces
       this.quill.root.innerHTML = this.pendingValue;
     }
     this.quill.enable(!this.isDisabled());
+    this.charCount.set(this.plainTextLength());
 
-    this.quill.on('text-change', () => {
-      this.onChange(this.currentHtml());
+    this.quill.on('text-change', (_delta, _oldDelta, source) => {
+      this.handleTextChange(source);
     });
     this.quill.on('selection-change', (range) => {
       if (!range) {
@@ -69,6 +77,7 @@ export class RichTextEditorComponent implements AfterViewInit, ControlValueAcces
       if (this.currentHtml() !== html) {
         this.quill.root.innerHTML = html;
       }
+      this.charCount.set(this.plainTextLength());
     } else {
       this.pendingValue = html;
     }
@@ -96,5 +105,29 @@ export class RichTextEditorComponent implements AfterViewInit, ControlValueAcces
       return '';
     }
     return this.quill.getText().trim() ? this.quill.root.innerHTML : '';
+  }
+
+  /** Cantidad de caracteres visibles. Quill.getText() siempre agrega un '\n' final. */
+  private plainTextLength(): number {
+    if (!this.quill) {
+      return 0;
+    }
+    return Math.max(0, this.quill.getText().length - 1);
+  }
+
+  private handleTextChange(source: string): void {
+    const max = this.maxLength();
+    const length = this.plainTextLength();
+
+    if (max !== null && length > max && source === 'user') {
+      // Recorta el excedente, igual que el atributo maxlength de un input.
+      // El propio deleteText dispara un nuevo text-change (source 'api') que
+      // termina de actualizar el contador y notificar el nuevo valor.
+      this.quill!.deleteText(max, length - max);
+      return;
+    }
+
+    this.charCount.set(length);
+    this.onChange(this.currentHtml());
   }
 }
