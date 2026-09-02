@@ -207,7 +207,10 @@ describe('POST /auth/register (contract)', () => {
     expect(persisted?.password).toBeDefined();
     expect(persisted?.password).not.toBe(validRegisterPayload.password);
     expect(
-      await bcrypt.compare(validRegisterPayload.password, persisted!.password),
+      await bcrypt.compare(
+        validRegisterPayload.password,
+        persisted!.password ?? '',
+      ),
     ).toBe(true);
   });
 });

@@ -14,6 +14,7 @@ import { Repository } from 'typeorm';
 import { RoleName } from '../common/enums/role-name.enum';
 import { ValidationStatus } from '../common/enums/validation-status.enum';
 import { Role } from '../roles/entities/role.entity';
+import { User } from '../users/entities/user.entity';
 import { UserPublicDto } from '../users/dto/user-public.dto';
 import { UsersService } from '../users/users.service';
 import { Veterinario } from '../veterinarios/entities/veterinario.entity';
@@ -26,6 +27,10 @@ import { CreateAssistedOwnerDto } from './dto/create-assisted-owner.dto';
 import { CambiarContraseñaDto } from './dto/cambiar-contrasena.dto';
 import { RestablecerContrasenaDto } from './dto/restablecer-contrasena.dto';
 import { MailService } from '../mail/mail.service';
+import { GoogleLoginDto } from './dto/google-login.dto';
+import { GoogleRegisterDto } from './dto/google-register.dto';
+import { GoogleLoginResponseDto } from './dto/google-login-response.dto';
+import { GoogleTokenVerifierService } from './google-token-verifier.service';
 
 const SALT_ROUNDS = 10;
 const DEFAULT_ROLE = RoleName.DUENO_MASCOTA;
@@ -43,6 +48,7 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
+    private readonly googleTokenVerifier: GoogleTokenVerifierService,
     @InjectRepository(Role)
     private readonly rolesRepository: Repository<Role>,
     @InjectRepository(Veterinario)
@@ -192,6 +198,111 @@ export class AuthService {
     return LoginResponseDto.build(token, user);
   }
 
+  /**
+   * Paso 1 del ingreso con Google. Si la cuenta ya existe devuelve la sesión;
+   * si es alguien nuevo avisa que falta completar el registro (el DNI).
+   */
+  async loginConGoogle(dto: GoogleLoginDto): Promise<GoogleLoginResponseDto> {
+    const cuenta = await this.googleTokenVerifier.verificar(dto.idToken);
+
+    const usuarioPorGoogleId = await this.usersService.findByGoogleId(
+      cuenta.googleId,
+    );
+    if (usuarioPorGoogleId) {
+      return GoogleLoginResponseDto.conSesion(
+        await this.generarToken(usuarioPorGoogleId),
+        usuarioPorGoogleId,
+      );
+    }
+
+    /*
+     * Si ya existe una cuenta con ese email (creada con contraseña), le
+     * vinculamos el id de Google en vez de rechazar el ingreso o crear un
+     * duplicado. Es seguro porque el verificador exige el email verificado.
+     */
+    const usuarioPorEmail = await this.usersService.findByEmail(cuenta.email);
+    if (usuarioPorEmail) {
+      await this.usersService.vincularGoogleId(
+        usuarioPorEmail.idUsuario,
+        cuenta.googleId,
+      );
+
+      return GoogleLoginResponseDto.conSesion(
+        await this.generarToken(usuarioPorEmail),
+        usuarioPorEmail,
+      );
+    }
+
+    return GoogleLoginResponseDto.registroPendiente(cuenta);
+  }
+
+  /**
+   * Paso 2: crea la cuenta con los datos de Google más el DNI que cargó la
+   * persona. Se vuelve a validar el token para no confiar en el paso anterior.
+   */
+  async registrarConGoogle(
+    dto: GoogleRegisterDto,
+  ): Promise<GoogleLoginResponseDto> {
+    const cuenta = await this.googleTokenVerifier.verificar(dto.idToken);
+
+    const yaRegistrado =
+      (await this.usersService.findByGoogleId(cuenta.googleId)) ??
+      (await this.usersService.findByEmail(cuenta.email));
+    if (yaRegistrado) {
+      throw new ConflictException({
+        codigoEstado: 409,
+        mensaje: 'El email ya se encuentra registrado',
+      });
+    }
+
+    const numeroDocumento = dto.numeroDocumento.trim();
+    const documentoExistente =
+      await this.usersService.findByDocument(numeroDocumento);
+    if (documentoExistente) {
+      throw new ConflictException({
+        codigoEstado: 409,
+        mensaje: 'El documento ya se encuentra registrado',
+      });
+    }
+
+    const defaultRole = await this.rolesRepository.findOne({
+      where: { nombre: DEFAULT_ROLE },
+    });
+    if (!defaultRole) {
+      throw new Error(
+        `No se encontró el rol por defecto "${DEFAULT_ROLE}". Verifique el seed de roles.`,
+      );
+    }
+
+    const user = await this.usersService.create({
+      nombre: cuenta.nombre,
+      apellido: cuenta.apellido,
+      email: cuenta.email,
+      numeroDocumento,
+      // Sin contraseña: la cuenta entra siempre por Google.
+      password: null,
+      googleId: cuenta.googleId,
+      idRol: defaultRole.idRol,
+    });
+    user.rol = defaultRole;
+
+    return GoogleLoginResponseDto.conSesion(
+      await this.generarToken(user),
+      user,
+    );
+  }
+
+  private async generarToken(user: User): Promise<string> {
+    const payload: JwtPayload = {
+      sub: user.idUsuario,
+      email: user.email,
+      idRol: user.rol.idRol,
+      rol: user.rol.nombre,
+    };
+
+    return this.jwtService.signAsync(payload);
+  }
+
   private async verificarVeterinarioAprobado(idUsuario: number): Promise<void> {
     await this.getApprovedVeterinarian(idUsuario);
   }
@@ -239,6 +350,15 @@ export class AuthService {
         mensaje: 'Usuario no encontrado',
       });
     }
+    // Las cuentas de Google no tienen contraseña propia que cambiar.
+    if (user.password === null) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje:
+          'Tu cuenta ingresa con Google, así que no tiene contraseña para cambiar',
+      });
+    }
+
     // Comparar contraseña vieja con la contraseña almacenada
     const passwordMatches = await bcrypt.compare(dto.viejaContraseña, user.password);
     if (!passwordMatches) {

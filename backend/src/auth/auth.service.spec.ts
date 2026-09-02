@@ -14,6 +14,7 @@ import { User } from '../users/entities/user.entity';
 import { UsersService } from '../users/users.service';
 import { Veterinario } from '../veterinarios/entities/veterinario.entity';
 import { MailService } from '../mail/mail.service';
+import { GoogleTokenVerifierService } from './google-token-verifier.service';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -29,6 +30,8 @@ describe('AuthService', () => {
     updatePassword: jest.Mock;
     clearRecoveryData: jest.Mock;
     activateIfPending: jest.Mock;
+    findByGoogleId: jest.Mock;
+    vincularGoogleId: jest.Mock;
   };
   let mailService: {
     sendRecoveryCode: jest.Mock;
@@ -42,6 +45,9 @@ describe('AuthService', () => {
   };
   let veterinariosRepository: {
     findOne: jest.Mock;
+  };
+  let googleTokenVerifier: {
+    verificar: jest.Mock;
   };
 
   const defaultRole: Role = { idRol: 1, nombre: RoleName.DUENO_MASCOTA };
@@ -70,6 +76,8 @@ describe('AuthService', () => {
             updatePassword: jest.fn(),
             clearRecoveryData: jest.fn(),
             activateIfPending: jest.fn(),
+            findByGoogleId: jest.fn(),
+            vincularGoogleId: jest.fn(),
           },
         },
         {
@@ -83,6 +91,12 @@ describe('AuthService', () => {
           useValue: {
             sendRecoveryCode: jest.fn(),
             sendAssistedOwnerActivationCode: jest.fn(),
+          },
+        },
+        {
+          provide: GoogleTokenVerifierService,
+          useValue: {
+            verificar: jest.fn(),
           },
         },
         {
@@ -106,10 +120,109 @@ describe('AuthService', () => {
     mailService = module.get(MailService);
     rolesRepository = module.get(getRepositoryToken(Role));
     veterinariosRepository = module.get(getRepositoryToken(Veterinario));
+    googleTokenVerifier = module.get(GoogleTokenVerifierService);
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('ingreso con Google', () => {
+    const cuentaGoogle = {
+      googleId: 'google-sub-123',
+      email: 'laura@gmail.com',
+      nombre: 'Laura',
+      apellido: 'Gomez',
+    };
+
+    beforeEach(() => {
+      googleTokenVerifier.verificar.mockResolvedValue(cuentaGoogle);
+      usersService.findByGoogleId = jest.fn().mockResolvedValue(null);
+      usersService.vincularGoogleId = jest.fn().mockResolvedValue(undefined);
+    });
+
+    it('pide completar el registro cuando la cuenta de Google es nueva', async () => {
+      usersService.findByEmail.mockResolvedValue(null);
+
+      const result = await service.loginConGoogle({ idToken: 'token-google' });
+
+      expect(result.requiereRegistro).toBe(true);
+      expect(result.email).toBe(cuentaGoogle.email);
+      expect(result.nombre).toBe(cuentaGoogle.nombre);
+      expect(result.token).toBeUndefined();
+      expect(usersService.create).not.toHaveBeenCalled();
+    });
+
+    it('devuelve la sesion cuando la cuenta de Google ya esta registrada', async () => {
+      const usuario = {
+        idUsuario: 5,
+        email: cuentaGoogle.email,
+        rol: defaultRole,
+      } as User;
+      usersService.findByGoogleId = jest.fn().mockResolvedValue(usuario);
+      jwtService.signAsync.mockResolvedValue('jwt-google');
+
+      const result = await service.loginConGoogle({ idToken: 'token-google' });
+
+      expect(result.requiereRegistro).toBe(false);
+      expect(result.token).toBe('jwt-google');
+      expect(usersService.findByEmail).not.toHaveBeenCalled();
+    });
+
+    it('vincula la cuenta de Google a un usuario que ya existia con contrasena', async () => {
+      const usuario = {
+        idUsuario: 8,
+        email: cuentaGoogle.email,
+        rol: defaultRole,
+      } as User;
+      usersService.findByEmail.mockResolvedValue(usuario);
+      jwtService.signAsync.mockResolvedValue('jwt-vinculado');
+
+      const result = await service.loginConGoogle({ idToken: 'token-google' });
+
+      expect(usersService.vincularGoogleId).toHaveBeenCalledWith(
+        usuario.idUsuario,
+        cuentaGoogle.googleId,
+      );
+      expect(result.token).toBe('jwt-vinculado');
+    });
+
+    it('crea la cuenta sin contrasena y con el DNI al completar el registro', async () => {
+      usersService.findByEmail.mockResolvedValue(null);
+      usersService.findByDocument.mockResolvedValue(null);
+      rolesRepository.findOne.mockResolvedValue(defaultRole);
+      usersService.create.mockResolvedValue({
+        idUsuario: 9,
+        email: cuentaGoogle.email,
+        rol: defaultRole,
+      } as User);
+      jwtService.signAsync.mockResolvedValue('jwt-nuevo');
+
+      const result = await service.registrarConGoogle({
+        idToken: 'token-google',
+        numeroDocumento: '30111222',
+      });
+
+      const createArgs = usersService.create.mock.calls[0][0];
+      expect(createArgs.password).toBeNull();
+      expect(createArgs.googleId).toBe(cuentaGoogle.googleId);
+      expect(createArgs.numeroDocumento).toBe('30111222');
+      expect(createArgs.idRol).toBe(defaultRole.idRol);
+      expect(result.token).toBe('jwt-nuevo');
+    });
+
+    it('rechaza el registro si el DNI ya pertenece a otra persona', async () => {
+      usersService.findByEmail.mockResolvedValue(null);
+      usersService.findByDocument.mockResolvedValue({ idUsuario: 99 } as User);
+
+      await expect(
+        service.registrarConGoogle({
+          idToken: 'token-google',
+          numeroDocumento: '30111222',
+        }),
+      ).rejects.toThrow(ConflictException);
+      expect(usersService.create).not.toHaveBeenCalled();
+    });
   });
 
   it('registers a user with the default role and a hashed password', async () => {
@@ -126,6 +239,7 @@ describe('AuthService', () => {
       telefono: null,
       direccion: null,
       password: 'hashed-password',
+      googleId: null,
       fechaRegistro: new Date('2026-07-02T00:00:00.000Z'),
       estado: 'activo',
       idVeterinarioAltaAsistida: null,
@@ -159,7 +273,7 @@ describe('AuthService', () => {
     const createArgs = usersService.create.mock.calls[0][0];
     expect(createArgs.password).not.toBe(registerDto.password);
     expect(
-      await bcrypt.compare(registerDto.password, createArgs.password),
+      await bcrypt.compare(registerDto.password, createArgs.password ?? ''),
     ).toBe(true);
 
     expect(result).toEqual({
@@ -218,6 +332,7 @@ describe('AuthService', () => {
       telefono: '3511234567',
       direccion: null,
       password: 'temporary-hash',
+      googleId: null,
       fechaRegistro: new Date('2026-08-07T00:00:00.000Z'),
       estado: 'pendiente_activacion',
       idVeterinarioAltaAsistida: veterinarian.idVeterinario,
@@ -324,6 +439,7 @@ describe('AuthService', () => {
       telefono: null,
       direccion: null,
       password: await bcrypt.hash(loginDto.password, 10),
+      googleId: null,
       fechaRegistro: new Date('2026-07-02T00:00:00.000Z'),
       estado: 'activo',
       idVeterinarioAltaAsistida: null,
@@ -454,6 +570,7 @@ describe('AuthService', () => {
         telefono: null,
         direccion: null,
         password: 'temporary-hash',
+        googleId: null,
         fechaRegistro: new Date('2026-08-07T00:00:00.000Z'),
         estado: 'pendiente_activacion',
         idVeterinarioAltaAsistida: 11,
