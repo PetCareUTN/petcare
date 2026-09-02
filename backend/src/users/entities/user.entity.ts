@@ -36,8 +36,13 @@ export class User {
   @Column({ type: 'varchar', length: 255, nullable: true })
   direccion: string | null;
 
-  @Column({ type: 'varchar', length: 255 })
-  password: string;
+  // Null en las cuentas creadas con Google: no tienen contraseña propia.
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  password: string | null;
+
+  // "sub" del token de Google: identifica la cuenta aunque cambie de email.
+  @Column({ name: 'google_id', type: 'varchar', length: 255, nullable: true, unique: true })
+  googleId: string | null;
 
   @CreateDateColumn({ name: 'fecha_registro' })
   fechaRegistro: Date;

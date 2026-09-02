@@ -26,6 +26,9 @@ import { UserPublicDto } from '../users/dto/user-public.dto';
 import { CambiarContraseñaDto } from './dto/cambiar-contrasena.dto';
 import { OlvideContrasenaDto } from './dto/olvide-contrasena.dto';
 import { RestablecerContrasenaDto } from './dto/restablecer-contrasena.dto';
+import { GoogleLoginDto } from './dto/google-login.dto';
+import { GoogleRegisterDto } from './dto/google-register.dto';
+import { GoogleLoginResponseDto } from './dto/google-login-response.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -41,6 +44,22 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   login(@Body() dto: LoginDto): Promise<LoginResponseDto> {
     return this.authService.login(dto);
+  }
+
+  // Paso 1: valida el token de Google. Devuelve la sesión, o avisa que falta el DNI.
+  @Post('google')
+  @HttpCode(HttpStatus.OK)
+  loginConGoogle(@Body() dto: GoogleLoginDto): Promise<GoogleLoginResponseDto> {
+    return this.authService.loginConGoogle(dto);
+  }
+
+  // Paso 2: crea la cuenta con los datos de Google más el DNI.
+  @Post('google/registro')
+  @HttpCode(HttpStatus.CREATED)
+  registrarConGoogle(
+    @Body() dto: GoogleRegisterDto,
+  ): Promise<GoogleLoginResponseDto> {
+    return this.authService.registrarConGoogle(dto);
   }
 
   @Post('duenos/alta-asistida')

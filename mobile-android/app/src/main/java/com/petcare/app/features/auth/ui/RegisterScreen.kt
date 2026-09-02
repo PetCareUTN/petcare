@@ -47,8 +47,10 @@ import com.petcare.app.ui.theme.PetCareTealSoft
 @Composable
 fun RegisterScreen(
     isLoading: Boolean = false,
+    isGoogleLoading: Boolean = false,
     serverError: String? = null,
     successMessage: String? = null,
+    onGoogleSignIn: () -> Unit = {},
     onRegister: (
         nombre: String,
         apellido: String,
@@ -350,6 +352,15 @@ fun RegisterScreen(
                             Text("Registrarme")
                         }
                     }
+
+                    SeparadorO(modifier = Modifier.padding(vertical = 4.dp))
+
+                    BotonGoogle(
+                        texto = "Continuar con Google",
+                        isLoading = isGoogleLoading,
+                        enabled = !isLoading,
+                        onClick = onGoogleSignIn
+                    )
                 }
             }
         }

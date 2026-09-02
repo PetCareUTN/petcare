@@ -44,8 +44,10 @@ import com.petcare.app.ui.theme.PetCareTealSoft
 @Composable
 fun LoginScreen(
     isLoading: Boolean = false,
+    isGoogleLoading: Boolean = false,
     serverError: String? = null,
     onLogin: (email: String, password: String) -> Unit,
+    onGoogleSignIn: () -> Unit = {},
     onForgotPassword: () -> Unit = {},
     onNavigateToRegister: () -> Unit = {}
 ) {
@@ -205,6 +207,15 @@ fun LoginScreen(
                             Text("Iniciar sesión")
                         }
                     }
+
+                    SeparadorO(modifier = Modifier.padding(vertical = 4.dp))
+
+                    BotonGoogle(
+                        texto = "Continuar con Google",
+                        isLoading = isGoogleLoading,
+                        enabled = !isLoading,
+                        onClick = onGoogleSignIn
+                    )
                 }
             }
 
