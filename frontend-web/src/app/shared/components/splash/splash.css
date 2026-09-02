@@ -1,0 +1,166 @@
+/*
+ * El fondo es exactamente el verde del logo.jpg para que el recuadro
+ * de la imagen se funda con la pantalla y no se note el borde.
+ */
+:host {
+  --splash-green: #aacbc0;
+  --splash-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background-color: var(--splash-green);
+  opacity: 1;
+  transition:
+    opacity 500ms ease,
+    transform 500ms var(--splash-ease);
+}
+
+.splash.is-leaving {
+  opacity: 0;
+  transform: scale(1.04);
+  pointer-events: none;
+}
+
+.splash-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.splash-logo-wrapper {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.splash-logo {
+  width: min(72vw, 340px);
+  height: auto;
+  display: block;
+  /* Suaviza los bordes del JPG por si la compresion deja algun artefacto. */
+  mask-image: radial-gradient(circle at center, #000 68%, transparent 88%);
+  -webkit-mask-image: radial-gradient(circle at center, #000 68%, transparent 88%);
+  animation: splash-logo-in 900ms var(--splash-ease) both;
+}
+
+/* Anillo que late una vez detras del logo, ajustado al dibujo y no al recuadro del JPG. */
+.splash-halo {
+  position: absolute;
+  width: min(52vw, 246px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  opacity: 0;
+  animation: splash-halo 1600ms var(--splash-ease) 400ms both;
+}
+
+.splash-title {
+  /* El JPG trae aire propio debajo del dibujo: lo compensamos para acercar el nombre. */
+  margin: -2rem 0 0;
+  display: flex;
+  font-family: var(--font-family);
+  font-size: clamp(2rem, 8vw, 3rem);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #ffffff;
+}
+
+.splash-letter {
+  display: inline-block;
+  opacity: 0;
+  /* El stagger hace que el nombre se "escriba" letra por letra. */
+  animation: splash-letter-in 600ms var(--splash-ease) both;
+  animation-delay: calc(500ms + var(--i) * 70ms);
+}
+
+.splash-underline {
+  display: block;
+  height: 2px;
+  width: 0;
+  border-radius: 2px;
+  background-color: rgba(255, 255, 255, 0.85);
+  animation: splash-underline 700ms var(--splash-ease) 1000ms both;
+}
+
+@keyframes splash-logo-in {
+  from {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes splash-halo {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  35% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
+@keyframes splash-letter-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes splash-underline {
+  from {
+    width: 0;
+  }
+  to {
+    width: min(38vw, 190px);
+  }
+}
+
+/* Sin movimiento: solo aparecen los elementos, sin desplazamientos ni escalas. */
+@media (prefers-reduced-motion: reduce) {
+  .splash,
+  .splash.is-leaving {
+    transform: none;
+  }
+
+  .splash-logo,
+  .splash-letter {
+    animation: splash-fade-in 300ms ease both;
+    animation-delay: 0ms;
+  }
+
+  .splash-halo {
+    animation: none;
+  }
+
+  .splash-underline {
+    animation: splash-fade-in 300ms ease both;
+    width: min(38vw, 190px);
+  }
+
+  @keyframes splash-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}

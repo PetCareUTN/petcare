@@ -104,6 +104,7 @@ import com.petcare.app.features.turnos.domain.TurnosController
 import com.petcare.app.features.turnos.domain.TurnosServiciosController
 import com.petcare.app.features.turnos.ui.MisTurnosScreen
 import com.petcare.app.features.turnos.ui.SolicitarTurnoScreen
+import com.petcare.app.ui.SplashScreen
 import com.petcare.app.ui.theme.PetCareTealDark
 import com.petcare.app.ui.theme.PetCareTheme
 import java.io.IOException
@@ -205,6 +206,10 @@ class MainActivity : ComponentActivity() {
                 }
                 var isRestoringSession by rememberSaveable {
                     mutableStateOf(true)
+                }
+                // rememberSaveable para no repetir la bienvenida al rotar la pantalla.
+                var isSplashTerminada by rememberSaveable {
+                    mutableStateOf(false)
                 }
                 var serverError by rememberSaveable {
                     mutableStateOf<String?>(null)
@@ -1196,7 +1201,9 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                if (isRestoringSession) {
+                if (!isSplashTerminada) {
+                    SplashScreen(onFinished = { isSplashTerminada = true })
+                } else if (isRestoringSession) {
                     Column(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.Center,
