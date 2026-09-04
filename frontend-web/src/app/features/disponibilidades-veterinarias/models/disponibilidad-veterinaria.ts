@@ -11,6 +11,7 @@ export interface DisponibilidadVeterinariaRequest {
   diaSemana: DiaSemana;
   horaInicio: string;
   horaFin: string;
+  cuposPorTurno: number;
 }
 
 export interface UpdateDisponibilidadVeterinariaRequest {
@@ -23,4 +24,5 @@ export interface DisponibilidadVeterinariaResponse {
   diaSemana: DiaSemana;
   horaInicio: string;
   horaFin: string;
+  cuposPorTurno: number;
 }

@@ -55,6 +55,7 @@ export class ConfiguracionDisponibilidadPage implements OnInit {
               diaSemana: disponibilidad.diaSemana,
               horaInicio: disponibilidad.horaInicio.slice(0, 5),
               horaFin: disponibilidad.horaFin.slice(0, 5),
+              cuposPorTurno: disponibilidad.cuposPorTurno,
             }),
           );
         });
@@ -113,12 +114,17 @@ export class ConfiguracionDisponibilidadPage implements OnInit {
       diaSemana: 'lunes',
       horaInicio: '',
       horaFin: '',
+      cuposPorTurno: 1,
     },
   ) {
     return this.formBuilder.group({
       diaSemana: [value.diaSemana, [Validators.required]],
       horaInicio: [value.horaInicio, [Validators.required]],
       horaFin: [value.horaFin, [Validators.required]],
+      cuposPorTurno: [
+        value.cuposPorTurno,
+        [Validators.required, Validators.min(1), Validators.max(20)],
+      ],
     });
   }
 }

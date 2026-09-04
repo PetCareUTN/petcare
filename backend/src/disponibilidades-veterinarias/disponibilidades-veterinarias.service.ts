@@ -47,6 +47,7 @@ export class DisponibilidadesVeterinariasService {
         diaSemana: disponibilidad.diaSemana,
         horaInicio: disponibilidad.horaInicio,
         horaFin: disponibilidad.horaFin,
+        cuposPorTurno: disponibilidad.cuposPorTurno ?? 1,
       }),
     );
 
