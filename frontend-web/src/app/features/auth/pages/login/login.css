@@ -1,0 +1,330 @@
+/*
+ * Pantalla de login en dos paneles: marca a la izquierda y formulario a la
+ * derecha. En pantallas angostas el panel de marca se oculta y queda solo el
+ * formulario.
+ */
+.login-screen {
+  --teal-900: #23413c;
+  --teal-700: #35594f;
+  --teal-600: #3d6b64;
+  --ink: #20281f;
+  --ink-soft: #5b6660;
+  --line: #dde3df;
+
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  color: var(--ink);
+}
+
+/* ---------- Panel de marca ---------- */
+.brand-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 36px;
+  padding: 64px;
+  overflow: hidden;
+  color: #ffffff;
+  /*
+   * El fondo es mas grande que el panel y se desplaza muy despacio, para que
+   * el degrade "respire". El ciclo es largo a proposito: tiene que notarse
+   * como que la pantalla esta viva, no como una animacion.
+   */
+  background: linear-gradient(160deg, var(--teal-900) 0%, var(--teal-600) 55%, var(--teal-700) 100%);
+  background-size: 160% 160%;
+  background-position: 0% 0%;
+  animation: respirar-gradiente 26s ease-in-out infinite;
+}
+
+@keyframes respirar-gradiente {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
+/* Puntitos tenues de fondo, para que el panel no quede plano. */
+.paw-field {
+  position: absolute;
+  inset: 0;
+  opacity: 0.08;
+  background-image:
+    radial-gradient(circle at 20% 30%, #ffffff 2px, transparent 2px),
+    radial-gradient(circle at 70% 65%, #ffffff 2px, transparent 2px),
+    radial-gradient(circle at 40% 80%, #ffffff 2px, transparent 2px);
+  background-size: 220px 220px;
+}
+
+/* Logo en blanco con fondo transparente, para que apoye sobre el gradiente. */
+.logo-badge {
+  position: relative;
+  z-index: 1;
+  width: 330px;
+  max-width: 100%;
+  height: auto;
+  display: block;
+  /* El archivo trae aire propio arriba y abajo: lo compensamos. */
+  margin: -32px 0;
+}
+
+.brand-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 380px;
+  text-align: center;
+}
+
+/*
+ * El color va explicito: styles.css pinta todos los h1 con --text-primary
+ * (oscuro) y esa regla le gana al color heredado del panel.
+ */
+.brand-copy h1 {
+  margin: 0 0 16px;
+  font-size: 34px;
+  line-height: 1.25;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: #ffffff;
+}
+
+.brand-copy p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  /* 0.9 en lugar de 0.78: a 15px, el contraste anterior quedaba en el limite. */
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* ---------- Panel del formulario ---------- */
+.form-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  background-color: var(--surface);
+}
+
+.form-wrap {
+  width: 100%;
+  max-width: 380px;
+}
+
+.form-header {
+  margin-bottom: 36px;
+}
+
+.form-header h1 {
+  margin: 0 0 6px;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.form-header p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+
+.field {
+  margin-bottom: 20px;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.input-shell {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.field input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--ink);
+  background-color: var(--surface);
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.field input::placeholder {
+  color: #a6ada8;
+}
+
+/*
+ * Chrome pinta de celeste los campos autocompletados y pisa nuestro estilo.
+ * No se puede cambiar ese fondo directamente: el truco es taparlo con una
+ * sombra interior del color del campo.
+ */
+.field input:-webkit-autofill,
+.field input:-webkit-autofill:hover,
+.field input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--ink);
+  -webkit-box-shadow: 0 0 0 1000px var(--surface) inset;
+  box-shadow: 0 0 0 1000px var(--surface) inset;
+  caret-color: var(--ink);
+}
+
+.field input:focus {
+  border-color: var(--teal-600);
+  box-shadow: 0 0 0 3px rgba(61, 107, 100, 0.14);
+}
+
+.field input.has-error {
+  border-color: var(--danger);
+}
+
+/* El ojo va dentro del campo, sobre el borde derecho. */
+.toggle-visibility {
+  position: absolute;
+  right: 12px;
+  display: flex;
+  padding: 4px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.toggle-visibility:hover {
+  color: var(--ink);
+}
+
+.field input[type='password'],
+.field input[type='text'] {
+  /* Deja lugar para que el texto no pase por debajo del ojo. */
+  padding-right: 44px;
+}
+
+.field-error {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--danger);
+}
+
+.banner-error {
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  background-color: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+}
+
+.row-between {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -8px;
+  margin-bottom: 24px;
+}
+
+.link {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--teal-600);
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 13px;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #ffffff;
+  background-color: var(--teal-600);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    transform 0.05s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--teal-700);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.divider-text {
+  margin-top: 28px;
+  text-align: center;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+}
+
+.divider-text a {
+  font-weight: 600;
+  color: var(--teal-600);
+  text-decoration: none;
+}
+
+.divider-text a:hover {
+  text-decoration: underline;
+}
+
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--teal-600);
+  outline-offset: 2px;
+}
+
+/* Si la persona pidio menos movimiento, el degrade queda quieto. */
+@media (prefers-reduced-motion: reduce) {
+  .brand-panel {
+    animation: none;
+  }
+}
+
+/*
+ * En pantallas angostas queda solo el formulario. Va al final del archivo a
+ * proposito: con la misma especificidad, gana la ultima regla.
+ */
+@media (max-width: 860px) {
+  .login-screen {
+    grid-template-columns: 1fr;
+  }
+
+  .brand-panel {
+    display: none;
+  }
+
+  .form-panel {
+    padding: 24px;
+  }
+}

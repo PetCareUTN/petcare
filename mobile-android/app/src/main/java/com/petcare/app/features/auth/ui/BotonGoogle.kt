@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -25,9 +26,23 @@ import com.petcare.app.R
 import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMuted
 
-/** Separador "o" entre el formulario y el ingreso con Google. */
+/** Ojo para mostrar u ocultar una contraseña. Va como trailingIcon del campo. */
 @Composable
-fun SeparadorO(modifier: Modifier = Modifier) {
+fun OjoContrasena(visible: Boolean, onToggle: () -> Unit) {
+    IconButton(onClick = onToggle) {
+        Icon(
+            painter = painterResource(
+                if (visible) R.drawable.ic_eye_off else R.drawable.ic_eye
+            ),
+            contentDescription = if (visible) "Ocultar contraseña" else "Mostrar contraseña",
+            tint = PetCareMuted
+        )
+    }
+}
+
+/** Separador entre el formulario y el ingreso con Google. */
+@Composable
+fun SeparadorO(modifier: Modifier = Modifier, texto: String = "o") {
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -35,7 +50,7 @@ fun SeparadorO(modifier: Modifier = Modifier) {
     ) {
         HorizontalDivider(modifier = Modifier.weight(1f), color = PetCareLine)
         Text(
-            text = "o",
+            text = texto,
             color = PetCareMuted,
             style = MaterialTheme.typography.bodyMedium
         )
