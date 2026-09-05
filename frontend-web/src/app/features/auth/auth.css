@@ -26,6 +26,26 @@
   font-size: 1.5rem;
 }
 
+/* Vuelta al login desde las pantallas a las que se llega por un link. */
+.auth-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-bottom: var(--spacing-md);
+  padding: 4px 8px 4px 4px;
+  border-radius: var(--radius-sm);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.auth-back:hover {
+  background-color: color-mix(in srgb, var(--primary) 10%, transparent);
+  color: var(--primary);
+}
+
 .auth-card label {
   margin-top: var(--spacing-md);
   font-size: 0.85rem;

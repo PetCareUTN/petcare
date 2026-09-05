@@ -4,6 +4,9 @@ import com.petcare.app.features.auth.data.local.AuthSession
 import com.petcare.app.features.auth.data.local.SessionStore
 import com.petcare.app.features.auth.data.remote.AuthApi
 import com.petcare.app.features.auth.data.remote.ForgotPasswordRequest
+import com.petcare.app.features.auth.data.remote.GoogleLoginRequest
+import com.petcare.app.features.auth.data.remote.GoogleLoginResponse
+import com.petcare.app.features.auth.data.remote.GoogleRegisterRequest
 import com.petcare.app.features.auth.data.remote.LoginRequest
 import com.petcare.app.features.auth.data.remote.LoginResponse
 import com.petcare.app.features.auth.data.remote.MessageResponse
@@ -14,6 +17,7 @@ import com.petcare.app.features.auth.data.remote.UserResponse
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AuthSessionControllerTest {
@@ -100,7 +104,95 @@ class AuthSessionControllerTest {
         assertNull(sessionStore.savedSession)
     }
 
-    private class FakeAuthApi : AuthApi {
+    @Test
+    fun `ingresar con Google abre sesion cuando la cuenta ya existe`() =
+        runBlocking {
+            val sessionStore = FakeSessionStore()
+            val controller = AuthSessionController(
+                authApi = FakeAuthApi(),
+                sessionStore = sessionStore
+            )
+
+            val resultado = controller.ingresarConGoogle("id-token-google")
+
+            assertTrue(resultado is GoogleAuthResult.Ingreso)
+            assertEquals("jwt-google", sessionStore.savedSession?.token)
+            assertEquals("Laura", sessionStore.savedSession?.userName)
+        }
+
+    @Test
+    fun `ingresar con Google pide completar el registro y no abre sesion`() =
+        runBlocking {
+            val sessionStore = FakeSessionStore()
+            val controller = AuthSessionController(
+                authApi = FakeAuthApi(
+                    respuestaGoogle = GoogleLoginResponse(
+                        requiereRegistro = true,
+                        token = null,
+                        usuario = null,
+                        nombre = "Laura",
+                        apellido = "Gomez",
+                        email = "laura@gmail.com"
+                    )
+                ),
+                sessionStore = sessionStore
+            )
+
+            val resultado = controller.ingresarConGoogle("id-token-google")
+
+            assertTrue(resultado is GoogleAuthResult.FaltaCompletarRegistro)
+            val pendiente = resultado as GoogleAuthResult.FaltaCompletarRegistro
+            assertEquals("laura@gmail.com", pendiente.email)
+            // El token se conserva para el segundo paso, donde se manda el DNI.
+            assertEquals("id-token-google", pendiente.idToken)
+            assertNull(sessionStore.savedSession)
+        }
+
+    @Test
+    fun `registrar con Google abre sesion al completar el DNI`() =
+        runBlocking {
+            val sessionStore = FakeSessionStore()
+            val controller = AuthSessionController(
+                authApi = FakeAuthApi(),
+                sessionStore = sessionStore
+            )
+
+            val resultado = controller.registrarConGoogle(
+                idToken = "id-token-google",
+                numeroDocumento = "30111222"
+            )
+
+            assertTrue(resultado is GoogleAuthResult.Ingreso)
+            assertEquals("jwt-google", sessionStore.savedSession?.token)
+        }
+
+    private class FakeAuthApi(
+        /** Respuesta que devuelven los endpoints de Google en cada test. */
+        private val respuestaGoogle: GoogleLoginResponse = GoogleLoginResponse(
+            requiereRegistro = false,
+            token = "jwt-google",
+            usuario = UserResponse(
+                id = 3,
+                nombre = "Laura",
+                apellido = "Gomez",
+                email = "laura@gmail.com",
+                roleId = 2,
+                estado = "ACTIVO",
+                registrationDate = "2026-09-01"
+            ),
+            nombre = null,
+            apellido = null,
+            email = null
+        )
+    ) : AuthApi {
+        override suspend fun loginConGoogle(
+            request: GoogleLoginRequest
+        ): GoogleLoginResponse = respuestaGoogle
+
+        override suspend fun registrarConGoogle(
+            request: GoogleRegisterRequest
+        ): GoogleLoginResponse = respuestaGoogle
+
         override suspend fun register(request: RegisterRequest): RegisterResponse =
             RegisterResponse(
                 id = 1,

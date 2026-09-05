@@ -33,11 +33,22 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { idUsuario } });
   }
 
+  findByGoogleId(googleId: string): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { googleId } });
+  }
+
+  /** Asocia una cuenta de Google a un usuario que ya existía con contraseña. */
+  async vincularGoogleId(idUsuario: number, googleId: string): Promise<void> {
+    await this.usersRepository.update({ idUsuario }, { googleId });
+  }
+
   async create(data: {
     nombre: string;
     apellido?: string | null;
     email: string;
-    password: string;
+    // Null en las cuentas creadas con Google: entran sin contraseña propia.
+    password?: string | null;
+    googleId?: string | null;
     idRol: number;
     numeroDocumento?: string | null;
     telefono?: string | null;
@@ -50,7 +61,8 @@ export class UsersService {
       apellido: data.apellido ?? null,
       email: data.email,
       numeroDocumento: data.numeroDocumento ?? null,
-      password: data.password,
+      password: data.password ?? null,
+      googleId: data.googleId ?? null,
       telefono: data.telefono ?? null,
       direccion: data.direccion ?? null,
       estado: data.estado ?? 'activo',

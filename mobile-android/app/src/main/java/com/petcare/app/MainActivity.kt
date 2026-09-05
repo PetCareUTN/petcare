@@ -51,8 +51,12 @@ import com.petcare.app.features.adopciones.ui.SolicitudesRecibidasScreen
 import com.petcare.app.features.auth.data.local.SessionManager
 import com.petcare.app.features.auth.data.remote.ForgotPasswordRequest
 import com.petcare.app.features.auth.data.remote.ResetPasswordRequest
+import com.petcare.app.features.auth.data.google.GoogleSignInClient
+import com.petcare.app.features.auth.data.google.GoogleSignInResult
 import com.petcare.app.features.auth.data.remote.RetrofitClient
 import com.petcare.app.features.auth.domain.AuthSessionController
+import com.petcare.app.features.auth.domain.GoogleAuthResult
+import com.petcare.app.features.auth.ui.CompletarRegistroGoogleScreen
 import com.petcare.app.features.auth.ui.ForgotPasswordScreen
 import com.petcare.app.features.auth.ui.LoginScreen
 import com.petcare.app.features.auth.ui.ResetPasswordScreen
@@ -105,6 +109,7 @@ import com.petcare.app.features.turnos.domain.TurnosController
 import com.petcare.app.features.turnos.domain.TurnosServiciosController
 import com.petcare.app.features.turnos.ui.MisTurnosScreen
 import com.petcare.app.features.turnos.ui.SolicitarTurnoScreen
+import com.petcare.app.ui.SplashScreen
 import com.petcare.app.ui.theme.PetCareTealDark
 import com.petcare.app.ui.theme.PetCareTheme
 import java.io.IOException
@@ -190,6 +195,10 @@ class MainActivity : ComponentActivity() {
                         turnosServiciosApi = RetrofitClient.turnosServiciosApi(sessionStore)
                     )
                 }
+                // Necesita el contexto de la Activity para mostrar el selector de cuentas.
+                val googleSignInClient = remember {
+                    GoogleSignInClient(this@MainActivity)
+                }
                 val notificacionesController = remember {
                     NotificacionesController(
                         notificacionesApi = RetrofitClient.notificacionesApi(sessionStore)
@@ -206,6 +215,10 @@ class MainActivity : ComponentActivity() {
                 }
                 var isRestoringSession by rememberSaveable {
                     mutableStateOf(true)
+                }
+                // rememberSaveable para no repetir la bienvenida al rotar la pantalla.
+                var isSplashTerminada by rememberSaveable {
+                    mutableStateOf(false)
                 }
                 var serverError by rememberSaveable {
                     mutableStateOf<String?>(null)
@@ -248,6 +261,19 @@ class MainActivity : ComponentActivity() {
                 }
                 var isRegisteringUser by rememberSaveable {
                     mutableStateOf(false)
+                }
+                var isGoogleLoading by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                /*
+                 * Datos que devolvió Google cuando la cuenta todavía no existe:
+                 * mientras esto no sea null se muestra la pantalla que pide el DNI.
+                 */
+                var registroGooglePendiente by remember {
+                    mutableStateOf<GoogleAuthResult.FaltaCompletarRegistro?>(null)
+                }
+                var googleError by rememberSaveable {
+                    mutableStateOf<String?>(null)
                 }
                 var isRegisterLoading by rememberSaveable {
                     mutableStateOf(false)
@@ -626,6 +652,10 @@ class MainActivity : ComponentActivity() {
                 fun navigateBackInApp() {
                     when {
                         vistaPrestadores != null -> vistaPrestadores = null
+                        registroGooglePendiente != null -> {
+                            registroGooglePendiente = null
+                            googleError = null
+                        }
                         isViewingNotificaciones -> isViewingNotificaciones = false
                         isRegisteringPet -> {
                             savePetError = null
@@ -1019,6 +1049,100 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                /*
+                 * Ingreso con Google. Primero se le pide el token a Google y
+                 * después el backend decide: si la cuenta existe entra derecho,
+                 * y si es nueva pide completar el registro con el DNI.
+                 */
+                fun ingresarConGoogle() {
+                    isGoogleLoading = true
+                    googleError = null
+                    serverError = null
+                    registerError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            when (val resultado = googleSignInClient.obtenerIdToken()) {
+                                is GoogleSignInResult.Cancelado -> {
+                                    // La persona cerró el selector: no es un error.
+                                }
+
+                                is GoogleSignInResult.Error -> {
+                                    googleError = resultado.mensaje
+                                }
+
+                                is GoogleSignInResult.Exitoso -> {
+                                    when (
+                                        val ingreso =
+                                            sessionController.ingresarConGoogle(resultado.idToken)
+                                    ) {
+                                        is GoogleAuthResult.Ingreso -> {
+                                            loggedUserName = ingreso.session.userName
+                                            isRegisteringUser = false
+                                            loadPets()
+                                            loadNotificaciones()
+                                        }
+
+                                        is GoogleAuthResult.FaltaCompletarRegistro -> {
+                                            registroGooglePendiente = ingreso
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (exception: HttpException) {
+                            googleError = when (exception.code()) {
+                                401 -> "Google rechazo el ingreso. Proba de nuevo"
+                                500 -> "Ocurrio un error en el servidor"
+                                else -> "No se pudo ingresar con Google"
+                            }
+                        } catch (exception: IOException) {
+                            googleError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            googleError = "Ocurrio un error inesperado"
+                        } finally {
+                            isGoogleLoading = false
+                        }
+                    }
+                }
+
+                fun completarRegistroConGoogle(numeroDocumento: String) {
+                    val pendiente = registroGooglePendiente ?: return
+
+                    isGoogleLoading = true
+                    googleError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            val resultado = sessionController.registrarConGoogle(
+                                idToken = pendiente.idToken,
+                                numeroDocumento = numeroDocumento
+                            )
+
+                            if (resultado is GoogleAuthResult.Ingreso) {
+                                registroGooglePendiente = null
+                                isRegisteringUser = false
+                                loggedUserName = resultado.session.userName
+                                loadPets()
+                                loadNotificaciones()
+                            }
+                        } catch (exception: HttpException) {
+                            googleError = when (exception.code()) {
+                                409 -> "Ese DNI ya está registrado"
+                                400 -> "Revisa el DNI ingresado"
+                                401 -> "La sesion de Google vencio. Proba de nuevo"
+                                500 -> "Ocurrio un error en el servidor"
+                                else -> "No se pudo completar el registro"
+                            }
+                        } catch (exception: IOException) {
+                            googleError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            googleError = "Ocurrio un error inesperado"
+                        } finally {
+                            isGoogleLoading = false
+                        }
+                    }
+                }
+
                 fun loadMisTurnos() {
                     isLoadingMisTurnos = true
                     misTurnosError = null
@@ -1167,7 +1291,8 @@ class MainActivity : ComponentActivity() {
                 }
 
                 val canNavigateBackInApp =
-                    isViewingNotificaciones ||
+                    registroGooglePendiente != null ||
+                        isViewingNotificaciones ||
                         isRegisteringPet ||
                         editingPet != null ||
                         isCreatingServicio ||
@@ -1206,7 +1331,9 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                if (isRestoringSession) {
+                if (!isSplashTerminada) {
+                    SplashScreen(onFinished = { isSplashTerminada = true })
+                } else if (isRestoringSession) {
                     Column(
                         modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.Center,
@@ -2264,11 +2391,29 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     }
+                } else if (registroGooglePendiente != null) {
+                    val pendiente = registroGooglePendiente!!
+
+                    CompletarRegistroGoogleScreen(
+                        nombre = pendiente.nombre,
+                        email = pendiente.email,
+                        isLoading = isGoogleLoading,
+                        serverError = googleError,
+                        onConfirmar = { documento ->
+                            completarRegistroConGoogle(documento)
+                        },
+                        onCancelar = {
+                            registroGooglePendiente = null
+                            googleError = null
+                        }
+                    )
                 } else if (isRegisteringUser) {
                     RegisterScreen(
                         isLoading = isRegisterLoading,
-                        serverError = registerError,
+                        isGoogleLoading = isGoogleLoading,
+                        serverError = registerError ?: googleError,
                         successMessage = registerSuccessMessage,
+                        onGoogleSignIn = { ingresarConGoogle() },
                         onRegister = { nombre, apellido, dni, email, password ->
                             isRegisterLoading = true
                             registerError = null
@@ -2314,7 +2459,9 @@ class MainActivity : ComponentActivity() {
                         AuthScreen.LOGIN -> {
                             LoginScreen(
                                 isLoading = isLoading,
-                                serverError = serverError,
+                                isGoogleLoading = isGoogleLoading,
+                                serverError = serverError ?: googleError,
+                                onGoogleSignIn = { ingresarConGoogle() },
                                 onLogin = { email, password ->
                                     isLoading = true
                                     serverError = null

@@ -57,4 +57,8 @@ dependencies {
     implementation(libs.retrofit.converter.gson)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
+    // Ingreso con Google (Credential Manager, el reemplazo de GoogleSignIn).
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
 }

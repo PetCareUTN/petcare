@@ -1,1 +1,5 @@
+@if (showSplash()) {
+  <app-splash (finished)="onSplashFinished()" />
+}
+
 <router-outlet />

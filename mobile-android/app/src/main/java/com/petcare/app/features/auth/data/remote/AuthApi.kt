@@ -72,7 +72,40 @@ data class RegisterResponse(
     val registrationDate: String
 )
 
+data class GoogleLoginRequest(
+    val idToken: String
+)
+
+data class GoogleRegisterRequest(
+    val idToken: String,
+    val numeroDocumento: String
+)
+
+/**
+ * Respuesta del ingreso con Google. Si `requiereRegistro` viene en true la
+ * cuenta todavía no existe: vienen los datos que dio Google para precargar el
+ * formulario donde se pide el DNI, y no hay token.
+ */
+data class GoogleLoginResponse(
+    val requiereRegistro: Boolean,
+    val token: String?,
+    val usuario: UserResponse?,
+    val nombre: String?,
+    val apellido: String?,
+    val email: String?
+)
+
 interface AuthApi {
+
+    @POST("auth/google")
+    suspend fun loginConGoogle(
+        @Body request: GoogleLoginRequest
+    ): GoogleLoginResponse
+
+    @POST("auth/google/registro")
+    suspend fun registrarConGoogle(
+        @Body request: GoogleRegisterRequest
+    ): GoogleLoginResponse
 
     @POST("auth/register")
     suspend fun register(

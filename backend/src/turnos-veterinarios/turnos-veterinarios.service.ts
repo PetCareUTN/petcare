@@ -87,8 +87,8 @@ export class TurnosVeterinariosService {
     }
 
     const horaFin = this.sumarMinutos(dto.hora, DURACION_TURNO_MINUTOS);
-    await this.verificarDisponibilidad(dto.idVeterinario, dto.fecha, dto.hora, horaFin);
-    await this.verificarSinSolapamiento(dto.idVeterinario, dto.fecha, dto.hora, horaFin);
+    const franja = await this.obtenerFranjaDisponible(dto.idVeterinario, dto.fecha, dto.hora, horaFin);
+    await this.verificarCupoDisponible(dto.idVeterinario, dto.fecha, dto.hora, horaFin, franja.cuposPorTurno);
 
     const turno = this.turnosRepository.create({
       veterinario,
@@ -113,12 +113,12 @@ export class TurnosVeterinariosService {
     return TurnoVeterinarioResponseDto.fromEntity(turnoCompleto!);
   }
 
-  private async verificarDisponibilidad(
+  private async obtenerFranjaDisponible(
     idVeterinario: number,
     fecha: string,
     horaInicio: string,
     horaFin: string,
-  ): Promise<void> {
+  ): Promise<DisponibilidadVeterinaria> {
     const diaSemana = this.obtenerDiaSemana(fecha);
     const disponibilidades = await this.disponibilidadesRepository.find({
       where: { veterinario: { idVeterinario }, diaSemana },
@@ -126,25 +126,34 @@ export class TurnosVeterinariosService {
 
     const inicioMinutos = this.aMinutos(horaInicio);
     const finMinutos = this.aMinutos(horaFin);
-    const disponible = disponibilidades.some(
+    const franja = disponibilidades.find(
       (disponibilidad) =>
         inicioMinutos >= this.aMinutos(disponibilidad.horaInicio) &&
         finMinutos <= this.aMinutos(disponibilidad.horaFin),
     );
 
-    if (!disponible) {
+    if (!franja) {
       throw new BadRequestException({
         codigoEstado: 400,
         mensaje: 'El horario solicitado no está disponible para esa veterinaria',
       });
     }
+
+    return franja;
   }
 
-  private async verificarSinSolapamiento(
+  /**
+   * Cuenta los turnos confirmados que se solapan con el horario pedido y
+   * rechaza la reserva si ya se alcanzó la cantidad de cupos configurada
+   * para esa franja (ej. dos veterinarios de la misma veterinaria atendiendo
+   * a la misma hora).
+   */
+  private async verificarCupoDisponible(
     idVeterinario: number,
     fecha: string,
     horaInicio: string,
     horaFin: string,
+    cuposPorTurno: number,
   ): Promise<void> {
     const turnosDelDia = await this.turnosRepository.find({
       where: { veterinario: { idVeterinario }, fecha },
@@ -152,28 +161,29 @@ export class TurnosVeterinariosService {
 
     const inicioMinutos = this.aMinutos(horaInicio);
     const finMinutos = this.aMinutos(horaFin);
-    const ocupado = turnosDelDia.some((turno) => {
+    const ocupados = turnosDelDia.filter((turno) => {
       if (!ESTADOS_QUE_OCUPAN_HORARIO.includes(turno.estado)) {
         return false;
       }
       const inicioTurnoExistente = this.aMinutos(turno.hora);
       const finTurnoExistente = inicioTurnoExistente + DURACION_TURNO_MINUTOS;
       return inicioMinutos < finTurnoExistente && finMinutos > inicioTurnoExistente;
-    });
+    }).length;
 
-    if (ocupado) {
+    if (ocupados >= cuposPorTurno) {
       throw new BadRequestException({
         codigoEstado: 400,
-        mensaje: 'Ese horario ya está ocupado',
+        mensaje: 'Ese horario ya no tiene cupos disponibles',
       });
     }
   }
 
   /**
-   * Horarios de inicio (HH:MM) todavía libres para ese veterinario en esa
-   * fecha: los que caen dentro de alguna franja configurada y no se solapan
-   * con un turno ya confirmado. Una vez asignado un turno, ese horario deja
-   * de aparecer para el resto de los dueños.
+   * Horarios de inicio (HH:MM) todavía con cupo para ese veterinario en esa
+   * fecha: los que caen dentro de alguna franja configurada y todavía no
+   * alcanzaron la cantidad de turnos simultáneos permitida en esa franja
+   * (cuposPorTurno). Una vez ocupados todos los cupos de un horario, deja de
+   * aparecer para el resto de los dueños.
    */
   async horariosDisponibles(
     idVeterinario: number,
@@ -188,9 +198,14 @@ export class TurnosVeterinariosService {
       where: { veterinario: { idVeterinario }, fecha },
     });
 
-    const ocupados = turnosDelDia
-      .filter((turno) => ESTADOS_QUE_OCUPAN_HORARIO.includes(turno.estado))
-      .map((turno) => this.deMinutos(this.aMinutos(turno.hora)));
+    const ocupadosPorHora = new Map<string, number>();
+    for (const turno of turnosDelDia) {
+      if (!ESTADOS_QUE_OCUPAN_HORARIO.includes(turno.estado)) {
+        continue;
+      }
+      const hora = this.deMinutos(this.aMinutos(turno.hora));
+      ocupadosPorHora.set(hora, (ocupadosPorHora.get(hora) ?? 0) + 1);
+    }
 
     const slots = new Set<string>();
     for (const disponibilidad of disponibilidades) {
@@ -202,7 +217,8 @@ export class TurnosVeterinariosService {
         minuto += DURACION_TURNO_MINUTOS
       ) {
         const hora = this.deMinutos(minuto);
-        if (!ocupados.includes(hora)) {
+        const ocupados = ocupadosPorHora.get(hora) ?? 0;
+        if (ocupados < disponibilidad.cuposPorTurno) {
           slots.add(hora);
         }
       }

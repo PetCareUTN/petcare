@@ -32,6 +32,7 @@ describe('DisponibilidadesVeterinariasService', () => {
     diaSemana: DiaSemana.LUNES,
     horaInicio: '09:00',
     horaFin: '12:00',
+    cuposPorTurno: 2,
   };
 
   beforeEach(async () => {
@@ -101,6 +102,31 @@ describe('DisponibilidadesVeterinariasService', () => {
         ...disponibilidad,
       },
     ]);
+  });
+
+  it('usa un cupo por turno cuando no se especifica', async () => {
+    veterinariosRepository.findOne.mockResolvedValue(veterinario);
+    disponibilidadesRepository.create.mockImplementation(
+      (entity: Partial<DisponibilidadVeterinaria>) =>
+        entity as DisponibilidadVeterinaria,
+    );
+    disponibilidadesRepository.save.mockImplementation((entities) =>
+      Promise.resolve(entities),
+    );
+
+    await service.replaceMine(10, {
+      disponibilidades: [
+        { diaSemana: DiaSemana.LUNES, horaInicio: '09:00', horaFin: '12:00' },
+      ],
+    });
+
+    expect(disponibilidadesRepository.create).toHaveBeenCalledWith({
+      veterinario,
+      diaSemana: DiaSemana.LUNES,
+      horaInicio: '09:00',
+      horaFin: '12:00',
+      cuposPorTurno: 1,
+    });
   });
 
   it('lista la disponibilidad propia ordenada por dia y horario', async () => {
