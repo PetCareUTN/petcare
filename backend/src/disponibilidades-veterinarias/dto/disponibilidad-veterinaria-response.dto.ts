@@ -7,6 +7,7 @@ export class DisponibilidadVeterinariaResponseDto {
   diaSemana: DiaSemana;
   horaInicio: string;
   horaFin: string;
+  cuposPorTurno: number;
 
   static fromEntity(
     disponibilidad: DisponibilidadVeterinaria,
@@ -17,6 +18,7 @@ export class DisponibilidadVeterinariaResponseDto {
       diaSemana: disponibilidad.diaSemana,
       horaInicio: disponibilidad.horaInicio,
       horaFin: disponibilidad.horaFin,
+      cuposPorTurno: disponibilidad.cuposPorTurno,
     };
   }
 }

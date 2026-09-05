@@ -361,12 +361,13 @@ fun PetCareBottomBar(
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 0.dp
     ) {
-        val items = listOf("Inicio", "Mascotas", "Servicios", "Adopción", "Turnos")
+        val items = listOf("Inicio", "Mascotas", "Servicios", "Adopción", "Turnos", "Localización")
         items.forEach { item ->
             val isInicio = item == "Inicio"
             val isTurnos = item == "Turnos"
             val isServicios = item == "Servicios"
             val isAdopcion = item == "Adopción"
+            // La localizacion se agrega para el sprint que viene (BLE); por ahora no hace nada.
             NavigationBarItem(
                 selected = item == selectedItem,
                 onClick = {
@@ -381,12 +382,13 @@ fun PetCareBottomBar(
                         "Servicios" -> R.drawable.ic_services
                         "Adopción" -> R.drawable.ic_heart
                         "Turnos" -> R.drawable.ic_calendar
+                        "Localización" -> R.drawable.ic_location
                         else -> R.drawable.ic_home
                     }
                     Icon(
                         painter = painterResource(iconRes),
                         contentDescription = item,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 },
                 label = {
@@ -394,7 +396,7 @@ fun PetCareBottomBar(
                         text = item,
                         maxLines = 1,
                         softWrap = false,
-                        fontSize = 10.sp,
+                        fontSize = 9.sp,
                         style = MaterialTheme.typography.labelSmall
                     )
                 }

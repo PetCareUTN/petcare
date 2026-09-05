@@ -3,7 +3,11 @@
     <header class="availability-header">
       <div>
         <h1>Disponibilidad</h1>
-        <p>Configurá los días y horarios de atención de la veterinaria.</p>
+        <p>
+          Configurá los días y horarios de atención de la veterinaria, y cuántos turnos podés
+          ofrecer en simultáneo en cada franja (por ejemplo, 2 si atienden dos veterinarios a la
+          misma hora).
+        </p>
       </div>
       <button type="button" class="btn-secondary" (click)="agregarFranja()">
         Agregar franja
@@ -52,6 +56,18 @@
                 type="time"
                 formControlName="horaFin"
                 [class.field-invalid]="grupo.get('horaFin')?.invalid && grupo.get('horaFin')?.touched"
+              />
+            </div>
+
+            <div class="field">
+              <label [for]="'cupos-' + i">Turnos por hora</label>
+              <input
+                [id]="'cupos-' + i"
+                type="number"
+                min="1"
+                max="20"
+                formControlName="cuposPorTurno"
+                [class.field-invalid]="grupo.get('cuposPorTurno')?.invalid && grupo.get('cuposPorTurno')?.touched"
               />
             </div>
 

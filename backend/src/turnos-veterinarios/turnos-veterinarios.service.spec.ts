@@ -198,6 +198,7 @@ describe('TurnosVeterinariosService', () => {
       diaSemana: DiaSemana.LUNES,
       horaInicio: '09:00',
       horaFin: '12:00',
+      cuposPorTurno: 1,
     } as DisponibilidadVeterinaria;
 
     it('crea un turno confirmado directamente cuando el horario esta disponible', async () => {
@@ -327,6 +328,43 @@ describe('TurnosVeterinariosService', () => {
       );
       expect(turnosRepository.save).not.toHaveBeenCalled();
     });
+
+    it('permite un segundo turno en simultaneo cuando la franja tiene dos cupos', async () => {
+      mascotasRepository.findOne.mockResolvedValue(mascotaPropia);
+      veterinariosRepository.findOne.mockResolvedValue(veterinario);
+      disponibilidadesRepository.find.mockResolvedValue([
+        { ...disponibilidadLunes, cuposPorTurno: 2 },
+      ]);
+      // Ya hay un turno confirmado a las 10:00 (ej. lo atiende Juan).
+      turnosRepository.find.mockResolvedValue([
+        { hora: '10:00', estado: AppointmentStatus.CONFIRMADO },
+      ]);
+      turnosRepository.create.mockReturnValue({});
+      turnosRepository.save.mockResolvedValue({ idTurno: 32 });
+      turnosRepository.findOne.mockResolvedValue({ ...turnoConfirmado, idTurno: 32 });
+
+      const result = await service.solicitar(idDueno, dto);
+
+      expect(result.idTurno).toBe(32);
+    });
+
+    it('rechaza un tercer turno cuando ya se ocuparon los dos cupos de la franja', async () => {
+      mascotasRepository.findOne.mockResolvedValue(mascotaPropia);
+      veterinariosRepository.findOne.mockResolvedValue(veterinario);
+      disponibilidadesRepository.find.mockResolvedValue([
+        { ...disponibilidadLunes, cuposPorTurno: 2 },
+      ]);
+      // Ya hay dos turnos confirmados a las 10:00 (Juan y Alejandro).
+      turnosRepository.find.mockResolvedValue([
+        { hora: '10:00', estado: AppointmentStatus.CONFIRMADO },
+        { hora: '10:00', estado: AppointmentStatus.CONFIRMADO },
+      ]);
+
+      await expect(service.solicitar(idDueno, dto)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(turnosRepository.save).not.toHaveBeenCalled();
+    });
   });
 
   describe('horariosDisponibles', () => {
@@ -334,6 +372,7 @@ describe('TurnosVeterinariosService', () => {
       diaSemana: DiaSemana.LUNES,
       horaInicio: '09:00',
       horaFin: '10:30',
+      cuposPorTurno: 1,
     } as DisponibilidadVeterinaria;
 
     it('devuelve los horarios libres excluyendo los ya confirmados', async () => {
@@ -364,6 +403,35 @@ describe('TurnosVeterinariosService', () => {
       const result = await service.horariosDisponibles(7, '2026-09-07');
 
       expect(result).toEqual([]);
+    });
+
+    it('mantiene un horario disponible mientras no se ocupen todos sus cupos', async () => {
+      disponibilidadesRepository.find.mockResolvedValue([
+        { ...disponibilidadLunes, cuposPorTurno: 2 },
+      ]);
+      // Solo un veterinario de la veterinaria tiene ocupado ese horario.
+      turnosRepository.find.mockResolvedValue([
+        { hora: '09:30', estado: AppointmentStatus.CONFIRMADO },
+      ]);
+
+      const result = await service.horariosDisponibles(7, '2026-09-07');
+
+      expect(result).toEqual(['09:00', '09:30', '10:00']);
+    });
+
+    it('oculta un horario recien cuando se ocupan todos sus cupos', async () => {
+      disponibilidadesRepository.find.mockResolvedValue([
+        { ...disponibilidadLunes, cuposPorTurno: 2 },
+      ]);
+      // Los dos veterinarios de la veterinaria ya tienen ocupado ese horario.
+      turnosRepository.find.mockResolvedValue([
+        { hora: '09:30', estado: AppointmentStatus.CONFIRMADO },
+        { hora: '09:30', estado: AppointmentStatus.CONFIRMADO },
+      ]);
+
+      const result = await service.horariosDisponibles(7, '2026-09-07');
+
+      expect(result).toEqual(['09:00', '10:00']);
     });
   });
 

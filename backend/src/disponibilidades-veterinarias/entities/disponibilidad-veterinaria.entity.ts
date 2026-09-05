@@ -25,4 +25,7 @@ export class DisponibilidadVeterinaria {
 
   @Column({ name: 'hora_fin', type: 'time' })
   horaFin: string;
+
+  @Column({ name: 'cupos_por_turno', type: 'int', default: 1 })
+  cuposPorTurno: number;
 }
