@@ -100,6 +100,13 @@ class ServiciosControllerTest {
         }
 
     private class FakeServiciosApi : ServiciosApi {
+        override suspend fun solicitudesPrestador(): List<com.petcare.app.features.servicios.data.remote.SolicitudPrestador> = emptyList()
+        override suspend fun solicitarPrestador(datos: Map<String, okhttp3.RequestBody>, archivos: List<okhttp3.MultipartBody.Part>) = Unit
+        override suspend fun reservasPrestador(): List<com.petcare.app.features.servicios.data.remote.ReservaPrestador> = emptyList()
+        override suspend fun completarServicio(id: Int) = Unit
+        override suspend fun resenarServicio(id: Int, datos: com.petcare.app.features.servicios.data.remote.ResenaPrestador) = Unit
+        override suspend fun reportarServicio(id: Int, datos: Map<String, String>) = Unit
+        override suspend fun perfilPrestador(id: Int, categoria: String) = com.petcare.app.features.servicios.data.remote.PerfilPrestador(true, false, 0, null, emptyList())
         var createdRequest: CreateServicioRequest? = null
         var updatedId: Int? = null
         var updatedRequest: UpdateServicioRequest? = null

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
@@ -15,10 +16,12 @@ import { User } from '../users/entities/user.entity';
 import { CreateTurnoServicioDto } from './dto/create-turno-servicio.dto';
 import { TurnoServicio } from './entities/turno-servicio.entity';
 import { TurnosServiciosService } from './turnos-servicios.service';
+import { PrestadoresService } from '../prestadores/prestadores.service';
 
 describe('TurnosServiciosService', () => {
   let service: TurnosServiciosService;
   let turnosRepository: {
+    update: jest.Mock;
     find: jest.Mock;
     findOne: jest.Mock;
     save: jest.Mock;
@@ -80,6 +83,7 @@ describe('TurnosServiciosService', () => {
   } as TurnoServicio;
 
   beforeEach(async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(new Date('2026-09-05T12:00:00Z').getTime());
     notificacionesTurnosService = {
       notificarTurnoConfirmado: jest.fn(),
       notificarTurnoCancelado: jest.fn(),
@@ -88,13 +92,14 @@ describe('TurnosServiciosService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TurnosServiciosService,
+        { provide: PrestadoresService, useValue: { exigirAprobado: jest.fn().mockResolvedValue({ estado: 'aprobado' }) } },
         {
           provide: NotificacionesTurnosService,
           useValue: notificacionesTurnosService,
         },
         {
           provide: getRepositoryToken(TurnoServicio),
-          useValue: { find: jest.fn(), findOne: jest.fn(), save: jest.fn(), create: jest.fn() },
+          useValue: { find: jest.fn(), findOne: jest.fn(), save: jest.fn(), create: jest.fn(), update: jest.fn().mockResolvedValue({ affected: 1 }) },
         },
         {
           provide: getRepositoryToken(Servicio),
@@ -112,6 +117,8 @@ describe('TurnosServiciosService', () => {
     serviciosRepository = module.get(getRepositoryToken(Servicio));
     mascotasRepository = module.get(getRepositoryToken(Mascota));
   });
+
+  afterEach(() => jest.restoreAllMocks());
 
   describe('solicitar', () => {
     const idDueno = 12;
@@ -242,6 +249,12 @@ describe('TurnosServiciosService', () => {
   });
 
   describe('cancelar', () => {
+    it('no cancela una reserva que se completó durante la operación', async () => {
+      turnosRepository.findOne.mockResolvedValue({ ...turnoConfirmado });
+      turnosRepository.update.mockResolvedValue({ affected: 0 });
+      await expect(service.cancelar(duenio.idUsuario, 30, {})).rejects.toThrow(ConflictException);
+      expect(notificacionesTurnosService.notificarTurnoCancelado).not.toHaveBeenCalled();
+    });
     it('permite cancelar al dueño', async () => {
       turnosRepository.findOne.mockResolvedValue({ ...turnoConfirmado });
       turnosRepository.save.mockImplementation((turno) => Promise.resolve(turno));

@@ -1,4 +1,9 @@
 import { Module } from '@nestjs/common';
+import { PrestadoresModule } from './prestadores/prestadores.module';
+import { SolicitudPrestador } from './prestadores/entities/solicitud-prestador.entity';
+import { DocumentoPrestador } from './prestadores/entities/documento-prestador.entity';
+import { ResenaServicio } from './prestadores/entities/resena-servicio.entity';
+import { ReporteServicio } from './prestadores/entities/reporte-servicio.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import * as dotenv from 'dotenv';
 import { AppController } from './app.controller';
@@ -47,6 +52,7 @@ dotenv.config();
       password: process.env.DATABASE_PASSWORD,
       database: process.env.DATABASE_NAME,
       entities: [
+        SolicitudPrestador, DocumentoPrestador, ResenaServicio, ReporteServicio,
         User,
         Role,
         Mascota,
@@ -67,6 +73,7 @@ dotenv.config();
       synchronize: false,
     }),
     AuthModule,
+    PrestadoresModule,
     UsersModule,
     RolesModule,
     MascotasModule,

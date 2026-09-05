@@ -76,7 +76,8 @@ fun MisTurnosScreen(
     cancelandoId: Int?,
     onRetry: () -> Unit,
     onNuevoTurno: () -> Unit,
-    onCancelar: (TurnoUnificado, String?) -> Unit
+    onCancelar: (TurnoUnificado, String?) -> Unit,
+    onResenasClick: () -> Unit
 ) {
     var rango by rememberSaveable { mutableStateOf(RangoFecha.TODOS) }
     // Prefijo ISO: "2026-08-26" filtra un dia y "2026-08" un mes completo.
@@ -121,6 +122,9 @@ fun MisTurnosScreen(
         )
 
         Spacer(modifier = Modifier.height(14.dp))
+        OutlinedButton(onClick = onResenasClick, modifier = Modifier.fillMaxWidth()) {
+            Text("Servicios realizados, reseñas y reportes")
+        }
 
         Button(
             onClick = onNuevoTurno,

@@ -14,6 +14,11 @@ import { ServicioResponseDto } from './dto/servicio-response.dto';
 import { UpdateServicioDto } from './dto/update-servicio.dto';
 import { DisponibilidadServicio } from './entities/disponibilidad-servicio.entity';
 import { Servicio } from './entities/servicio.entity';
+import { PrestadoresService } from '../prestadores/prestadores.service';
+import { SolicitudPrestador } from '../prestadores/entities/solicitud-prestador.entity';
+import { RoleName } from '../common/enums/role-name.enum';
+import { ValidationStatus } from '../common/enums/validation-status.enum';
+import { Veterinario } from '../veterinarios/entities/veterinario.entity';
 
 @Injectable()
 export class ServiciosService {
@@ -24,6 +29,7 @@ export class ServiciosService {
     private readonly disponibilidadesRepository: Repository<DisponibilidadServicio>,
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    private readonly prestadores: PrestadoresService,
   ) {}
 
   async create(
@@ -41,6 +47,7 @@ export class ServiciosService {
     }
 
     this.validarDisponibilidades(dto.disponibilidades);
+    await this.prestadores.exigirAprobado(idUsuario, dto.categoria);
 
     const servicio = this.serviciosRepository.create({
       usuario,
@@ -68,17 +75,23 @@ export class ServiciosService {
   async findAll(
     categoria?: CategoriaServicio,
   ): Promise<ServicioResponseDto[]> {
-    const servicios = await this.serviciosRepository.find({
-      where: categoria ? { categoria } : {},
-      relations: ['usuario'],
-      order: { idServicio: 'ASC' },
-    });
+    const query = this.serviciosRepository.createQueryBuilder('servicio')
+      .innerJoinAndSelect('servicio.usuario', 'usuario')
+      .innerJoin('usuario.rol', 'rol')
+      .leftJoinAndSelect('servicio.disponibilidades', 'disponibilidad')
+      .leftJoin(SolicitudPrestador, 'solicitud', 'solicitud.id_usuario = usuario.id_usuario AND solicitud.categoria = servicio.categoria AND solicitud.estado = :estado', { estado: 'aprobado' })
+      .leftJoin(Veterinario, 'veterinario', 'veterinario.id_usuario = usuario.id_usuario AND veterinario.estado_validacion = :validacionVeterinaria', { validacionVeterinaria: ValidationStatus.APROBADO })
+      .where('usuario.estado = :activo AND ((rol.nombre = :dueno AND solicitud.id IS NOT NULL) OR (rol.nombre = :rolVeterinario AND veterinario.id_veterinario IS NOT NULL))', { activo: 'activo', dueno: RoleName.DUENO_MASCOTA, rolVeterinario: RoleName.VETERINARIO })
+      .orderBy('servicio.idServicio', 'ASC');
+    if (categoria) query.andWhere('servicio.categoria = :categoria', { categoria });
+    const servicios = await query.getMany();
 
     return servicios.map((servicio) => ServicioResponseDto.fromEntity(servicio));
   }
 
-  async findOne(id: number): Promise<ServicioResponseDto> {
+  async findOne(id: number, idUsuario?: number): Promise<ServicioResponseDto> {
     const servicio = await this.findServicio(id);
+    if (idUsuario !== servicio.usuario.idUsuario) await this.prestadores.exigirAprobado(servicio.usuario.idUsuario, servicio.categoria);
     return ServicioResponseDto.fromEntity(servicio);
   }
 
@@ -91,6 +104,11 @@ export class ServiciosService {
       id,
       idUsuario,
     );
+
+    await this.prestadores.exigirAprobado(idUsuario, dto.categoria ?? servicio.categoria);
+    if (dto.categoria !== undefined && dto.categoria !== servicio.categoria) {
+      throw new BadRequestException({ codigoEstado: 400, mensaje: 'Creá un servicio nuevo para otra categoría; las reservas existentes conservan su categoría original.' });
+    }
 
     if (dto.categoria !== undefined) {
       servicio.categoria = dto.categoria;

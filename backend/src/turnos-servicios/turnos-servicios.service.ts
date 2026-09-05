@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -21,6 +22,7 @@ import { CreateTurnoServicioDto } from './dto/create-turno-servicio.dto';
 import { TurnoServicioDuenioResponseDto } from './dto/turno-servicio-duenio-response.dto';
 import { TurnoServicioPrestadorResponseDto } from './dto/turno-servicio-prestador-response.dto';
 import { TurnoServicio } from './entities/turno-servicio.entity';
+import { PrestadoresService } from '../prestadores/prestadores.service';
 
 const DURACION_MINUTOS_POR_CATEGORIA: Record<CategoriaServicio, number> = {
   [CategoriaServicio.PASEADOR]: 30,
@@ -55,6 +57,7 @@ export class TurnosServiciosService {
     @InjectRepository(Mascota)
     private readonly mascotasRepository: Repository<Mascota>,
     private readonly notificacionesTurnosService: NotificacionesTurnosService,
+    private readonly prestadores: PrestadoresService,
   ) {}
 
   async solicitar(
@@ -92,6 +95,10 @@ export class TurnosServiciosService {
       });
     }
 
+    await this.prestadores.exigirAprobado(servicio.usuario.idUsuario, servicio.categoria);
+    if (servicio.usuario.idUsuario === idDueno) throw new BadRequestException('No podés reservar tu propio servicio.');
+    const inicio = new Date(`${dto.fecha}T${dto.horaInicio}:00-03:00`).getTime();
+    if (!Number.isFinite(inicio) || inicio <= Date.now()) throw new BadRequestException('La reserva debe comenzar en el futuro.');
     const duracionMinutos = DURACION_MINUTOS_POR_CATEGORIA[servicio.categoria];
     const horaFin = this.sumarMinutos(dto.horaInicio, duracionMinutos);
 
@@ -194,6 +201,7 @@ export class TurnosServiciosService {
       });
     }
 
+    await this.prestadores.exigirAprobado(servicio.usuario.idUsuario, servicio.categoria);
     const duracionMinutos = DURACION_MINUTOS_POR_CATEGORIA[servicio.categoria];
     const diaSemana = this.obtenerDiaSemana(fecha);
 
@@ -322,7 +330,14 @@ export class TurnosServiciosService {
     turno.motivoCancelacion = dto.motivoCancelacion?.trim() || null;
     turno.canceladoPor = esDuenio ? 'dueño' : 'prestador';
 
-    const guardado = await this.turnosRepository.save(turno);
+    // La confirmación de realización usa el mismo registro con bloqueo. Esta
+    // actualización condicional evita cancelar una reserva recién completada.
+    const cambio = await this.turnosRepository.update(
+      { idTurno, estado: TurnoServicioEstado.CONFIRMADO },
+      { estado: turno.estado, motivoCancelacion: turno.motivoCancelacion, canceladoPor: turno.canceladoPor },
+    );
+    if (cambio.affected !== 1) throw new ConflictException('La reserva cambió. Actualizá la lista antes de continuar.');
+    const guardado = turno;
 
     await this.notificacionesTurnosService.notificarTurnoCancelado(
       this.aDatosTurno(guardado),
