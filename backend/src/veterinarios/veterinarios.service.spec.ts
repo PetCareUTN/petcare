@@ -10,6 +10,7 @@ import { NotificacionesService } from '../notificaciones/notificaciones.service'
 import { ValidationStatus } from '../common/enums/validation-status.enum';
 import { RoleName } from '../common/enums/role-name.enum';
 import { RegisterVeterinarioDto } from './dto/register-veterinario.dto';
+import { GeocodingService } from '../geocoding/geocoding.service';
 
 describe('VeterinariosService', () => {
   let service: VeterinariosService;
@@ -28,6 +29,9 @@ describe('VeterinariosService', () => {
   };
   let notificacionesService: {
     crear: jest.Mock;
+  };
+  let geocodingService: {
+    geocodificar: jest.Mock;
   };
 
   const mockFile = {
@@ -63,6 +67,7 @@ describe('VeterinariosService', () => {
     rolesRepository = { findOne: jest.fn() };
     usersService = { findByEmail: jest.fn(), create: jest.fn() };
     notificacionesService = { crear: jest.fn() };
+    geocodingService = { geocodificar: jest.fn().mockResolvedValue(null) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -71,6 +76,7 @@ describe('VeterinariosService', () => {
         { provide: getRepositoryToken(Role), useValue: rolesRepository },
         { provide: UsersService, useValue: usersService },
         { provide: NotificacionesService, useValue: notificacionesService },
+        { provide: GeocodingService, useValue: geocodingService },
       ],
     }).compile();
 
@@ -86,11 +92,21 @@ describe('VeterinariosService', () => {
       repository.find.mockResolvedValue([
         {
           idVeterinario: 2,
-          usuario: { nombre: 'Veterinaria Zeta', direccion: 'Calle 2' },
+          usuario: {
+            nombre: 'Veterinaria Zeta',
+            direccion: 'Calle 2',
+            latitud: -31.42,
+            longitud: -64.18,
+          },
         },
         {
           idVeterinario: 1,
-          usuario: { nombre: 'Veterinaria Alfa', direccion: 'Calle 1' },
+          usuario: {
+            nombre: 'Veterinaria Alfa',
+            direccion: 'Calle 1',
+            latitud: null,
+            longitud: null,
+          },
         },
       ]);
 
@@ -101,8 +117,20 @@ describe('VeterinariosService', () => {
         relations: ['usuario'],
       });
       expect(result).toEqual([
-        { idVeterinario: 1, nombre: 'Veterinaria Alfa', direccion: 'Calle 1' },
-        { idVeterinario: 2, nombre: 'Veterinaria Zeta', direccion: 'Calle 2' },
+        {
+          idVeterinario: 1,
+          nombre: 'Veterinaria Alfa',
+          direccion: 'Calle 1',
+          latitud: null,
+          longitud: null,
+        },
+        {
+          idVeterinario: 2,
+          nombre: 'Veterinaria Zeta',
+          direccion: 'Calle 2',
+          latitud: -31.42,
+          longitud: -64.18,
+        },
       ]);
     });
   });

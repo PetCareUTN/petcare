@@ -21,15 +21,27 @@ export class DisponibilidadResponseDto {
   }
 }
 
+export interface UbicacionServicio {
+  direccion: string | null;
+  latitud: number | null;
+  longitud: number | null;
+}
+
 export class ServicioResponseDto {
   idServicio: number;
   idUsuario: number;
   nombrePrestador: string;
   categoria: CategoriaServicio;
   descripcion: string | null;
+  direccion: string | null;
+  latitud: number | null;
+  longitud: number | null;
   disponibilidades: DisponibilidadResponseDto[];
 
-  static fromEntity(servicio: Servicio): ServicioResponseDto {
+  static fromEntity(
+    servicio: Servicio,
+    ubicacion?: UbicacionServicio | null,
+  ): ServicioResponseDto {
     return {
       idServicio: servicio.idServicio,
       idUsuario: servicio.usuario.idUsuario,
@@ -38,6 +50,9 @@ export class ServicioResponseDto {
         .join(' '),
       categoria: servicio.categoria,
       descripcion: servicio.descripcion,
+      direccion: ubicacion?.direccion ?? null,
+      latitud: ubicacion?.latitud ?? null,
+      longitud: ubicacion?.longitud ?? null,
       disponibilidades: (servicio.disponibilidades ?? []).map((d) =>
         DisponibilidadResponseDto.fromEntity(d),
       ),

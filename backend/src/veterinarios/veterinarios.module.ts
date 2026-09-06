@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
 import { VeterinarioValidadoGuard } from '../auth/guards/veterinario-validado.guard';
+import { GeocodingModule } from '../geocoding/geocoding.module';
 import { NotificacionesModule } from '../notificaciones/notificaciones.module';
 import { RolesModule } from '../roles/roles.module';
 import { UsersModule } from '../users/users.module';
@@ -13,6 +14,7 @@ import { VeterinariosService } from './veterinarios.service';
   imports: [
     TypeOrmModule.forFeature([Veterinario]),
     AuthModule,
+    GeocodingModule,
     NotificacionesModule,
     RolesModule,
     UsersModule,

@@ -10,6 +10,7 @@ import { Repository } from 'typeorm';
 import { RoleName } from '../common/enums/role-name.enum';
 import { ValidationStatus } from '../common/enums/validation-status.enum';
 import { NotificationType } from '../common/enums/notification-type.enum';
+import { GeocodingService } from '../geocoding/geocoding.service';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { Role } from '../roles/entities/role.entity';
 import { UsersService } from '../users/users.service';
@@ -29,6 +30,7 @@ export class VeterinariosService {
     private readonly rolesRepository: Repository<Role>,
     private readonly usersService: UsersService,
     private readonly notificacionesService: NotificacionesService,
+    private readonly geocoding: GeocodingService,
   ) {}
 
   private getPublicUrl(relativePath: string): string {
@@ -56,7 +58,7 @@ export class VeterinariosService {
     dto: RegisterVeterinarioDto,
     matriculaFile: UploadedDocumentFile | undefined,
     habilitacionFile: UploadedDocumentFile | undefined,
-  ): Promise<{ mensaje: string }> {
+  ): Promise<{ mensaje: string; advertenciaUbicacion?: string }> {
     if (!matriculaFile) {
       throw new BadRequestException({
         codigoEstado: 400,
@@ -90,6 +92,10 @@ export class VeterinariosService {
 
     const passwordHash = await bcrypt.hash(dto.password, SALT_ROUNDS);
 
+    // Best-effort: si Google no encuentra la dirección o la API key no está
+    // configurada, el registro se completa igual, sin coordenadas.
+    const geocodificado = await this.geocoding.geocodificar(dto.direccion);
+
     const usuario = await this.usersService.create({
       nombre: dto.nombre,
       apellido: null,
@@ -98,6 +104,8 @@ export class VeterinariosService {
       idRol: rolVeterinario.idRol,
       telefono: dto.telefono,
       direccion: dto.direccion,
+      latitud: geocodificado?.latitud ?? null,
+      longitud: geocodificado?.longitud ?? null,
     });
 
     const veterinario = this.veterinariosRepository.create({
@@ -121,11 +129,20 @@ export class VeterinariosService {
     return {
       mensaje:
         'Cuenta creada correctamente. Un administrador revisará tu matrícula antes de que puedas iniciar sesión.',
+      advertenciaUbicacion: geocodificado?.precisionBaja
+        ? 'No pudimos ubicar tu dirección con precisión. Revisá que incluya calle, número y localidad; igualmente guardamos una ubicación aproximada.'
+        : undefined,
     };
   }
 
   async listarAprobados(): Promise<
-    { idVeterinario: number; nombre: string; direccion: string | null }[]
+    {
+      idVeterinario: number;
+      nombre: string;
+      direccion: string | null;
+      latitud: number | null;
+      longitud: number | null;
+    }[]
   > {
     const veterinarios = await this.veterinariosRepository.find({
       where: { estadoValidacion: ValidationStatus.APROBADO },
@@ -137,6 +154,8 @@ export class VeterinariosService {
         idVeterinario: veterinario.idVeterinario,
         nombre: veterinario.usuario.nombre,
         direccion: veterinario.usuario.direccion,
+        latitud: veterinario.usuario.latitud,
+        longitud: veterinario.usuario.longitud,
       }))
       .sort((a, b) => a.nombre.localeCompare(b.nombre));
   }

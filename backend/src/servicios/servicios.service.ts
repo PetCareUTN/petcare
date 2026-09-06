@@ -10,7 +10,10 @@ import { CategoriaServicio } from '../common/enums/categoria-servicio.enum';
 import { User } from '../users/entities/user.entity';
 import { CreateServicioDto } from './dto/create-servicio.dto';
 import { DisponibilidadDto } from './dto/disponibilidad.dto';
-import { ServicioResponseDto } from './dto/servicio-response.dto';
+import {
+  ServicioResponseDto,
+  UbicacionServicio,
+} from './dto/servicio-response.dto';
 import { UpdateServicioDto } from './dto/update-servicio.dto';
 import { DisponibilidadServicio } from './entities/disponibilidad-servicio.entity';
 import { Servicio } from './entities/servicio.entity';
@@ -59,7 +62,7 @@ export class ServiciosService {
     });
 
     const savedServicio = await this.serviciosRepository.save(servicio);
-    return ServicioResponseDto.fromEntity(savedServicio);
+    return this.toResponseDto(savedServicio);
   }
 
   async findMine(idUsuario: number): Promise<ServicioResponseDto[]> {
@@ -69,7 +72,9 @@ export class ServiciosService {
       order: { idServicio: 'ASC' },
     });
 
-    return servicios.map((servicio) => ServicioResponseDto.fromEntity(servicio));
+    return Promise.all(
+      servicios.map((servicio) => this.toResponseDto(servicio)),
+    );
   }
 
   async findAll(
@@ -86,13 +91,15 @@ export class ServiciosService {
     if (categoria) query.andWhere('servicio.categoria = :categoria', { categoria });
     const servicios = await query.getMany();
 
-    return servicios.map((servicio) => ServicioResponseDto.fromEntity(servicio));
+    return Promise.all(
+      servicios.map((servicio) => this.toResponseDto(servicio)),
+    );
   }
 
   async findOne(id: number, idUsuario?: number): Promise<ServicioResponseDto> {
     const servicio = await this.findServicio(id);
     if (idUsuario !== servicio.usuario.idUsuario) await this.prestadores.exigirAprobado(servicio.usuario.idUsuario, servicio.categoria);
-    return ServicioResponseDto.fromEntity(servicio);
+    return this.toResponseDto(servicio);
   }
 
   async update(
@@ -127,7 +134,7 @@ export class ServiciosService {
     }
 
     const savedServicio = await this.serviciosRepository.save(servicio);
-    return ServicioResponseDto.fromEntity(savedServicio);
+    return this.toResponseDto(savedServicio);
   }
 
   async remove(id: number, idUsuario: number): Promise<void> {
@@ -137,6 +144,35 @@ export class ServiciosService {
     );
 
     await this.serviciosRepository.remove(servicio);
+  }
+
+  /**
+   * Arma el DTO de respuesta resolviendo la ubicación del prestador: los
+   * veterinarios la tienen en su propia cuenta (usuarios.direccion), mientras
+   * que los dueños de mascota que ofrecen servicios la tienen en la
+   * solicitud de prestador aprobada para esa categoría (ver
+   * PrestadoresService.obtenerUbicacion).
+   */
+  private async toResponseDto(servicio: Servicio): Promise<ServicioResponseDto> {
+    const ubicacion = await this.resolverUbicacion(servicio);
+    return ServicioResponseDto.fromEntity(servicio, ubicacion);
+  }
+
+  private async resolverUbicacion(
+    servicio: Servicio,
+  ): Promise<UbicacionServicio | null> {
+    if (servicio.usuario.rol.nombre === RoleName.VETERINARIO) {
+      return {
+        direccion: servicio.usuario.direccion,
+        latitud: servicio.usuario.latitud,
+        longitud: servicio.usuario.longitud,
+      };
+    }
+
+    return this.prestadores.obtenerUbicacion(
+      servicio.usuario.idUsuario,
+      servicio.categoria,
+    );
   }
 
   private buildDisponibilidad(
