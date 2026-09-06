@@ -8,6 +8,11 @@ import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
+import retrofit2.http.Multipart
+import retrofit2.http.Part
+import retrofit2.http.PartMap
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 
 data class DisponibilidadResponse(
     @SerializedName("idDisponibilidad")
@@ -48,6 +53,27 @@ data class UpdateServicioRequest(
 )
 
 interface ServiciosApi {
+    @GET("prestadores/solicitudes/mias")
+    suspend fun solicitudesPrestador(): List<SolicitudPrestador>
+
+    @Multipart
+    @POST("prestadores/solicitudes")
+    suspend fun solicitarPrestador(@PartMap datos: Map<String, @JvmSuppressWildcards RequestBody>, @Part archivos: List<MultipartBody.Part>)
+
+    @GET("prestadores/reservas")
+    suspend fun reservasPrestador(): List<ReservaPrestador>
+
+    @POST("prestadores/turnos/{id}/completar")
+    suspend fun completarServicio(@Path("id") id: Int)
+
+    @POST("prestadores/turnos/{id}/resena")
+    suspend fun resenarServicio(@Path("id") id: Int, @Body datos: ResenaPrestador)
+
+    @POST("prestadores/turnos/{id}/reporte")
+    suspend fun reportarServicio(@Path("id") id: Int, @Body datos: Map<String, String>)
+
+    @GET("prestadores/{id}/{categoria}/perfil")
+    suspend fun perfilPrestador(@Path("id") id: Int, @Path("categoria") categoria: String): PerfilPrestador
 
     @GET("servicios/mios")
     suspend fun getMyServicios(): List<ServicioResponse>

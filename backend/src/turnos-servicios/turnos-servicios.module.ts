@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PrestadoresModule } from '../prestadores/prestadores.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from '../auth/auth.module';
 import { Mascota } from '../mascotas/entities/mascota.entity';
@@ -10,6 +11,7 @@ import { TurnosServiciosService } from './turnos-servicios.service';
 
 @Module({
   imports: [
+    PrestadoresModule,
     AuthModule,
     NotificacionesModule,
     TypeOrmModule.forFeature([TurnoServicio, Servicio, Mascota]),

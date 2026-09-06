@@ -56,8 +56,8 @@ export class ServiciosController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
-  findOne(@Param('id', ParseIntPipe) id: number): Promise<ServicioResponseDto> {
-    return this.serviciosService.findOne(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: JwtPayload): Promise<ServicioResponseDto> {
+    return this.serviciosService.findOne(id, user.sub);
   }
 
   @Patch(':id')

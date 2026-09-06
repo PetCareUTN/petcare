@@ -61,6 +61,7 @@ export class ServicioFormPage implements OnInit {
     const id = Number(idParam);
     this.idServicio.set(id);
     this.isEditMode.set(true);
+    this.form.controls.categoria.disable();
     this.isLoading.set(true);
 
     this.serviciosService.getOne(id).subscribe({

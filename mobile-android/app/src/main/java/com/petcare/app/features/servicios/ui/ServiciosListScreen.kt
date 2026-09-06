@@ -49,7 +49,8 @@ fun ServiciosListScreen(
     onCreateServicio: () -> Unit,
     onEditServicio: (ServicioResponse) -> Unit,
     onDeleteServicio: (ServicioResponse) -> Unit,
-    onSolicitudesRecibidasClick: () -> Unit
+    onSolicitudesRecibidasClick: () -> Unit,
+    onValidacionClick: () -> Unit
 ) {
     var servicioToDelete by remember { mutableStateOf<ServicioResponse?>(null) }
 
@@ -73,6 +74,10 @@ fun ServiciosListScreen(
         )
 
         Spacer(modifier = Modifier.height(14.dp))
+        OutlinedButton(onClick = onValidacionClick, modifier = Modifier.fillMaxWidth()) {
+            Text("Quiero ofrecer un servicio / Mis solicitudes")
+        }
+        Text("Necesitás aprobación para publicar y recibir reservas de cada categoría.", style = MaterialTheme.typography.bodySmall)
 
         Button(
             onClick = onCreateServicio,

@@ -95,6 +95,7 @@ import com.petcare.app.features.servicios.data.remote.UpdateServicioRequest
 import com.petcare.app.features.servicios.domain.ServiciosController
 import com.petcare.app.features.servicios.ui.ServicioFormScreen
 import com.petcare.app.features.servicios.ui.ServiciosListScreen
+import com.petcare.app.features.servicios.ui.PrestadoresScreen
 import com.petcare.app.features.servicios.ui.SolicitudesServiciosRecibidasScreen
 import com.petcare.app.features.turnos.data.remote.CreateTurnoRequest
 import com.petcare.app.features.turnos.data.remote.CreateTurnoServicioRequest
@@ -427,6 +428,8 @@ class MainActivity : ComponentActivity() {
                 var isViewingServicios by rememberSaveable {
                     mutableStateOf(false)
                 }
+                var vistaPrestadores by rememberSaveable { mutableStateOf<String?>(null) }
+                var categoriasAprobadas by remember { mutableStateOf(emptyList<String>()) }
                 var isLoadingServicios by rememberSaveable {
                     mutableStateOf(false)
                 }
@@ -587,6 +590,8 @@ class MainActivity : ComponentActivity() {
                     isViewingServicios = false
                     serviciosError = null
                     servicios = emptyList()
+                    vistaPrestadores = null
+                    categoriasAprobadas = emptyList()
                     isCreatingServicio = false
                     editingServicio = null
                     saveServicioError = null
@@ -618,6 +623,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 fun volverAInicio() {
+                    vistaPrestadores = null
                     isRegisteringPet = false
                     editingPet = null
                     selectedPetId = null
@@ -645,6 +651,7 @@ class MainActivity : ComponentActivity() {
 
                 fun navigateBackInApp() {
                     when {
+                        vistaPrestadores != null -> vistaPrestadores = null
                         registroGooglePendiente != null -> {
                             registroGooglePendiente = null
                             googleError = null
@@ -841,10 +848,13 @@ class MainActivity : ComponentActivity() {
                 fun loadServicios() {
                     isLoadingServicios = true
                     serviciosError = null
+                    categoriasAprobadas = emptyList()
 
                     lifecycleScope.launch {
                         try {
                             servicios = serviciosController.getMyServicios()
+                            categoriasAprobadas = RetrofitClient.serviciosApi(sessionStore)
+                                .solicitudesPrestador().filter { it.estado == "aprobado" }.map { it.categoria }
                         } catch (exception: HttpException) {
                             if (exception.code() == 401) {
                                 logout()
@@ -1579,6 +1589,7 @@ class MainActivity : ComponentActivity() {
                     )
                 } else if (loggedUserName != null && (isCreatingServicio || editingServicio != null)) {
                     ServicioFormScreen(
+                        categoriasAprobadas = categoriasAprobadas,
                         servicio = editingServicio,
                         isSaving = isSavingServicio,
                         saveError = saveServicioError,
@@ -1847,8 +1858,15 @@ class MainActivity : ComponentActivity() {
                             loadMisPublicaciones()
                         }
                     )
+                } else if (loggedUserName != null && vistaPrestadores != null) {
+                    PrestadoresScreen(
+                        api = remember { RetrofitClient.serviciosApi(sessionStore) },
+                        inicial = vistaPrestadores!!,
+                        onBack = { vistaPrestadores = null; if (isViewingMisTurnos) loadMisTurnos() else loadServicios() }
+                    )
                 } else if (loggedUserName != null && isViewingServicios) {
                     ServiciosListScreen(
+                        onValidacionClick = { vistaPrestadores = "solicitudes" },
                         isLoading = isLoadingServicios,
                         errorMessage = serviciosError,
                         servicios = servicios,
@@ -1856,7 +1874,7 @@ class MainActivity : ComponentActivity() {
                         onRetry = { loadServicios() },
                         onCreateServicio = {
                             saveServicioError = null
-                            isCreatingServicio = true
+                            if (categoriasAprobadas.isEmpty()) vistaPrestadores = "solicitudes" else isCreatingServicio = true
                         },
                         onEditServicio = { servicio ->
                             saveServicioError = null
@@ -2195,6 +2213,7 @@ class MainActivity : ComponentActivity() {
                     )
                 } else if (loggedUserName != null && isViewingMisTurnos) {
                     MisTurnosScreen(
+                        onResenasClick = { vistaPrestadores = "reservas" },
                         isLoading = isLoadingMisTurnos,
                         errorMessage = misTurnosError,
                         turnos = misTurnos.map { TurnoUnificado.fromVeterinario(it) } +

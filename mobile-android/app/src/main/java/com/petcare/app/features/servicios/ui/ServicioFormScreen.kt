@@ -67,6 +67,7 @@ private data class DisponibilidadFormItem(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ServicioFormScreen(
+    categoriasAprobadas: List<String>,
     servicio: ServicioResponse?,
     isSaving: Boolean,
     saveError: String?,
@@ -140,9 +141,9 @@ fun ServicioFormScreen(
                     label = "Categoria",
                     selectedValue = categoria,
                     placeholder = "Seleccionar categoria",
-                    options = categoriaOptions,
+                    options = categoriaOptions.filter { it in categoriasAprobadas },
                     optionLabel = ::categoriaLabel,
-                    enabled = !isSaving,
+                    enabled = !isSaving && servicio == null,
                     isError = validation.categoriaError != null,
                     supportingText = validation.categoriaError,
                     onSelect = { categoria = it }
@@ -227,11 +228,11 @@ fun ServicioFormScreen(
                 val nextValidation = ServicioValidator.validate(categoria, requestDisponibilidades)
                 validation = nextValidation
 
-                if (nextValidation.isValid) {
+                if (nextValidation.isValid && categoria in categoriasAprobadas) {
                     onSave(categoria, descripcion.trim().ifBlank { null }, requestDisponibilidades)
                 }
             },
-            enabled = !isSaving,
+            enabled = !isSaving && categoria in categoriasAprobadas,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(54.dp)

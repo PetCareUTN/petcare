@@ -12,9 +12,12 @@ import { User } from '../users/entities/user.entity';
 import { DisponibilidadServicio } from './entities/disponibilidad-servicio.entity';
 import { Servicio } from './entities/servicio.entity';
 import { ServiciosService } from './servicios.service';
+import { PrestadoresService } from '../prestadores/prestadores.service';
 
 describe('ServiciosService', () => {
   let service: ServiciosService;
+  const aprobacion = { exigirAprobado: jest.fn() };
+  const query = { innerJoinAndSelect: jest.fn(), innerJoin: jest.fn(), leftJoin: jest.fn(), leftJoinAndSelect: jest.fn(), where: jest.fn(), orderBy: jest.fn(), andWhere: jest.fn(), getMany: jest.fn() };
   let serviciosRepository: {
     find: jest.Mock;
     findOne: jest.Mock;
@@ -59,9 +62,13 @@ describe('ServiciosService', () => {
   };
 
   beforeEach(async () => {
+    aprobacion.exigirAprobado.mockReset().mockResolvedValue({ estado: 'aprobado' });
+    for (const method of Object.values(query)) method.mockReset().mockReturnValue(query);
+    query.getMany.mockResolvedValue([buildServicio()]);
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ServiciosService,
+        { provide: PrestadoresService, useValue: aprobacion },
         {
           provide: getRepositoryToken(Servicio),
           useValue: {
@@ -70,6 +77,7 @@ describe('ServiciosService', () => {
             create: jest.fn(),
             save: jest.fn(),
             remove: jest.fn(),
+            createQueryBuilder: jest.fn().mockReturnValue(query),
           },
         },
         {
@@ -166,11 +174,7 @@ describe('ServiciosService', () => {
 
       await service.findAll(CategoriaServicio.PELUQUERIA);
 
-      expect(serviciosRepository.find).toHaveBeenCalledWith({
-        where: { categoria: CategoriaServicio.PELUQUERIA },
-        relations: ['usuario'],
-        order: { idServicio: 'ASC' },
-      });
+      expect(query.andWhere).toHaveBeenCalledWith('servicio.categoria = :categoria', { categoria: CategoriaServicio.PELUQUERIA });
     });
 
     it('returns all servicios when no categoria filter is given', async () => {
@@ -178,11 +182,10 @@ describe('ServiciosService', () => {
 
       await service.findAll();
 
-      expect(serviciosRepository.find).toHaveBeenCalledWith({
-        where: {},
-        relations: ['usuario'],
-        order: { idServicio: 'ASC' },
-      });
+      expect(query.andWhere).not.toHaveBeenCalled();
+      expect(query.leftJoin).toHaveBeenCalledWith(expect.anything(), 'solicitud', expect.stringContaining('solicitud.estado = :estado'), { estado: 'aprobado' });
+      expect(query.leftJoin).toHaveBeenCalledWith(expect.anything(), 'veterinario', expect.stringContaining('veterinario.estado_validacion = :validacionVeterinaria'), { validacionVeterinaria: 'APROBADO' });
+      expect(query.where).toHaveBeenCalledWith(expect.stringContaining('OR (rol.nombre = :rolVeterinario'), { activo: 'activo', dueno: RoleName.DUENO_MASCOTA, rolVeterinario: RoleName.VETERINARIO });
     });
   });
 
@@ -221,23 +224,15 @@ describe('ServiciosService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('applies only the provided fields', async () => {
+    it('rejects changing category to preserve reservation history', async () => {
       const servicio = buildServicio();
       serviciosRepository.findOne.mockResolvedValue(servicio);
       serviciosRepository.save.mockImplementation((entity) =>
         Promise.resolve(entity),
       );
 
-      const result = await service.update(10, propietario.idUsuario, {
-        categoria: CategoriaServicio.PASEADOR,
-      });
-
-      expect(serviciosRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({
-          categoria: CategoriaServicio.PASEADOR,
-        }),
-      );
-      expect(result.categoria).toBe(CategoriaServicio.PASEADOR);
+      await expect(service.update(10, propietario.idUsuario, { categoria: CategoriaServicio.PASEADOR })).rejects.toThrow(BadRequestException);
+      expect(serviciosRepository.save).not.toHaveBeenCalled();
     });
 
     it('replaces disponibilidades when provided', async () => {

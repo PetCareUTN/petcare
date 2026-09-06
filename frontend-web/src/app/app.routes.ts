@@ -161,6 +161,7 @@ export const routes: Routes = [
     loadComponent: () => import('./shared/layout/admin-layout').then((m) => m.AdminLayout),
     canActivate: [authGuard],
     children: [
+      { path: 'prestadores', loadComponent: () => import('./features/prestadores/admin-prestadores').then(m => m.AdminPrestadoresPage) },
       {
         path: 'usuarios',
         loadComponent: () =>

@@ -12,6 +12,7 @@ export class CreateTurnoServicioDto {
   idServicio: number;
 
   @IsDateString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
   fecha: string;
 
   @IsString()

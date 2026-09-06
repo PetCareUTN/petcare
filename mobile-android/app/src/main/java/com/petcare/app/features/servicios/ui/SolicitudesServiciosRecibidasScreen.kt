@@ -49,6 +49,7 @@ import com.petcare.app.ui.theme.PetCareTealSoft
 
 private enum class FiltroEstado(val valor: String, val etiqueta: String) {
     CONFIRMADO("confirmado", "Confirmados"),
+    COMPLETADO("completado", "Completados"),
     CANCELADO("cancelado", "Cancelados")
 }
 

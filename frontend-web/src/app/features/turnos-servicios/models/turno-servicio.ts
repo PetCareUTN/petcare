@@ -1,4 +1,4 @@
-export type TurnoServicioEstado = 'confirmado' | 'cancelado';
+export type TurnoServicioEstado = 'confirmado' | 'cancelado' | 'completado';
 /** Unificado entre turnos de servicio (prestador) y turnos veterinarios (veterinario). */
 export type CanceladoPor = 'dueño' | 'prestador' | 'veterinario';
 

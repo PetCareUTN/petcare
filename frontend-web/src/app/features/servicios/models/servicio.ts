@@ -31,6 +31,7 @@ export interface DisponibilidadResponse {
 }
 
 export interface ServicioResponse {
+  nombrePrestador: string;
   idServicio: number;
   idUsuario: number;
   categoria: CategoriaServicio;
