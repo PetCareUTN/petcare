@@ -108,8 +108,14 @@ fun PrestadoresScreen(api: ServiciosApi, onBack: () -> Unit, inicial: String = "
                 CampoPrestador("Experiencia con animales (mín. 30 caracteres)", datos.experiencia, 2000) { datos = datos.copy(experiencia = it) }
                 CampoPrestador("Referencias autorizadas y contacto (opcional)", datos.referencias, 1500) { datos = datos.copy(referencias = it) }
                 CampoPrestador("Cuidados, prevención de escapes y emergencias (mín. 50 caracteres)", datos.protocolo, 2000) { datos = datos.copy(protocolo = it) }
+                // Para guardería/peluquería es la dirección del local; para paseador es un
+                // domicilio o zona de referencia (no implica que el servicio se preste ahí).
+                val direccionLabel = if (categoria == "paseador") "Zona o domicilio de referencia" else "Dirección del lugar"
+                val direccionAyuda = if (categoria == "paseador")
+                    "Ej: tu domicilio o el barrio donde ofrecés el paseo — se usa para mostrarte a dueños cercanos, no implica que el servicio sea ahí."
+                else "Ej: Av. Corrientes 1234, CABA"
+                CampoPrestador(direccionLabel, datos.direccion, 255, ayuda = direccionAyuda) { datos = datos.copy(direccion = it) }
                 if (categoria == "guarderia") {
-                    CampoPrestador("Dirección del lugar", datos.direccion, 255) { datos = datos.copy(direccion = it) }
                     CampoPrestador("Cantidad máxima de mascotas", capacidad, 3) { capacidad = it.filter(Char::isDigit) }
                     Text("Adjuntá fotos de accesos, cerramientos, descanso y espacios de separación.")
                 } else if (categoria == "peluqueria") Text("Adjuntá trabajos realizados y certificados de capacitación si los tenés.")
@@ -117,7 +123,7 @@ fun PrestadoresScreen(api: ServiciosApi, onBack: () -> Unit, inicial: String = "
                 OutlinedButton(onClick = { evidenciaPicker.launch(arrayOf("application/pdf", "image/png", "image/jpeg")) }, enabled = !ocupado) { Text("Evidencia del servicio: ${evidencia.size}/4 archivos") }
                 Text("PDF, PNG o JPEG de hasta 5 MB. Los archivos son privados y se eliminan de la base activa a los 30 días. La decisión y su historial se conservan.")
                 Row { Checkbox(checked = consentimiento, onCheckedChange = { consentimiento = it }); Text("Autorizo la revisión y conservación de archivos por 30 días; las referencias autorizaron ser contactadas.") }
-                val valido = datos.nombreCompleto.trim().length >= 3 && datos.numeroDocumento.trim().length >= 5 && datos.telefono.trim().length >= 6 && datos.experiencia.trim().length >= 30 && datos.protocolo.trim().length >= 50 && (categoria != "guarderia" || (datos.direccion.isNotBlank() && (capacidad.toIntOrNull() ?: 0) in 1..100))
+                val valido = datos.nombreCompleto.trim().length >= 3 && datos.numeroDocumento.trim().length >= 5 && datos.telefono.trim().length >= 6 && datos.experiencia.trim().length >= 30 && datos.protocolo.trim().length >= 50 && datos.direccion.isNotBlank() && (categoria != "guarderia" || (capacidad.toIntOrNull() ?: 0) in 1..100)
                 Button(enabled = !ocupado && !bloqueada && valido && consentimiento && identidad != null && (categoria == "paseador" || evidencia.isNotEmpty()), onClick = {
                     val identity = identidad ?: return@Button
                     val datosEnvio = datos; val categoriaEnvio = categoria; val capacidadEnvio = capacidad; val evidenciasEnvio = evidencia.toList()
@@ -177,8 +183,14 @@ fun PrestadoresScreen(api: ServiciosApi, onBack: () -> Unit, inicial: String = "
 }
 
 @Composable
-private fun CampoPrestador(label: String, valor: String, max: Int, onChange: (String) -> Unit) {
-    OutlinedTextField(value = valor, onValueChange = { if (it.length <= max) onChange(it) }, label = { Text(label) }, modifier = Modifier.fillMaxWidth())
+private fun CampoPrestador(label: String, valor: String, max: Int, ayuda: String? = null, onChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = valor,
+        onValueChange = { if (it.length <= max) onChange(it) },
+        label = { Text(label) },
+        supportingText = ayuda?.let { { Text(it) } },
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
 
 private fun partePrivada(context: Context, uri: Uri, campo: String): MultipartBody.Part {

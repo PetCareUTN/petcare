@@ -10,7 +10,9 @@ import retrofit2.http.Query
 data class VeterinariaResponse(
     val idVeterinario: Int,
     val nombre: String,
-    val direccion: String?
+    val direccion: String?,
+    val latitud: Double?,
+    val longitud: Double?
 )
 
 data class DisponibilidadTurnoResponse(

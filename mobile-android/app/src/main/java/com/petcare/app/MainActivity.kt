@@ -87,6 +87,8 @@ import com.petcare.app.features.profile.ui.ChangeEmailScreen
 import com.petcare.app.features.profile.ui.EditProfileScreen
 import com.petcare.app.features.profile.ui.ProfileScreen
 import com.petcare.app.features.settings.data.local.ThemePreferences
+import com.petcare.app.features.mapa.ui.MapaPrestadoresScreen
+import com.petcare.app.features.mapa.ui.PinUbicacion
 import com.petcare.app.features.settings.ui.ConfiguracionScreen
 import com.petcare.app.features.servicios.data.remote.CreateServicioRequest
 import com.petcare.app.features.servicios.data.remote.DisponibilidadRequest
@@ -127,6 +129,12 @@ private enum class AuthScreen {
     FORGOT_PASSWORD,
     RESET_PASSWORD
 }
+
+private data class VistaMapa(
+    val titulo: String,
+    val subtitulo: String,
+    val pines: List<PinUbicacion>
+)
 
 class MainActivity : ComponentActivity() {
 
@@ -429,6 +437,7 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf(false)
                 }
                 var vistaPrestadores by rememberSaveable { mutableStateOf<String?>(null) }
+                var vistaMapa by remember { mutableStateOf<VistaMapa?>(null) }
                 var categoriasAprobadas by remember { mutableStateOf(emptyList<String>()) }
                 var isLoadingServicios by rememberSaveable {
                     mutableStateOf(false)
@@ -591,6 +600,7 @@ class MainActivity : ComponentActivity() {
                     serviciosError = null
                     servicios = emptyList()
                     vistaPrestadores = null
+                    vistaMapa = null
                     categoriasAprobadas = emptyList()
                     isCreatingServicio = false
                     editingServicio = null
@@ -624,6 +634,7 @@ class MainActivity : ComponentActivity() {
 
                 fun volverAInicio() {
                     vistaPrestadores = null
+                    vistaMapa = null
                     isRegisteringPet = false
                     editingPet = null
                     selectedPetId = null
@@ -651,6 +662,7 @@ class MainActivity : ComponentActivity() {
 
                 fun navigateBackInApp() {
                     when {
+                        vistaMapa != null -> vistaMapa = null
                         vistaPrestadores != null -> vistaPrestadores = null
                         registroGooglePendiente != null -> {
                             registroGooglePendiente = null
@@ -1346,7 +1358,7 @@ class MainActivity : ComponentActivity() {
                     val scope = rememberCoroutineScope()
                     val seccionActual = when {
                         isViewingServicios || isCreatingServicio || editingServicio != null || isViewingSolicitudesServicios -> "Servicios"
-                        isViewingMisTurnos || isRequestingTurno -> "Turnos"
+                        isViewingMisTurnos || isRequestingTurno || vistaMapa != null -> "Turnos"
                         isViewingAdopciones || isPublishingAdopcion || isViewingAdopcionDetalle || isViewingMisPublicaciones || isViewingSolicitudesRecibidas -> "Adopción"
                         else -> "Inicio"
                     }
@@ -1858,6 +1870,13 @@ class MainActivity : ComponentActivity() {
                             loadMisPublicaciones()
                         }
                     )
+                } else if (loggedUserName != null && vistaMapa != null) {
+                    MapaPrestadoresScreen(
+                        titulo = vistaMapa!!.titulo,
+                        subtitulo = vistaMapa!!.subtitulo,
+                        pines = vistaMapa!!.pines,
+                        onBack = { vistaMapa = null }
+                    )
                 } else if (loggedUserName != null && vistaPrestadores != null) {
                     PrestadoresScreen(
                         api = remember { RetrofitClient.serviciosApi(sessionStore) },
@@ -2272,6 +2291,49 @@ class MainActivity : ComponentActivity() {
                         onSelectCategoria = { categoria ->
                             turnoError = null
                             loadServiciosTurno(categoria)
+                        },
+                        onVerMapa = { esVeterinaria, etiqueta ->
+                            vistaMapa = if (esVeterinaria) {
+                                VistaMapa(
+                                    titulo = "Veterinarias",
+                                    subtitulo = "Prestadores con ubicación cargada",
+                                    pines = veterinariasTurno.mapNotNull { veterinaria ->
+                                        val lat = veterinaria.latitud
+                                        val lng = veterinaria.longitud
+                                        if (lat == null || lng == null) {
+                                            null
+                                        } else {
+                                            PinUbicacion(
+                                                id = veterinaria.idVeterinario,
+                                                titulo = veterinaria.nombre,
+                                                subtitulo = veterinaria.direccion,
+                                                latitud = lat,
+                                                longitud = lng
+                                            )
+                                        }
+                                    }
+                                )
+                            } else {
+                                VistaMapa(
+                                    titulo = etiqueta,
+                                    subtitulo = "Prestadores con ubicación cargada",
+                                    pines = serviciosTurno.mapNotNull { servicio ->
+                                        val lat = servicio.latitud
+                                        val lng = servicio.longitud
+                                        if (lat == null || lng == null) {
+                                            null
+                                        } else {
+                                            PinUbicacion(
+                                                id = servicio.id,
+                                                titulo = servicio.nombrePrestador,
+                                                subtitulo = servicio.direccion,
+                                                latitud = lat,
+                                                longitud = lng
+                                            )
+                                        }
+                                    }
+                                )
+                            }
                         },
                         onCargarHorarios = { idProveedor, fecha, esServicio ->
                             turnoError = null

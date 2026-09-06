@@ -120,6 +120,9 @@ class ServiciosControllerTest {
                     nombrePrestador = "Carla",
                     categoria = "paseador",
                     descripcion = "Paseos por el barrio",
+                    direccion = null,
+                    latitud = null,
+                    longitud = null,
                     disponibilidades = listOf(
                         DisponibilidadResponse(
                             id = 1,
@@ -135,6 +138,9 @@ class ServiciosControllerTest {
                     nombrePrestador = "Carla",
                     categoria = "guarderia",
                     descripcion = null,
+                    direccion = null,
+                    latitud = null,
+                    longitud = null,
                     disponibilidades = emptyList()
                 )
             )
@@ -150,6 +156,9 @@ class ServiciosControllerTest {
                 nombrePrestador = "Carla",
                 categoria = request.categoria,
                 descripcion = request.descripcion,
+                direccion = null,
+                latitud = null,
+                longitud = null,
                 disponibilidades = request.disponibilidades.mapIndexed { index, disponibilidad ->
                     DisponibilidadResponse(
                         id = index + 1,
@@ -170,6 +179,9 @@ class ServiciosControllerTest {
                 nombrePrestador = "Carla",
                 categoria = request.categoria,
                 descripcion = request.descripcion,
+                direccion = null,
+                latitud = null,
+                longitud = null,
                 disponibilidades = request.disponibilidades.mapIndexed { index, disponibilidad ->
                     DisponibilidadResponse(
                         id = index + 1,

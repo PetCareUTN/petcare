@@ -81,6 +81,7 @@ fun SolicitarTurnoScreen(
     errorMessage: String?,
     successMessage: String?,
     onSelectCategoria: (categoria: String) -> Unit,
+    onVerMapa: (esVeterinaria: Boolean, etiqueta: String) -> Unit,
     onCargarHorarios: (idProveedor: Int, fecha: String, esServicio: Boolean) -> Unit,
     onSolicitarVeterinario: (
         idMascota: Int,
@@ -218,6 +219,14 @@ fun SolicitarTurnoScreen(
                         )
                     }
                     else -> {
+                        OutlinedButton(
+                            onClick = { onVerMapa(true, "Veterinarias") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.large
+                        ) {
+                            Text("Ver en el mapa")
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
                         veterinarias.forEach { veterinaria ->
                             SelectableOptionCard(
                                 title = veterinaria.nombre,
@@ -257,6 +266,14 @@ fun SolicitarTurnoScreen(
                         )
                     }
                     else -> {
+                        OutlinedButton(
+                            onClick = { onVerMapa(false, categoriaTexto) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.large
+                        ) {
+                            Text("Ver en el mapa")
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
                         serviciosPorCategoria.forEach { servicio ->
                             SelectableOptionCard(
                                 title = servicio.nombrePrestador,
