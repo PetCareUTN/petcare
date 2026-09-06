@@ -2385,7 +2385,19 @@ class MainActivity : ComponentActivity() {
                             isViewingProfile = true
                             loadProfile()
                         },
-                        onSettingsClick = { isViewingSettings = true }
+                        onSettingsClick = { isViewingSettings = true },
+                        turnos = misTurnos.map { TurnoUnificado.fromVeterinario(it) } +
+                            misReservasServicios.map { TurnoUnificado.fromServicio(it) },
+                        isLoadingTurnos = isLoadingMisTurnos,
+                        onLoadTurnos = {
+                            misTurnosError = null
+                            loadMisTurnos()
+                        },
+                        onVerTurnos = {
+                            misTurnosError = null
+                            isViewingMisTurnos = true
+                            loadMisTurnos()
+                        }
                     )
                         }
                         }
