@@ -45,7 +45,13 @@
 
       <div class="field field-wide">
         <label for="direccion">Dirección</label>
-        <input id="direccion" type="text" formControlName="direccion" autocomplete="street-address" />
+        <input
+          id="direccion"
+          type="text"
+          formControlName="direccion"
+          autocomplete="street-address"
+          placeholder="Ej: Av. Colón 1234, Córdoba"
+        />
         @if (form.controls.direccion.invalid && form.controls.direccion.touched) {
           <p class="field-error">La dirección es obligatoria.</p>
         }
