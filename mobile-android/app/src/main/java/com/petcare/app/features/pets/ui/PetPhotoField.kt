@@ -152,7 +152,9 @@ private fun constrainPhotoOffset(
 internal fun PetPhotoField(
     photoUri: Uri?,
     enabled: Boolean,
-    onPhotoAdjusted: (Uri) -> Unit
+    onPhotoAdjusted: (Uri) -> Unit,
+    // Al publicar en adopción la foto deja de ser opcional.
+    tituloSinFoto: String = "Foto opcional"
 ) {
     var uriBeingEdited by remember { mutableStateOf<Uri?>(null) }
     val photoPicker = rememberLauncherForActivityResult(
@@ -186,7 +188,7 @@ internal fun PetPhotoField(
 
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = if (photoUri == null) "Foto opcional" else "Foto lista",
+                    text = if (photoUri == null) tituloSinFoto else "Foto lista",
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(

@@ -9,11 +9,14 @@ class SolicitudesAdopcionController(
     private val solicitudesAdopcionApi: SolicitudesAdopcionApi
 ) {
 
-    suspend fun solicitar(idPublicacion: Int): SolicitudAdopcionResponse =
-        solicitudesAdopcionApi.solicitar(SolicitarAdopcionRequest(idPublicacion))
+    suspend fun solicitar(request: SolicitarAdopcionRequest): SolicitudAdopcionResponse =
+        solicitudesAdopcionApi.solicitar(request)
 
     suspend fun listarRecibidas(): List<SolicitudAdopcionResponse> =
         solicitudesAdopcionApi.listarRecibidas()
+
+    suspend fun listarMisSolicitudes(): List<SolicitudAdopcionResponse> =
+        solicitudesAdopcionApi.listarMisSolicitudes()
 
     suspend fun aceptar(idSolicitud: Int): SolicitudAdopcionResponse =
         solicitudesAdopcionApi.aceptar(idSolicitud)

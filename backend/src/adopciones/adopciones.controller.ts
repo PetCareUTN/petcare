@@ -8,6 +8,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -15,6 +16,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { AdopcionesService } from './adopciones.service';
 import { CreatePublicacionAdopcionDto } from './dto/create-publicacion-adopcion.dto';
+import { FiltrosAdopcionDto } from './dto/filtros-adopcion.dto';
 import { PublicacionAdopcionResponseDto } from './dto/publicacion-adopcion-response.dto';
 
 @Controller('adopciones')
@@ -43,8 +45,9 @@ export class AdopcionesController {
   @UseGuards(JwtAuthGuard)
   findAll(
     @CurrentUser() user: JwtPayload,
+    @Query() filtros: FiltrosAdopcionDto,
   ): Promise<PublicacionAdopcionResponseDto[]> {
-    return this.adopcionesService.findAll(user.sub);
+    return this.adopcionesService.findAll(user.sub, filtros);
   }
 
   @Get(':id')
@@ -63,5 +66,25 @@ export class AdopcionesController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<PublicacionAdopcionResponseDto> {
     return this.adopcionesService.cancelar(user.sub, id);
+  }
+
+  @Patch(':id/pausar')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  pausar(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<PublicacionAdopcionResponseDto> {
+    return this.adopcionesService.pausar(user.sub, id);
+  }
+
+  @Patch(':id/reanudar')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  reanudar(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<PublicacionAdopcionResponseDto> {
+    return this.adopcionesService.reanudar(user.sub, id);
   }
 }

@@ -1,5 +1,6 @@
 package com.petcare.app.features.adopciones.ui
 
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -17,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -34,12 +36,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.petcare.app.features.pets.data.remote.PetResponse
+import com.petcare.app.features.pets.ui.PetPhotoField
 import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMint
 import com.petcare.app.ui.theme.PetCareMuted
 import com.petcare.app.ui.theme.PetCareSurfaceSoft
 import com.petcare.app.ui.theme.PetCareTeal
+import com.petcare.app.ui.theme.PetCareTealDark
 import com.petcare.app.ui.theme.PetCareTealSoft
+
+private val TAMANOS = listOf("PEQUENO" to "Pequeño", "MEDIANO" to "Mediano", "GRANDE" to "Grande")
 
 @Composable
 fun PublicarAdopcionScreen(
@@ -47,12 +53,31 @@ fun PublicarAdopcionScreen(
     isPublishing: Boolean,
     errorMessage: String?,
     successMessage: String?,
-    onPublish: (petId: Int, descripcion: String) -> Unit,
+    onPublish: (
+        petId: Int,
+        descripcion: String,
+        tamano: String?,
+        vacunado: Boolean,
+        compatiblePerros: Boolean,
+        compatibleGatos: Boolean,
+        compatibleNinos: Boolean,
+        necesitaPatio: Boolean,
+        ubicacion: String?,
+        fotoUri: Uri?
+    ) -> Unit,
     onRegisterNewPet: () -> Unit,
     onBack: () -> Unit
 ) {
     var selectedPetId by rememberSaveable { mutableStateOf<Int?>(null) }
+    var fotoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
     var descripcion by rememberSaveable { mutableStateOf("") }
+    var tamano by rememberSaveable { mutableStateOf<String?>(null) }
+    var vacunado by rememberSaveable { mutableStateOf(false) }
+    var compatiblePerros by rememberSaveable { mutableStateOf(false) }
+    var compatibleGatos by rememberSaveable { mutableStateOf(false) }
+    var compatibleNinos by rememberSaveable { mutableStateOf(false) }
+    var necesitaPatio by rememberSaveable { mutableStateOf(false) }
+    var ubicacion by rememberSaveable { mutableStateOf("") }
     var formError by rememberSaveable { mutableStateOf<String?>(null) }
 
     Column(
@@ -117,6 +142,7 @@ fun PublicarAdopcionScreen(
                     selected = pet.id == selectedPetId,
                     onClick = {
                         selectedPetId = pet.id
+                        fotoUri = null
                         formError = null
                     }
                 )
@@ -128,6 +154,31 @@ fun PublicarAdopcionScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("+ Registrar nueva mascota")
+            }
+
+            val mascotaElegida = pets.firstOrNull { it.id == selectedPetId }
+            val necesitaFoto = mascotaElegida != null && mascotaElegida.foto.isNullOrBlank()
+
+            if (necesitaFoto) {
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Text(text = "Foto de la mascota", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    text = "${mascotaElegida.nombre} todavía no tiene foto y hace falta una " +
+                        "para publicarla. La foto queda guardada en su perfil.",
+                    color = PetCareMuted,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                PetPhotoField(
+                    photoUri = fotoUri,
+                    enabled = !isPublishing,
+                    onPhotoAdjusted = {
+                        fotoUri = it
+                        formError = null
+                    },
+                    tituloSinFoto = "Foto obligatoria"
+                )
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -144,6 +195,41 @@ fun PublicarAdopcionScreen(
                 label = { Text("Descripción o comentario") },
                 enabled = !isPublishing,
                 singleLine = false
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Text(text = "Tamaño", style = MaterialTheme.typography.titleSmall)
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TAMANOS.forEach { (valor, etiqueta) ->
+                    TamanoChip(
+                        texto = etiqueta,
+                        seleccionado = tamano == valor,
+                        onClick = { tamano = if (tamano == valor) null else valor },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(text = "Características", style = MaterialTheme.typography.titleSmall)
+            OpcionCheckbox("Vacunado/a", vacunado) { vacunado = it }
+            OpcionCheckbox("Convive bien con perros", compatiblePerros) { compatiblePerros = it }
+            OpcionCheckbox("Convive bien con gatos", compatibleGatos) { compatibleGatos = it }
+            OpcionCheckbox("Convive bien con niños", compatibleNinos) { compatibleNinos = it }
+            OpcionCheckbox("Necesita patio", necesitaPatio) { necesitaPatio = it }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = ubicacion,
+                onValueChange = { ubicacion = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Ubicación (ej. Córdoba)") },
+                enabled = !isPublishing,
+                singleLine = true
             )
 
             val error = formError ?: errorMessage
@@ -171,15 +257,28 @@ fun PublicarAdopcionScreen(
                     when {
                         petId == null ->
                             formError = "Elegí una mascota para publicar"
+                        necesitaFoto && fotoUri == null ->
+                            formError = "Agregá una foto de la mascota para publicarla"
                         descripcion.isBlank() ->
                             formError = "Agregá una descripción o comentario"
-                        else -> onPublish(petId, descripcion.trim())
+                        else -> onPublish(
+                            petId,
+                            descripcion.trim(),
+                            tamano,
+                            vacunado,
+                            compatiblePerros,
+                            compatibleGatos,
+                            compatibleNinos,
+                            necesitaPatio,
+                            ubicacion.trim().ifBlank { null },
+                            fotoUri
+                        )
                     }
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
-                enabled = !isPublishing,
+                enabled = !isPublishing && !(necesitaFoto && fotoUri == null),
                 shape = MaterialTheme.shapes.large
             ) {
                 if (isPublishing) {
@@ -202,6 +301,44 @@ fun PublicarAdopcionScreen(
         ) {
             Text("Cancelar")
         }
+    }
+}
+
+@Composable
+private fun OpcionCheckbox(texto: String, valor: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onChange(!valor) },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Checkbox(checked = valor, onCheckedChange = onChange)
+        Text(text = texto, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
+private fun TamanoChip(
+    texto: String,
+    seleccionado: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.clickable(onClick = onClick),
+        color = if (seleccionado) PetCareTeal else MaterialTheme.colorScheme.surface,
+        shape = MaterialTheme.shapes.large,
+        border = BorderStroke(1.dp, if (seleccionado) PetCareTeal else PetCareLine)
+    ) {
+        Text(
+            text = texto,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            color = if (seleccionado) androidx.compose.ui.graphics.Color.White else PetCareTealDark,
+            style = MaterialTheme.typography.labelLarge
+        )
     }
 }
 
