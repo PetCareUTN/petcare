@@ -9,12 +9,14 @@
     </div>
 
     <nav class="admin-nav">
-      <a routerLink="/admin/prestadores">Prestadores y reportes</a>
+      <a routerLink="/admin/prestadores" [class.active]="isPrestadoresActive()">
+        Prestadores de servicios
+      </a>
       <a routerLink="/admin/usuarios" [class.active]="isUsuariosActive()">
         Usuarios
       </a>
       <a routerLink="/admin/validaciones" [class.active]="isValidacionesActive()">
-        Validaciones
+        Matrículas veterinarias
       </a>
     </nav>
 

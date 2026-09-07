@@ -9,13 +9,14 @@ import { AuthService } from '../../services/auth-service';
   styleUrl: './home.css',
 })
 export class HomePage {
-  protected readonly isAdmin: boolean;
-
   constructor() {
     const authService = inject(AuthService);
+    const router = inject(Router);
+
     if (authService.isVeterinario()) {
-      inject(Router).navigateByUrl('/eventos-clinicos');
+      router.navigateByUrl('/eventos-clinicos');
+    } else if (authService.isAdmin()) {
+      router.navigateByUrl('/admin');
     }
-    this.isAdmin = authService.isAdmin();
   }
 }

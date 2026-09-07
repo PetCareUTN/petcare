@@ -70,9 +70,12 @@ export class LoginPage implements AfterViewInit {
         this.isSubmitting.set(false);
         this.authService.saveToken(response.token);
         this.authService.saveRole(response.usuario.id_rol);
-        this.router.navigateByUrl(
-          this.authService.isVeterinario() ? '/eventos-clinicos' : '/',
-        );
+        const destino = this.authService.isVeterinario()
+          ? '/eventos-clinicos'
+          : this.authService.isAdmin()
+            ? '/admin'
+            : '/';
+        this.router.navigateByUrl(destino);
       },
       error: (error: ApiError) => {
         this.isSubmitting.set(false);

@@ -26,6 +26,9 @@ export class AdminLayout {
   protected readonly isUsuariosActive = () =>
     this.currentUrl().startsWith('/admin/usuarios');
 
+  protected readonly isPrestadoresActive = () =>
+    this.currentUrl().startsWith('/admin/prestadores');
+
   protected readonly isValidacionesActive = () =>
     this.currentUrl().startsWith('/admin/validaciones');
 
