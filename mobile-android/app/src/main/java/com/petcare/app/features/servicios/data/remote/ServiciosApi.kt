@@ -31,6 +31,12 @@ data class ServicioResponse(
     val nombrePrestador: String,
     val categoria: String,
     val descripcion: String?,
+    // Ubicación del prestador (dirección de la cuenta si es veterinario, o de
+    // la solicitud de prestador aprobada si es dueño de mascota). Puede venir
+    // en null si todavía no se pudo geocodificar.
+    val direccion: String?,
+    val latitud: Double?,
+    val longitud: Double?,
     val disponibilidades: List<DisponibilidadResponse>
 )
 

@@ -1,5 +1,6 @@
 package com.petcare.app.features.turnos.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -38,6 +40,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.petcare.app.features.mapa.ui.MapaPrestadoresScreen
+import com.petcare.app.features.mapa.ui.PinUbicacion
 import com.petcare.app.features.pets.data.remote.PetResponse
 import com.petcare.app.features.servicios.data.remote.ServicioResponse
 import com.petcare.app.features.servicios.ui.categoriaLabel
@@ -67,6 +71,19 @@ private fun TipoTurno.categoria(): String? = when (this) {
     TipoTurno.GUARDERIA -> "guarderia"
     TipoTurno.PELUQUERIA -> "peluqueria"
 }
+
+// El mapa se maneja adentro de esta misma pantalla (en vez de que la
+// muestre una pantalla separada en MainActivity) para que el tipo de
+// turno, la mascota y el resto de la selección no se pierdan al ir y
+// volver: si el mapa fuera una rama distinta del if/else de navegación,
+// esta pantalla se sacaría por completo de la composición mientras se ve
+// el mapa y el estado (rememberSaveable) no se restaura al volver.
+private data class VistaMapaTurno(
+    val titulo: String,
+    val subtitulo: String,
+    val pines: List<PinUbicacion>,
+    val onSeleccionar: (PinUbicacion) -> Unit
+)
 
 @Composable
 fun SolicitarTurnoScreen(
@@ -106,6 +123,21 @@ fun SolicitarTurnoScreen(
     var selectedHora by rememberSaveable { mutableStateOf<String?>(null) }
     var notas by rememberSaveable { mutableStateOf("") }
     var formError by rememberSaveable { mutableStateOf<String?>(null) }
+    var vistaMapa by remember { mutableStateOf<VistaMapaTurno?>(null) }
+
+    BackHandler(enabled = vistaMapa != null) { vistaMapa = null }
+
+    val mapaActual = vistaMapa
+    if (mapaActual != null) {
+        MapaPrestadoresScreen(
+            titulo = mapaActual.titulo,
+            subtitulo = mapaActual.subtitulo,
+            pines = mapaActual.pines,
+            onBack = { vistaMapa = null },
+            onSeleccionarPin = mapaActual.onSeleccionar
+        )
+        return
+    }
 
     Column(
         modifier = Modifier
@@ -218,6 +250,41 @@ fun SolicitarTurnoScreen(
                         )
                     }
                     else -> {
+                        OutlinedButton(
+                            onClick = {
+                                vistaMapa = VistaMapaTurno(
+                                    titulo = "Veterinarias",
+                                    subtitulo = "Prestadores con ubicación cargada",
+                                    pines = veterinarias.mapNotNull { veterinaria ->
+                                        val lat = veterinaria.latitud
+                                        val lng = veterinaria.longitud
+                                        if (lat == null || lng == null) {
+                                            null
+                                        } else {
+                                            PinUbicacion(
+                                                id = veterinaria.idVeterinario,
+                                                titulo = veterinaria.nombre,
+                                                subtitulo = veterinaria.direccion,
+                                                latitud = lat,
+                                                longitud = lng
+                                            )
+                                        }
+                                    },
+                                    onSeleccionar = { pin ->
+                                        selectedVeterinariaId = pin.id
+                                        selectedFecha = ""
+                                        selectedHora = null
+                                        formError = null
+                                        vistaMapa = null
+                                    }
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.large
+                        ) {
+                            Text("Ver en el mapa")
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
                         veterinarias.forEach { veterinaria ->
                             SelectableOptionCard(
                                 title = veterinaria.nombre,
@@ -257,6 +324,41 @@ fun SolicitarTurnoScreen(
                         )
                     }
                     else -> {
+                        OutlinedButton(
+                            onClick = {
+                                vistaMapa = VistaMapaTurno(
+                                    titulo = categoriaTexto,
+                                    subtitulo = "Prestadores con ubicación cargada",
+                                    pines = serviciosPorCategoria.mapNotNull { servicio ->
+                                        val lat = servicio.latitud
+                                        val lng = servicio.longitud
+                                        if (lat == null || lng == null) {
+                                            null
+                                        } else {
+                                            PinUbicacion(
+                                                id = servicio.id,
+                                                titulo = servicio.nombrePrestador,
+                                                subtitulo = servicio.direccion,
+                                                latitud = lat,
+                                                longitud = lng
+                                            )
+                                        }
+                                    },
+                                    onSeleccionar = { pin ->
+                                        selectedServicioId = pin.id
+                                        selectedFecha = ""
+                                        selectedHora = null
+                                        formError = null
+                                        vistaMapa = null
+                                    }
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = MaterialTheme.shapes.large
+                        ) {
+                            Text("Ver en el mapa")
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
                         serviciosPorCategoria.forEach { servicio ->
                             SelectableOptionCard(
                                 title = servicio.nombrePrestador,
@@ -461,14 +563,20 @@ private fun SelectableOptionCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 if (subtitle.isNotBlank()) {
                     Text(text = subtitle, color = PetCareMuted, style = MaterialTheme.typography.bodyMedium)
                 }
             }
             if (selected) {
-                Text(text = "Seleccionada", color = PetCareTeal, style = MaterialTheme.typography.labelLarge)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Seleccionada",
+                    color = PetCareTeal,
+                    style = MaterialTheme.typography.labelLarge,
+                    maxLines = 1
+                )
             }
         }
     }

@@ -31,6 +31,10 @@ export class SolicitudPrestador {
   @Column({ default: false }) identidadRevisada: boolean;
   @Column({ default: false }) contactoVerificado: boolean;
   @Column({ default: false }) referenciasComprobadas: boolean;
+  // Resultado de geocodificar `datos.direccion` (Google Geocoding API).
+  // Quedan en NULL si la dirección no pudo geocodificarse.
+  @Column({ type: 'double precision', nullable: true }) latitud: number | null;
+  @Column({ type: 'double precision', nullable: true }) longitud: number | null;
   @Column({ type: 'jsonb', default: () => "'[]'::jsonb" })
   historial: RevisionPrestador[];
   @Column({ type: 'timestamptz', default: () => 'now()' }) actualizada: Date;

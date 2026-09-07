@@ -23,6 +23,7 @@ import { DisponibilidadServicio } from '../src/servicios/entities/disponibilidad
 import { ServiciosService } from '../src/servicios/servicios.service';
 import { PrestadoresService } from '../src/prestadores/prestadores.service';
 import { SolicitudPrestador } from '../src/prestadores/entities/solicitud-prestador.entity';
+import { GeocodingService } from '../src/geocoding/geocoding.service';
 
 async function main() {
   assert(
@@ -47,7 +48,7 @@ async function main() {
       transaction: <T>(work: (manager: EntityManager) => Promise<T>) =>
         work(em),
     } as unknown as DataSource;
-    const prestadores = new PrestadoresService(scoped);
+    const prestadores = new PrestadoresService(scoped, new GeocodingService());
     const servicios = new ServiciosService(
       em.getRepository(Servicio),
       em.getRepository(DisponibilidadServicio),
@@ -118,6 +119,7 @@ async function main() {
           'Experiencia ficticia para una prueba de integración local.',
         protocolo:
           'Protocolo ficticio de cuidados, prevención de escapes y atención de emergencias para la prueba.',
+        direccion: 'Zona de prueba, barrio ficticio',
         consentimiento: 'true',
       },
       [

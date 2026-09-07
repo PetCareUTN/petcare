@@ -36,6 +36,14 @@ export class User {
   @Column({ type: 'varchar', length: 255, nullable: true })
   direccion: string | null;
 
+  // Resultado de geocodificar `direccion` (Google Geocoding API). Quedan en
+  // NULL si la dirección no pudo geocodificarse (ver GeocodingService).
+  @Column({ type: 'double precision', nullable: true })
+  latitud: number | null;
+
+  @Column({ type: 'double precision', nullable: true })
+  longitud: number | null;
+
   // Null en las cuentas creadas con Google: no tienen contraseña propia.
   @Column({ type: 'varchar', length: 255, nullable: true })
   password: string | null;

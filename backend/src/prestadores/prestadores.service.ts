@@ -15,6 +15,7 @@ import { ValidationStatus } from '../common/enums/validation-status.enum';
 import { Veterinario } from '../veterinarios/entities/veterinario.entity';
 import { TurnoServicioEstado } from '../common/enums/turno-servicio-estado.enum';
 import { NotificationType } from '../common/enums/notification-type.enum';
+import { GeocodingService } from '../geocoding/geocoding.service';
 import { Notificacion } from '../notificaciones/entities/notificacion.entity';
 import { User } from '../users/entities/user.entity';
 import { TurnoServicio } from '../turnos-servicios/entities/turno-servicio.entity';
@@ -49,7 +50,10 @@ export function mimeDocumento(buffer: Buffer): string {
 export class PrestadoresService implements OnModuleInit, OnModuleDestroy {
   private timer?: ReturnType<typeof setInterval>;
   private readonly logger = new Logger(PrestadoresService.name);
-  constructor(private readonly db: DataSource) {}
+  constructor(
+    private readonly db: DataSource,
+    private readonly geocoding: GeocodingService,
+  ) {}
 
   onModuleInit() {
     const limpiar = () => {
@@ -146,16 +150,16 @@ export class PrestadoresService implements OnModuleInit, OnModuleDestroy {
       throw fallo(
         'Adjuntá fotos del espacio o evidencia de tus trabajos según la categoría.',
       );
-    if (
-      dto.categoria === CategoriaServicio.GUARDERIA &&
-      (!dto.direccion?.trim() || !dto.capacidad)
-    )
-      throw fallo('Indicá la dirección y la capacidad máxima de la guardería.');
+    if (dto.categoria === CategoriaServicio.GUARDERIA && !dto.capacidad)
+      throw fallo('Indicá la capacidad máxima de la guardería.');
     const documentos = archivos.map((f) => ({
       tipo: f.fieldname as 'identidad' | 'evidencia',
       mime: mimeDocumento(f.buffer),
       contenido: f.buffer,
     }));
+    // Best-effort: si Google no encuentra la dirección o la API key no está
+    // configurada, la solicitud se guarda igual, sin coordenadas.
+    const geocodificado = await this.geocoding.geocodificar(dto.direccion);
     return this.db.transaction(async (em) => {
       // Serializa solicitudes de una misma cuenta, incluso cuando todavía no existe la categoría.
       const usuario = await em.getRepository(User).findOne({
@@ -184,9 +188,11 @@ export class PrestadoresService implements OnModuleInit, OnModuleDestroy {
         experiencia: dto.experiencia,
         referencias: dto.referencias ?? '',
         protocolo: dto.protocolo,
-        direccion: dto.direccion ?? '',
+        direccion: dto.direccion,
         capacidad: dto.capacidad ?? null,
       };
+      s.latitud = geocodificado?.latitud ?? null;
+      s.longitud = geocodificado?.longitud ?? null;
       s.estado = 'pendiente';
       s.identidadRevisada = false;
       s.contactoVerificado = false;
@@ -216,8 +222,40 @@ export class PrestadoresService implements OnModuleInit, OnModuleDestroy {
         'Solicitud de prestador recibida',
         `Tu solicitud de ${s.categoria} está pendiente. Podés seguir usando PetCare como dueño.`,
       );
-      return { id: s.id, estado: s.estado };
+      return {
+        id: s.id,
+        estado: s.estado,
+        advertenciaUbicacion: geocodificado?.precisionBaja
+          ? 'No pudimos ubicar tu dirección con precisión. Revisá que incluya calle, número y localidad; igualmente guardamos una ubicación aproximada.'
+          : undefined,
+      };
     });
+  }
+
+  /**
+   * Ubicación aprobada de un prestador (dueño de mascota) para una
+   * categoría, usada por ServiciosService para mostrar sus servicios en el
+   * mapa. Devuelve null si no tiene una solicitud aprobada.
+   */
+  async obtenerUbicacion(
+    idUsuario: number,
+    categoria: CategoriaServicio,
+  ): Promise<{
+    direccion: string | null;
+    latitud: number | null;
+    longitud: number | null;
+  } | null> {
+    const solicitud = await this.db.getRepository(SolicitudPrestador).findOne(
+      {
+        where: { idUsuario, categoria, estado: 'aprobado' },
+      },
+    );
+    if (!solicitud) return null;
+    return {
+      direccion: solicitud.datos.direccion,
+      latitud: solicitud.latitud,
+      longitud: solicitud.longitud,
+    };
   }
 
   async documento(id: number, idUsuario: number, esAdmin: boolean) {

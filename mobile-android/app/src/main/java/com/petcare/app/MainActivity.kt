@@ -134,6 +134,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
 import retrofit2.HttpException
 
 private enum class AuthScreen {
@@ -141,6 +142,15 @@ private enum class AuthScreen {
     FORGOT_PASSWORD,
     RESET_PASSWORD
 }
+
+// El backend manda el motivo real en el body (mensaje/message) para los 400
+// de turnos (fecha pasada, horario ocupado, fuera de disponibilidad, etc.).
+// Sin esto, el usuario ve un texto genérico que no dice qué pasó en verdad.
+private fun mensajeErrorTurno(exception: HttpException, fallback: String): String =
+    runCatching {
+        val json = JSONObject(exception.response()?.errorBody()?.string() ?: "{}")
+        json.optString("mensaje").ifBlank { json.optString("message") }.ifBlank { fallback }
+    }.getOrDefault(fallback)
 
 class MainActivity : ComponentActivity() {
 
@@ -2795,7 +2805,7 @@ class MainActivity : ComponentActivity() {
                                         }
                                         403 -> "No podés solicitar un turno para una mascota que no es tuya"
                                         404 -> "No se encontró la mascota o la veterinaria"
-                                        else -> "El horario solicitado no está disponible"
+                                        else -> mensajeErrorTurno(exception, "El horario solicitado no está disponible")
                                     }
                                 } catch (exception: IOException) {
                                     turnoError = "No se pudo conectar con el servidor"
@@ -2832,7 +2842,7 @@ class MainActivity : ComponentActivity() {
                                         }
                                         403 -> "No podés solicitar un turno para una mascota que no es tuya"
                                         404 -> "No se encontró la mascota o el servicio"
-                                        else -> "El horario solicitado no está disponible"
+                                        else -> mensajeErrorTurno(exception, "El horario solicitado no está disponible")
                                     }
                                 } catch (exception: IOException) {
                                     turnoError = "No se pudo conectar con el servidor"

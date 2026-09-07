@@ -5,6 +5,7 @@ import {
   IsEnum,
   IsIn,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
@@ -31,7 +32,13 @@ export class SolicitarPrestadorDto {
   @Trim() @IsString() @MinLength(30) @MaxLength(2000) experiencia: string;
   @IsOptional() @Trim() @IsString() @MaxLength(1500) referencias?: string;
   @Trim() @IsString() @MinLength(50) @MaxLength(2000) protocolo: string;
-  @IsOptional() @Trim() @IsString() @MaxLength(255) direccion?: string;
+  // Para guardería/peluquería es la dirección del local; para paseador es un
+  // domicilio o zona de referencia (no implica que el servicio se preste ahí).
+  @Trim()
+  @IsString()
+  @IsNotEmpty({ message: 'Indicá una dirección o zona de referencia.' })
+  @MaxLength(255)
+  direccion: string;
   @IsOptional()
   @Type(() => Number)
   @IsInt()

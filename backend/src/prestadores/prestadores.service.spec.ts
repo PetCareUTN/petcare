@@ -15,6 +15,7 @@ import { ROLES_KEY } from '../auth/decorators/roles.decorator';
 import { TurnoServicioEstado } from '../common/enums/turno-servicio-estado.enum';
 import { mimeDocumento, PrestadoresService } from './prestadores.service';
 import { RevisarPrestadorDto, SolicitarPrestadorDto } from './prestadores.dto';
+import { GeocodingService } from '../geocoding/geocoding.service';
 
 describe('PrestadoresService: confianza y autorización', () => {
   const ahora = new Date('2026-09-05T15:00:00Z');
@@ -44,6 +45,7 @@ describe('PrestadoresService: confianza y autorización', () => {
     experiencia: 'Experiencia suficiente con mascotas de diferentes edades.',
     protocolo:
       'Uso correas y reviso cierres; ante emergencias contacto al dueño y a su veterinario.',
+    direccion: 'Zona de prueba, barrio ficticio',
     consentimiento: 'true',
   };
   const archivo = {
@@ -69,6 +71,7 @@ describe('PrestadoresService: confianza y autorización', () => {
     delete: jest.fn(),
   };
   const db = { getRepository: jest.fn(), transaction: jest.fn() };
+  const geocoding = { geocodificar: jest.fn() };
   let service: PrestadoresService;
   beforeEach(() => {
     jest.useFakeTimers().setSystemTime(ahora);
@@ -76,6 +79,7 @@ describe('PrestadoresService: confianza y autorización', () => {
       ...Object.values(repo),
       ...Object.values(em),
       ...Object.values(db),
+      ...Object.values(geocoding),
     ])
       fn.mockReset();
     db.getRepository.mockReturnValue(repo);
@@ -85,7 +89,11 @@ describe('PrestadoresService: confianza y autorización', () => {
     em.getRepository.mockReturnValue(repo);
     em.create.mockImplementation((_entity: unknown, values: unknown) => values);
     em.save.mockImplementation((value: unknown) => Promise.resolve(value));
-    service = new PrestadoresService(db as unknown as DataSource);
+    geocoding.geocodificar.mockResolvedValue(null);
+    service = new PrestadoresService(
+      db as unknown as DataSource,
+      geocoding as unknown as GeocodingService,
+    );
   });
   afterEach(() => jest.useRealTimers());
 

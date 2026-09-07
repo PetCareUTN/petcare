@@ -53,6 +53,8 @@ export class UsersService {
     numeroDocumento?: string | null;
     telefono?: string | null;
     direccion?: string | null;
+    latitud?: number | null;
+    longitud?: number | null;
     estado?: string;
     idVeterinarioAltaAsistida?: number | null;
   }): Promise<User> {
@@ -65,6 +67,8 @@ export class UsersService {
       googleId: data.googleId ?? null,
       telefono: data.telefono ?? null,
       direccion: data.direccion ?? null,
+      latitud: data.latitud ?? null,
+      longitud: data.longitud ?? null,
       estado: data.estado ?? 'activo',
       idVeterinarioAltaAsistida: data.idVeterinarioAltaAsistida ?? null,
       rol: { idRol: data.idRol },
