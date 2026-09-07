@@ -3,11 +3,7 @@
   <p>Gestioná la información de tus mascotas desde un solo lugar.</p>
 
   <div class="home-actions">
-    @if (isAdmin) {
-      <a class="btn-primary" routerLink="/admin/validaciones">Solicitudes de validación</a>
-    } @else {
-      <a class="btn-primary" routerLink="/mascotas/nueva">Registrar mascota</a>
-      <a class="btn-secondary" routerLink="/mascotas">Mis mascotas</a>
-    }
+    <a class="btn-primary" routerLink="/mascotas/nueva">Registrar mascota</a>
+    <a class="btn-secondary" routerLink="/mascotas">Mis mascotas</a>
   </div>
 </main>
