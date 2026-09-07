@@ -82,7 +82,7 @@ export class ServiciosService {
   ): Promise<ServicioResponseDto[]> {
     const query = this.serviciosRepository.createQueryBuilder('servicio')
       .innerJoinAndSelect('servicio.usuario', 'usuario')
-      .innerJoin('usuario.rol', 'rol')
+      .innerJoinAndSelect('usuario.rol', 'rol')
       .leftJoinAndSelect('servicio.disponibilidades', 'disponibilidad')
       .leftJoin(SolicitudPrestador, 'solicitud', 'solicitud.id_usuario = usuario.id_usuario AND solicitud.categoria = servicio.categoria AND solicitud.estado = :estado', { estado: 'aprobado' })
       .leftJoin(Veterinario, 'veterinario', 'veterinario.id_usuario = usuario.id_usuario AND veterinario.estado_validacion = :validacionVeterinaria', { validacionVeterinaria: ValidationStatus.APROBADO })

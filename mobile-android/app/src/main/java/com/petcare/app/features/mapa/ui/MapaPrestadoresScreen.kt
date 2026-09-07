@@ -77,7 +77,8 @@ fun MapaPrestadoresScreen(
     titulo: String,
     subtitulo: String,
     pines: List<PinUbicacion>,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onSeleccionarPin: ((PinUbicacion) -> Unit)? = null
 ) {
     val context = LocalContext.current
 
@@ -96,11 +97,13 @@ fun MapaPrestadoresScreen(
         )
     }
 
-    // Si el usuario da permiso y no hay pines para centrar el mapa, lo
-    // centramos en su ubicación actual (best-effort: si falla, se queda en
-    // el centro por defecto).
-    LaunchedEffect(hasLocationPermission, pines) {
-        if (hasLocationPermission && pines.isEmpty()) {
+    // Si el usuario da permiso, centramos el mapa en su ubicación actual
+    // (tiene prioridad sobre los pines: el listado no viene ordenado por
+    // cercanía, así que el primer pin no es necesariamente el más
+    // relevante). Best-effort: si falla, se queda centrado en el primer pin
+    // o en el centro por defecto.
+    LaunchedEffect(hasLocationPermission) {
+        if (hasLocationPermission) {
             obtenerUltimaUbicacion(context)?.let { ubicacion ->
                 cameraPositionState.position = CameraPosition.fromLatLngZoom(ubicacion, 14f)
             }
@@ -165,6 +168,16 @@ fun MapaPrestadoresScreen(
             Spacer(modifier = Modifier.height(8.dp))
         }
 
+        if (onSeleccionarPin != null && pines.isNotEmpty()) {
+            Text(
+                text = "Tocá un pin y después el globo con el nombre para seleccionarlo",
+                color = PetCareMuted,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(horizontal = 20.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
         Box(modifier = Modifier.fillMaxSize()) {
             GoogleMap(
                 modifier = Modifier
@@ -181,7 +194,8 @@ fun MapaPrestadoresScreen(
                     Marker(
                         state = MarkerState(position = LatLng(pin.latitud, pin.longitud)),
                         title = pin.titulo,
-                        snippet = pin.subtitulo
+                        snippet = pin.subtitulo,
+                        onInfoWindowClick = { onSeleccionarPin?.invoke(pin) }
                     )
                 }
             }
