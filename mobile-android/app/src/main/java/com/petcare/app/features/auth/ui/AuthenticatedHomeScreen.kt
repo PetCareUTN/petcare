@@ -45,8 +45,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -79,10 +83,8 @@ fun AuthenticatedHomeScreen(
     onRetryPets: () -> Unit,
     onRegisterPet: () -> Unit,
     onEditPet: (PetResponse) -> Unit,
-    onLogout: () -> Unit,
     onPetClick: (PetResponse) -> Unit = {},
     onProfileClick: () -> Unit = {},
-    onSettingsClick: () -> Unit = {},
     turnos: List<TurnoUnificado> = emptyList(),
     isLoadingTurnos: Boolean = false,
     onLoadTurnos: () -> Unit = {},
@@ -103,9 +105,7 @@ fun AuthenticatedHomeScreen(
     ) {
         HomeHeader(
             userName = userName,
-            onLogout = onLogout,
-            onProfileClick = onProfileClick,
-            onSettingsClick = onSettingsClick
+            onProfileClick = onProfileClick
         )
 
         Spacer(modifier = Modifier.height(22.dp))
@@ -147,11 +147,8 @@ fun AuthenticatedHomeScreen(
 @Composable
 private fun HomeHeader(
     userName: String,
-    onLogout: () -> Unit,
-    onProfileClick: () -> Unit,
-    onSettingsClick: () -> Unit
+    onProfileClick: () -> Unit
 ) {
-    var isMenuExpanded by remember { mutableStateOf(false) }
     val displayName = userName.ifBlank { "Tutor" }
 
     Row(
@@ -175,50 +172,22 @@ private fun HomeHeader(
                 )
             }
         }
-        Box {
-            Surface(
-                modifier = Modifier
-                    .size(46.dp)
-                    .clickable { isMenuExpanded = true },
-                shape = CircleShape,
-                color = PetCareTeal
+        Surface(
+            modifier = Modifier
+                .size(46.dp)
+                .clickable(onClick = onProfileClick),
+            shape = CircleShape,
+            color = PetCareTeal
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = displayName.trim().take(1).uppercase(),
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-            }
-            DropdownMenu(
-                expanded = isMenuExpanded,
-                onDismissRequest = { isMenuExpanded = false }
-            ) {
-                DropdownMenuItem(
-                    text = { Text("Mi perfil") },
-                    onClick = {
-                        isMenuExpanded = false
-                        onProfileClick()
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Configuración") },
-                    onClick = {
-                        isMenuExpanded = false
-                        onSettingsClick()
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Cerrar sesión") },
-                    onClick = {
-                        isMenuExpanded = false
-                        onLogout()
-                    }
+                Text(
+                    text = displayName.trim().take(1).uppercase(),
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleMedium
                 )
             }
         }
@@ -339,8 +308,70 @@ private fun PetsCarousel(
                         onEdit = { onEditPet(pet) }
                     )
                 }
+                item(key = "agregar-mascota") {
+                    AgregarMascotaCard(onClick = onRegisterPet)
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun AgregarMascotaCard(onClick: () -> Unit) {
+    val bordePunteado = PetCareTeal.copy(alpha = 0.55f)
+    Column(
+        modifier = Modifier
+            .width(168.dp)
+            .heightIn(min = 192.dp)
+            .clip(MaterialTheme.shapes.extraLarge)
+            .background(PetCareSurfaceSoft)
+            .drawBehind {
+                drawRoundRect(
+                    color = bordePunteado,
+                    cornerRadius = CornerRadius(28.dp.toPx()),
+                    style = Stroke(
+                        width = 2.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(
+                            floatArrayOf(12.dp.toPx(), 8.dp.toPx())
+                        )
+                    )
+                )
+            }
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Surface(
+            modifier = Modifier.size(56.dp),
+            shape = CircleShape,
+            color = PetCareTeal
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_add),
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Text(
+            text = "Agregar mascota",
+            color = PetCareTealDark,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = "Sumá a un integrante más de la familia",
+            color = PetCareMuted,
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
@@ -548,18 +579,20 @@ fun PetCareBottomBar(
     onInicioClick: () -> Unit = {},
     onServiciosClick: () -> Unit,
     onTurnosClick: () -> Unit,
-    onAdopcionClick: () -> Unit
+    onAdopcionClick: () -> Unit,
+    onPerfilClick: () -> Unit
 ) {
     NavigationBar(
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 0.dp
     ) {
-        val items = listOf("Inicio", "Mascotas", "Servicios", "Adopción", "Turnos", "Localización")
+        val items = listOf("Inicio", "Servicios", "Adopción", "Turnos", "Localización", "Perfil")
         items.forEach { item ->
             val isInicio = item == "Inicio"
             val isTurnos = item == "Turnos"
             val isServicios = item == "Servicios"
             val isAdopcion = item == "Adopción"
+            val isPerfil = item == "Perfil"
             // La localizacion se agrega para el sprint que viene (BLE); por ahora no hace nada.
             NavigationBarItem(
                 selected = item == selectedItem,
@@ -568,14 +601,15 @@ fun PetCareBottomBar(
                     if (isTurnos) onTurnosClick()
                     if (isServicios) onServiciosClick()
                     if (isAdopcion) onAdopcionClick()
+                    if (isPerfil) onPerfilClick()
                 },
                 icon = {
                     val iconRes = when (item) {
-                        "Mascotas" -> R.drawable.ic_paw
                         "Servicios" -> R.drawable.ic_services
                         "Adopción" -> R.drawable.ic_heart
                         "Turnos" -> R.drawable.ic_calendar
                         "Localización" -> R.drawable.ic_location
+                        "Perfil" -> R.drawable.ic_person
                         else -> R.drawable.ic_home
                     }
                     Icon(

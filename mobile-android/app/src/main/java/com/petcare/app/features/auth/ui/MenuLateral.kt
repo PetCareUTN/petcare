@@ -28,7 +28,7 @@ import com.petcare.app.ui.theme.PetCareTealDark
 
 /**
  * Menu lateral compartido por las secciones principales (Inicio, Servicios,
- * Adopcion, Turnos), asi el acceso a "Nuevo turno", "Publicar en adopcion",
+ * Adopcion, Turnos), asi el acceso a "Nuevo turno", "Registrar mascota",
  * etc. esta disponible sin importar en que seccion este el usuario.
  */
 @Composable

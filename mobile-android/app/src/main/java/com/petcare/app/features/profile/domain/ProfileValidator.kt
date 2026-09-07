@@ -56,9 +56,12 @@ object ProfileValidator {
                 else -> null
             },
             telefonoError = when {
-                trimmedTelefono.isBlank() -> null
+                // Sin teléfono no hay forma de contactar tras un match.
+                trimmedTelefono.isBlank() -> "El teléfono es obligatorio"
                 trimmedTelefono.length > 30 -> "El teléfono no puede superar 30 caracteres"
                 !telefonoRegex.matches(trimmedTelefono) -> "El teléfono solo puede contener números"
+                trimmedTelefono.count { it.isDigit() } < 8 ->
+                    "Ingresá el número completo, con característica y sin el 0"
                 else -> null
             }
         )

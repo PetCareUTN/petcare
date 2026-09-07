@@ -8,13 +8,26 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AdopcionStatus } from '../common/enums/adopcion-status.enum';
+import { NotificationType } from '../common/enums/notification-type.enum';
 import { SolicitudAdopcionEstado } from '../common/enums/solicitud-adopcion-estado.enum';
+import {
+  MENSAJE_TELEFONO_REQUERIDO,
+  tieneCodigoPais,
+} from '../common/utils/telefono.util';
 import { PublicacionAdopcion } from '../adopciones/entities/publicacion-adopcion.entity';
+import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { User } from '../users/entities/user.entity';
 import { CreateSolicitudAdopcionDto } from './dto/create-solicitud-adopcion.dto';
 import { RechazarSolicitudAdopcionDto } from './dto/rechazar-solicitud-adopcion.dto';
 import { SolicitudAdopcionResponseDto } from './dto/solicitud-adopcion-response.dto';
 import { SolicitudAdopcion } from './entities/solicitud-adopcion.entity';
+
+const RELACIONES_SOLICITUD = [
+  'publicacion',
+  'publicacion.mascota',
+  'publicacion.usuario',
+  'solicitante',
+];
 
 @Injectable()
 export class SolicitudesAdopcionService {
@@ -25,6 +38,7 @@ export class SolicitudesAdopcionService {
     private readonly publicacionesRepository: Repository<PublicacionAdopcion>,
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    private readonly notificacionesService: NotificacionesService,
   ) {}
 
   /**
@@ -79,14 +93,35 @@ export class SolicitudesAdopcionService {
       });
     }
 
+    if (!tieneCodigoPais(solicitante.telefono)) {
+      throw new ConflictException({
+        codigoEstado: 409,
+        mensaje: MENSAJE_TELEFONO_REQUERIDO,
+      });
+    }
+
     const solicitud = this.solicitudesRepository.create({
       publicacion,
       solicitante,
       estado: SolicitudAdopcionEstado.PENDIENTE,
+      tipoVivienda: dto.tipoVivienda ?? null,
+      tienePatio: dto.tienePatio ?? null,
+      tieneOtrasMascotas: dto.tieneOtrasMascotas ?? null,
+      tieneNinos: dto.tieneNinos ?? null,
+      tuvoMascotasAntes: dto.tuvoMascotasAntes ?? null,
+      motivo: dto.motivo ?? null,
+      informacionAdicional: dto.informacionAdicional ?? null,
     });
     const guardada = await this.solicitudesRepository.save(solicitud);
     guardada.publicacion = publicacion;
     guardada.solicitante = solicitante;
+
+    await this.notificacionesService.crear(
+      publicacion.usuario.idUsuario,
+      NotificationType.SOLICITUD_RECIBIDA,
+      'Nueva solicitud de adopción',
+      `Alguien está interesado en adoptar a ${publicacion.mascota.nombre}.`,
+    );
 
     return SolicitudAdopcionResponseDto.fromEntity(guardada);
   }
@@ -100,7 +135,7 @@ export class SolicitudesAdopcionService {
   ): Promise<SolicitudAdopcionResponseDto[]> {
     const solicitudes = await this.solicitudesRepository.find({
       where: { publicacion: { usuario: { idUsuario } } },
-      relations: ['publicacion', 'publicacion.mascota', 'solicitante'],
+      relations: RELACIONES_SOLICITUD,
       order: { createdAt: 'DESC' },
     });
 
@@ -118,8 +153,34 @@ export class SolicitudesAdopcionService {
   ): Promise<SolicitudAdopcionResponseDto[]> {
     const solicitudes = await this.solicitudesRepository.find({
       where: { solicitante: { idUsuario } },
-      relations: ['publicacion', 'publicacion.mascota', 'publicacion.usuario', 'solicitante'],
+      relations: RELACIONES_SOLICITUD,
       order: { createdAt: 'DESC' },
+    });
+
+    return solicitudes.map((solicitud) =>
+      SolicitudAdopcionResponseDto.fromEntity(solicitud),
+    );
+  }
+
+  /**
+   * Matches: solicitudes ya aceptadas donde el usuario participa, sea como
+   * adoptante o como dueño de la publicación. No existe una tabla separada
+   * de "match": una solicitud ACEPTADA ya representa exactamente eso.
+   */
+  async findMatches(idUsuario: number): Promise<SolicitudAdopcionResponseDto[]> {
+    const solicitudes = await this.solicitudesRepository.find({
+      where: [
+        {
+          solicitante: { idUsuario },
+          estado: SolicitudAdopcionEstado.ACEPTADA,
+        },
+        {
+          publicacion: { usuario: { idUsuario } },
+          estado: SolicitudAdopcionEstado.ACEPTADA,
+        },
+      ],
+      relations: RELACIONES_SOLICITUD,
+      order: { updatedAt: 'DESC' },
     });
 
     return solicitudes.map((solicitud) =>
@@ -143,9 +204,16 @@ export class SolicitudesAdopcionService {
     publicacion.estado = AdopcionStatus.CERRADA;
     await this.publicacionesRepository.save(publicacion);
 
-    return SolicitudAdopcionResponseDto.fromEntity(
-      await this.solicitudesRepository.save(solicitud),
+    const guardada = await this.solicitudesRepository.save(solicitud);
+
+    await this.notificacionesService.crear(
+      solicitud.solicitante.idUsuario,
+      NotificationType.APROBACION,
+      '¡Hay match!',
+      `El responsable de ${publicacion.mascota.nombre} aceptó tu solicitud de adopción.`,
     );
+
+    return SolicitudAdopcionResponseDto.fromEntity(guardada);
   }
 
   async rechazar(
@@ -159,9 +227,16 @@ export class SolicitudesAdopcionService {
     );
     solicitud.estado = SolicitudAdopcionEstado.RECHAZADA;
     solicitud.motivoRechazo = dto.motivoRechazo.trim();
-    return SolicitudAdopcionResponseDto.fromEntity(
-      await this.solicitudesRepository.save(solicitud),
+    const guardada = await this.solicitudesRepository.save(solicitud);
+
+    await this.notificacionesService.crear(
+      solicitud.solicitante.idUsuario,
+      NotificationType.RECHAZO,
+      'Solicitud de adopción rechazada',
+      `Tu solicitud para adoptar a ${solicitud.publicacion.mascota.nombre} no fue aceptada.`,
     );
+
+    return SolicitudAdopcionResponseDto.fromEntity(guardada);
   }
 
   private async findSolicitudPropiaPendiente(
@@ -170,7 +245,7 @@ export class SolicitudesAdopcionService {
   ): Promise<SolicitudAdopcion> {
     const solicitud = await this.solicitudesRepository.findOne({
       where: { idSolicitud },
-      relations: ['publicacion', 'publicacion.mascota', 'publicacion.usuario', 'solicitante'],
+      relations: RELACIONES_SOLICITUD,
     });
 
     if (!solicitud) {

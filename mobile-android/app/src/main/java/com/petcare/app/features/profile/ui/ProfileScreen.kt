@@ -2,6 +2,7 @@ package com.petcare.app.features.profile.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,6 +33,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.petcare.app.features.profile.data.remote.UserProfileResponse
 import com.petcare.app.R
+import com.petcare.app.ui.theme.PetCareError
 import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMuted
 import com.petcare.app.ui.theme.PetCareTealDark
@@ -43,8 +45,11 @@ fun ProfileScreen(
     errorMessage: String?,
     profile: UserProfileResponse?,
     onRetry: () -> Unit,
-    onBack: () -> Unit,
-    onEdit: () -> Unit
+    onEdit: () -> Unit,
+    onConfiguracion: () -> Unit,
+    onLogout: () -> Unit,
+    // Null cuando la pantalla se abre como pestaña: ahí no hay a dónde volver.
+    onBack: (() -> Unit)? = null
 ) {
     Column(
         modifier = Modifier
@@ -60,12 +65,14 @@ fun ProfileScreen(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_arrow_back),
-                    contentDescription = "Volver",
-                    tint = PetCareTealDark
-                )
+            if (onBack != null) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_arrow_back),
+                        contentDescription = "Volver",
+                        tint = PetCareTealDark
+                    )
+                }
             }
             Text(
                 text = "Mi perfil",
@@ -119,12 +126,71 @@ fun ProfileScreen(
                 ProfileContent(profile = profile, onEdit = onEdit)
             }
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = BorderStroke(1.dp, PetCareLine),
+            shape = MaterialTheme.shapes.extraLarge
+        ) {
+            Column(modifier = Modifier.padding(vertical = 6.dp)) {
+                AccesoPerfil(
+                    texto = "Configuración",
+                    iconRes = R.drawable.ic_settings,
+                    onClick = onConfiguracion
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        OutlinedButton(
+            onClick = onLogout,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = MaterialTheme.shapes.large,
+            border = BorderStroke(1.dp, PetCareError)
+        ) {
+            Text("Cerrar sesión", color = PetCareError)
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+    }
+}
+
+@Composable
+private fun AccesoPerfil(texto: String, iconRes: Int, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Icon(
+            painter = painterResource(iconRes),
+            contentDescription = null,
+            tint = PetCareTealDark,
+            modifier = Modifier.size(22.dp)
+        )
+        Text(
+            text = texto,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.bodyLarge
+        )
     }
 }
 
 @Composable
 private fun ProfileContent(profile: UserProfileResponse, onEdit: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Surface(
             modifier = Modifier.size(84.dp),
             shape = CircleShape,

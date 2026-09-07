@@ -39,6 +39,10 @@ import { SolicitudAdopcion } from './solicitudes-adopcion/entities/solicitud-ado
 import { SolicitudesAdopcionModule } from './solicitudes-adopcion/solicitudes-adopcion.module';
 import { TurnoServicio } from './turnos-servicios/entities/turno-servicio.entity';
 import { TurnosServiciosModule } from './turnos-servicios/turnos-servicios.module';
+import { Favorito } from './favoritos/entities/favorito.entity';
+import { FavoritosModule } from './favoritos/favoritos.module';
+import { DescarteAdopcion } from './descartes/entities/descarte-adopcion.entity';
+import { DescartesModule } from './descartes/descartes.module';
 
 dotenv.config();
 
@@ -69,6 +73,8 @@ dotenv.config();
         AuditoriaUsuario,
         SolicitudAdopcion,
         TurnoServicio,
+        Favorito,
+        DescarteAdopcion,
       ],
       synchronize: false,
     }),
@@ -88,6 +94,8 @@ dotenv.config();
     AdminModule,
     SolicitudesAdopcionModule,
     TurnosServiciosModule,
+    FavoritosModule,
+    DescartesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

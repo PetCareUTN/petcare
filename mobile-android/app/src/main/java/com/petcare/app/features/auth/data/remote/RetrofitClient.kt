@@ -1,6 +1,8 @@
 package com.petcare.app.features.auth.data.remote
 
 import com.petcare.app.features.adopciones.data.remote.AdopcionesApi
+import com.petcare.app.features.adopciones.data.remote.DescartesApi
+import com.petcare.app.features.adopciones.data.remote.FavoritosApi
 import com.petcare.app.features.adopciones.data.remote.SolicitudesAdopcionApi
 import com.petcare.app.features.auth.data.local.SessionStore
 import com.petcare.app.features.historiaclinica.data.remote.HistoriaClinicaApi
@@ -45,6 +47,14 @@ object RetrofitClient {
     fun solicitudesAdopcionApi(sessionStore: SessionStore): SolicitudesAdopcionApi =
         createRetrofit(sessionStore)
             .create(SolicitudesAdopcionApi::class.java)
+
+    fun favoritosApi(sessionStore: SessionStore): FavoritosApi =
+        createRetrofit(sessionStore)
+            .create(FavoritosApi::class.java)
+
+    fun descartesApi(sessionStore: SessionStore): DescartesApi =
+        createRetrofit(sessionStore)
+            .create(DescartesApi::class.java)
 
     fun serviciosApi(sessionStore: SessionStore): ServiciosApi =
         createRetrofit(sessionStore)

@@ -223,11 +223,21 @@ private fun SolicitudRow(
             solicitud.telefonoSolicitante?.takeIf { it.isNotBlank() }?.let {
                 Text(text = it, color = PetCareMuted, style = MaterialTheme.typography.bodySmall)
             }
+
+            RespuestasFormulario(solicitud)
+
             solicitud.motivoRechazo?.takeIf { it.isNotBlank() }?.let { motivo ->
                 Text(
                     text = "Motivo del rechazo: $motivo",
                     color = PetCareError,
                     style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
+            if (solicitud.estado == "ACEPTADA") {
+                BloqueMatch(
+                    nombreContacto = solicitud.nombreSolicitante,
+                    telefonoContacto = solicitud.telefonoSolicitante
                 )
             }
 
@@ -263,7 +273,36 @@ private fun SolicitudRow(
 }
 
 @Composable
-private fun EstadoBadge(estado: String) {
+internal fun RespuestasFormulario(solicitud: SolicitudAdopcionResponse) {
+    val respuestas = buildList {
+        solicitud.tipoVivienda?.let { add("Vivienda" to if (it == "CASA") "Casa" else "Departamento") }
+        solicitud.tienePatio?.let { add("Patio" to if (it) "Sí" else "No") }
+        solicitud.tieneOtrasMascotas?.let { add("Otras mascotas" to if (it) "Sí" else "No") }
+        solicitud.tieneNinos?.let { add("Niños en casa" to if (it) "Sí" else "No") }
+        solicitud.tuvoMascotasAntes?.let { add("Experiencia previa" to if (it) "Sí" else "No") }
+    }
+    if (respuestas.isEmpty() && solicitud.motivo.isNullOrBlank()) return
+
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        respuestas.forEach { (etiqueta, valor) ->
+            Text(
+                text = "$etiqueta: $valor",
+                color = PetCareMuted,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+        solicitud.motivo?.takeIf { it.isNotBlank() }?.let { motivo ->
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = "\"$motivo\"", style = MaterialTheme.typography.bodyMedium)
+        }
+        solicitud.informacionAdicional?.takeIf { it.isNotBlank() }?.let {
+            Text(text = it, color = PetCareMuted, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+internal fun EstadoBadge(estado: String) {
     val color = when (estado) {
         "ACEPTADA" -> PetCareTeal
         "PENDIENTE" -> PetCareWarning
