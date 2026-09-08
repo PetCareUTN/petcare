@@ -222,7 +222,9 @@ fun MapaPrestadoresScreen(
 }
 
 @SuppressLint("MissingPermission")
-private suspend fun obtenerUltimaUbicacion(context: Context): LatLng? =
+// internal (no private) porque la pantalla de solicitar turno la reutiliza
+// para calcular a que distancia queda cada veterinaria o prestador.
+internal suspend fun obtenerUltimaUbicacion(context: Context): LatLng? =
     suspendCancellableCoroutine { continuation ->
         val client = LocationServices.getFusedLocationProviderClient(context)
         runCatching {
