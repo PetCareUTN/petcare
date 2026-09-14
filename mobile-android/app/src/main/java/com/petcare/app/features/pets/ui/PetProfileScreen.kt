@@ -28,11 +28,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.petcare.app.features.perdidas.data.remote.ReportePerdidaResponse
 import com.petcare.app.features.pets.data.remote.PetResponse
+import com.petcare.app.ui.theme.PetCareError
 import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMuted
 import com.petcare.app.R
 import com.petcare.app.ui.theme.PetCareTealDark
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @Composable
 fun PetProfileScreen(
@@ -41,7 +45,13 @@ fun PetProfileScreen(
     pet: PetResponse?,
     onRetry: () -> Unit,
     onBack: () -> Unit,
-    onViewHistoria: () -> Unit = {}
+    onViewHistoria: () -> Unit = {},
+    // Reporte de mascota perdida abierto, si la mascota está reportada (US-36).
+    reporteActivo: ReportePerdidaResponse? = null,
+    isCerrandoReporte: Boolean = false,
+    reporteError: String? = null,
+    onReportarPerdida: () -> Unit = {},
+    onMarcarEncontrada: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -113,14 +123,30 @@ fun PetProfileScreen(
             }
 
             pet != null -> {
-                PetProfileContent(pet = pet, onViewHistoria = onViewHistoria)
+                PetProfileContent(
+                    pet = pet,
+                    onViewHistoria = onViewHistoria,
+                    reporteActivo = reporteActivo,
+                    isCerrandoReporte = isCerrandoReporte,
+                    reporteError = reporteError,
+                    onReportarPerdida = onReportarPerdida,
+                    onMarcarEncontrada = onMarcarEncontrada
+                )
             }
         }
     }
 }
 
 @Composable
-private fun PetProfileContent(pet: PetResponse, onViewHistoria: () -> Unit) {
+private fun PetProfileContent(
+    pet: PetResponse,
+    onViewHistoria: () -> Unit,
+    reporteActivo: ReportePerdidaResponse?,
+    isCerrandoReporte: Boolean,
+    reporteError: String?,
+    onReportarPerdida: () -> Unit,
+    onMarcarEncontrada: () -> Unit
+) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         PetAvatar(
             petName = pet.nombre,
@@ -138,6 +164,11 @@ private fun PetProfileContent(pet: PetResponse, onViewHistoria: () -> Unit) {
     }
 
     Spacer(modifier = Modifier.height(18.dp))
+
+    if (reporteActivo != null) {
+        ReportePerdidaBanner(reporte = reporteActivo)
+        Spacer(modifier = Modifier.height(18.dp))
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -211,7 +242,103 @@ private fun PetProfileContent(pet: PetResponse, onViewHistoria: () -> Unit) {
     ) {
         Text("Ver historia clinica")
     }
+
+    if (reporteError != null) {
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            text = reporteError,
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodyMedium
+        )
+    }
+
+    Spacer(modifier = Modifier.height(12.dp))
+
+    if (reporteActivo != null) {
+        Button(
+            onClick = onMarcarEncontrada,
+            enabled = !isCerrandoReporte,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = MaterialTheme.shapes.large
+        ) {
+            if (isCerrandoReporte) {
+                CircularProgressIndicator(
+                    modifier = Modifier.height(22.dp),
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+            } else {
+                Text("Marcar como encontrada")
+            }
+        }
+    } else {
+        OutlinedButton(
+            onClick = onReportarPerdida,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = MaterialTheme.shapes.large,
+            border = BorderStroke(1.dp, PetCareError)
+        ) {
+            Text(text = "Reportar como perdida", color = PetCareError)
+        }
+    }
+
+    Spacer(modifier = Modifier.height(24.dp))
 }
+
+/** Estado "perdida" de la mascota: el reporte abierto y desde cuándo (US-36). */
+@Composable
+private fun ReportePerdidaBanner(reporte: ReportePerdidaResponse) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, PetCareError),
+        shape = MaterialTheme.shapes.extraLarge
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Reportada como perdida",
+                color = PetCareError,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = "Desde ${reporte.fechaPerdida.aFechaHoraLegible()}",
+                color = PetCareMuted,
+                style = MaterialTheme.typography.bodyMedium
+            )
+            reporte.descripcion?.ifBlank { null }?.let { descripcion ->
+                Text(
+                    text = descripcion,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            reporte.contacto?.ifBlank { null }?.let { contacto ->
+                Text(
+                    text = "Contacto: $contacto",
+                    color = PetCareMuted,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            Text(
+                text = "La red colaborativa te avisa si alguien la detecta cerca",
+                color = PetCareMuted,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
+
+/** El backend manda la fecha en ISO-8601 UTC; se muestra en la zona del celular. */
+private fun String.aFechaHoraLegible(): String =
+    runCatching {
+        val iso = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.US)
+        SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(iso.parse(this)!!)
+    }.getOrDefault(this)
 
 @Composable
 private fun DetailRow(label: String, value: String) {
