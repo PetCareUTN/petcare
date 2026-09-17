@@ -15,6 +15,40 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
+    <!-- ===== Colaboración anónima con la búsqueda de mascotas perdidas (US-30) =====
+         El rango minSdk 24 → targetSdk 36 obliga a sostener dos caminos de permisos
+         en paralelo. Ver docs/spike-escaneo-ble-segundo-plano.md, punto 2. -->
+
+    <!-- Camino legacy (API 24–30): el escaneo se habilita con estos dos permisos
+         normales, y ADEMÁS exige ACCESS_FINE_LOCATION en runtime (ya declarado). -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+
+    <!-- Camino moderno (API 31+). A propósito SIN usesPermissionFlags="neverForLocation":
+         ese flag es para apps que escanean sin derivar posición, y acá justamente la
+         derivamos. Declararlo filtraría resultados y sería incorrecto. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+
+    <!-- Escanear con la app cerrada. No se puede pedir en el mismo diálogo que el resto:
+         Android obliga a un flujo escalonado y en API 30+ manda al usuario a Ajustes. -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- Notificación del foreground service. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Obligatorio desde API 34, y tiene que coincidir con el foregroundServiceType. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+
+    <!-- El escaneo necesita radio BLE, pero no queremos que el Play Store excluya
+         dispositivos por la app entera: required=false. -->
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="false" />
+
     <application
         android:usesCleartextTraffic="true"
         android:allowBackup="true"
@@ -42,6 +76,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Colaboración anónima (US-30). El tipo `location` es obligatorio porque de
+             la detección derivamos la ubicación aproximada del detector; con
+             `connectedDevice` la detección viajaría sin coordenadas y rompería el
+             criterio de aceptación de US-31. -->
+        <service
+            android:name=".features.ble.service.ServicioEscaneoBle"
+            android:exported="false"
+            android:foregroundServiceType="location" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
