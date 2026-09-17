@@ -49,6 +49,14 @@ android {
     buildFeatures {
         compose = true
     }
+    testOptions {
+        unitTests {
+            // Sin esto, cualquier llamada a android.util.Log desde código testeado
+            // revienta con "Method w in android.util.Log not mocked". Con el flag,
+            // los métodos del framework devuelven su valor por defecto y no estorban.
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 dependencies {

@@ -2,6 +2,8 @@ package com.petcare.app.features.settings.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.petcare.app.features.ble.ui.ColaboracionBleCard
 
 @Composable
 fun ConfiguracionScreen(
@@ -34,6 +37,9 @@ fun ConfiguracionScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .systemBarsPadding()
+            // La tarjeta de colaboracion crece cuando pide el permiso de ubicacion en
+            // segundo plano, y sin scroll el boton queda fuera de la pantalla.
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.Start
@@ -44,7 +50,7 @@ fun ConfiguracionScreen(
             color = MaterialTheme.colorScheme.onBackground
         )
         Text(
-            text = "Ajustá cómo se ve la app.",
+            text = "Ajustá cómo se ve y cómo funciona la app.",
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyMedium
         )
@@ -89,6 +95,10 @@ fun ConfiguracionScreen(
                 )
             }
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        ColaboracionBleCard()
 
         Spacer(modifier = Modifier.height(24.dp))
 
