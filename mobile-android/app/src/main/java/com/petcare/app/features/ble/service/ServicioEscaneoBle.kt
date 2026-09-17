@@ -15,9 +15,9 @@ import androidx.core.app.NotificationCompat
 import com.petcare.app.MainActivity
 import com.petcare.app.R
 import com.petcare.app.features.ble.data.local.ColaboracionPreferences
+import com.petcare.app.features.ble.domain.DeteccionesController
 import com.petcare.app.features.ble.domain.EscaneoNoDisponibleException
 import com.petcare.app.features.ble.domain.MotorEscaneoBle
-import com.petcare.app.features.ble.domain.TagDetectado
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -55,6 +55,7 @@ class ServicioEscaneoBle : Service() {
 
     private val preferencias by lazy { ColaboracionPreferences(this) }
     private val motor by lazy { MotorEscaneoBle(this) }
+    private val detecciones by lazy { DeteccionesController(this) }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var escaneo: Job? = null
@@ -88,6 +89,10 @@ class ServicioEscaneoBle : Service() {
         if (escaneo?.isActive == true) return
 
         escaneo = scope.launch {
+            // Lo que haya quedado sin enviar de la sesion anterior (sin red, o porque
+            // el sistema mato el proceso) se manda apenas arranca la colaboracion.
+            detecciones.vaciarCola()
+
             motor.escanear(intervaloMillis = preferencias.getIntervaloMillis())
                 .catch { error ->
                     if (error is EscaneoNoDisponibleException) {
@@ -100,24 +105,8 @@ class ServicioEscaneoBle : Service() {
                         throw error
                     }
                 }
-                .collect { registrar(it) }
+                .collect { detecciones.registrar(it) }
         }
-    }
-
-    /**
-     * Por ahora solo deja la deteccion en el log.
-     *
-     * El armado del payload (deteccionId, coordenadas redondeadas a 3 decimales) y el
-     * envio a `POST /detecciones` van en el proximo commit: necesitan la cola de envio
-     * offline y una instancia de Retrofit sin `AuthTokenInterceptor`, porque el endpoint
-     * es anonimo por diseño.
-     */
-    private fun registrar(deteccion: TagDetectado) {
-        Log.d(
-            TAG,
-            "Tag ${deteccion.tagId} · RSSI ${deteccion.rssi} dBm · " +
-                "~${"%.1f".format(deteccion.distanciaAproximadaMetros)} m",
-        )
     }
 
     private fun arrancarEnPrimerPlano() {
