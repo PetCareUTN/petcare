@@ -47,7 +47,7 @@ class EscaneoNoDisponibleException(
  * - `ScanFilter` por service UUID `0xFEAA` **mas la mascara del namespace PetCare**, de
  *   forma que el descarte lo haga el chip Bluetooth sin despertar el CPU. Es la decision
  *   que mas impacta el consumo: en el banco de pruebas la misma escena paso de 8
- *   dispositivos a 1.
+ *   dispositivos a 1. Verificado contra el tag real en el TCL 6102A (API 30).
  * - `SCAN_MODE_LOW_POWER` como modo base.
  * - Duty cycling con ventana e intervalo configurables, acotado por [GuardiaDeThrottle].
  *
@@ -233,6 +233,9 @@ class MotorEscaneoBle(
          *
          * El instance (bytes 12..17) queda fuera del filtro: es justamente lo que
          * cambia de tag en tag.
+         *
+         * Verificado en el TCL 6102A (API 30): el filtro entrega resultados y el frame
+         * decodifica al tagId esperado.
          */
         fun filtrosDeLaFlota(): List<ScanFilter> {
             val namespace = requireNotNull(hexABytes(NAMESPACE_PETCARE)) {

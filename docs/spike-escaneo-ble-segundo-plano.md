@@ -447,6 +447,29 @@ Android deja de mostrar diálogo y manda al usuario a Ajustes.
 restricción es de API 35+ y no se puede observar acá. Sigue valiendo la limitación
 documentada al final del punto 1.
 
+### ⚠️ El TCL 6102A no deja pasar los logs de la app a logcat
+
+Probando el foreground service en este equipo, **la app no emite una sola línea a
+`logcat`** — ni `Log.d`, ni `Log.w`, ni `Log.e`. El buffer de logcat funciona y se ven
+los logs del sistema (incluido `bt_stack`), pero los de la app no aparecen nunca.
+
+Es una particularidad de la ROM, no un problema del código, y **es una trampa cara**:
+hace parecer que el escaneo no está detectando nada cuando en realidad funciona
+perfecto. Costó una hora y dos diagnósticos equivocados (se culpó primero al
+`ScanFilter` y después al `ScanMode`, y ninguno de los dos tenía nada que ver).
+
+Cómo verificar de verdad en este equipo:
+
+- **Escribir el diagnóstico a un archivo** en `context.filesDir` y leerlo con
+  `adb shell run-as com.petcare.app cat /data/data/com.petcare.app/files/<archivo>`.
+- Para confirmar que el escaneo al menos *corre*, sirven los logs del sistema, que sí
+  se ven: cada ventana deja un `GATT_Register` y su `bta_gattc_deregister` en
+  `bt_stack`. Con eso se mide el duty cycling sin tocar la app.
+
+```bash
+adb logcat -d | grep -E "GATT_Register|bta_gattc_deregister"
+```
+
 ### Qué queda sin poder validarse
 
 Solo el **segundo camino de permisos** (el de Android 12+): `BLUETOOTH_SCAN`,
