@@ -1,4 +1,4 @@
-package com.petcare.app.debug.ble
+package com.petcare.app.features.ble.domain
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

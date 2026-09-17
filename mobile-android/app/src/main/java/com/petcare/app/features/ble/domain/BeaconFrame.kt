@@ -1,11 +1,14 @@
-package com.petcare.app.debug.ble
+package com.petcare.app.features.ble.domain
 
 /**
- * Decodificadores de los formatos que puede emitir el Blue Charm BC021 (spike US-30).
+ * Decodificadores de los formatos que puede emitir el Blue Charm BC021 (US-30).
  *
  * Son funciones puras sobre ByteArray a proposito: no dependen del SDK de Android,
- * asi que se pueden testear sin dispositivo. Si el spike confirma Eddystone-UID,
- * esta parte es la unica que sobrevive tal cual al motor de escaneo definitivo.
+ * asi que se pueden testear sin dispositivo.
+ *
+ * Vienen del banco de pruebas del spike (src/debug), que ya confirmo Eddystone-UID
+ * contra el tag real. Es la unica pieza del spike que sobrevivio tal cual, asi que
+ * paso a src/main sin cambios funcionales.
  *
  * Ver docs/spike-escaneo-ble-segundo-plano.md
  */

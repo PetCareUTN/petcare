@@ -44,6 +44,13 @@ import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.MultiplePermissionsState
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.petcare.app.features.ble.domain.APPLE_COMPANY_ID
+import com.petcare.app.features.ble.domain.BeaconFrame
+import com.petcare.app.features.ble.domain.EDDYSTONE_SERVICE_UUID
+import com.petcare.app.features.ble.domain.clave
+import com.petcare.app.features.ble.domain.decodificarEddystone
+import com.petcare.app.features.ble.domain.decodificarIBeacon
+import com.petcare.app.features.ble.domain.estimarDistanciaMetros
 import com.petcare.app.ui.theme.PetCareTheme
 import java.util.concurrent.TimeUnit
 
