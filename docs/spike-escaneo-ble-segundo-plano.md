@@ -62,7 +62,18 @@ Al manifest (`mobile-android/app/src/main/AndroidManifest.xml`, que hoy solo dec
 | `ACCESS_BACKGROUND_LOCATION` | API 29+ | **sí, aparte** | Escanear con la app cerrada |
 | `POST_NOTIFICATIONS` | API 33+ | **sí** | Notificación del foreground service |
 | `FOREGROUND_SERVICE` | API 28+ | no | Declarar el service |
-| `FOREGROUND_SERVICE_LOCATION` | API 34+ | no | Obligatorio: debe coincidir con `foregroundServiceType` |
+| `FOREGROUND_SERVICE_LOCATION` | API 34+ | no | Obligatorio desde API 34: debe coincidir con `foregroundServiceType` |
+
+> **No confundir el permiso con el atributo.** El *permiso*
+> `FOREGROUND_SERVICE_LOCATION` es API 34+, pero el *atributo*
+> `android:foregroundServiceType="location"` del manifest existe desde **API 29**
+> (`ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION`, `since="29"` en
+> `platforms/android-36.1/data/api-versions.xml` del SDK).
+>
+> O sea: un foreground service de tipo `location` **se puede declarar y correr desde
+> Android 10**. Declarar además el permiso en un equipo API 30 es inofensivo, el
+> sistema lo ignora. Esto importa para elegir el equipo de pruebas (ver la sección
+> del final).
 
 Dos trampas concretas:
 
@@ -403,27 +414,53 @@ Dos consecuencias:
 El decoder del banco de pruebas ya muestra los dos frames a la vez y vuelca en hexa
 los que no reconoce.
 
-### ⚠️ El teléfono de pruebas no alcanza para validar la historia
+### Equipos de pruebas: qué se puede validar en cada uno
 
-El equipo con el que se está probando es un **Moto C con Android 7.0 (API 24)** —
-exactamente el `minSdk` del proyecto. Sirve para validar el camino legacy, pero **no
-puede ejercitar nada de lo que define la historia en el target real** (API 36):
+Hay dos equipos disponibles, y la diferencia entre ellos es lo que decide qué parte de
+la historia se puede probar. El umbral que importa es **API 29**.
 
-| | Moto C (API 24) | Hace falta |
-|---|---|---|
-| Permiso `BLUETOOTH_SCAN` | no existe, usa el camino legacy | API 31+ |
-| `ACCESS_BACKGROUND_LOCATION` | no existe | API 29+ |
-| `foregroundServiceType="location"` | no existe | API 34+ |
-| Restricción de FGS en `BOOT_COMPLETED` | no aplica | API 35+ |
-| `POST_NOTIFICATIONS` | no existe | API 33+ |
+| | Moto C (API 24) | TCL 6102A (API 30) | Hace falta |
+|---|---|---|---|
+| Escaneo BLE (`bluetooth_le`) | sí | sí | — |
+| `ACCESS_BACKGROUND_LOCATION` | no existe | **sí** | API 29+ |
+| `foregroundServiceType="location"` | no existe | **sí** | API 29+ |
+| Escaneo en segundo plano vía FGS | no | **sí** | API 29+ |
+| Medición de batería / Doze | no | **sí** | API 29+ |
+| Permiso `BLUETOOTH_SCAN` | no, camino legacy | no, camino legacy | API 31+ |
+| `POST_NOTIFICATIONS` | no existe | no existe | API 33+ |
+| Permiso `FOREGROUND_SERVICE_LOCATION` | no existe | no existe (se ignora) | API 34+ |
+| Restricción de FGS en `BOOT_COMPLETED` | no aplica | no aplica | API 35+ |
 
-O sea: el flujo escalonado de permisos, el foreground service y la limitación del boot
-—que son el corazón de US-30— **no se pueden probar en este equipo**. Hace falta
-conseguir un segundo Android razonablemente moderno (API 31+, idealmente 34+) antes de
-cerrar la historia; si no, se desarrolla a ciegas contra el target.
+**Moto C (API 24)**: es exactamente el `minSdk`. Sirve para validar el camino legacy de
+permisos y nada más — no puede ejercitar el foreground service tipado ni el permiso de
+ubicación en segundo plano, o sea nada de lo que define la historia.
 
-Es un bloqueante de la historia, no del spike, pero conviene levantarlo ya en la daily
-porque puede tardar en conseguirse.
+**TCL 6102A, Android 11 / API 30** (verificado por `adb`: `ro.build.version.sdk=30`,
+`bluetooth_le` presente): **alcanza para desarrollar la historia y para cerrar los
+cuatro puntos de hardware pendientes del punto 6**, incluida la medición de consumo que
+fija el umbral del criterio de aceptación. Además ejercita el escalonamiento de
+`ACCESS_BACKGROUND_LOCATION` en su variante más incómoda, porque API 30 es justo donde
+Android deja de mostrar diálogo y manda al usuario a Ajustes.
+
+⚠️ **Cuidado con el boot en API 30.** En este equipo el service *sí* arranca desde
+`BOOT_COMPLETED`. No hay que concluir de ahí que la reanudación automática funciona: la
+restricción es de API 35+ y no se puede observar acá. Sigue valiendo la limitación
+documentada al final del punto 1.
+
+### Qué queda sin poder validarse
+
+Solo el **segundo camino de permisos** (el de Android 12+): `BLUETOOTH_SCAN`,
+`POST_NOTIFICATIONS` y el permiso `FOREGROUND_SERVICE_LOCATION`, más la restricción del
+boot de API 35+.
+
+Sigue haciendo falta un equipo API 31+ (idealmente 34+) **para cerrar la historia**,
+y conviene pedirlo en la daily porque puede tardar. Pero ya no es un bloqueante para
+empezar: con el TCL se desarrolla y se mide contra un foreground service real, no a
+ciegas.
+
+Aparte, el spike recomienda probar en **al menos dos marcas distintas**, porque Xiaomi,
+Samsung y Huawei matan foreground services que Android puro mantiene. Ese punto queda
+abierto igual.
 
 ### Pendiente de la próxima sesión con el tag
 
