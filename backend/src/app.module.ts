@@ -4,6 +4,7 @@ import { SolicitudPrestador } from './prestadores/entities/solicitud-prestador.e
 import { DocumentoPrestador } from './prestadores/entities/documento-prestador.entity';
 import { ResenaServicio } from './prestadores/entities/resena-servicio.entity';
 import { ReporteServicio } from './prestadores/entities/reporte-servicio.entity';
+import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import * as dotenv from 'dotenv';
 import { AppController } from './app.controller';
@@ -52,6 +53,10 @@ dotenv.config();
 
 @Module({
   imports: [
+    // Habilita las tareas programadas. La primera es el recordatorio de
+    // vacunacion de US-40; hasta ahora todas las notificaciones nacian de una
+    // accion del usuario y ninguna del paso del tiempo.
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DATABASE_HOST,

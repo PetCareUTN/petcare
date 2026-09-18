@@ -4,4 +4,5 @@ export enum NotificationType {
   RECHAZO = 'rechazo',
   TURNO_CONFIRMADO = 'turno_confirmado',
   TURNO_CANCELADO = 'turno_cancelado',
+  RECORDATORIO_VACUNA = 'recordatorio_vacuna',
 }
