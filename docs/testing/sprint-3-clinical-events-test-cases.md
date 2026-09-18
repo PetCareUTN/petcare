@@ -70,7 +70,7 @@ Si la mascota todavia no tiene historia clinica, el backend crea una y la asocia
 | CLIN-02 | Campo obligatorio faltante | Body sin `descripcion` | 400 |
 | CLIN-03 | Mascota inexistente | `idMascota` inexistente | 404 |
 | CLIN-04 | Usuario no veterinario | JWT de duenio de mascota | 403 |
-| CLIN-05 | Veterinario no aprobado | JWT de veterinario pendiente | 403 |
+| CLIN-05 | Veterinario no aprobado | Credenciales de veterinario pendiente | 403 en `/auth/login`: no obtiene token, por lo que no puede llegar a crear eventos |
 
 Archivo:
 
