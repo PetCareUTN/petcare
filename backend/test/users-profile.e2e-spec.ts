@@ -157,13 +157,26 @@ describe('PATCH /users/me (contract)', () => {
       .expect(400);
   });
 
-  it('PROF-05 rejects an email already used by another user with 409', async () => {
+  // El cambio de email dejo de resolverse en PATCH /users/me: paso al flujo
+  // verificado por codigo (POST /users/me/cambiar-email). Este endpoint ahora
+  // rechaza cualquier email distinto al actual, sea de otro usuario o no.
+  it('PROF-05 rejects changing the email from this endpoint with 400', async () => {
     const token = await loginAs(ownerPayload.email, ownerPayload.password);
 
     await request(app.getHttpServer())
       .patch('/users/me')
       .set('Authorization', `Bearer ${token}`)
       .send({ email: otherOwnerPayload.email })
+      .expect(400);
+  });
+
+  it('PROF-10 rejects an email already used by another user with 409', async () => {
+    const token = await loginAs(ownerPayload.email, ownerPayload.password);
+
+    await request(app.getHttpServer())
+      .post('/users/me/cambiar-email')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ nuevoEmail: otherOwnerPayload.email })
       .expect(409);
   });
 

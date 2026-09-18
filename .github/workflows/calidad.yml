@@ -1,0 +1,114 @@
+name: Calidad de codigo
+
+# OJO: este workflow NO bloquea el merge todavia.
+#
+# Al momento de incorporarlo el backend arrastra ~140 hallazgos de ESLint y el
+# frontend ~120 archivos sin formatear con Prettier. Hacerlo bloqueante de
+# entrada dejaria todos los PR en rojo sin relacion con el cambio propuesto.
+#
+# La idea es: dejarlo corriendo para tener el numero a la vista, bajar la deuda,
+# y cuando llegue a cero sacar los `continue-on-error: true` de abajo. A partir
+# de ahi el lint pasa a ser un gate real.
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+concurrency:
+  group: calidad-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend - ESLint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependencias
+        working-directory: backend
+        run: npm ci
+
+      # lint:ci corre ESLint sin --fix. El script `lint` de siempre lleva --fix
+      # y reescribe los archivos, por eso no sirve como verificacion.
+      - name: ESLint
+        id: eslint
+        continue-on-error: true
+        working-directory: backend
+        run: npm run lint:ci
+
+      - name: Resumen de hallazgos
+        if: always()
+        working-directory: backend
+        run: |
+          npx eslint "{src,apps,libs,test}/**/*.ts" -f json -o eslint.json || true
+          node -e '
+            const informe = require("./eslint.json");
+            let errores = 0, advertencias = 0;
+            const porRegla = {};
+            for (const archivo of informe) {
+              for (const m of archivo.messages) {
+                if (m.severity === 2) errores++; else advertencias++;
+                porRegla[m.ruleId ?? "sin-regla"] = (porRegla[m.ruleId ?? "sin-regla"] ?? 0) + 1;
+              }
+            }
+            const top = Object.entries(porRegla).sort((a, b) => b[1] - a[1]).slice(0, 10);
+            const filas = top.map(([regla, n]) => `| \`${regla}\` | ${n} |`).join("\n");
+            const salida = [
+              "## ESLint backend",
+              "",
+              `**${errores} errores** y **${advertencias} advertencias**.`,
+              "",
+              "| Regla | Hallazgos |",
+              "| --- | --- |",
+              filas,
+              "",
+              "_No bloquea el merge. Ver el comentario al inicio de `.github/workflows/calidad.yml`._",
+            ].join("\n");
+            require("fs").appendFileSync(process.env.GITHUB_STEP_SUMMARY, salida + "\n");
+          '
+
+  frontend:
+    name: Frontend web - Prettier
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend-web/package-lock.json
+
+      - name: Instalar dependencias
+        working-directory: frontend-web
+        run: npm ci
+
+      - name: Prettier
+        id: prettier
+        continue-on-error: true
+        working-directory: frontend-web
+        run: npm run format:check
+
+      - name: Resumen de hallazgos
+        if: always()
+        working-directory: frontend-web
+        run: |
+          pendientes=$(npx prettier --list-different "src/**/*.{ts,html,css}" | wc -l)
+          {
+            echo "## Prettier frontend web"
+            echo ""
+            echo "**$pendientes archivos** sin formatear."
+            echo ""
+            echo "Se arreglan con \`npx prettier --write \"src/**/*.{ts,html,css}\"\`."
+            echo ""
+            echo "_No bloquea el merge. Ver el comentario al inicio de \`.github/workflows/calidad.yml\`._"
+          } >> "$GITHUB_STEP_SUMMARY"

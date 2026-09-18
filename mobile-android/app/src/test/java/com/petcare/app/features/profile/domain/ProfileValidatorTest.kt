@@ -1,5 +1,6 @@
 package com.petcare.app.features.profile.domain
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -23,8 +24,10 @@ class ProfileValidatorTest {
         assertNull(result.telefonoError)
     }
 
+    // El telefono paso a ser obligatorio: sin telefono no hay forma de
+    // contactar al usuario despues de un match de adopcion.
     @Test
-    fun `validate acepta telefono vacio porque es opcional`() {
+    fun `validate rechaza telefono vacio porque es obligatorio`() {
         val result = ProfileValidator.validate(
             nombre = "Ana",
             apellido = "Perez",
@@ -32,8 +35,8 @@ class ProfileValidatorTest {
             telefono = ""
         )
 
-        assertTrue(result.isValid)
-        assertNull(result.telefonoError)
+        assertFalse(result.isValid)
+        assertEquals("El teléfono es obligatorio", result.telefonoError)
     }
 
     @Test

@@ -1,0 +1,199 @@
+name: CI
+
+# Se ejecuta en cada Pull Request hacia develop/main y en cada push a esas ramas.
+# El objetivo es que ningun cambio se integre sin compilar y sin pasar las pruebas.
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+# Si se pushean dos commits seguidos a la misma rama, cancela la corrida vieja.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Backend NestJS: compilacion + 262 pruebas unitarias con cobertura.
+  # ---------------------------------------------------------------------------
+  backend:
+    name: Backend - build y pruebas unitarias
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependencias
+        working-directory: backend
+        run: npm ci
+
+      - name: Compilar
+        working-directory: backend
+        run: npm run build
+
+      - name: Pruebas unitarias con cobertura
+        working-directory: backend
+        run: npm run test:cov -- --ci
+
+      - name: Publicar reporte de cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cobertura-backend
+          path: backend/coverage/
+          retention-days: 14
+
+  # ---------------------------------------------------------------------------
+  # Backend NestJS: pruebas e2e contra una PostgreSQL real, creada desde cero
+  # con las migraciones de TypeORM y el seeder de roles.
+  # ---------------------------------------------------------------------------
+  backend-e2e:
+    name: Backend - pruebas e2e
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: petcare
+          POSTGRES_USER: petcare_user
+          POSTGRES_PASSWORD: petcare_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U petcare_user -d petcare"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_HOST: localhost
+      DATABASE_PORT: '5432'
+      DATABASE_NAME: petcare
+      DATABASE_USER: petcare_user
+      DATABASE_PASSWORD: petcare_password
+      JWT_SECRET: ci_jwt_secret_no_usar_en_produccion
+      JWT_EXPIRES_IN: 1d
+      CORS_ORIGIN: http://localhost:4200
+      # Valores ficticios: ningun test e2e envia mails ni llama a Google, pero
+      # las dependencias se instancian al levantar el AppModule.
+      BREVO_API_KEY: ci_dummy_key
+      MAIL_FROM: ci@petcare.test
+      GOOGLE_CLIENT_ID: ci-dummy.apps.googleusercontent.com
+      GOOGLE_GEOCODING_API_KEY: ci_dummy_key
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependencias
+        working-directory: backend
+        run: npm ci
+
+      - name: Aplicar migraciones
+        working-directory: backend
+        run: npm run migration:run
+
+      - name: Sembrar roles
+        run: |
+          command -v psql >/dev/null 2>&1 || {
+            sudo apt-get update && sudo apt-get install -y postgresql-client
+          }
+          PGPASSWORD="$DATABASE_PASSWORD" psql \
+            -h "$DATABASE_HOST" -p "$DATABASE_PORT" \
+            -U "$DATABASE_USER" -d "$DATABASE_NAME" \
+            -v ON_ERROR_STOP=1 -f database/seeders/01-roles.sql
+
+      # --runInBand es obligatorio: las suites e2e comparten la misma base y
+      # limpian tablas entre tests, en paralelo se pisan entre si.
+      - name: Pruebas e2e
+        working-directory: backend
+        run: npm run test:e2e -- --runInBand --ci
+
+  # ---------------------------------------------------------------------------
+  # Frontend Angular: build de produccion + pruebas con Vitest.
+  # ---------------------------------------------------------------------------
+  frontend:
+    name: Frontend web - build y pruebas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend-web/package-lock.json
+
+      - name: Instalar dependencias
+        working-directory: frontend-web
+        run: npm ci
+
+      - name: Compilar
+        working-directory: frontend-web
+        run: npm run build
+
+      - name: Pruebas unitarias
+        working-directory: frontend-web
+        run: npm test -- --watch=false
+
+  # ---------------------------------------------------------------------------
+  # App Android: pruebas unitarias + APK de debug como evidencia descargable.
+  # ---------------------------------------------------------------------------
+  android:
+    name: Android - build y pruebas unitarias
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # JDK 21: es el que trae el JBR de Android Studio con el que compila el equipo.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Aceptar licencias del SDK de Android
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
+
+      # local.properties esta gitignoreado (trae MAPS_API_KEY). No hace falta
+      # recrearlo: build.gradle.kts usa un placeholder y el SDK sale de ANDROID_HOME.
+      - name: Pruebas unitarias
+        working-directory: mobile-android
+        run: ./gradlew testDebugUnitTest --console=plain
+
+      - name: Compilar APK de debug
+        working-directory: mobile-android
+        run: ./gradlew assembleDebug --console=plain
+
+      - name: Publicar APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: petcare-debug-apk
+          path: mobile-android/app/build/outputs/apk/debug/*.apk
+          retention-days: 14
+
+      - name: Publicar reporte de pruebas
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-pruebas-android
+          path: mobile-android/app/build/reports/tests/
+          retention-days: 14
