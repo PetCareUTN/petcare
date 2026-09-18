@@ -96,6 +96,19 @@ export class HistoriaClinicaPage implements OnInit {
     return EVENT_TYPE_LABELS[tipo] ?? tipo;
   }
 
+  /** Nombre legible de la vacuna, para no mostrar el valor interno (US-40). */
+  protected etiquetaVacuna(vacuna: string): string {
+    const etiquetas: Record<string, string> = {
+      antirrabica: 'Antirrábica',
+      quintuple: 'Quíntuple',
+      sextuple: 'Séxtuple',
+      traqueobronquitis: 'Traqueobronquitis',
+      triple_felina: 'Triple felina',
+      leucemia_felina: 'Leucemia felina',
+    };
+    return etiquetas[vacuna] ?? vacuna;
+  }
+
   protected abrirFormulario(): void {
     this.submitError.set(null);
     this.isFormOpen.set(true);

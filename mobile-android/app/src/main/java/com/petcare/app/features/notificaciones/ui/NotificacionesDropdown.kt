@@ -214,6 +214,7 @@ internal fun tipoLabel(tipo: String): String = when (tipo) {
     "rechazo" -> "Rechazo"
     "turno_confirmado" -> "Turno confirmado"
     "turno_cancelado" -> "Turno cancelado"
+    "recordatorio_vacuna" -> "Vacunación"
     else -> tipo
 }
 

@@ -34,6 +34,7 @@ import com.petcare.app.ui.theme.PetCareTealDark
 import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMuted
 import com.petcare.app.ui.theme.PetCareTeal
+import com.petcare.app.features.historiaclinica.domain.aTextoPlano
 
 private val EVENT_TYPE_LABELS = mapOf(
     "consulta" to "Consulta",
@@ -250,27 +251,43 @@ private fun EventoCard(evento: EventoClinicoResponse) {
             }
 
             Text(
-                text = evento.descripcion,
+                text = aTextoPlano(evento.descripcion),
                 style = MaterialTheme.typography.bodyLarge
             )
 
+            // US-40: en una vacuna, cual fue y cuando toca la proxima son el dato
+            // que el dueño viene a buscar, asi que van antes que el resto.
+            evento.vacuna?.let {
+                Text(
+                    text = "Vacuna: ${nombreVacuna(it)}",
+                    color = PetCareMuted,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            evento.proximaAplicacion?.let {
+                Text(
+                    text = "Proxima dosis: ${formatearFechaCorta(it)}",
+                    color = PetCareMuted,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
             evento.diagnostico?.let {
                 Text(
-                    text = "Diagnostico: $it",
+                    text = "Diagnostico: ${aTextoPlano(it)}",
                     color = PetCareMuted,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
             evento.tratamiento?.let {
                 Text(
-                    text = "Tratamiento: $it",
+                    text = "Tratamiento: ${aTextoPlano(it)}",
                     color = PetCareMuted,
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
             evento.observaciones?.let {
                 Text(
-                    text = "Observaciones: $it",
+                    text = "Observaciones: ${aTextoPlano(it)}",
                     color = PetCareMuted,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -278,3 +295,20 @@ private fun EventoCard(evento: EventoClinicoResponse) {
         }
     }
 }
+
+/** Nombre legible de la vacuna, para no mostrarle al usuario el valor interno. */
+private fun nombreVacuna(vacuna: String): String = when (vacuna) {
+    "antirrabica" -> "Antirrábica"
+    "quintuple" -> "Quíntuple"
+    "sextuple" -> "Séxtuple"
+    "traqueobronquitis" -> "Traqueobronquitis"
+    "triple_felina" -> "Triple felina"
+    "leucemia_felina" -> "Leucemia felina"
+    else -> vacuna
+}
+
+/** Pasa la fecha YYYY-MM-DD del backend a DD/MM/YYYY. */
+private fun formatearFechaCorta(fecha: String): String =
+    fecha.split("-").takeIf { it.size == 3 }
+        ?.let { (anio, mes, dia) -> "$dia/$mes/$anio" }
+        ?: fecha
