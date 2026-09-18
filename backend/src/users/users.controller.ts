@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { ConfirmarCambioEmailDto } from './dto/confirmar-cambio-email.dto';
 import { SolicitarCambioEmailDto } from './dto/solicitar-cambio-email.dto';
+import { UpdatePreferenciasDto } from './dto/update-preferencias.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserPublicDto } from './dto/user-public.dto';
 import { UsersService } from './users.service';
@@ -19,6 +20,20 @@ export class UsersController {
     @Body() dto: UpdateUserDto,
   ): Promise<UserPublicDto> {
     const updatedUser = await this.usersService.update(user.sub, dto);
+    return UserPublicDto.fromEntity(updatedUser);
+  }
+
+  /** Preferencias de notificaciones del usuario autenticado (US-40). */
+  @Patch('me/preferencias')
+  @UseGuards(JwtAuthGuard)
+  async updatePreferencias(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: UpdatePreferenciasDto,
+  ): Promise<UserPublicDto> {
+    const updatedUser = await this.usersService.updatePreferencias(
+      user.sub,
+      dto,
+    );
     return UserPublicDto.fromEntity(updatedUser);
   }
 

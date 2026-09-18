@@ -113,6 +113,20 @@ export class User {
   })
   fechaExpiracionCodigoEmail: Date | null;
 
+  /**
+   * Si el dueño quiere recibir recordatorios de vacunación (US-40).
+   *
+   * Arranca en `true`: la historia plantea el recordatorio como un servicio que
+   * la app presta, no como algo a lo que haya que suscribirse. El criterio de
+   * aceptación pide poder desactivarlo, que es lo que hace esta columna.
+   */
+  @Column({
+    name: 'recordatorios_vacunas',
+    type: 'boolean',
+    default: true,
+  })
+  recordatoriosVacunas: boolean;
+
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }
