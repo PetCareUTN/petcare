@@ -1,4 +1,5 @@
 import { ClinicalEventType } from '../../common/enums/clinical-event-type.enum';
+import { TipoVacuna } from '../../common/enums/tipo-vacuna.enum';
 import { EventoClinico } from '../entities/evento-clinico.entity';
 import { ArchivoMedicoResponseDto } from './archivo-medico-response.dto';
 
@@ -13,6 +14,9 @@ export class EventoClinicoResponseDto {
   diagnostico: string | null;
   tratamiento: string | null;
   observaciones: string | null;
+  /** Solo en eventos de tipo vacuna (US-40); null en el resto. */
+  vacuna: TipoVacuna | null;
+  proximaAplicacion: string | null;
   createdAt: Date;
   updatedAt: Date;
   archivos: ArchivoMedicoResponseDto[];
@@ -29,6 +33,8 @@ export class EventoClinicoResponseDto {
       diagnostico: evento.diagnostico,
       tratamiento: evento.tratamiento,
       observaciones: evento.observaciones,
+      vacuna: evento.vacuna,
+      proximaAplicacion: evento.proximaAplicacion,
       createdAt: evento.createdAt,
       updatedAt: evento.updatedAt,
       archivos: (evento.archivosMedicos ?? []).map((archivo) =>

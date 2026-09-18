@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { ClinicalEventType } from '../common/enums/clinical-event-type.enum';
 import { RoleName } from '../common/enums/role-name.enum';
 import { ValidationStatus } from '../common/enums/validation-status.enum';
 import { HistoriaClinica } from '../historias-clinicas/entities/historia-clinica.entity';
@@ -48,6 +49,11 @@ export class EventosClinicosService {
     const mascota = await this.findMascota(dto.idMascota);
     const historia = await this.findOrCreateHistoriaClinica(mascota);
 
+    const esVacuna = dto.tipo === ClinicalEventType.VACUNA;
+    if (esVacuna) {
+      this.validarProximaAplicacion(dto.fecha, dto.proximaAplicacion);
+    }
+
     const evento = this.eventosClinicosRepository.create({
       historia,
       veterinario,
@@ -57,6 +63,12 @@ export class EventosClinicosService {
       diagnostico: dto.diagnostico ?? null,
       tratamiento: dto.tratamiento ?? null,
       observaciones: dto.observaciones ?? null,
+      // Los campos de vacunación se ignoran en cualquier otro tipo de evento,
+      // aunque el cliente los mande: que quedaran colgados en un evento que no
+      // es una vacuna generaría recordatorios fantasma.
+      vacuna: esVacuna ? (dto.vacuna ?? null) : null,
+      proximaAplicacion: esVacuna ? (dto.proximaAplicacion ?? null) : null,
+      recordatorioEnviadoAt: null,
     });
 
     const savedEvento = await this.eventosClinicosRepository.save(evento);
@@ -97,6 +109,34 @@ export class EventosClinicosService {
       idMascota,
       eventos,
     );
+  }
+
+  /**
+   * La próxima dosis tiene que ser posterior al día en que se aplicó esta (US-40).
+   *
+   * Sin esta validación, una fecha en el pasado —un error de tipeo en el año, por
+   * ejemplo— generaría un recordatorio que sale de inmediato y para una dosis que
+   * en realidad no vence. El dueño recibe un aviso equivocado y nadie se entera de
+   * que el dato estaba mal.
+   */
+  private validarProximaAplicacion(
+    fecha: string,
+    proximaAplicacion: string | undefined,
+  ) {
+    if (!proximaAplicacion) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje: 'Debe indicar la fecha de la próxima aplicación de la vacuna',
+      });
+    }
+
+    if (proximaAplicacion > fecha) return;
+
+    throw new BadRequestException({
+      codigoEstado: 400,
+      mensaje:
+        'La próxima aplicación debe ser posterior a la fecha de la vacuna',
+    });
   }
 
   /**

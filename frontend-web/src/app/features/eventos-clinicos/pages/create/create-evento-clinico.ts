@@ -8,12 +8,19 @@ import {
   ArchivoMedicoResponse,
   ClinicalEventType,
   CreateEventoClinicoRequest,
+  TipoVacuna,
 } from '../../models/evento-clinico';
 import { EventosClinicosService } from '../../services/eventos-clinicos-service';
 
 type EventTypeOption = {
   value: ClinicalEventType;
   label: string;
+};
+
+type VacunaOption = {
+  value: TipoVacuna;
+  label: string;
+  especie: string;
 };
 
 /**
@@ -49,6 +56,21 @@ export class CreateEventoClinicoPage implements OnInit {
     { value: 'otro', label: 'Otro' },
   ];
 
+  /**
+   * Se muestran todas las vacunas, con la especie como referencia visual: el
+   * formulario recibe el id de la mascota pero no su especie, y traerla solo
+   * para filtrar esta lista no justifica el pedido extra. El veterinario sabe
+   * cuál corresponde.
+   */
+  protected readonly vacunas: VacunaOption[] = [
+    { value: 'antirrabica', label: 'Antirrabica', especie: 'perros y gatos' },
+    { value: 'quintuple', label: 'Quintuple', especie: 'perros' },
+    { value: 'sextuple', label: 'Sextuple', especie: 'perros' },
+    { value: 'traqueobronquitis', label: 'Traqueobronquitis', especie: 'perros' },
+    { value: 'triple_felina', label: 'Triple felina', especie: 'gatos' },
+    { value: 'leucemia_felina', label: 'Leucemia felina', especie: 'gatos' },
+  ];
+
   protected readonly isSubmitting = signal(false);
   protected readonly successMessage = signal<string | null>(null);
   protected readonly errorMessage = signal<string | null>(null);
@@ -69,6 +91,8 @@ export class CreateEventoClinicoPage implements OnInit {
     diagnostico: [''],
     tratamiento: [''],
     observaciones: [''],
+    vacuna: [null as TipoVacuna | null],
+    proximaAplicacion: [''],
   });
 
   ngOnInit(): void {
@@ -86,6 +110,29 @@ export class CreateEventoClinicoPage implements OnInit {
     }
 
     this.backQueryParams.set(this.buildBackQueryParams());
+
+    // Los campos de vacunación solo existen —y solo son obligatorios— cuando el
+    // evento es una vacuna. Se enganchan y desenganchan al cambiar el tipo para
+    // que el formulario no quede inválido por campos que ni se muestran.
+    this.form.controls.tipo.valueChanges.subscribe((tipo) => {
+      this.aplicarValidacionDeVacuna(tipo === 'vacuna');
+    });
+    this.aplicarValidacionDeVacuna(this.form.controls.tipo.value === 'vacuna');
+  }
+
+  private aplicarValidacionDeVacuna(esVacuna: boolean): void {
+    const { vacuna, proximaAplicacion } = this.form.controls;
+    if (esVacuna) {
+      vacuna.addValidators(Validators.required);
+      proximaAplicacion.addValidators(Validators.required);
+    } else {
+      vacuna.removeValidators(Validators.required);
+      proximaAplicacion.removeValidators(Validators.required);
+      vacuna.setValue(null);
+      proximaAplicacion.setValue('');
+    }
+    vacuna.updateValueAndValidity();
+    proximaAplicacion.updateValueAndValidity();
   }
 
   submit(): void {
@@ -117,6 +164,11 @@ export class CreateEventoClinicoPage implements OnInit {
       observaciones: this.optionalText(value.observaciones),
     };
 
+    if (value.tipo === 'vacuna') {
+      payload.vacuna = value.vacuna!;
+      payload.proximaAplicacion = value.proximaAplicacion!;
+    }
+
     this.eventosClinicosService.create(payload).subscribe({
       next: (evento) => {
         this.isSubmitting.set(false);
@@ -133,6 +185,8 @@ export class CreateEventoClinicoPage implements OnInit {
           diagnostico: '',
           tratamiento: '',
           observaciones: '',
+          vacuna: null,
+          proximaAplicacion: '',
         });
       },
       error: (error: ApiError) => {

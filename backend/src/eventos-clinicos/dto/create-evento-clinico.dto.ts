@@ -7,9 +7,11 @@ import {
   IsString,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import { ClinicalEventType } from '../../common/enums/clinical-event-type.enum';
+import { TipoVacuna } from '../../common/enums/tipo-vacuna.enum';
 
 /**
  * Los campos llegan como HTML del editor de texto enriquecido del frontend,
@@ -51,4 +53,30 @@ export class CreateEventoClinicoDto {
   @IsOptional()
   @MaxLength(CAMPO_CORTO_MAX_LENGTH)
   observaciones?: string;
+
+  /*
+   * Campos de vacunación (US-40). Obligatorios cuando el evento es de tipo
+   * VACUNA e ignorados en cualquier otro tipo.
+   */
+
+  /**
+   * Qué vacuna se aplicó.
+   *
+   * Es un enum y no texto libre porque el recordatorio compara dos registros
+   * para saber si una dosis ya fue reaplicada, y eso exige que el valor sea
+   * idéntico entre uno y otro.
+   */
+  @ValidateIf((dto: CreateEventoClinicoDto) => dto.tipo === ClinicalEventType.VACUNA)
+  @IsEnum(TipoVacuna)
+  vacuna?: TipoVacuna;
+
+  /**
+   * Fecha de la próxima dosis, que carga el veterinario.
+   *
+   * No se prellena ni se calcula: el esquema depende del animal. Un cachorro
+   * recibe varias dosis separadas por semanas antes de pasar al esquema anual.
+   */
+  @ValidateIf((dto: CreateEventoClinicoDto) => dto.tipo === ClinicalEventType.VACUNA)
+  @IsDateString()
+  proximaAplicacion?: string;
 }

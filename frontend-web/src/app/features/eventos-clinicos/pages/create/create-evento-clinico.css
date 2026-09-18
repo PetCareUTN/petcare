@@ -125,6 +125,13 @@
   color: var(--danger);
 }
 
+/* Aclaración bajo un campo, sin connotación de error (US-40). */
+.field-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted, #6b7280);
+}
+
 .banner {
   display: flex;
   flex-wrap: wrap;
