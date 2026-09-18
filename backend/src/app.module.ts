@@ -43,6 +43,8 @@ import { Favorito } from './favoritos/entities/favorito.entity';
 import { FavoritosModule } from './favoritos/favoritos.module';
 import { DescarteAdopcion } from './descartes/entities/descarte-adopcion.entity';
 import { DescartesModule } from './descartes/descartes.module';
+import { ReportePerdida } from './reportes-perdida/entities/reporte-perdida.entity';
+import { ReportesPerdidaModule } from './reportes-perdida/reportes-perdida.module';
 
 dotenv.config();
 
@@ -75,6 +77,7 @@ dotenv.config();
         TurnoServicio,
         Favorito,
         DescarteAdopcion,
+        ReportePerdida,
       ],
       synchronize: false,
     }),
@@ -96,6 +99,7 @@ dotenv.config();
     TurnosServiciosModule,
     FavoritosModule,
     DescartesModule,
+    ReportesPerdidaModule,
   ],
   controllers: [AppController],
   providers: [AppService],

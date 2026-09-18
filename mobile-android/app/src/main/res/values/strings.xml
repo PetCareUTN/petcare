@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">PetCare</string>
+
+    <!-- Colaboración anónima con la búsqueda de mascotas perdidas (US-30). -->
+    <string name="ble_canal_nombre">Colaboración con mascotas perdidas</string>
+    <string name="ble_canal_descripcion">Aviso de que la app está colaborando en segundo plano con la búsqueda de mascotas perdidas cercanas.</string>
+    <string name="ble_notificacion_titulo">Colaborando con la búsqueda</string>
+    <string name="ble_notificacion_texto">PetCare detecta mascotas perdidas cerca tuyo. No se registra ningún dato tuyo.</string>
 </resources>
