@@ -488,16 +488,21 @@ docs/arquitectura/adrs/
 
 ## Integración continua
 
-El proyecto debe incorporar un pipeline de CI que permita:
+El repositorio cuenta con un pipeline de CI en GitHub Actions que se ejecuta en
+cada Pull Request hacia `develop` y `main`.
 
-- Instalar dependencias.
-- Compilar el proyecto.
-- Ejecutar pruebas.
-- Ejecutar análisis estático.
-- Validar Pull Requests.
-- Generar reportes de cobertura.
+| Workflow | Alcance |
+| --- | --- |
+| `.github/workflows/ci.yml` | Backend (build, 262 pruebas unitarias con cobertura y pruebas e2e contra una PostgreSQL real), frontend web (build de producción y pruebas con Vitest) y Android (pruebas unitarias y APK de debug). |
+| `.github/workflows/calidad.yml` | Análisis estático: ESLint en el backend y Prettier en el frontend web. |
 
-El pipeline debe impedir integrar cambios que no compilen o que fallen en pruebas críticas.
+El pipeline instala dependencias, compila, ejecuta las pruebas, genera el reporte
+de cobertura como artifact descargable y publica el APK de debug de cada Pull
+Request.
+
+El detalle de cada job, cómo reproducirlo en local, la deuda técnica pendiente y
+la configuración de branch protection que falta aplicar en GitHub están en
+[docs/ci.md](docs/ci.md).
 
 ---
 
