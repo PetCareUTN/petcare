@@ -21,7 +21,11 @@ data class UserProfileResponse(
     val estado: String,
 
     @SerializedName("fecha_registro")
-    val registrationDate: String
+    val registrationDate: String,
+
+    /** US-40: en que estado mostrar el toggle de recordatorios de vacunacion. */
+    @SerializedName("recordatorios_vacunas")
+    val recordatoriosVacunas: Boolean = true
 )
 
 data class UpdateProfileRequest(
@@ -37,6 +41,11 @@ data class RequestEmailChangeRequest(
 
 data class ConfirmEmailChangeRequest(
     val codigo: String
+)
+
+/** Preferencias de notificaciones del usuario (US-40). */
+data class UpdatePreferenciasRequest(
+    val recordatoriosVacunas: Boolean
 )
 
 data class MessageResponse(
@@ -62,4 +71,9 @@ interface ProfileApi {
     suspend fun confirmEmailChange(
         @Body request: ConfirmEmailChangeRequest
     ): MessageResponse
+
+    @PATCH("users/me/preferencias")
+    suspend fun updatePreferencias(
+        @Body request: UpdatePreferenciasRequest
+    ): UserProfileResponse
 }

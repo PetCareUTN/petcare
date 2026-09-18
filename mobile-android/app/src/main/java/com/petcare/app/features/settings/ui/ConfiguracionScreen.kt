@@ -25,11 +25,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.petcare.app.features.ble.ui.ColaboracionBleCard
+import com.petcare.app.features.notificaciones.ui.RecordatoriosVacunasCard
+import com.petcare.app.features.profile.domain.ProfileController
 
 @Composable
 fun ConfiguracionScreen(
     isDarkMode: Boolean,
     onDarkModeChange: (Boolean) -> Unit,
+    profileController: ProfileController,
     onBack: () -> Unit
 ) {
     Column(
@@ -99,6 +102,10 @@ fun ConfiguracionScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         ColaboracionBleCard()
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        RecordatoriosVacunasCard(profileController = profileController)
 
         Spacer(modifier = Modifier.height(24.dp))
 
