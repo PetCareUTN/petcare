@@ -114,16 +114,63 @@ describe('TagsBleService', () => {
       expect(tagsBleRepository.save).not.toHaveBeenCalled();
     });
 
-    it('rechaza vincular un tag que ya esta en uso por otra mascota', async () => {
+    // US-33: un tag no puede quedar vinculado a más de una mascota a la vez.
+    it('rechaza vincular un tag que ya esta en uso por otra mascota, con un mensaje claro', async () => {
       mascotasRepository.findOne.mockResolvedValue(mascota);
       tagsBleRepository.findOne
         .mockResolvedValueOnce(null) // la mascota no tiene tag propio
         .mockResolvedValueOnce({ idTagBle: 3, tagId: dto.tagId }); // el tag ya esta en uso
 
-      await expect(
-        service.vincular(idDuenio, idMascota, dto),
-      ).rejects.toThrow(ConflictException);
+      await expect(service.vincular(idDuenio, idMascota, dto)).rejects.toMatchObject({
+        response: {
+          codigoEstado: 409,
+          mensaje: 'Ese tag ya está vinculado a otra mascota',
+        },
+      });
       expect(tagsBleRepository.save).not.toHaveBeenCalled();
+    });
+
+    // US-33: un tag desvinculado tiene que quedar libre para otra mascota.
+    it('permite vincular un tag previamente desvinculado a otra mascota', async () => {
+      const otraMascota = {
+        idMascota: 46,
+        nombre: 'nacho',
+        usuarios: [{ idUsuario: idDuenio }],
+      } as Mascota;
+
+      // 1) Se vincula el tag a la primera mascota.
+      mascotasRepository.findOne.mockResolvedValueOnce(mascota);
+      tagsBleRepository.findOne
+        .mockResolvedValueOnce(null) // sin tag propio
+        .mockResolvedValueOnce(null); // tag libre
+      tagsBleRepository.create.mockReturnValueOnce({ tagId: dto.tagId });
+      const tagVinculado = { idTagBle: 5, tagId: dto.tagId, mascota };
+      tagsBleRepository.save.mockResolvedValueOnce(tagVinculado);
+
+      await service.vincular(idDuenio, idMascota, dto);
+
+      // 2) Se desvincula de la primera mascota.
+      mascotasRepository.findOne.mockResolvedValueOnce(mascota);
+      tagsBleRepository.findOne.mockResolvedValueOnce(tagVinculado);
+
+      await service.desvincular(idDuenio, idMascota);
+
+      // 3) El mismo tagId ahora se vincula a una segunda mascota sin problema.
+      mascotasRepository.findOne.mockResolvedValueOnce(otraMascota);
+      tagsBleRepository.findOne
+        .mockResolvedValueOnce(null) // sin tag propio
+        .mockResolvedValueOnce(null); // el tag quedo libre al desvincularse
+      tagsBleRepository.create.mockReturnValueOnce({ tagId: dto.tagId });
+      tagsBleRepository.save.mockResolvedValueOnce({
+        idTagBle: 6,
+        tagId: dto.tagId,
+        mascota: otraMascota,
+      });
+
+      const resultado = await service.vincular(idDuenio, 46, dto);
+
+      expect(resultado.tagId).toBe(dto.tagId);
+      expect(resultado.idMascota).toBe(46);
     });
   });
 
