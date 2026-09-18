@@ -87,6 +87,10 @@ import com.petcare.app.features.historiaclinica.ui.HistoriaClinicaScreen
 import com.petcare.app.features.notificaciones.data.remote.NotificacionResponse
 import com.petcare.app.features.notificaciones.domain.NotificacionesController
 import com.petcare.app.features.notificaciones.ui.NotificacionesDropdown
+import com.petcare.app.features.perdidas.data.remote.CreateReportePerdidaRequest
+import com.petcare.app.features.perdidas.data.remote.ReportePerdidaResponse
+import com.petcare.app.features.perdidas.domain.ReportesPerdidaController
+import com.petcare.app.features.perdidas.ui.ReportarMascotaPerdidaScreen
 import com.petcare.app.features.pets.data.remote.CreatePetRequest
 import com.petcare.app.features.pets.data.remote.PetResponse
 import com.petcare.app.features.pets.data.remote.UpdatePetRequest
@@ -143,10 +147,11 @@ private enum class AuthScreen {
     RESET_PASSWORD
 }
 
-// El backend manda el motivo real en el body (mensaje/message) para los 400
-// de turnos (fecha pasada, horario ocupado, fuera de disponibilidad, etc.).
-// Sin esto, el usuario ve un texto genérico que no dice qué pasó en verdad.
-private fun mensajeErrorTurno(exception: HttpException, fallback: String): String =
+// El backend manda el motivo real en el body (mensaje/message): turnos (fecha
+// pasada, horario ocupado, fuera de disponibilidad), reportes de mascota
+// perdida (ya está reportada), etc. Sin esto, el usuario ve un texto genérico
+// que no dice qué pasó en verdad.
+private fun mensajeErrorBackend(exception: HttpException, fallback: String): String =
     runCatching {
         val json = JSONObject(exception.response()?.errorBody()?.string() ?: "{}")
         json.optString("mensaje").ifBlank { json.optString("message") }.ifBlank { fallback }
@@ -236,6 +241,11 @@ class MainActivity : ComponentActivity() {
                 val notificacionesController = remember {
                     NotificacionesController(
                         notificacionesApi = RetrofitClient.notificacionesApi(sessionStore)
+                    )
+                }
+                val reportesPerdidaController = remember {
+                    ReportesPerdidaController(
+                        reportesPerdidaApi = RetrofitClient.reportesPerdidaApi(sessionStore)
                     )
                 }
                 var isLoading by rememberSaveable {
@@ -329,6 +339,23 @@ class MainActivity : ComponentActivity() {
                 }
                 var petProfileError by rememberSaveable {
                     mutableStateOf<String?>(null)
+                }
+                // Reporte de mascota perdida abierto de la mascota seleccionada (US-36).
+                var reportePerdidaActivo by remember {
+                    mutableStateOf<ReportePerdidaResponse?>(null)
+                }
+                var isReportandoPerdida by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isCerrandoReportePerdida by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var reportePerdidaError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                // true mientras se muestra el formulario para reportar la perdida.
+                var isReportandoPerdidaScreen by rememberSaveable {
+                    mutableStateOf(false)
                 }
                 var isViewingHistoria by rememberSaveable {
                     mutableStateOf(false)
@@ -832,10 +859,16 @@ class MainActivity : ComponentActivity() {
                             historiaEventos = emptyList()
                             exportHistoriaMessage = null
                         }
+                        isReportandoPerdidaScreen -> {
+                            isReportandoPerdidaScreen = false
+                            reportePerdidaError = null
+                        }
                         selectedPetId != null -> {
                             selectedPetId = null
                             selectedPet = null
                             petProfileError = null
+                            reportePerdidaActivo = null
+                            reportePerdidaError = null
                         }
                         isViewingMisTurnos -> isViewingMisTurnos = false
                         isRequestingTurno -> {
@@ -885,9 +918,38 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                /**
+                 * Estado "perdida" de la mascota: se deriva de tener un reporte
+                 * abierto, así que se lee del listado de reportes activos del
+                 * dueño en vez de guardarse como un campo de la mascota.
+                 */
+                fun loadReportePerdida(idMascota: Int) {
+                    reportePerdidaError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            reportePerdidaActivo = reportesPerdidaController
+                                .getMisReportesActivos()
+                                .firstOrNull { it.idMascota == idMascota }
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                reportePerdidaError = "No se pudo cargar el estado del reporte"
+                            }
+                        } catch (exception: IOException) {
+                            reportePerdidaError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            reportePerdidaError = "Ocurrio un error inesperado"
+                        }
+                    }
+                }
+
                 fun loadPetProfile(id: Int) {
                     isLoadingPetProfile = true
                     petProfileError = null
+                    loadReportePerdida(id)
 
                     lifecycleScope.launch {
                         try {
@@ -2694,6 +2756,58 @@ class MainActivity : ComponentActivity() {
                             exportHistoriaMessage = null
                         }
                     )
+                } else if (
+                    loggedUserName != null &&
+                    isReportandoPerdidaScreen &&
+                    selectedPet != null
+                ) {
+                    val mascota = selectedPet!!
+                    ReportarMascotaPerdidaScreen(
+                        petName = mascota.nombre,
+                        isSaving = isReportandoPerdida,
+                        errorMessage = reportePerdidaError,
+                        contactoInicial = profile?.telefono.orEmpty(),
+                        onBack = {
+                            isReportandoPerdidaScreen = false
+                            reportePerdidaError = null
+                        },
+                        onReportar = { fechaPerdida, latitud, longitud, descripcion, contacto ->
+                            isReportandoPerdida = true
+                            reportePerdidaError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    reportePerdidaActivo = reportesPerdidaController.reportar(
+                                        CreateReportePerdidaRequest(
+                                            idMascota = mascota.id,
+                                            fechaPerdida = fechaPerdida,
+                                            latitud = latitud,
+                                            longitud = longitud,
+                                            descripcion = descripcion,
+                                            contacto = contacto
+                                        )
+                                    )
+                                    isReportandoPerdidaScreen = false
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        reportePerdidaError = mensajeErrorBackend(
+                                            exception,
+                                            "No se pudo reportar la mascota como perdida"
+                                        )
+                                    }
+                                } catch (exception: IOException) {
+                                    reportePerdidaError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    reportePerdidaError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isReportandoPerdida = false
+                                }
+                            }
+                        }
+                    )
                 } else if (loggedUserName != null && selectedPetId != null) {
                     PetProfileScreen(
                         isLoading = isLoadingPetProfile,
@@ -2704,12 +2818,52 @@ class MainActivity : ComponentActivity() {
                             selectedPetId = null
                             selectedPet = null
                             petProfileError = null
+                            reportePerdidaActivo = null
+                            reportePerdidaError = null
                         },
                         onViewHistoria = {
                             historiaError = null
                             historiaEventos = emptyList()
                             isViewingHistoria = true
                             selectedPetId?.let { loadHistoriaClinica(it) }
+                        },
+                        reporteActivo = reportePerdidaActivo,
+                        isCerrandoReporte = isCerrandoReportePerdida,
+                        reporteError = reportePerdidaError,
+                        onReportarPerdida = {
+                            reportePerdidaError = null
+                            // Para prellenar el contacto con el teléfono del
+                            // dueño si todavía no se cargó su perfil.
+                            if (profile == null) loadProfile()
+                            isReportandoPerdidaScreen = true
+                        },
+                        onMarcarEncontrada = {
+                            val reporte = reportePerdidaActivo ?: return@PetProfileScreen
+                            isCerrandoReportePerdida = true
+                            reportePerdidaError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    reportesPerdidaController.cerrar(reporte.idReporte)
+                                    reportePerdidaActivo = null
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        reportePerdidaError = mensajeErrorBackend(
+                                            exception,
+                                            "No se pudo cerrar el reporte"
+                                        )
+                                    }
+                                } catch (exception: IOException) {
+                                    reportePerdidaError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    reportePerdidaError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isCerrandoReportePerdida = false
+                                }
+                            }
                         }
                     )
                 } else if (loggedUserName != null && isViewingMisTurnos) {
@@ -2805,7 +2959,7 @@ class MainActivity : ComponentActivity() {
                                         }
                                         403 -> "No podés solicitar un turno para una mascota que no es tuya"
                                         404 -> "No se encontró la mascota o la veterinaria"
-                                        else -> mensajeErrorTurno(exception, "El horario solicitado no está disponible")
+                                        else -> mensajeErrorBackend(exception, "El horario solicitado no está disponible")
                                     }
                                 } catch (exception: IOException) {
                                     turnoError = "No se pudo conectar con el servidor"
@@ -2842,7 +2996,7 @@ class MainActivity : ComponentActivity() {
                                         }
                                         403 -> "No podés solicitar un turno para una mascota que no es tuya"
                                         404 -> "No se encontró la mascota o el servicio"
-                                        else -> mensajeErrorTurno(exception, "El horario solicitado no está disponible")
+                                        else -> mensajeErrorBackend(exception, "El horario solicitado no está disponible")
                                     }
                                 } catch (exception: IOException) {
                                     turnoError = "No se pudo conectar con el servidor"
