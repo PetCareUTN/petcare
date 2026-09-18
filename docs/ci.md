@@ -118,6 +118,27 @@ propósito y la prueba quedó vieja, no porque hubiera un bug:
 
 Con eso, las 51 pruebas e2e del backend y las 71 unitarias de Android pasan en verde.
 
+### Budgets de CSS del frontend web
+
+El build de producción del frontend venía fallando sin que se notara, por la
+misma razón que las pruebas de arriba: `ng test` compila en configuración de
+desarrollo, que no aplica budgets, así que el error solo aparecía al correr
+`ng build`.
+
+Los budgets eran los que trae el Angular CLI por defecto (4 kB de warning y 8 kB
+de error por hoja de estilos de componente), pensados para componentes chicos.
+En este proyecto varias pantallas son componentes de página con bastante CSS
+propio: cinco superaban el warning y `gestion-turnos.css` cruzaba el error con
+10,61 kB.
+
+Se subieron a 8 kB de warning y 16 kB de error. Con eso el build pasa, queda un
+warning visible sobre el único caso realmente grande, y hay margen antes del
+próximo corte.
+
+La deuda de fondo sigue abierta: los CSS de página no comparten estilos y
+repiten patrones entre pantallas. Bajar `gestion-turnos.css` moviendo lo común a
+estilos compartidos es un refactor de presentación que conviene hacer aparte,
+con revisión visual.
 ### Lint y formato
 
 `calidad.yml` es informativo por ahora: el backend arrastra unos 140 hallazgos de
