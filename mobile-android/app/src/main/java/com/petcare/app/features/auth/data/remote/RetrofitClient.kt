@@ -5,6 +5,7 @@ import com.petcare.app.features.adopciones.data.remote.DescartesApi
 import com.petcare.app.features.adopciones.data.remote.FavoritosApi
 import com.petcare.app.features.adopciones.data.remote.SolicitudesAdopcionApi
 import com.petcare.app.features.auth.data.local.SessionStore
+import com.petcare.app.features.ble.data.remote.TagsBleApi
 import com.petcare.app.features.historiaclinica.data.remote.HistoriaClinicaApi
 import com.petcare.app.features.notificaciones.data.remote.NotificacionesApi
 import com.petcare.app.features.perdidas.data.remote.ReportesPerdidaApi
@@ -76,6 +77,10 @@ object RetrofitClient {
     fun notificacionesApi(sessionStore: SessionStore): NotificacionesApi =
         createRetrofit(sessionStore)
             .create(NotificacionesApi::class.java)
+
+    fun tagsBleApi(sessionStore: SessionStore): TagsBleApi =
+        createRetrofit(sessionStore)
+            .create(TagsBleApi::class.java)
 
     private fun createRetrofit(sessionStore: SessionStore): Retrofit {
         val okHttpClient = OkHttpClient.Builder()
