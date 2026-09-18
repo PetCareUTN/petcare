@@ -14,6 +14,9 @@ data class EventoClinicoResponse(
     val diagnostico: String?,
     val tratamiento: String?,
     val observaciones: String?,
+    /** Solo en eventos de tipo vacuna (US-40); null en el resto. */
+    val vacuna: String? = null,
+    val proximaAplicacion: String? = null,
     val createdAt: String,
     val updatedAt: String,
     val archivos: List<ArchivoMedicoResponse> = emptyList()

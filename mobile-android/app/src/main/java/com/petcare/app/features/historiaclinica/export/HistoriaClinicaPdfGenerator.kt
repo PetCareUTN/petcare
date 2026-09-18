@@ -17,6 +17,7 @@ import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.petcare.app.features.historiaclinica.domain.aTextoPlano
 
 /**
  * Genera un PDF con la historia clinica completa de una mascota:
@@ -233,13 +234,13 @@ object HistoriaClinicaPdfGenerator {
             canvas.drawText(evento.fecha, PAGE_WIDTH - MARGIN, y + 12f, fechaPaint)
             y += 22f
 
-            drawWrapped(evento.descripcion, bodyPaint, MARGIN)
+            drawWrapped(aTextoPlano(evento.descripcion), bodyPaint, MARGIN)
             evento.diagnostico?.takeIf { it.isNotBlank() }
-                ?.let { drawLabeledValue("Diagnostico", it) }
+                ?.let { drawLabeledValue("Diagnostico", aTextoPlano(it)) }
             evento.tratamiento?.takeIf { it.isNotBlank() }
-                ?.let { drawLabeledValue("Tratamiento", it) }
+                ?.let { drawLabeledValue("Tratamiento", aTextoPlano(it)) }
             evento.observaciones?.takeIf { it.isNotBlank() }
-                ?.let { drawLabeledValue("Observaciones", it) }
+                ?.let { drawLabeledValue("Observaciones", aTextoPlano(it)) }
 
             if (evento.archivos.isNotEmpty()) {
                 ensureSpace(18f)

@@ -130,6 +130,17 @@
               <span class="evento-fecha">{{ evento.fecha | date: 'dd/MM/yyyy' }}</span>
             </div>
             <div class="evento-descripcion rich-text-content" [innerHTML]="evento.descripcion"></div>
+            @if (evento.vacuna) {
+              <div class="evento-detalle">
+                <strong>Vacuna:</strong> {{ etiquetaVacuna(evento.vacuna) }}
+              </div>
+            }
+            @if (evento.proximaAplicacion) {
+              <div class="evento-detalle">
+                <strong>Próxima dosis:</strong>
+                {{ evento.proximaAplicacion | date: 'dd/MM/yyyy' }}
+              </div>
+            }
             @if (evento.diagnostico) {
               <div class="evento-detalle">
                 <strong>Diagnóstico:</strong>

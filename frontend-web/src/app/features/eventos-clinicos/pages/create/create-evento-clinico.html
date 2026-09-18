@@ -47,8 +47,42 @@
         }
       </div>
 
+      @if (esVacuna()) {
+        <div class="field">
+          <label for="vacuna">Vacuna</label>
+          <select id="vacuna" formControlName="vacuna">
+            <option [ngValue]="null" disabled>Seleccionar vacuna</option>
+            @for (opcion of vacunas; track opcion.value) {
+              <option [ngValue]="opcion.value">
+                {{ opcion.label }} ({{ opcion.especie }})
+              </option>
+            }
+          </select>
+          @if (form.controls.vacuna.invalid && form.controls.vacuna.touched) {
+            <p class="field-error">Debe seleccionar la vacuna aplicada.</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="proximaAplicacion">Proxima aplicacion</label>
+          <input
+            id="proximaAplicacion"
+            type="date"
+            formControlName="proximaAplicacion"
+            [min]="form.controls.fecha.value"
+          />
+          <p class="field-hint">
+            El dueño recibe un recordatorio antes de esta fecha. Depende del esquema
+            de cada animal, asi que no se completa automaticamente.
+          </p>
+          @if (form.controls.proximaAplicacion.invalid && form.controls.proximaAplicacion.touched) {
+            <p class="field-error">Debe indicar cuando corresponde la proxima dosis.</p>
+          }
+        </div>
+      }
+
       <div class="field field-wide">
-        <label for="descripcion">{{ esVacuna() ? 'Nombre de la vacuna' : 'Descripcion' }}</label>
+        <label for="descripcion">Descripcion</label>
         <app-rich-text-editor
           id="descripcion"
           formControlName="descripcion"
@@ -56,7 +90,7 @@
         />
         @if (form.controls.descripcion.invalid && form.controls.descripcion.touched) {
           <p class="field-error">
-            {{ esVacuna() ? 'El nombre de la vacuna es obligatorio.' : 'La descripcion es obligatoria.' }}
+            La descripcion es obligatoria.
           </p>
         }
       </div>

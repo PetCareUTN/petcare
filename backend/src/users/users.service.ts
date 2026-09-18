@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { MailService } from '../mail/mail.service';
+import { UpdatePreferenciasDto } from './dto/update-preferencias.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 
@@ -117,6 +118,32 @@ export class UsersService {
 
     return this.usersRepository.save(user);
   }
+
+  /**
+   * Actualiza las preferencias de notificaciones del usuario (US-40).
+   *
+   * Solo toca los campos que vienen en el DTO: mandar `{}` no cambia nada.
+   */
+  async updatePreferencias(
+    idUsuario: number,
+    dto: UpdatePreferenciasDto,
+  ): Promise<User> {
+    const user = await this.findById(idUsuario);
+
+    if (!user) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Usuario no encontrado',
+      });
+    }
+
+    if (dto.recordatoriosVacunas !== undefined) {
+      user.recordatoriosVacunas = dto.recordatoriosVacunas;
+    }
+
+    return this.usersRepository.save(user);
+  }
+
   async updatePassword(idUsuario: number, passwordHash: string): Promise<User> {
     const user = await this.findById(idUsuario);
 

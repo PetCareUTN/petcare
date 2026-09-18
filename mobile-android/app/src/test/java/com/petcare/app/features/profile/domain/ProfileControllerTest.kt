@@ -4,6 +4,7 @@ import com.petcare.app.features.profile.data.remote.ConfirmEmailChangeRequest
 import com.petcare.app.features.profile.data.remote.MessageResponse
 import com.petcare.app.features.profile.data.remote.ProfileApi
 import com.petcare.app.features.profile.data.remote.RequestEmailChangeRequest
+import com.petcare.app.features.profile.data.remote.UpdatePreferenciasRequest
 import com.petcare.app.features.profile.data.remote.UpdateProfileRequest
 import com.petcare.app.features.profile.data.remote.UserProfileResponse
 import kotlinx.coroutines.runBlocking
@@ -73,6 +74,11 @@ class ProfileControllerTest {
                 telefono = request.telefono ?: current.telefono
             )
         }
+
+        override suspend fun updatePreferencias(
+            request: UpdatePreferenciasRequest
+        ): UserProfileResponse =
+            getMyProfile().copy(recordatoriosVacunas = request.recordatoriosVacunas)
 
         override suspend fun requestEmailChange(request: RequestEmailChangeRequest): MessageResponse =
             throw UnsupportedOperationException("No usado en este test")

@@ -15,6 +15,8 @@ export class UserPublicDto {
   id_rol: number;
   estado: string;
   fecha_registro: Date;
+  /** US-40: la app necesita saber en qué estado mostrar el toggle. */
+  recordatorios_vacunas: boolean;
 
   static fromEntity(user: User): UserPublicDto {
     const dto = new UserPublicDto();
@@ -28,6 +30,7 @@ export class UserPublicDto {
     dto.id_rol = user.rol.idRol;
     dto.estado = user.estado;
     dto.fecha_registro = user.fechaRegistro;
+    dto.recordatorios_vacunas = user.recordatoriosVacunas;
     return dto;
   }
 }

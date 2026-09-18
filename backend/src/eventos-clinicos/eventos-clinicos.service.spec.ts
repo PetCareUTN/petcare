@@ -7,6 +7,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { ClinicalEventType } from '../common/enums/clinical-event-type.enum';
+import { TipoVacuna } from '../common/enums/tipo-vacuna.enum';
 import { RoleName } from '../common/enums/role-name.enum';
 import { ValidationStatus } from '../common/enums/validation-status.enum';
 import { HistoriaClinica } from '../historias-clinicas/entities/historia-clinica.entity';
@@ -177,6 +178,9 @@ describe('EventosClinicosService', () => {
       fecha: '2026-08-05',
       descripcion: 'Antirrabica anual',
       observaciones: 'Sin reacciones adversas',
+      // US-40 los hace obligatorios en los eventos de tipo vacuna.
+      vacuna: TipoVacuna.ANTIRRABICA,
+      proximaAplicacion: '2027-08-05',
     };
     const evento = {
       idEvento: 32,
@@ -209,6 +213,116 @@ describe('EventosClinicosService', () => {
     );
     expect(result.tipo).toBe(ClinicalEventType.VACUNA);
     expect(result.idHistoria).toBe(20);
+  });
+
+  it('rechaza una vacuna sin fecha de proxima aplicacion (US-40)', async () => {
+    const historia = { idHistoria: 20 } as HistoriaClinica;
+    const mascota = {
+      idMascota: 10,
+      idHistoria: 20,
+      historiaClinica: historia,
+    } as Mascota;
+    const veterinario = {
+      idVeterinario: 5,
+      estadoValidacion: ValidationStatus.APROBADO,
+    } as Veterinario;
+
+    veterinariosRepository.findOne.mockResolvedValue(veterinario);
+    mascotasRepository.findOne.mockResolvedValue(mascota);
+
+    await expect(
+      service.create(7, {
+        idMascota: 10,
+        tipo: ClinicalEventType.VACUNA,
+        fecha: '2026-08-05',
+        descripcion: 'Antirrabica anual',
+        vacuna: TipoVacuna.ANTIRRABICA,
+      } as CreateEventoClinicoDto),
+    ).rejects.toThrow(BadRequestException);
+
+    expect(eventosClinicosRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('rechaza una proxima aplicacion anterior a la fecha de la vacuna (US-40)', async () => {
+    // Un error de tipeo en el ano generaria un recordatorio inmediato para una
+    // dosis que en realidad no vence.
+    const historia = { idHistoria: 20 } as HistoriaClinica;
+    const mascota = {
+      idMascota: 10,
+      idHistoria: 20,
+      historiaClinica: historia,
+    } as Mascota;
+    const veterinario = {
+      idVeterinario: 5,
+      estadoValidacion: ValidationStatus.APROBADO,
+    } as Veterinario;
+
+    veterinariosRepository.findOne.mockResolvedValue(veterinario);
+    mascotasRepository.findOne.mockResolvedValue(mascota);
+
+    await expect(
+      service.create(7, {
+        idMascota: 10,
+        tipo: ClinicalEventType.VACUNA,
+        fecha: '2026-08-05',
+        descripcion: 'Antirrabica anual',
+        vacuna: TipoVacuna.ANTIRRABICA,
+        proximaAplicacion: '2025-08-05',
+      } as CreateEventoClinicoDto),
+    ).rejects.toThrow(BadRequestException);
+
+    expect(eventosClinicosRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('ignora los campos de vacunacion en un evento que no es vacuna (US-40)', async () => {
+    // Si quedaran colgados en una consulta comun, generarian recordatorios
+    // fantasma para una vacuna que nunca se aplico.
+    const historia = { idHistoria: 20 } as HistoriaClinica;
+    const mascota = {
+      idMascota: 10,
+      idHistoria: 20,
+      historiaClinica: historia,
+    } as Mascota;
+    const veterinario = {
+      idVeterinario: 5,
+      estadoValidacion: ValidationStatus.APROBADO,
+    } as Veterinario;
+    const evento = {
+      idEvento: 33,
+      historia,
+      veterinario,
+      tipo: ClinicalEventType.CONSULTA,
+      fecha: '2026-08-05',
+      descripcion: 'Control general',
+      diagnostico: null,
+      tratamiento: null,
+      observaciones: null,
+      vacuna: null,
+      proximaAplicacion: null,
+      createdAt: new Date('2026-08-05T10:00:00Z'),
+      updatedAt: new Date('2026-08-05T10:00:00Z'),
+    } as EventoClinico;
+
+    veterinariosRepository.findOne.mockResolvedValue(veterinario);
+    mascotasRepository.findOne.mockResolvedValue(mascota);
+    eventosClinicosRepository.create.mockReturnValue(evento);
+    eventosClinicosRepository.save.mockResolvedValue(evento);
+
+    await service.create(7, {
+      idMascota: 10,
+      tipo: ClinicalEventType.CONSULTA,
+      fecha: '2026-08-05',
+      descripcion: 'Control general',
+      vacuna: TipoVacuna.ANTIRRABICA,
+      proximaAplicacion: '2027-08-05',
+    } as CreateEventoClinicoDto);
+
+    expect(eventosClinicosRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        vacuna: null,
+        proximaAplicacion: null,
+      }),
+    );
   });
 
   it('crea la historia clinica cuando la mascota todavia no tiene una', async () => {

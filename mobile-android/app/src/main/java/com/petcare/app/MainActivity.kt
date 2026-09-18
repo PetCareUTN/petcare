@@ -2705,6 +2705,7 @@ class MainActivity : ComponentActivity() {
                             darkModePreference = enabled
                             themePreferences.setDarkMode(enabled)
                         },
+                        profileController = profileController,
                         onBack = { isViewingSettings = false }
                     )
                 } else if (loggedUserName != null && isViewingProfile) {
