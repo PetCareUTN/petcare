@@ -87,6 +87,10 @@ import com.petcare.app.features.historiaclinica.ui.HistoriaClinicaScreen
 import com.petcare.app.features.notificaciones.data.remote.NotificacionResponse
 import com.petcare.app.features.notificaciones.domain.NotificacionesController
 import com.petcare.app.features.notificaciones.ui.NotificacionesDropdown
+import com.petcare.app.features.ble.data.remote.TagBleResponse
+import com.petcare.app.features.ble.domain.TagsBleController
+import com.petcare.app.features.ble.ui.TagBleUiState
+import com.petcare.app.features.ble.ui.VincularTagScreen
 import com.petcare.app.features.perdidas.data.remote.CreateReportePerdidaRequest
 import com.petcare.app.features.perdidas.data.remote.ReportePerdidaResponse
 import com.petcare.app.features.perdidas.domain.ReportesPerdidaController
@@ -248,6 +252,11 @@ class MainActivity : ComponentActivity() {
                         reportesPerdidaApi = RetrofitClient.reportesPerdidaApi(sessionStore)
                     )
                 }
+                val tagsBleController = remember {
+                    TagsBleController(
+                        tagsBleApi = RetrofitClient.tagsBleApi(sessionStore)
+                    )
+                }
                 var isLoading by rememberSaveable {
                     mutableStateOf(false)
                 }
@@ -355,6 +364,26 @@ class MainActivity : ComponentActivity() {
                 }
                 // true mientras se muestra el formulario para reportar la perdida.
                 var isReportandoPerdidaScreen by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                // Tag BLE de la mascota seleccionada (US-32).
+                var tagBleDeLaMascota by remember {
+                    mutableStateOf<TagBleResponse?>(null)
+                }
+                var isLoadingTagBle by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isVinculandoTag by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isDesvinculandoTag by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var tagBleError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                // true mientras se muestra la pantalla de vincular/desvincular el tag.
+                var isVinculandoTagScreen by rememberSaveable {
                     mutableStateOf(false)
                 }
                 var isViewingHistoria by rememberSaveable {
@@ -863,12 +892,18 @@ class MainActivity : ComponentActivity() {
                             isReportandoPerdidaScreen = false
                             reportePerdidaError = null
                         }
+                        isVinculandoTagScreen -> {
+                            isVinculandoTagScreen = false
+                            tagBleError = null
+                        }
                         selectedPetId != null -> {
                             selectedPetId = null
                             selectedPet = null
                             petProfileError = null
                             reportePerdidaActivo = null
                             reportePerdidaError = null
+                            tagBleDeLaMascota = null
+                            tagBleError = null
                         }
                         isViewingMisTurnos -> isViewingMisTurnos = false
                         isRequestingTurno -> {
@@ -946,10 +981,35 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                fun loadTagBle(idMascota: Int) {
+                    isLoadingTagBle = true
+                    tagBleError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            tagBleDeLaMascota = tagsBleController.obtener(idMascota)
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                tagBleError = "No se pudo cargar el tag BLE"
+                            }
+                        } catch (exception: IOException) {
+                            tagBleError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            tagBleError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingTagBle = false
+                        }
+                    }
+                }
+
                 fun loadPetProfile(id: Int) {
                     isLoadingPetProfile = true
                     petProfileError = null
                     loadReportePerdida(id)
+                    loadTagBle(id)
 
                     lifecycleScope.launch {
                         try {
@@ -2808,6 +2868,81 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     )
+                } else if (
+                    loggedUserName != null &&
+                    isVinculandoTagScreen &&
+                    selectedPet != null
+                ) {
+                    val mascota = selectedPet!!
+                    VincularTagScreen(
+                        petName = mascota.nombre,
+                        tagVinculado = when {
+                            isLoadingTagBle -> TagBleUiState.Cargando
+                            tagBleDeLaMascota != null ->
+                                TagBleUiState.Vinculado(tagBleDeLaMascota!!.tagId)
+                            else -> TagBleUiState.SinVincular
+                        },
+                        isVinculando = isVinculandoTag,
+                        isDesvinculando = isDesvinculandoTag,
+                        errorMessage = tagBleError,
+                        onBack = {
+                            isVinculandoTagScreen = false
+                            tagBleError = null
+                        },
+                        onVincular = { tagId ->
+                            isVinculandoTag = true
+                            tagBleError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    tagBleDeLaMascota = tagsBleController.vincular(mascota.id, tagId)
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        tagBleError = mensajeErrorBackend(
+                                            exception,
+                                            "No se pudo vincular el tag"
+                                        )
+                                    }
+                                } catch (exception: IOException) {
+                                    tagBleError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    tagBleError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isVinculandoTag = false
+                                }
+                            }
+                        },
+                        onDesvincular = {
+                            isDesvinculandoTag = true
+                            tagBleError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    tagsBleController.desvincular(mascota.id)
+                                    tagBleDeLaMascota = null
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        tagBleError = mensajeErrorBackend(
+                                            exception,
+                                            "No se pudo desvincular el tag"
+                                        )
+                                    }
+                                } catch (exception: IOException) {
+                                    tagBleError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    tagBleError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isDesvinculandoTag = false
+                                }
+                            }
+                        }
+                    )
                 } else if (loggedUserName != null && selectedPetId != null) {
                     PetProfileScreen(
                         isLoading = isLoadingPetProfile,
@@ -2820,6 +2955,8 @@ class MainActivity : ComponentActivity() {
                             petProfileError = null
                             reportePerdidaActivo = null
                             reportePerdidaError = null
+                            tagBleDeLaMascota = null
+                            tagBleError = null
                         },
                         onViewHistoria = {
                             historiaError = null
@@ -2864,7 +3001,10 @@ class MainActivity : ComponentActivity() {
                                     isCerrandoReportePerdida = false
                                 }
                             }
-                        }
+                        },
+                        tagBle = tagBleDeLaMascota,
+                        isLoadingTagBle = isLoadingTagBle,
+                        onVerTagBle = { isVinculandoTagScreen = true }
                     )
                 } else if (loggedUserName != null && isViewingMisTurnos) {
                     MisTurnosScreen(

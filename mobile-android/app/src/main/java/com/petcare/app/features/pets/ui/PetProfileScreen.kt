@@ -2,6 +2,7 @@ package com.petcare.app.features.pets.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.petcare.app.features.ble.data.remote.TagBleResponse
 import com.petcare.app.features.perdidas.data.remote.ReportePerdidaResponse
 import com.petcare.app.features.pets.data.remote.PetResponse
 import com.petcare.app.ui.theme.PetCareError
@@ -51,7 +53,11 @@ fun PetProfileScreen(
     isCerrandoReporte: Boolean = false,
     reporteError: String? = null,
     onReportarPerdida: () -> Unit = {},
-    onMarcarEncontrada: () -> Unit = {}
+    onMarcarEncontrada: () -> Unit = {},
+    // Tag BLE vinculado, si tiene (US-32).
+    tagBle: TagBleResponse? = null,
+    isLoadingTagBle: Boolean = false,
+    onVerTagBle: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -130,7 +136,10 @@ fun PetProfileScreen(
                     isCerrandoReporte = isCerrandoReporte,
                     reporteError = reporteError,
                     onReportarPerdida = onReportarPerdida,
-                    onMarcarEncontrada = onMarcarEncontrada
+                    onMarcarEncontrada = onMarcarEncontrada,
+                    tagBle = tagBle,
+                    isLoadingTagBle = isLoadingTagBle,
+                    onVerTagBle = onVerTagBle
                 )
             }
         }
@@ -145,7 +154,10 @@ private fun PetProfileContent(
     isCerrandoReporte: Boolean,
     reporteError: String?,
     onReportarPerdida: () -> Unit,
-    onMarcarEncontrada: () -> Unit
+    onMarcarEncontrada: () -> Unit,
+    tagBle: TagBleResponse?,
+    isLoadingTagBle: Boolean,
+    onVerTagBle: () -> Unit
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         PetAvatar(
@@ -227,6 +239,48 @@ private fun PetProfileContent(
             DetailRow(
                 label = "Observaciones",
                 value = pet.observaciones?.ifBlank { null } ?: "Sin observaciones registradas"
+            )
+        }
+    }
+
+    Spacer(modifier = Modifier.height(18.dp))
+
+    Text(
+        text = "Tag BLE",
+        style = MaterialTheme.typography.titleLarge
+    )
+
+    Spacer(modifier = Modifier.height(10.dp))
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onVerTagBle),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, PetCareLine),
+        shape = MaterialTheme.shapes.extraLarge
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            if (isLoadingTagBle) {
+                CircularProgressIndicator(modifier = Modifier.size(22.dp))
+            } else {
+                Column(modifier = Modifier.weight(1f)) {
+                    DetailRow(
+                        label = "Estado",
+                        value = tagBle?.let { "Vinculado (${it.tagId})" } ?: "Sin vincular"
+                    )
+                }
+            }
+            Text(
+                text = if (tagBle != null) "Gestionar" else "Vincular",
+                color = PetCareTealDark,
+                style = MaterialTheme.typography.labelLarge
             )
         }
     }
