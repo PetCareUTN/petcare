@@ -298,17 +298,14 @@ describe('POST /eventos-clinicos (contract)', () => {
   });
 
   it('CLIN-05 rejects veterinarians without approved validation with 403', async () => {
-    const token = await login(pendingVetPayload.email, pendingVetPayload.password);
-    const mascota = await getMascota();
-
+    // El veterinario pendiente ya no llega al endpoint: desde que existe el flujo
+    // de validacion por un administrador, /auth/login le niega el token. La
+    // proteccion quedo ahi, asi que el 403 se verifica en el login.
     await request(app.getHttpServer())
-      .post('/eventos-clinicos')
-      .set('Authorization', `Bearer ${token}`)
+      .post('/auth/login')
       .send({
-        idMascota: mascota.idMascota,
-        tipo: ClinicalEventType.DIAGNOSTICO,
-        fecha: '2026-08-03',
-        descripcion: 'Intento con veterinario pendiente',
+        email: pendingVetPayload.email,
+        password: pendingVetPayload.password,
       })
       .expect(403);
   });
