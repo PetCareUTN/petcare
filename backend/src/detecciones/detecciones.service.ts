@@ -97,8 +97,15 @@ export class DeteccionesService {
 
     const ultima = await this.deteccionesRepository.findOne({
       where: { reporte: { idReporte } },
-      // El id desempata dos lecturas con la misma marca de tiempo.
-      order: { detectadoEn: 'DESC', idDeteccion: 'DESC' },
+      // Dos celulares pueden detectar el mismo tag en el mismo instante: es el
+      // caso de triangulación que US-31 acepta a propósito. Entre esas, se
+      // muestra la de menor `precisionMetros`, que es la que acota mejor dónde
+      // estaba. El id solo desempata si además empatan en precisión.
+      order: {
+        detectadoEn: 'DESC',
+        precisionMetros: 'ASC',
+        idDeteccion: 'DESC',
+      },
     });
 
     return UltimaDeteccionResponseDto.fromEntity(

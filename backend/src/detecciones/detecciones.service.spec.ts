@@ -245,8 +245,34 @@ describe('DeteccionesService', () => {
 
       expect(deteccionesRepository.findOne).toHaveBeenCalledWith({
         where: { reporte: { idReporte: ID_REPORTE } },
-        order: { detectadoEn: 'DESC', idDeteccion: 'DESC' },
+        order: {
+          detectadoEn: 'DESC',
+          precisionMetros: 'ASC',
+          idDeteccion: 'DESC',
+        },
       });
+    });
+
+    it('entre dos detecciones del mismo instante pide la más precisa', async () => {
+      reportesPerdidaService.buscarReporteDelDuenio.mockResolvedValue(
+        reporteDelDuenio,
+      );
+      deteccionesRepository.findOne.mockResolvedValue(deteccion);
+
+      await service.buscarUltimaDelReporte(ID_REPORTE, ID_USUARIO);
+
+      // US-31 acepta que dos celulares detecten el mismo tag a la misma hora
+      // (es lo que permite triangular). La que se muestra es la que acota
+      // mejor la posición, no la que entró última a la base.
+      const [consulta] = deteccionesRepository.findOne.mock.calls[0] as [
+        { order: Record<string, string> },
+      ];
+      expect(Object.keys(consulta.order)).toEqual([
+        'detectadoEn',
+        'precisionMetros',
+        'idDeteccion',
+      ]);
+      expect(consulta.order.precisionMetros).toBe('ASC');
     });
 
     it('devuelve null cuando el reporte todavía no tiene detecciones', async () => {
