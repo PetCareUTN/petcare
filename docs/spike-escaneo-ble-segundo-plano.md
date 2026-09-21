@@ -237,6 +237,24 @@ Decisiones detrás del payload:
   vincular el tag tiene que ser exactamente este mismo string, o las detecciones no
   van a matchear contra ninguna mascota.
 
+Respuestas (definidas al implementar US-31):
+
+| Caso | Respuesta | Se guarda |
+|---|---|---|
+| Tag vinculado a una mascota con reporte de pérdida abierto | `202` | Sí, colgada del reporte |
+| Tag no vinculado a ninguna mascota | `202` | No |
+| Mascota que no está perdida, o lectura anterior a `fechaPerdida` | `202` | No |
+| `deteccionId` ya recibido (reintento) | `202` | No, no duplica |
+| Campos faltantes, mal formados, extra, o `detectadoEn` más de 5 min en el futuro | `400` | No |
+
+- **Siempre `202` para lo bien formado**, sin body. Como el endpoint no tiene
+  autenticación, responder distinto según el caso dejaría a cualquiera averiguar qué
+  tags existen y qué mascotas están perdidas, que es justo lo que el instance aleatorio
+  intenta evitar.
+- **El celular descarta los `4xx`** (salvo 408 y 429) en lugar de reintentarlos: un
+  payload inválido va a dar el mismo error siempre y trabaría la cola. Red caída y `5xx`
+  sí se reintentan (`esRechazoDefinitivo` en `DeteccionesController.kt`).
+
 ## 6. Qué queda pendiente de dispositivo físico
 
 El emulador no expone radio BLE real ni permite medir consumo, así que estos cuatro
