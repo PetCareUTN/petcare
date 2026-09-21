@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { NotificacionesDeteccionesService } from '../notificaciones/notificaciones-detecciones.service';
 import { ReportesPerdidaService } from '../reportes-perdida/reportes-perdida.service';
 import { TagBle } from '../tags-ble/entities/tag-ble.entity';
 import { RegistrarDeteccionDto } from './dto/registrar-deteccion.dto';
@@ -24,6 +25,7 @@ export class DeteccionesService {
     @InjectRepository(TagBle)
     private readonly tagsBleRepository: Repository<TagBle>,
     private readonly reportesPerdidaService: ReportesPerdidaService,
+    private readonly notificacionesDeteccionesService: NotificacionesDeteccionesService,
   ) {}
 
   async registrar(dto: RegistrarDeteccionDto): Promise<ResultadoDeteccion> {
@@ -73,7 +75,19 @@ export class DeteccionesService {
     // `raw` son las filas del RETURNING: vacío si el ON CONFLICT no insertó.
     // (`identifiers` no sirve para esto: TypeORM lo arma por cada valor enviado.)
     const insertadas = resultado.raw as unknown[];
-    return insertadas.length > 0 ? 'registrada' : 'duplicada';
+    if (insertadas.length === 0) return 'duplicada';
+
+    // Solo se avisa por detecciones nuevas: un reintento del mismo celular no
+    // es una novedad para el dueño. Las de mascotas con el reporte cerrado ya
+    // se descartaron más arriba, así que nunca llegan hasta acá (US-41).
+    await this.notificacionesDeteccionesService.notificarDeteccion({
+      idReporte: reporte.idReporte,
+      idDuenio: reporte.usuario.idUsuario,
+      nombreMascota: reporte.mascota?.nombre ?? null,
+      detectadoEn,
+    });
+
+    return 'registrada';
   }
 
   /**

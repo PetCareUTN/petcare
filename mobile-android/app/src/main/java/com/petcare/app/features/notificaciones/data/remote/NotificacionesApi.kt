@@ -11,7 +11,13 @@ data class NotificacionResponse(
     val titulo: String,
     val cuerpo: String,
     val leida: Boolean,
-    val fechaEnvio: String
+    val fechaEnvio: String,
+    /**
+     * Registro que abre la notificación al tocarla (US-41). Qué representa
+     * depende del `tipo`: en `mascota_detectada` es el id del reporte de
+     * pérdida. Null en los tipos que todavía no llevan a ninguna pantalla.
+     */
+    val idReferencia: Int? = null
 )
 
 interface NotificacionesApi {

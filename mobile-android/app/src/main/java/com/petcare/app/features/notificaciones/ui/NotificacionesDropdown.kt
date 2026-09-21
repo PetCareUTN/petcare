@@ -1,5 +1,6 @@
 package com.petcare.app.features.notificaciones.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -43,7 +44,9 @@ fun NotificacionesDropdown(
     onDismiss: () -> Unit,
     onRetry: () -> Unit,
     onMarcarLeida: (NotificacionResponse) -> Unit,
-    onMarcarTodasLeidas: () -> Unit
+    onMarcarTodasLeidas: () -> Unit,
+    /** Abre la última ubicación del reporte que indica la notificación (US-41). */
+    onAbrirUltimaUbicacion: (Int) -> Unit = {}
 ) {
     val noLeidas = notificaciones.count { !it.leida }
 
@@ -138,7 +141,10 @@ fun NotificacionesDropdown(
                     NotificacionItem(
                         notificacion = notificacion,
                         isMarcando = marcandoLeidaId == notificacion.idNotificacion,
-                        onMarcarLeida = { onMarcarLeida(notificacion) }
+                        onMarcarLeida = { onMarcarLeida(notificacion) },
+                        onAbrir = destinoDe(notificacion)?.let { idReporte ->
+                            { onAbrirUltimaUbicacion(idReporte) }
+                        }
                     )
                     if (indice < notificaciones.lastIndex) {
                         HorizontalDivider(color = PetCareLine)
@@ -153,11 +159,14 @@ fun NotificacionesDropdown(
 private fun NotificacionItem(
     notificacion: NotificacionResponse,
     isMarcando: Boolean,
-    onMarcarLeida: () -> Unit
+    onMarcarLeida: () -> Unit,
+    /** Null cuando la notificación no lleva a ninguna pantalla. */
+    onAbrir: (() -> Unit)? = null
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .then(if (onAbrir != null) Modifier.clickable { onAbrir() } else Modifier)
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
@@ -193,6 +202,14 @@ private fun NotificacionItem(
             style = MaterialTheme.typography.bodySmall
         )
 
+        if (onAbrir != null) {
+            Text(
+                text = "Ver ultima ubicacion",
+                color = PetCareTealDark,
+                style = MaterialTheme.typography.labelMedium
+            )
+        }
+
         if (!notificacion.leida) {
             TextButton(
                 onClick = onMarcarLeida,
@@ -208,6 +225,13 @@ private fun NotificacionItem(
     }
 }
 
+/**
+ * Id del reporte al que lleva la notificación, o null si no lleva a ninguna
+ * pantalla. Hoy solo las de detección navegan (US-41).
+ */
+private fun destinoDe(notificacion: NotificacionResponse): Int? =
+    notificacion.idReferencia?.takeIf { notificacion.tipo == "mascota_detectada" }
+
 internal fun tipoLabel(tipo: String): String = when (tipo) {
     "solicitud_recibida" -> "Solicitud"
     "aprobacion" -> "Aprobación"
@@ -215,6 +239,7 @@ internal fun tipoLabel(tipo: String): String = when (tipo) {
     "turno_confirmado" -> "Turno confirmado"
     "turno_cancelado" -> "Turno cancelado"
     "recordatorio_vacuna" -> "Vacunación"
+    "mascota_detectada" -> "Mascota detectada"
     else -> tipo
 }
 
