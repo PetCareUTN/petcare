@@ -118,6 +118,15 @@ export class ReportesPerdidaService {
     return reporte !== null;
   }
 
+  /**
+   * El reporte abierto de la mascota, o `null` si no está perdida. La ingesta
+   * de detecciones (US-31) lo necesita entero para colgar cada detección del
+   * reporte y para ignorar las lecturas previas a la pérdida.
+   */
+  buscarReporteActivo(idMascota: number): Promise<ReportePerdida | null> {
+    return this.findReporteActivo(idMascota);
+  }
+
   private findReporteActivo(idMascota: number): Promise<ReportePerdida | null> {
     return this.reportesRepository.findOne({
       where: {

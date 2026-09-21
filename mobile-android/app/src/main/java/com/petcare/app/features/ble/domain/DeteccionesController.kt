@@ -7,6 +7,7 @@ import com.petcare.app.features.ble.data.remote.DeteccionRequest
 import com.petcare.app.features.ble.data.remote.DeteccionesApi
 import com.petcare.app.features.ble.data.remote.DeteccionesRetrofit
 import java.util.UUID
+import retrofit2.HttpException
 
 /**
  * Convierte lo que ve el motor de escaneo en detecciones enviadas al backend (US-30).
@@ -68,6 +69,10 @@ class DeteccionesController(
      *
      * Se corta al primer fallo: si no hay red, seguir intentando con el resto solo gasta
      * bateria. Lo que quedo sin enviar se reintenta en la proxima deteccion.
+     *
+     * La excepcion es un rechazo definitivo del backend (ver [esRechazoDefinitivo]): esa
+     * deteccion se saca de la cola y se sigue con la proxima, porque reintentarla daria
+     * el mismo error para siempre y trabaria a todas las que vienen atras.
      */
     suspend fun vaciarCola() {
         val pendientes = cola.pendientes()
@@ -75,11 +80,15 @@ class DeteccionesController(
 
         val enviadas = mutableSetOf<String>()
         for (deteccion in pendientes) {
-            val resultado = runCatching { api.registrarDeteccion(deteccion) }
-            if (resultado.isFailure) {
+            val error = runCatching { api.registrarDeteccion(deteccion) }.exceptionOrNull()
+            if (error != null && !esRechazoDefinitivo(error)) {
                 Log.d(TAG, "Envio interrumpido, quedan ${pendientes.size - enviadas.size}")
                 break
             }
+            if (error != null) {
+                Log.w(TAG, "Deteccion ${deteccion.deteccionId} rechazada por el backend, se descarta", error)
+            }
+            // Enviada o rechazada para siempre: en los dos casos sale de la cola.
             enviadas += deteccion.deteccionId
         }
 
@@ -93,3 +102,14 @@ class DeteccionesController(
         const val TAG = "DeteccionesController"
     }
 }
+
+/**
+ * Si el backend rechazo la deteccion por ser invalida, y no por un problema pasajero.
+ *
+ * `POST /detecciones` responde 202 a toda deteccion bien formada, se guarde o no (US-31),
+ * asi que un 4xx significa que el payload esta mal y reenviarlo no lo va a arreglar.
+ * Red caida, timeouts y 5xx si se reintentan, igual que 408 y 429: son 4xx pero hablan
+ * del momento, no del payload.
+ */
+internal fun esRechazoDefinitivo(error: Throwable): Boolean =
+    error is HttpException && error.code() in 400..499 && error.code() !in setOf(408, 429)

@@ -48,6 +48,8 @@ import { ReportePerdida } from './reportes-perdida/entities/reporte-perdida.enti
 import { ReportesPerdidaModule } from './reportes-perdida/reportes-perdida.module';
 import { TagBle } from './tags-ble/entities/tag-ble.entity';
 import { TagsBleModule } from './tags-ble/tags-ble.module';
+import { Deteccion } from './detecciones/entities/deteccion.entity';
+import { DeteccionesModule } from './detecciones/detecciones.module';
 
 dotenv.config();
 
@@ -86,6 +88,7 @@ dotenv.config();
         DescarteAdopcion,
         ReportePerdida,
         TagBle,
+        Deteccion,
       ],
       synchronize: false,
     }),
@@ -109,6 +112,7 @@ dotenv.config();
     DescartesModule,
     ReportesPerdidaModule,
     TagsBleModule,
+    DeteccionesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
