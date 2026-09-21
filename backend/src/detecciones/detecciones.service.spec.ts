@@ -221,10 +221,9 @@ describe('DeteccionesService', () => {
         ID_USUARIO,
       );
 
-      expect(reportesPerdidaService.buscarReporteDelDuenio).toHaveBeenCalledWith(
-        ID_REPORTE,
-        ID_USUARIO,
-      );
+      expect(
+        reportesPerdidaService.buscarReporteDelDuenio,
+      ).toHaveBeenCalledWith(ID_REPORTE, ID_USUARIO);
       expect(resultado.nombreMascota).toBe('Firulais');
       expect(resultado.ultimaDeteccion).toEqual({
         latitud: -31.421,
