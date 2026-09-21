@@ -389,7 +389,13 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf(false)
                 }
                 // Última ubicación conocida de la mascota perdida (US-37).
-                var isViewingUltimaUbicacion by rememberSaveable {
+                //
+                // `remember` y no `rememberSaveable` a propósito: la pantalla
+                // depende de `reportePerdidaActivo`, que tampoco sobrevive a que
+                // se recree la Activity. Si el flag sobreviviera y el reporte no,
+                // al rotar el usuario volvería al perfil con el flag prendido y el
+                // primer 'atrás' no haría nada visible.
+                var isViewingUltimaUbicacion by remember {
                     mutableStateOf(false)
                 }
                 var isLoadingUltimaUbicacion by rememberSaveable {
