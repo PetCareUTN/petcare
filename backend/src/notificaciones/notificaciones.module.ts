@@ -4,6 +4,7 @@ import { AuthModule } from '../auth/auth.module';
 import { EventoClinico } from '../eventos-clinicos/entities/evento-clinico.entity';
 import { Notificacion } from './entities/notificacion.entity';
 import { NotificacionesController } from './notificaciones.controller';
+import { NotificacionesDeteccionesService } from './notificaciones-detecciones.service';
 import { NotificacionesTurnosService } from './notificaciones-turnos.service';
 import { NotificacionesService } from './notificaciones.service';
 import { RecordatoriosVacunasService } from './recordatorios-vacunas.service';
@@ -13,11 +14,13 @@ import { RecordatoriosVacunasService } from './recordatorios-vacunas.service';
   controllers: [NotificacionesController],
   providers: [
     NotificacionesService,
+    NotificacionesDeteccionesService,
     NotificacionesTurnosService,
     RecordatoriosVacunasService,
   ],
   exports: [
     NotificacionesService,
+    NotificacionesDeteccionesService,
     NotificacionesTurnosService,
     RecordatoriosVacunasService,
   ],

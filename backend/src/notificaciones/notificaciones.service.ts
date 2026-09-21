@@ -17,6 +17,8 @@ export class NotificacionesService {
     tipo: NotificationType,
     titulo: string,
     cuerpo: string,
+    /** Id del registro que abre la notificación al tocarla (ver la entidad). */
+    idReferencia: number | null = null,
   ): Promise<NotificacionResponseDto> {
     const notificacion = this.notificacionesRepository.create({
       usuario: { idUsuario } as any,
@@ -24,6 +26,7 @@ export class NotificacionesService {
       titulo,
       cuerpo,
       leida: false,
+      idReferencia,
     });
 
     const guardada = await this.notificacionesRepository.save(notificacion);

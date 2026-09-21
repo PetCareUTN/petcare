@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ReportePerdidaEstado } from '../common/enums/reporte-perdida-estado.enum';
+import { NotificacionesDeteccionesService } from '../notificaciones/notificaciones-detecciones.service';
 import { ReportesPerdidaService } from '../reportes-perdida/reportes-perdida.service';
 import { TagBle } from '../tags-ble/entities/tag-ble.entity';
 import { DeteccionesService } from './detecciones.service';
@@ -19,6 +20,7 @@ describe('DeteccionesService', () => {
     buscarReporteActivo: jest.Mock;
     buscarReporteDelDuenio: jest.Mock;
   };
+  let notificacionesDeteccionesService: { notificarDeteccion: jest.Mock };
   let insertBuilder: {
     insert: jest.Mock;
     into: jest.Mock;
@@ -36,10 +38,14 @@ describe('DeteccionesService', () => {
     mascota: { idMascota: ID_MASCOTA },
   } as TagBle;
 
+  const ID_DUENIO = 3;
+
   const reporteActivo = {
     idReporte: ID_REPORTE,
     estado: ReportePerdidaEstado.ACTIVO,
     fechaPerdida: new Date('2026-09-12T15:00:00.000Z'),
+    usuario: { idUsuario: ID_DUENIO },
+    mascota: { idMascota: ID_MASCOTA, nombre: 'Firulais' },
   };
 
   const dto = (): RegistrarDeteccionDto => ({
@@ -76,6 +82,10 @@ describe('DeteccionesService', () => {
           useValue: { findOne: jest.fn() },
         },
         {
+          provide: NotificacionesDeteccionesService,
+          useValue: { notificarDeteccion: jest.fn().mockResolvedValue(true) },
+        },
+        {
           provide: ReportesPerdidaService,
           useValue: {
             buscarReporteActivo: jest.fn(),
@@ -89,6 +99,9 @@ describe('DeteccionesService', () => {
     deteccionesRepository = module.get(getRepositoryToken(Deteccion));
     tagsBleRepository = module.get(getRepositoryToken(TagBle));
     reportesPerdidaService = module.get(ReportesPerdidaService);
+    notificacionesDeteccionesService = module.get(
+      NotificacionesDeteccionesService,
+    );
   });
 
   it('registra la detección de una mascota reportada como perdida', async () => {
@@ -301,6 +314,48 @@ describe('DeteccionesService', () => {
       ).rejects.toBeInstanceOf(ForbiddenException);
 
       expect(deteccionesRepository.findOne).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('aviso al dueño (US-41)', () => {
+    it('avisa al dueño cuando entra una detección nueva', async () => {
+      tagsBleRepository.findOne.mockResolvedValue(tagVinculado);
+      reportesPerdidaService.buscarReporteActivo.mockResolvedValue(reporteActivo);
+
+      await service.registrar(dto());
+
+      expect(
+        notificacionesDeteccionesService.notificarDeteccion,
+      ).toHaveBeenCalledWith({
+        idReporte: ID_REPORTE,
+        idDuenio: ID_DUENIO,
+        nombreMascota: 'Firulais',
+        detectadoEn: new Date('2026-09-12T18:30:00.000Z'),
+      });
+    });
+
+    it('no avisa cuando el celular reenvía una detección que ya estaba', async () => {
+      tagsBleRepository.findOne.mockResolvedValue(tagVinculado);
+      reportesPerdidaService.buscarReporteActivo.mockResolvedValue(reporteActivo);
+      insertBuilder.execute.mockResolvedValue({ raw: [] });
+
+      await expect(service.registrar(dto())).resolves.toBe('duplicada');
+
+      expect(
+        notificacionesDeteccionesService.notificarDeteccion,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('no avisa por una mascota cuyo reporte ya se cerró', async () => {
+      tagsBleRepository.findOne.mockResolvedValue(tagVinculado);
+      // Sin reporte abierto la detección ni siquiera se guarda.
+      reportesPerdidaService.buscarReporteActivo.mockResolvedValue(null);
+
+      await expect(service.registrar(dto())).resolves.toBe('descartada');
+
+      expect(
+        notificacionesDeteccionesService.notificarDeteccion,
+      ).not.toHaveBeenCalled();
     });
   });
 });

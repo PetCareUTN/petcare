@@ -112,7 +112,16 @@ export class ReportesPerdidaService {
    * reporte y para ignorar las lecturas previas a la pérdida.
    */
   buscarReporteActivo(idMascota: number): Promise<ReportePerdida | null> {
-    return this.findReporteActivo(idMascota);
+    return this.reportesRepository.findOne({
+      where: {
+        mascota: { idMascota },
+        estado: ReportePerdidaEstado.ACTIVO,
+      },
+      // El aviso de US-41 necesita a quién avisarle y el nombre de la mascota.
+      // Va acá y no en `findReporteActivo` para que `tieneReporteActivo`, que
+      // solo pregunta si existe, siga sin traer los joins.
+      relations: ['usuario', 'mascota'],
+    });
   }
 
   /**

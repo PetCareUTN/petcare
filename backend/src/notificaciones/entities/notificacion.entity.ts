@@ -30,6 +30,14 @@ export class Notificacion {
   @Column({ type: 'boolean', default: false })
   leida: boolean;
 
+  /**
+   * Registro al que apunta la notificación, para poder abrir la pantalla que
+   * corresponde al tocarla (US-41). Qué representa depende de `tipo`: en
+   * `mascota_detectada` es el id del reporte de pérdida.
+   */
+  @Column({ name: 'id_referencia', type: 'integer', nullable: true })
+  idReferencia: number | null;
+
   @CreateDateColumn({ name: 'fecha_envio' })
   fechaEnvio: Date;
 }
