@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { ReportesPerdidaService } from '../reportes-perdida/reportes-perdida.service';
 import { TagBle } from '../tags-ble/entities/tag-ble.entity';
 import { RegistrarDeteccionDto } from './dto/registrar-deteccion.dto';
+import { UltimaDeteccionResponseDto } from './dto/ultima-deteccion-response.dto';
 import { Deteccion } from './entities/deteccion.entity';
 
 /**
@@ -73,5 +74,38 @@ export class DeteccionesService {
     // (`identifiers` no sirve para esto: TypeORM lo arma por cada valor enviado.)
     const insertadas = resultado.raw as unknown[];
     return insertadas.length > 0 ? 'registrada' : 'duplicada';
+  }
+
+  /**
+   * Última ubicación conocida de una mascota perdida (US-37).
+   *
+   * Ordena por `detectadoEn` y no por `created_at`: una detección puede llegar
+   * tarde porque el celular la encoló mientras no tenía red, y lo que orienta la
+   * búsqueda es cuándo se vio a la mascota, no cuándo entró la fila al servidor.
+   *
+   * El permiso lo resuelve `buscarReporteDelDuenio`, que tira 404 si el reporte
+   * no existe y 403 si es de otro dueño.
+   */
+  async buscarUltimaDelReporte(
+    idReporte: number,
+    idUsuario: number,
+  ): Promise<UltimaDeteccionResponseDto> {
+    const reporte = await this.reportesPerdidaService.buscarReporteDelDuenio(
+      idReporte,
+      idUsuario,
+    );
+
+    const ultima = await this.deteccionesRepository.findOne({
+      where: { reporte: { idReporte } },
+      // El id desempata dos lecturas con la misma marca de tiempo.
+      order: { detectadoEn: 'DESC', idDeteccion: 'DESC' },
+    });
+
+    return UltimaDeteccionResponseDto.fromEntity(
+      reporte.idReporte,
+      reporte.mascota.idMascota,
+      reporte.mascota.nombre ?? null,
+      ultima,
+    );
   }
 }

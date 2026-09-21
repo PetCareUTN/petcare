@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ReportePerdidaEstado } from '../common/enums/reporte-perdida-estado.enum';
@@ -10,8 +10,15 @@ import { Deteccion } from './entities/deteccion.entity';
 
 describe('DeteccionesService', () => {
   let service: DeteccionesService;
+  let deteccionesRepository: {
+    createQueryBuilder: jest.Mock;
+    findOne: jest.Mock;
+  };
   let tagsBleRepository: { findOne: jest.Mock };
-  let reportesPerdidaService: { buscarReporteActivo: jest.Mock };
+  let reportesPerdidaService: {
+    buscarReporteActivo: jest.Mock;
+    buscarReporteDelDuenio: jest.Mock;
+  };
   let insertBuilder: {
     insert: jest.Mock;
     into: jest.Mock;
@@ -59,7 +66,10 @@ describe('DeteccionesService', () => {
         DeteccionesService,
         {
           provide: getRepositoryToken(Deteccion),
-          useValue: { createQueryBuilder: jest.fn(() => insertBuilder) },
+          useValue: {
+            createQueryBuilder: jest.fn(() => insertBuilder),
+            findOne: jest.fn(),
+          },
         },
         {
           provide: getRepositoryToken(TagBle),
@@ -67,12 +77,16 @@ describe('DeteccionesService', () => {
         },
         {
           provide: ReportesPerdidaService,
-          useValue: { buscarReporteActivo: jest.fn() },
+          useValue: {
+            buscarReporteActivo: jest.fn(),
+            buscarReporteDelDuenio: jest.fn(),
+          },
         },
       ],
     }).compile();
 
     service = module.get(DeteccionesService);
+    deteccionesRepository = module.get(getRepositoryToken(Deteccion));
     tagsBleRepository = module.get(getRepositoryToken(TagBle));
     reportesPerdidaService = module.get(ReportesPerdidaService);
   });
@@ -178,5 +192,90 @@ describe('DeteccionesService', () => {
     await expect(
       service.registrar({ ...dto(), detectadoEn: enUnMinuto }),
     ).resolves.toBe('registrada');
+  });
+
+  describe('buscarUltimaDelReporte (US-37)', () => {
+    const ID_USUARIO = 3;
+
+    const reporteDelDuenio = {
+      idReporte: ID_REPORTE,
+      mascota: { idMascota: ID_MASCOTA, nombre: 'Firulais' },
+    };
+
+    const deteccion = {
+      idDeteccion: 12,
+      latitud: -31.421,
+      longitud: -64.189,
+      precisionMetros: 25,
+      detectadoEn: new Date('2026-09-12T18:30:00.000Z'),
+    };
+
+    it('devuelve la última detección de la mascota perdida', async () => {
+      reportesPerdidaService.buscarReporteDelDuenio.mockResolvedValue(
+        reporteDelDuenio,
+      );
+      deteccionesRepository.findOne.mockResolvedValue(deteccion);
+
+      const resultado = await service.buscarUltimaDelReporte(
+        ID_REPORTE,
+        ID_USUARIO,
+      );
+
+      expect(reportesPerdidaService.buscarReporteDelDuenio).toHaveBeenCalledWith(
+        ID_REPORTE,
+        ID_USUARIO,
+      );
+      expect(resultado.nombreMascota).toBe('Firulais');
+      expect(resultado.ultimaDeteccion).toEqual({
+        latitud: -31.421,
+        longitud: -64.189,
+        precisionMetros: 25,
+        // 25 del GPS + 80 del redondeo de coordenadas que hace el celular.
+        radioAproximadoMetros: 105,
+        detectadoEn: '2026-09-12T18:30:00.000Z',
+      });
+    });
+
+    it('pide la más reciente por fecha de detección, no por fecha de alta', async () => {
+      reportesPerdidaService.buscarReporteDelDuenio.mockResolvedValue(
+        reporteDelDuenio,
+      );
+      deteccionesRepository.findOne.mockResolvedValue(deteccion);
+
+      await service.buscarUltimaDelReporte(ID_REPORTE, ID_USUARIO);
+
+      expect(deteccionesRepository.findOne).toHaveBeenCalledWith({
+        where: { reporte: { idReporte: ID_REPORTE } },
+        order: { detectadoEn: 'DESC', idDeteccion: 'DESC' },
+      });
+    });
+
+    it('devuelve null cuando el reporte todavía no tiene detecciones', async () => {
+      reportesPerdidaService.buscarReporteDelDuenio.mockResolvedValue(
+        reporteDelDuenio,
+      );
+      deteccionesRepository.findOne.mockResolvedValue(null);
+
+      const resultado = await service.buscarUltimaDelReporte(
+        ID_REPORTE,
+        ID_USUARIO,
+      );
+
+      // Estado vacío, no error: el reporte existe, todavía nadie la cruzó.
+      expect(resultado.ultimaDeteccion).toBeNull();
+      expect(resultado.idMascota).toBe(ID_MASCOTA);
+    });
+
+    it('no deja consultar la mascota de otro dueño', async () => {
+      reportesPerdidaService.buscarReporteDelDuenio.mockRejectedValue(
+        new ForbiddenException(),
+      );
+
+      await expect(
+        service.buscarUltimaDelReporte(ID_REPORTE, 99),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+
+      expect(deteccionesRepository.findOne).not.toHaveBeenCalled();
+    });
   });
 });
