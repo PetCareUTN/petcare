@@ -388,15 +388,14 @@ class MainActivity : ComponentActivity() {
                 var isVinculandoTagScreen by rememberSaveable {
                     mutableStateOf(false)
                 }
-                // Última ubicación conocida de la mascota perdida (US-37).
+                // Reporte cuya última ubicación se está mirando, o null si no se
+                // está mirando ninguna (US-37).
                 //
-                // `remember` y no `rememberSaveable` a propósito: la pantalla
-                // depende de `reportePerdidaActivo`, que tampoco sobrevive a que
-                // se recree la Activity. Si el flag sobreviviera y el reporte no,
-                // al rotar el usuario volvería al perfil con el flag prendido y el
-                // primer 'atrás' no haría nada visible.
-                var isViewingUltimaUbicacion by remember {
-                    mutableStateOf(false)
+                // Guarda el id y no un booleano porque a esta pantalla se llega
+                // desde dos lados: el perfil de la mascota y el aviso de detección
+                // (US-41), y desde el aviso no hay ninguna mascota seleccionada.
+                var ultimaUbicacionIdReporte by rememberSaveable {
+                    mutableStateOf<Int?>(null)
                 }
                 var isLoadingUltimaUbicacion by rememberSaveable {
                     mutableStateOf(false)
@@ -701,7 +700,7 @@ class MainActivity : ComponentActivity() {
                     editingPet = null
                     selectedPetId = null
                     selectedPet = null
-                    isViewingUltimaUbicacion = false
+                    ultimaUbicacionIdReporte = null
                     ultimaUbicacion = null
                     ultimaUbicacionError = null
                     petProfileError = null
@@ -797,7 +796,7 @@ class MainActivity : ComponentActivity() {
                     editingPet = null
                     selectedPetId = null
                     selectedPet = null
-                    isViewingUltimaUbicacion = false
+                    ultimaUbicacionIdReporte = null
                     ultimaUbicacion = null
                     ultimaUbicacionError = null
                     isViewingHistoria = false
@@ -923,8 +922,8 @@ class MainActivity : ComponentActivity() {
                             isVinculandoTagScreen = false
                             tagBleError = null
                         }
-                        isViewingUltimaUbicacion -> {
-                            isViewingUltimaUbicacion = false
+                        ultimaUbicacionIdReporte != null -> {
+                            ultimaUbicacionIdReporte = null
                             ultimaUbicacion = null
                             ultimaUbicacionError = null
                         }
@@ -2356,7 +2355,16 @@ class MainActivity : ComponentActivity() {
                                             },
                                             onRetry = { loadNotificaciones() },
                                             onMarcarLeida = { marcarNotificacionLeida(it) },
-                                            onMarcarTodasLeidas = { marcarTodasLeidas() }
+                                            onMarcarTodasLeidas = { marcarTodasLeidas() },
+                                            // El aviso de detección abre la última
+                                            // ubicación de ese reporte (US-41).
+                                            onAbrirUltimaUbicacion = { idReporte ->
+                                                isViewingNotificaciones = false
+                                                cerradoEnMs = System.currentTimeMillis()
+                                                ultimaUbicacion = null
+                                                ultimaUbicacionError = null
+                                                ultimaUbicacionIdReporte = idReporte
+                                            }
                                         )
                                     }
                                 }
@@ -2944,17 +2952,23 @@ class MainActivity : ComponentActivity() {
                     )
                 } else if (
                     loggedUserName != null &&
-                    isViewingUltimaUbicacion &&
-                    reportePerdidaActivo != null
+                    ultimaUbicacionIdReporte != null
                 ) {
-                    val reporte = reportePerdidaActivo!!
+                    val idReporte = ultimaUbicacionIdReporte!!
+                    // La carga la dispara la pantalla y no quien navega hasta ella:
+                    // si se recrea la Activity, el id sobrevive pero los datos no,
+                    // y sin esto se vería el estado vacío en vez de recargar.
+                    LaunchedEffect(idReporte) { loadUltimaUbicacion(idReporte) }
                     UltimaUbicacionScreen(
-                        isLoading = isLoadingUltimaUbicacion,
+                        // Todavía sin respuesta ni error es que sigue cargando: un
+                        // reporte sin detecciones igual devuelve un objeto.
+                        isLoading = isLoadingUltimaUbicacion ||
+                            (ultimaUbicacion == null && ultimaUbicacionError == null),
                         errorMessage = ultimaUbicacionError,
                         ubicacion = ultimaUbicacion,
-                        onRetry = { loadUltimaUbicacion(reporte.idReporte) },
+                        onRetry = { loadUltimaUbicacion(idReporte) },
                         onBack = {
-                            isViewingUltimaUbicacion = false
+                            ultimaUbicacionIdReporte = null
                             ultimaUbicacion = null
                             ultimaUbicacionError = null
                         }
@@ -3097,8 +3111,7 @@ class MainActivity : ComponentActivity() {
                             val reporte = reportePerdidaActivo ?: return@PetProfileScreen
                             ultimaUbicacion = null
                             ultimaUbicacionError = null
-                            isViewingUltimaUbicacion = true
-                            loadUltimaUbicacion(reporte.idReporte)
+                            ultimaUbicacionIdReporte = reporte.idReporte
                         },
                         tagBle = tagBleDeLaMascota,
                         isLoadingTagBle = isLoadingTagBle,
