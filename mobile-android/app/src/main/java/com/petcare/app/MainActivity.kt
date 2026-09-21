@@ -94,7 +94,9 @@ import com.petcare.app.features.ble.ui.VincularTagScreen
 import com.petcare.app.features.perdidas.data.remote.CreateReportePerdidaRequest
 import com.petcare.app.features.perdidas.data.remote.ReportePerdidaResponse
 import com.petcare.app.features.perdidas.domain.ReportesPerdidaController
+import com.petcare.app.features.perdidas.data.remote.UltimaDeteccionResponse
 import com.petcare.app.features.perdidas.ui.ReportarMascotaPerdidaScreen
+import com.petcare.app.features.perdidas.ui.UltimaUbicacionScreen
 import com.petcare.app.features.pets.data.remote.CreatePetRequest
 import com.petcare.app.features.pets.data.remote.PetResponse
 import com.petcare.app.features.pets.data.remote.UpdatePetRequest
@@ -385,6 +387,19 @@ class MainActivity : ComponentActivity() {
                 // true mientras se muestra la pantalla de vincular/desvincular el tag.
                 var isVinculandoTagScreen by rememberSaveable {
                     mutableStateOf(false)
+                }
+                // Última ubicación conocida de la mascota perdida (US-37).
+                var isViewingUltimaUbicacion by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isLoadingUltimaUbicacion by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var ultimaUbicacionError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var ultimaUbicacion by remember {
+                    mutableStateOf<UltimaDeteccionResponse?>(null)
                 }
                 var isViewingHistoria by rememberSaveable {
                     mutableStateOf(false)
@@ -680,6 +695,9 @@ class MainActivity : ComponentActivity() {
                     editingPet = null
                     selectedPetId = null
                     selectedPet = null
+                    isViewingUltimaUbicacion = false
+                    ultimaUbicacion = null
+                    ultimaUbicacionError = null
                     petProfileError = null
                     isViewingHistoria = false
                     historiaError = null
@@ -773,6 +791,9 @@ class MainActivity : ComponentActivity() {
                     editingPet = null
                     selectedPetId = null
                     selectedPet = null
+                    isViewingUltimaUbicacion = false
+                    ultimaUbicacion = null
+                    ultimaUbicacionError = null
                     isViewingHistoria = false
                     isViewingProfile = false
                     isEditingProfile = false
@@ -896,6 +917,11 @@ class MainActivity : ComponentActivity() {
                             isVinculandoTagScreen = false
                             tagBleError = null
                         }
+                        isViewingUltimaUbicacion -> {
+                            isViewingUltimaUbicacion = false
+                            ultimaUbicacion = null
+                            ultimaUbicacionError = null
+                        }
                         selectedPetId != null -> {
                             selectedPetId = null
                             selectedPet = null
@@ -904,6 +930,8 @@ class MainActivity : ComponentActivity() {
                             reportePerdidaError = null
                             tagBleDeLaMascota = null
                             tagBleError = null
+                            ultimaUbicacion = null
+                            ultimaUbicacionError = null
                         }
                         isViewingMisTurnos -> isViewingMisTurnos = false
                         isRequestingTurno -> {
@@ -977,6 +1005,39 @@ class MainActivity : ComponentActivity() {
                             reportePerdidaError = "No se pudo conectar con el servidor"
                         } catch (exception: Exception) {
                             reportePerdidaError = "Ocurrio un error inesperado"
+                        }
+                    }
+                }
+
+                /**
+                 * Última detección registrada del reporte (US-37). Se pide al abrir
+                 * la pantalla y no junto con el perfil: la mayoría de las veces el
+                 * dueño entra a ver los datos de la mascota, no a buscarla.
+                 */
+                fun loadUltimaUbicacion(idReporte: Int) {
+                    isLoadingUltimaUbicacion = true
+                    ultimaUbicacionError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            ultimaUbicacion = reportesPerdidaController
+                                .getUltimaDeteccion(idReporte)
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                ultimaUbicacionError = mensajeErrorBackend(
+                                    exception,
+                                    "No se pudo cargar la ultima ubicacion"
+                                )
+                            }
+                        } catch (exception: IOException) {
+                            ultimaUbicacionError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            ultimaUbicacionError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingUltimaUbicacion = false
                         }
                     }
                 }
@@ -2877,6 +2938,23 @@ class MainActivity : ComponentActivity() {
                     )
                 } else if (
                     loggedUserName != null &&
+                    isViewingUltimaUbicacion &&
+                    reportePerdidaActivo != null
+                ) {
+                    val reporte = reportePerdidaActivo!!
+                    UltimaUbicacionScreen(
+                        isLoading = isLoadingUltimaUbicacion,
+                        errorMessage = ultimaUbicacionError,
+                        ubicacion = ultimaUbicacion,
+                        onRetry = { loadUltimaUbicacion(reporte.idReporte) },
+                        onBack = {
+                            isViewingUltimaUbicacion = false
+                            ultimaUbicacion = null
+                            ultimaUbicacionError = null
+                        }
+                    )
+                } else if (
+                    loggedUserName != null &&
                     isVinculandoTagScreen &&
                     selectedPet != null
                 ) {
@@ -3008,6 +3086,13 @@ class MainActivity : ComponentActivity() {
                                     isCerrandoReportePerdida = false
                                 }
                             }
+                        },
+                        onVerUltimaUbicacion = {
+                            val reporte = reportePerdidaActivo ?: return@PetProfileScreen
+                            ultimaUbicacion = null
+                            ultimaUbicacionError = null
+                            isViewingUltimaUbicacion = true
+                            loadUltimaUbicacion(reporte.idReporte)
                         },
                         tagBle = tagBleDeLaMascota,
                         isLoadingTagBle = isLoadingTagBle,

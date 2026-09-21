@@ -55,6 +55,8 @@ fun PetProfileScreen(
     reporteError: String? = null,
     onReportarPerdida: () -> Unit = {},
     onMarcarEncontrada: () -> Unit = {},
+    // Última ubicación conocida de la mascota perdida (US-37).
+    onVerUltimaUbicacion: () -> Unit = {},
     // Tag BLE vinculado, si tiene (US-32).
     tagBle: TagBleResponse? = null,
     isLoadingTagBle: Boolean = false,
@@ -139,6 +141,7 @@ fun PetProfileScreen(
                     reporteError = reporteError,
                     onReportarPerdida = onReportarPerdida,
                     onMarcarEncontrada = onMarcarEncontrada,
+                    onVerUltimaUbicacion = onVerUltimaUbicacion,
                     tagBle = tagBle,
                     isLoadingTagBle = isLoadingTagBle,
                     tagBleError = tagBleError,
@@ -158,6 +161,7 @@ private fun PetProfileContent(
     reporteError: String?,
     onReportarPerdida: () -> Unit,
     onMarcarEncontrada: () -> Unit,
+    onVerUltimaUbicacion: () -> Unit,
     tagBle: TagBleResponse?,
     isLoadingTagBle: Boolean,
     tagBleError: String?,
@@ -184,6 +188,7 @@ private fun PetProfileContent(
     if (reporteActivo != null) {
         ReportePerdidaBanner(
             reporte = reporteActivo,
+            onVerUltimaUbicacion = onVerUltimaUbicacion,
             tieneTagBle = tagBle != null,
             // Si la carga del tag falló, no sabemos si tiene: igual que cargando.
             tagBleDesconocido = isLoadingTagBle || tagBleError != null,
@@ -362,6 +367,7 @@ private fun PetProfileContent(
 @Composable
 private fun ReportePerdidaBanner(
     reporte: ReportePerdidaResponse,
+    onVerUltimaUbicacion: () -> Unit,
     tieneTagBle: Boolean,
     tagBleDesconocido: Boolean,
     onVincularTag: () -> Unit
@@ -418,6 +424,13 @@ private fun ReportePerdidaBanner(
                     TextButton(onClick = onVincularTag) {
                         Text("Vincular un tag", color = PetCareTealDark)
                     }
+                }
+            }
+            // Sin tag no puede haber detecciones, así que el acceso a la última
+            // ubicación se ofrece solo cuando puede traer algo (US-37).
+            if (tieneTagBle || tagBleDesconocido) {
+                TextButton(onClick = onVerUltimaUbicacion) {
+                    Text("Ver ultima ubicacion", color = PetCareTealDark)
                 }
             }
         }
