@@ -3,6 +3,7 @@ package com.petcare.app.features.perdidas.domain
 import com.petcare.app.features.perdidas.data.remote.CreateReportePerdidaRequest
 import com.petcare.app.features.perdidas.data.remote.ReportePerdidaResponse
 import com.petcare.app.features.perdidas.data.remote.ReportesPerdidaApi
+import com.petcare.app.features.perdidas.data.remote.UltimaDeteccionResponse
 
 class ReportesPerdidaController(
     private val reportesPerdidaApi: ReportesPerdidaApi
@@ -16,4 +17,8 @@ class ReportesPerdidaController(
 
     suspend fun cerrar(idReporte: Int): ReportePerdidaResponse =
         reportesPerdidaApi.cerrar(idReporte)
+
+    /** Última ubicación conocida de la mascota perdida (US-37). */
+    suspend fun getUltimaDeteccion(idReporte: Int): UltimaDeteccionResponse =
+        reportesPerdidaApi.getUltimaDeteccion(idReporte)
 }

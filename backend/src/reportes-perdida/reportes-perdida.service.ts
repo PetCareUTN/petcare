@@ -80,19 +80,7 @@ export class ReportesPerdidaService {
     idReporte: number,
     idUsuario: number,
   ): Promise<ReportePerdidaResponseDto> {
-    const reporte = await this.reportesRepository.findOne({
-      where: { idReporte },
-      relations: ['mascota', 'mascota.usuarios'],
-    });
-
-    if (!reporte) {
-      throw new NotFoundException({
-        codigoEstado: 404,
-        mensaje: 'Reporte no encontrado',
-      });
-    }
-
-    this.ensureDuenio(reporte.mascota, idUsuario);
+    const reporte = await this.buscarReporteDelDuenio(idReporte, idUsuario);
 
     if (reporte.estado === ReportePerdidaEstado.CERRADO) {
       throw new ConflictException({
@@ -125,6 +113,35 @@ export class ReportesPerdidaService {
    */
   buscarReporteActivo(idMascota: number): Promise<ReportePerdida | null> {
     return this.findReporteActivo(idMascota);
+  }
+
+  /**
+   * El reporte del dueño autenticado, con la mascota cargada. Lo usa US-37 para
+   * consultar las detecciones de una pérdida: la verificación de dueño vive acá
+   * y no en el módulo de detecciones para no tener dos criterios de permiso
+   * sobre el mismo recurso.
+   *
+   * Sirve tanto para reportes abiertos como cerrados: si la mascota apareció, el
+   * dueño sigue pudiendo mirar dónde la habían detectado.
+   */
+  async buscarReporteDelDuenio(
+    idReporte: number,
+    idUsuario: number,
+  ): Promise<ReportePerdida> {
+    const reporte = await this.reportesRepository.findOne({
+      where: { idReporte },
+      relations: ['mascota', 'mascota.usuarios'],
+    });
+
+    if (!reporte) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Reporte no encontrado',
+      });
+    }
+
+    this.ensureDuenio(reporte.mascota, idUsuario);
+    return reporte;
   }
 
   private findReporteActivo(idMascota: number): Promise<ReportePerdida | null> {
