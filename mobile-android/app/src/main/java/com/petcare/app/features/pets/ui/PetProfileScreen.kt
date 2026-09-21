@@ -24,6 +24,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,6 +58,7 @@ fun PetProfileScreen(
     // Tag BLE vinculado, si tiene (US-32).
     tagBle: TagBleResponse? = null,
     isLoadingTagBle: Boolean = false,
+    tagBleError: String? = null,
     onVerTagBle: () -> Unit = {}
 ) {
     Column(
@@ -139,6 +141,7 @@ fun PetProfileScreen(
                     onMarcarEncontrada = onMarcarEncontrada,
                     tagBle = tagBle,
                     isLoadingTagBle = isLoadingTagBle,
+                    tagBleError = tagBleError,
                     onVerTagBle = onVerTagBle
                 )
             }
@@ -157,6 +160,7 @@ private fun PetProfileContent(
     onMarcarEncontrada: () -> Unit,
     tagBle: TagBleResponse?,
     isLoadingTagBle: Boolean,
+    tagBleError: String?,
     onVerTagBle: () -> Unit
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -178,7 +182,13 @@ private fun PetProfileContent(
     Spacer(modifier = Modifier.height(18.dp))
 
     if (reporteActivo != null) {
-        ReportePerdidaBanner(reporte = reporteActivo)
+        ReportePerdidaBanner(
+            reporte = reporteActivo,
+            tieneTagBle = tagBle != null,
+            // Si la carga del tag falló, no sabemos si tiene: igual que cargando.
+            tagBleDesconocido = isLoadingTagBle || tagBleError != null,
+            onVincularTag = onVerTagBle
+        )
         Spacer(modifier = Modifier.height(18.dp))
     }
 
@@ -342,9 +352,20 @@ private fun PetProfileContent(
     Spacer(modifier = Modifier.height(24.dp))
 }
 
-/** Estado "perdida" de la mascota: el reporte abierto y desde cuándo (US-36). */
+/**
+ * Estado "perdida" de la mascota: el reporte abierto y desde cuándo (US-36).
+ *
+ * Sin tag vinculado el reporte vale igual, pero la red colaborativa no puede
+ * detectarla (las detecciones llegan por tagId), así que se lo decimos al dueño
+ * en vez de prometerle avisos que nunca van a llegar.
+ */
 @Composable
-private fun ReportePerdidaBanner(reporte: ReportePerdidaResponse) {
+private fun ReportePerdidaBanner(
+    reporte: ReportePerdidaResponse,
+    tieneTagBle: Boolean,
+    tagBleDesconocido: Boolean,
+    onVincularTag: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -378,11 +399,27 @@ private fun ReportePerdidaBanner(reporte: ReportePerdidaResponse) {
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
-            Text(
-                text = "La red colaborativa te avisa si alguien la detecta cerca",
-                color = PetCareMuted,
-                style = MaterialTheme.typography.bodySmall
-            )
+            when {
+                // Mientras no sabemos si tiene tag, no afirmamos nada.
+                tagBleDesconocido -> Unit
+                tieneTagBle -> Text(
+                    text = "La red colaborativa te avisa si alguien la detecta cerca",
+                    color = PetCareMuted,
+                    style = MaterialTheme.typography.bodySmall
+                )
+                else -> {
+                    Text(
+                        text = "No tiene un tag vinculado, así que la red colaborativa " +
+                            "no puede detectarla. Vinculá uno para que te avisen si " +
+                            "alguien pasa cerca.",
+                        color = PetCareError,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    TextButton(onClick = onVincularTag) {
+                        Text("Vincular un tag", color = PetCareTealDark)
+                    }
+                }
+            }
         }
     }
 }

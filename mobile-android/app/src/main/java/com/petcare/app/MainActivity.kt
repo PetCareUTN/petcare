@@ -2828,6 +2828,12 @@ class MainActivity : ComponentActivity() {
                         isSaving = isReportandoPerdida,
                         errorMessage = reportePerdidaError,
                         contactoInicial = profile?.telefono.orEmpty(),
+                        // Si todavía carga o falló la carga, no sabemos si tiene tag.
+                        tieneTagBle = if (isLoadingTagBle || tagBleError != null) {
+                            null
+                        } else {
+                            tagBleDeLaMascota != null
+                        },
                         onBack = {
                             isReportandoPerdidaScreen = false
                             reportePerdidaError = null
@@ -3005,6 +3011,7 @@ class MainActivity : ComponentActivity() {
                         },
                         tagBle = tagBleDeLaMascota,
                         isLoadingTagBle = isLoadingTagBle,
+                        tagBleError = tagBleError,
                         onVerTagBle = { isVinculandoTagScreen = true }
                     )
                 } else if (loggedUserName != null && isViewingMisTurnos) {

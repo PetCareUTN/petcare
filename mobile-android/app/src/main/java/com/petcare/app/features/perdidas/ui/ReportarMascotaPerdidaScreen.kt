@@ -92,6 +92,8 @@ fun ReportarMascotaPerdidaScreen(
     isSaving: Boolean,
     errorMessage: String?,
     contactoInicial: String,
+    // null mientras se está cargando el tag de la mascota (US-32).
+    tieneTagBle: Boolean?,
     onBack: () -> Unit,
     onReportar: (
         fechaPerdida: String,
@@ -177,21 +179,45 @@ fun ReportarMascotaPerdidaScreen(
 
         Spacer(modifier = Modifier.height(18.dp))
 
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = PetCareTealSoft,
-            shape = MaterialTheme.shapes.large
-        ) {
-            Text(
-                text = "Al reportarla, la red colaborativa empieza a avisarte si " +
-                    "alguien la detecta cerca.",
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                color = PetCareTealDark,
-                style = MaterialTheme.typography.bodyMedium
-            )
+        when (tieneTagBle) {
+            true -> {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = PetCareTealSoft,
+                    shape = MaterialTheme.shapes.large
+                ) {
+                    Text(
+                        text = "Al reportarla, la red colaborativa empieza a avisarte si " +
+                            "alguien la detecta cerca.",
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        color = PetCareTealDark,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+                Spacer(modifier = Modifier.height(18.dp))
+            }
+            // Sin tag se puede reportar igual, pero sin red colaborativa: las
+            // detecciones llegan por tagId y no habría con qué asociarlas.
+            false -> {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surface,
+                    shape = MaterialTheme.shapes.large,
+                    border = BorderStroke(1.dp, PetCareError)
+                ) {
+                    Text(
+                        text = "$petName no tiene un tag vinculado. Podés reportarla " +
+                            "igual, pero la red colaborativa no va a poder detectarla.",
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        color = PetCareError,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+                Spacer(modifier = Modifier.height(18.dp))
+            }
+            // Todavía no sabemos si tiene tag: mejor no afirmar nada.
+            null -> Unit
         }
-
-        Spacer(modifier = Modifier.height(18.dp))
 
         Text(
             text = "Cuándo la viste por última vez",
