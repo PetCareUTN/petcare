@@ -12,6 +12,7 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import com.petcare.app.MainActivity
 import com.petcare.app.R
 import com.petcare.app.features.ble.data.local.ColaboracionPreferences
@@ -166,12 +167,33 @@ class ServicioEscaneoBle : Service() {
 
         detectorSeparacion.registrarLectura(lectura.tagId, lectura.detectadoEnMillis)
 
-        // Punto de enganche para US-35 (P1-174): esa historia decide como avisar
-        // (umbral configurable, silenciado por mascota, texto de la alerta) y todavia
-        // no esta implementada. Este service solo garantiza que el evento se detecta
-        // una sola vez por episodio; no arma ninguna notificacion todavia.
+        // La alerta definitiva (umbral configurable, silenciado por mascota, texto
+        // final) es US-35 (P1-174) y todavia no esta implementada. Esta notificacion
+        // es solo para probar HOY que la deteccion real funciona con el tag fisico,
+        // sin depender de tener el celular enchufado a una compu mirando el Logcat.
         if (detectorSeparacion.separacionNuevaDetectada(lectura.tagId, lectura.detectadoEnMillis)) {
             Log.i(TAG, "Separacion detectada para el tag ${lectura.tagId} (pendiente US-35)")
+            mostrarNotificacionDebugDeSeparacion(lectura.tagId)
+        }
+    }
+
+    private fun mostrarNotificacionDebugDeSeparacion(tagId: String) {
+        val notificacion = NotificationCompat.Builder(this, ID_CANAL_DEBUG_SEPARACION)
+            .setContentTitle("[DEBUG US-34] Separación detectada")
+            .setContentText("Hace rato que no se ve el tag $tagId")
+            .setSmallIcon(android.R.drawable.stat_notify_sync)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .build()
+
+        // tagId.hashCode() como id: si hay varios tags monitoreados, cada uno tiene su
+        // propia notificacion en vez de pisar la de otro.
+        runCatching {
+            NotificationManagerCompat.from(this).notify(tagId.hashCode(), notificacion)
+        }.onFailure {
+            // Sin permiso POST_NOTIFICATIONS (API 33+) no se puede mostrar: el Logcat
+            // de arriba sigue sirviendo como respaldo para confirmar la deteccion.
+            Log.w(TAG, "No se pudo mostrar la notificacion de debug", it)
         }
     }
 
@@ -224,7 +246,21 @@ class ServicioEscaneoBle : Service() {
             setShowBadge(false)
         }
 
+        // Canal aparte para la notificacion de prueba de US-34: a diferencia del de
+        // arriba (silencioso, porque es obligatorio y el usuario no lo pidio), esta
+        // tiene que hacerse notar para poder probarla sin mirar el celular todo el
+        // tiempo. Se borra junto con mostrarNotificacionDebugDeSeparacion() cuando
+        // llegue la alerta definitiva de US-35.
+        val canalDebug = NotificationChannel(
+            ID_CANAL_DEBUG_SEPARACION,
+            "[DEBUG] Separación detectada (US-34)",
+            NotificationManager.IMPORTANCE_HIGH,
+        ).apply {
+            description = "Notificacion de prueba para validar la deteccion de separacion con hardware real."
+        }
+
         getSystemService(NotificationManager::class.java)?.createNotificationChannel(canal)
+        getSystemService(NotificationManager::class.java)?.createNotificationChannel(canalDebug)
     }
 
     private fun detenerse() {
@@ -244,6 +280,8 @@ class ServicioEscaneoBle : Service() {
 
         private const val ID_CANAL = "petcare_colaboracion_ble"
         private const val ID_NOTIFICACION = 1001
+
+        private const val ID_CANAL_DEBUG_SEPARACION = "petcare_debug_separacion_us34"
 
         private const val ACCION_DETENER = "com.petcare.app.ble.DETENER"
 
