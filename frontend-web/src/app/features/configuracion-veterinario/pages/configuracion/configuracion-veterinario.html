@@ -1,0 +1,107 @@
+<main class="config-page">
+  <header class="config-header">
+    <h1>Configuración</h1>
+  </header>
+
+  @if (isLoading()) {
+    <p class="status-text">Cargando...</p>
+  }
+
+  @if (errorMessage()) {
+    <p class="banner banner-error">{{ errorMessage() }}</p>
+  }
+
+  @if (!isLoading() && datos(); as datos) {
+    <section class="config-card">
+      <h2>Datos de la clínica</h2>
+      <p class="card-subtitle">
+        Estos datos se cargaron al registrarte. Si necesitás modificarlos, contactate con
+        soporte.
+      </p>
+
+      <dl class="datos-list">
+        <div class="datos-row">
+          <dt>Nombre</dt>
+          <dd>{{ datos.nombre }}</dd>
+        </div>
+        <div class="datos-row">
+          <dt>Dirección</dt>
+          <dd>{{ datos.direccion || 'Sin dirección cargada' }}</dd>
+        </div>
+        <div class="datos-row">
+          <dt>Teléfono</dt>
+          <dd>{{ datos.telefono || 'Sin teléfono cargado' }}</dd>
+        </div>
+        <div class="datos-row">
+          <dt>Email</dt>
+          <dd>{{ datos.email }}</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="config-card">
+      <h2>Cambiar contraseña</h2>
+
+      @if (contrasenaSuccess()) {
+        <p class="banner banner-success">{{ contrasenaSuccess() }}</p>
+      }
+      @if (contrasenaError()) {
+        <p class="banner banner-error">{{ contrasenaError() }}</p>
+      }
+
+      <form class="password-form" [formGroup]="formContrasena" (ngSubmit)="cambiarContrasena()">
+        <div class="field">
+          <label for="actual">Contraseña actual</label>
+          <input
+            id="actual"
+            type="password"
+            formControlName="actual"
+            [class.field-invalid]="
+              formContrasena.controls.actual.invalid && formContrasena.controls.actual.touched
+            "
+          />
+        </div>
+
+        <div class="field">
+          <label for="nueva">Nueva contraseña</label>
+          <input
+            id="nueva"
+            type="password"
+            formControlName="nueva"
+            [class.field-invalid]="
+              formContrasena.controls.nueva.invalid && formContrasena.controls.nueva.touched
+            "
+          />
+          @if (
+            formContrasena.controls.nueva.touched &&
+            formContrasena.controls.nueva.hasError('minlength')
+          ) {
+            <p class="field-error">Tiene que tener al menos 8 caracteres.</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="confirmarNueva">Confirmar nueva contraseña</label>
+          <input
+            id="confirmarNueva"
+            type="password"
+            formControlName="confirmarNueva"
+            [class.field-invalid]="
+              formContrasena.controls.confirmarNueva.touched && formContrasena.hasError('noCoincide')
+            "
+          />
+          @if (
+            formContrasena.controls.confirmarNueva.touched &&
+            formContrasena.hasError('noCoincide')
+          ) {
+            <p class="field-error">Las contraseñas no coinciden.</p>
+          }
+        </div>
+
+        <button type="submit" class="btn-primary" [disabled]="isCambiandoContrasena()">
+          {{ isCambiandoContrasena() ? 'Guardando...' : 'Cambiar contraseña' }}
+        </button>
+      </form>
+    </section>
+  }
+</main>

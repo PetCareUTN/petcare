@@ -125,6 +125,13 @@ export const routes: Routes = [
             './features/reportes-veterinarios/pages/dashboard/dashboard-reportes'
           ).then((m) => m.DashboardReportesPage),
       },
+      {
+        path: 'configuracion',
+        loadComponent: () =>
+          import(
+            './features/configuracion-veterinario/pages/configuracion/configuracion-veterinario'
+          ).then((m) => m.ConfiguracionVeterinarioPage),
+      },
     ],
   },
   {

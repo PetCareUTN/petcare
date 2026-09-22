@@ -28,7 +28,8 @@ export class VetLayout {
     this.currentUrl().startsWith('/eventos-clinicos') &&
     !this.isDisponibilidadActive() &&
     !this.isTurnosActive() &&
-    !this.isReportesActive();
+    !this.isReportesActive() &&
+    !this.isConfiguracionActive();
 
   protected readonly isDisponibilidadActive = () =>
     this.currentUrl().startsWith('/eventos-clinicos/disponibilidad');
@@ -38,6 +39,9 @@ export class VetLayout {
 
   protected readonly isReportesActive = () =>
     this.currentUrl().startsWith('/eventos-clinicos/reportes');
+
+  protected readonly isConfiguracionActive = () =>
+    this.currentUrl().startsWith('/eventos-clinicos/configuracion');
 
   protected readonly isServiciosActive = () => this.currentUrl().startsWith('/servicios');
 

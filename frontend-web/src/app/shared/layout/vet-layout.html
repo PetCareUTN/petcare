@@ -25,6 +25,12 @@
       <a routerLink="/eventos-clinicos/reportes" [class.active]="isReportesActive()">
         Reportes
       </a>
+      <a
+        routerLink="/eventos-clinicos/configuracion"
+        [class.active]="isConfiguracionActive()"
+      >
+        Configuración
+      </a>
     </nav>
 
     <button type="button" class="vet-logout" (click)="logout()">Cerrar sesión</button>
