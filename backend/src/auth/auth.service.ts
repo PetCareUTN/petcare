@@ -359,11 +359,14 @@ export class AuthService {
       });
     }
 
-    // Comparar contraseña vieja con la contraseña almacenada
+    // Comparar contraseña vieja con la contraseña almacenada.
+    // Se responde 400 y no 401: el usuario ya está autenticado con un JWT
+    // válido, así que un 401 acá dispararía el interceptor global que
+    // interpreta cualquier 401 como sesión expirada y lo desloguea.
     const passwordMatches = await bcrypt.compare(dto.viejaContraseña, user.password);
     if (!passwordMatches) {
-      throw new UnauthorizedException({
-        codigoEstado: 401,
+      throw new BadRequestException({
+        codigoEstado: 400,
         mensaje: 'Contraseña actual incorrecta',
       });
     }

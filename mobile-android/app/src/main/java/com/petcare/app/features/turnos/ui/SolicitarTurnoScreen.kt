@@ -1,8 +1,10 @@
 package com.petcare.app.features.turnos.ui
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
+import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
@@ -521,11 +523,18 @@ fun SolicitarTurnoScreen(
                         CircularProgressIndicator()
                     }
                 } else if (horariosDisponibles.isEmpty()) {
-                    Text(
-                        text = "No hay horarios disponibles para ese día",
-                        color = PetCareMuted,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+                    if (tipo == TipoTurno.VETERINARIA) {
+                        val telefonoVeterinaria = veterinarias
+                            .firstOrNull { it.idVeterinario == selectedVeterinariaId }
+                            ?.telefono
+                        SinHorariosVeterinariaCard(telefono = telefonoVeterinaria)
+                    } else {
+                        Text(
+                            text = "No hay horarios disponibles para ese día",
+                            color = PetCareMuted,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
                 } else {
                     /*
                      * Separados en mañana y tarde: una lista corrida de quince
@@ -1044,6 +1053,55 @@ private fun SlotChip(
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             style = MaterialTheme.typography.labelLarge
         )
+    }
+}
+
+/**
+ * Se muestra cuando no quedan horarios habituales para una veterinaria en el
+ * día elegido. Los sobreturnos no se piden desde la app: hay que llamar
+ * directamente a la veterinaria, por eso el mensaje incluye su teléfono
+ * registrado como un link que abre el marcador.
+ */
+@Composable
+private fun SinHorariosVeterinariaCard(telefono: String?) {
+    val context = LocalContext.current
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = PetCareMint),
+        border = BorderStroke(1.dp, PetCareLine),
+        shape = MaterialTheme.shapes.large
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            horizontalAlignment = Alignment.Start
+        ) {
+            Text(
+                text = "No hay horarios disponibles para ese día",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Para sobreturnos, contactate directamente con la veterinaria.",
+                color = PetCareMuted,
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            if (!telefono.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = "Llamar al $telefono",
+                    color = PetCareTealDark,
+                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.clickable {
+                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$telefono"))
+                        context.startActivity(intent)
+                    }
+                )
+            }
+        }
     }
 }
 

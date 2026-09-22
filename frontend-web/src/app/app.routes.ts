@@ -54,6 +54,13 @@ export const routes: Routes = [
     canActivate: [authGuard],
     children: [
       {
+        path: 'inicio',
+        loadComponent: () =>
+          import('./features/inicio-veterinario/pages/inicio/inicio-veterinario').then(
+            (m) => m.InicioVeterinarioPage,
+          ),
+      },
+      {
         path: '',
         loadComponent: () =>
           import('./features/eventos-clinicos/pages/buscar/buscar-mascota').then(
@@ -117,6 +124,20 @@ export const routes: Routes = [
           import(
             './features/turnos-veterinarios/pages/gestion-turnos/gestion-turnos'
           ).then((m) => m.GestionTurnosVeterinariosPage),
+      },
+      {
+        path: 'reportes',
+        loadComponent: () =>
+          import(
+            './features/reportes-veterinarios/pages/dashboard/dashboard-reportes'
+          ).then((m) => m.DashboardReportesPage),
+      },
+      {
+        path: 'configuracion',
+        loadComponent: () =>
+          import(
+            './features/configuracion-veterinario/pages/configuracion/configuracion-veterinario'
+          ).then((m) => m.ConfiguracionVeterinarioPage),
       },
     ],
   },

@@ -7,6 +7,7 @@
 
   --tipo-veterinaria: var(--primary);
   --tipo-servicio: #6f63b8;
+  --tipo-sobreturno: #2f6fb0;
 }
 
 .appointments-page {
@@ -368,6 +369,15 @@
   text-decoration: line-through;
 }
 
+/* Sobreturno: cupo extra cargado por el veterinario, no un turno reservado. */
+.event-chip.sobreturno,
+.event-block.sobreturno {
+  border-left-style: dotted;
+  border-left-color: var(--tipo-sobreturno);
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 14%, white);
+  color: var(--tipo-sobreturno);
+}
+
 .event-chip.selected,
 .event-block.selected {
   border-color: var(--text-primary);
@@ -575,6 +585,11 @@
 .tipo-badge.servicio {
   background-color: color-mix(in srgb, var(--tipo-servicio) 16%, white);
   color: var(--tipo-servicio);
+}
+
+.tipo-badge.sobreturno {
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 16%, white);
+  color: var(--tipo-sobreturno);
 }
 
 .appointment-reason,

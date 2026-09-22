@@ -9,8 +9,14 @@
     </div>
 
     <nav class="vet-nav">
+      <a routerLink="/eventos-clinicos/inicio" [class.active]="isInicioActive()">
+        Inicio
+      </a>
       <a routerLink="/eventos-clinicos" [class.active]="isAttentionActive()">
         Atención veterinaria
+      </a>
+      <a routerLink="/eventos-clinicos/turnos" [class.active]="isTurnosActive()">
+        Turnos
       </a>
       <a
         routerLink="/eventos-clinicos/disponibilidad"
@@ -18,10 +24,16 @@
       >
         Disponibilidad
       </a>
-      <a routerLink="/eventos-clinicos/turnos" [class.active]="isTurnosActive()">
-        Turnos
+      <a routerLink="/servicios" [class.active]="isServiciosActive()"> Servicios </a>
+      <a routerLink="/eventos-clinicos/reportes" [class.active]="isReportesActive()">
+        Reportes
       </a>
-      <a routerLink="/servicios" [class.active]="isServiciosActive()"> Mis servicios </a>
+      <a
+        routerLink="/eventos-clinicos/configuracion"
+        [class.active]="isConfiguracionActive()"
+      >
+        Configuración
+      </a>
     </nav>
 
     <button type="button" class="vet-logout" (click)="logout()">Cerrar sesión</button>

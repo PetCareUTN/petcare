@@ -12,7 +12,8 @@ data class VeterinariaResponse(
     val nombre: String,
     val direccion: String?,
     val latitud: Double?,
-    val longitud: Double?
+    val longitud: Double?,
+    val telefono: String?
 )
 
 data class DisponibilidadTurnoResponse(

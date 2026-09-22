@@ -5,8 +5,8 @@
   background-color: var(--background);
 }
 
-.availability-form {
-  width: min(100%, 860px);
+.availability-card {
+  width: min(100%, 780px);
   margin: 0 auto;
   padding: var(--spacing-xl);
   border: 1px solid var(--border);
@@ -16,10 +16,6 @@
 }
 
 .availability-header {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--spacing-md);
-  align-items: flex-start;
   margin-bottom: var(--spacing-lg);
 }
 
@@ -31,100 +27,6 @@
 .availability-header p {
   margin: var(--spacing-xs) 0 0;
   color: var(--text-secondary);
-}
-
-.availability-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
-
-.availability-row {
-  display: grid;
-  grid-template-columns:
-    minmax(150px, 1fr) minmax(120px, 0.7fr) minmax(120px, 0.7fr) minmax(110px, 0.6fr) auto;
-  gap: var(--spacing-md);
-  align-items: end;
-  padding: var(--spacing-md);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background-color: var(--background);
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-}
-
-.field label {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.field select,
-.field input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 0.6rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background-color: var(--surface);
-  color: var(--text-primary);
-  font: inherit;
-}
-
-.field select:focus,
-.field input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
-}
-
-.field input.field-invalid {
-  border-color: var(--danger);
-}
-
-.btn-primary,
-.btn-secondary,
-.btn-remove {
-  border-radius: var(--radius-sm);
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.btn-primary {
-  margin-top: var(--spacing-lg);
-  padding: 0.75rem 1.4rem;
-  border: none;
-  background-color: var(--primary);
-  color: #ffffff;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background-color: #446f64;
-}
-
-.btn-secondary,
-.btn-remove {
-  padding: 0.6rem 1rem;
-  border: 1px solid var(--border);
-  background-color: var(--surface);
-  color: var(--primary);
-}
-
-.btn-secondary:hover:not(:disabled),
-.btn-remove:hover:not(:disabled) {
-  background-color: var(--primary-light);
-}
-
-.btn-primary:disabled,
-.btn-secondary:disabled,
-.btn-remove:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 .banner,
@@ -152,22 +54,218 @@
   color: var(--danger);
 }
 
-@media (max-width: 720px) {
-  .availability-form {
+/* Formulario para agregar un horario nuevo */
+
+.add-form {
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--background);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.field label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.field input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background-color: var(--surface);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.field input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+.dias-selector {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.dia-circle {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.dia-circle:hover {
+  border-color: var(--primary);
+}
+
+.dia-circle.active {
+  border-color: var(--primary);
+  background-color: var(--primary);
+  color: #ffffff;
+}
+
+.horario-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.7fr) minmax(110px, 0.7fr) minmax(140px, 1fr) auto;
+  gap: var(--spacing-md);
+  align-items: end;
+  margin-top: var(--spacing-lg);
+}
+
+.btn-primary,
+.btn-secondary,
+.btn-remove {
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 0.75rem 1.4rem;
+  border: none;
+  background-color: var(--primary);
+  color: #ffffff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #446f64;
+}
+
+.btn-secondary {
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  color: var(--primary);
+  height: fit-content;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--primary-light);
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-remove:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Lista de horarios ya configurados */
+
+.reglas-list {
+  margin-bottom: var(--spacing-lg);
+}
+
+.reglas-list h2 {
+  margin: 0 0 var(--spacing-md);
+  font-size: 1.1rem;
+}
+
+.reglas-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.regla-row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--background);
+  flex-wrap: wrap;
+}
+
+.regla-dias {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.dia-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  font-size: 0.72rem;
+  font-weight: 800;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  opacity: 0.45;
+}
+
+.dia-badge.active {
+  border-color: var(--primary);
+  background-color: var(--primary);
+  color: #ffffff;
+  opacity: 1;
+}
+
+.regla-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  flex: 1;
+  min-width: 8rem;
+}
+
+.regla-horario {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.regla-cantidad {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.btn-remove {
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  color: var(--danger);
+}
+
+.btn-remove:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--danger) 12%, white);
+}
+
+@media (max-width: 640px) {
+  .availability-card {
     padding: var(--spacing-lg);
   }
 
-  .availability-header,
-  .availability-row {
+  .horario-row {
     grid-template-columns: 1fr;
   }
 
-  .availability-header {
-    display: grid;
-  }
-
-  .btn-secondary,
-  .btn-remove {
+  .btn-secondary {
     width: 100%;
   }
 }

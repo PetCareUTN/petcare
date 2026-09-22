@@ -71,7 +71,7 @@ export class LoginPage implements AfterViewInit {
         this.authService.saveToken(response.token);
         this.authService.saveRole(response.usuario.id_rol);
         const destino = this.authService.isVeterinario()
-          ? '/eventos-clinicos'
+          ? '/eventos-clinicos/inicio'
           : this.authService.isAdmin()
             ? '/admin'
             : '/';
