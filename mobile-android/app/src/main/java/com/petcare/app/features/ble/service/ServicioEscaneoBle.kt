@@ -15,6 +15,8 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.petcare.app.MainActivity
 import com.petcare.app.R
+import com.petcare.app.features.auth.data.local.SessionManager
+import com.petcare.app.features.auth.data.remote.RetrofitClient
 import com.petcare.app.features.ble.data.local.ColaboracionPreferences
 import com.petcare.app.features.ble.data.local.MonitoreoSeparacionPreferences
 import com.petcare.app.features.ble.domain.DeteccionesController
@@ -22,12 +24,15 @@ import com.petcare.app.features.ble.domain.DetectorDeSeparacion
 import com.petcare.app.features.ble.domain.EscaneoNoDisponibleException
 import com.petcare.app.features.ble.domain.MotorEscaneoBle
 import com.petcare.app.features.ble.domain.TagDetectado
+import com.petcare.app.features.notificaciones.data.remote.AvisarSeparacionRequest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
@@ -81,6 +86,7 @@ class ServicioEscaneoBle : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var escaneo: Job? = null
+    private var vigilanciaSeparacion: Job? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -103,6 +109,7 @@ class ServicioEscaneoBle : Service() {
 
         arrancarEnPrimerPlano()
         escanear()
+        vigilarSeparacion()
 
         // START_STICKY: si el sistema mata el proceso por memoria, que vuelva a
         // levantar el escaneo. onStartCommand va a recibir un intent nulo, y por eso la
@@ -166,14 +173,76 @@ class ServicioEscaneoBle : Service() {
         if (!detectorSeparacion.monitoreoActivo(lectura.tagId)) return
 
         detectorSeparacion.registrarLectura(lectura.tagId, lectura.detectadoEnMillis)
+    }
 
-        // La alerta definitiva (umbral configurable, silenciado por mascota, texto
-        // final) es US-35 (P1-174) y todavia no esta implementada. Esta notificacion
-        // es solo para probar HOY que la deteccion real funciona con el tag fisico,
-        // sin depender de tener el celular enchufado a una compu mirando el Logcat.
-        if (detectorSeparacion.separacionNuevaDetectada(lectura.tagId, lectura.detectadoEnMillis)) {
-            Log.i(TAG, "Separacion detectada para el tag ${lectura.tagId} (pendiente US-35)")
-            mostrarNotificacionDebugDeSeparacion(lectura.tagId)
+    /**
+     * Revisa periodicamente si algun tag monitoreado cumplio el intervalo de separacion.
+     *
+     * Va aparte del `collect` de lecturas a proposito: la separacion es **la ausencia de
+     * lecturas**, asi que colgarla de una lectura que llega nunca la detectaria. Es lo
+     * que pide el KDoc de [DetectorDeSeparacion]: `registrarLectura` por cada lectura, y
+     * `evaluar` periodicamente, en cada ciclo de duty cycling.
+     *
+     * Se apoya en el reloj del sistema y no en el timestamp de una lectura, porque
+     * justamente no hay lectura de la cual sacarlo.
+     */
+    private fun vigilarSeparacion() {
+        if (vigilanciaSeparacion?.isActive == true) return
+
+        vigilanciaSeparacion = scope.launch {
+            while (isActive) {
+                delay(preferencias.getIntervaloMillis())
+
+                // Un tag que el usuario acaba de activar tiene que entrar en la
+                // vigilancia sin esperar a que se reinicie el escaneo.
+                sincronizarTagsMonitoreados()
+
+                val ahora = System.currentTimeMillis()
+                for (tagId in monitoreoSeparacion.tagsMonitoreados()) {
+                    // La alerta definitiva (umbral configurable, silenciado por mascota,
+                    // texto final) es US-35 (P1-174) y todavia no esta implementada.
+                    // Esta notificacion es solo para probar HOY que la deteccion real
+                    // funciona con el tag fisico, sin depender de tener el celular
+                    // enchufado a una compu mirando el Logcat.
+                    if (detectorSeparacion.separacionNuevaDetectada(tagId, ahora)) {
+                        Log.i(TAG, "Separacion detectada para el tag $tagId (pendiente US-35)")
+                        mostrarNotificacionDebugDeSeparacion(tagId)
+                        avisarSeparacionAlBackend(tagId)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Deja el aviso de separacion en el historial del dueño (la campanita).
+     *
+     * La notificacion local de arriba es efimera: si el dueño no la ve en el
+     * momento, se pierde sin dejar rastro. Esta queda, y al tocarla abre el
+     * reporte de perdida de la mascota.
+     *
+     * A diferencia de las detecciones de US-31, que son anonimas, esto exige
+     * sesion: el aviso es para el dueño. Sin sesion no se intenta siquiera.
+     *
+     * No se encola para reintentar si falla, a proposito: a diferencia de una
+     * deteccion —que es un dato del mundo que se perderia para siempre— acá el
+     * dueño ya recibio la alerta local, y un aviso de "se alejo" que aparece
+     * media hora tarde confunde mas de lo que ayuda.
+     */
+    private fun avisarSeparacionAlBackend(tagId: String) {
+        val sesion = SessionManager(this)
+        if (sesion.getSession() == null) {
+            Log.w(TAG, "Sin sesion: no se puede dejar el aviso de separacion en la campanita")
+            return
+        }
+
+        scope.launch {
+            runCatching {
+                RetrofitClient.notificacionesApi(sesion)
+                    .avisarSeparacion(AvisarSeparacionRequest(tagId))
+            }.onFailure {
+                Log.w(TAG, "No se pudo dejar el aviso de separacion en la campanita", it)
+            }
         }
     }
 
@@ -266,6 +335,8 @@ class ServicioEscaneoBle : Service() {
     private fun detenerse() {
         escaneo?.cancel()
         escaneo = null
+        vigilanciaSeparacion?.cancel()
+        vigilanciaSeparacion = null
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }

@@ -6,4 +6,5 @@ export enum NotificationType {
   TURNO_CANCELADO = 'turno_cancelado',
   RECORDATORIO_VACUNA = 'recordatorio_vacuna',
   MASCOTA_DETECTADA = 'mascota_detectada',
+  MASCOTA_SEPARADA = 'mascota_separada',
 }

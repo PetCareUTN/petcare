@@ -10,5 +10,8 @@ import { TagsBleService } from './tags-ble.service';
   imports: [AuthModule, TypeOrmModule.forFeature([TagBle, Mascota])],
   controllers: [TagsBleController],
   providers: [TagsBleService],
+  // Lo usa NotificacionesModule para resolver a qué mascota pertenece el tag
+  // que avisó una separación (US-34).
+  exports: [TagsBleService],
 })
 export class TagsBleModule {}
