@@ -142,6 +142,7 @@ export class VeterinariosService {
       direccion: string | null;
       latitud: number | null;
       longitud: number | null;
+      telefono: string | null;
     }[]
   > {
     const veterinarios = await this.veterinariosRepository.find({
@@ -156,6 +157,7 @@ export class VeterinariosService {
         direccion: veterinario.usuario.direccion,
         latitud: veterinario.usuario.latitud,
         longitud: veterinario.usuario.longitud,
+        telefono: veterinario.usuario.telefono,
       }))
       .sort((a, b) => a.nombre.localeCompare(b.nombre));
   }

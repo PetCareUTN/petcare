@@ -1,0 +1,96 @@
+<main class="sobreturnos-page">
+  <section class="sobreturnos-card">
+    <header class="sobreturnos-header">
+      <div>
+        <h1>Sobreturnos</h1>
+        <p>
+          Agregá turnos extra puntuales para una fecha y hora específica, aunque estén fuera de
+          tu disponibilidad habitual. Los dueños van a poder reservarlos como cualquier otro
+          turno.
+        </p>
+      </div>
+    </header>
+
+    @if (successMessage()) {
+      <p class="banner banner-success">{{ successMessage() }}</p>
+    }
+
+    @if (errorMessage()) {
+      <p class="banner banner-error">{{ errorMessage() }}</p>
+    }
+
+    <form class="sobreturno-form" [formGroup]="form" (ngSubmit)="agregar()">
+      <div class="field">
+        <label for="fecha">Fecha</label>
+        <input
+          id="fecha"
+          type="date"
+          formControlName="fecha"
+          [class.field-invalid]="form.get('fecha')?.invalid && form.get('fecha')?.touched"
+        />
+      </div>
+
+      <div class="field">
+        <label for="hora">Hora</label>
+        <input
+          id="hora"
+          type="time"
+          formControlName="hora"
+          [class.field-invalid]="form.get('hora')?.invalid && form.get('hora')?.touched"
+        />
+      </div>
+
+      <div class="field">
+        <label for="cupos">Cupos</label>
+        <input
+          id="cupos"
+          type="number"
+          min="1"
+          max="20"
+          formControlName="cupos"
+          [class.field-invalid]="form.get('cupos')?.invalid && form.get('cupos')?.touched"
+        />
+      </div>
+
+      <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Agregando...' : 'Agregar sobreturno' }}
+      </button>
+    </form>
+  </section>
+
+  <section class="sobreturnos-list-card">
+    <h2>Mis sobreturnos</h2>
+
+    @if (isLoading()) {
+      <p class="status-text">Cargando sobreturnos...</p>
+    }
+
+    @if (!isLoading() && sobreturnos().length === 0) {
+      <p class="status-text">Todavía no agregaste ningún sobreturno.</p>
+    }
+
+    @if (!isLoading() && sobreturnos().length > 0) {
+      <ul class="sobreturnos-list">
+        @for (sobreturno of sobreturnos(); track sobreturno.idSobreturno) {
+          <li class="sobreturno-row">
+            <div class="sobreturno-info">
+              <span class="sobreturno-fecha">{{ sobreturno.fecha }}</span>
+              <span class="sobreturno-hora">{{ sobreturno.hora.slice(0, 5) }} hs</span>
+              <span class="sobreturno-cupos">
+                {{ sobreturno.cupos }} {{ sobreturno.cupos === 1 ? 'cupo' : 'cupos' }}
+              </span>
+            </div>
+            <button
+              type="button"
+              class="btn-remove"
+              [disabled]="eliminandoId() === sobreturno.idSobreturno"
+              (click)="eliminar(sobreturno)"
+            >
+              {{ eliminandoId() === sobreturno.idSobreturno ? 'Eliminando...' : 'Eliminar' }}
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</main>

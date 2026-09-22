@@ -50,6 +50,8 @@ import { TagBle } from './tags-ble/entities/tag-ble.entity';
 import { TagsBleModule } from './tags-ble/tags-ble.module';
 import { Deteccion } from './detecciones/entities/deteccion.entity';
 import { DeteccionesModule } from './detecciones/detecciones.module';
+import { SobreturnoVeterinario } from './sobreturnos-veterinarios/entities/sobreturno-veterinario.entity';
+import { SobreturnosVeterinariosModule } from './sobreturnos-veterinarios/sobreturnos-veterinarios.module';
 
 dotenv.config();
 
@@ -89,6 +91,7 @@ dotenv.config();
         ReportePerdida,
         TagBle,
         Deteccion,
+        SobreturnoVeterinario,
       ],
       synchronize: false,
     }),
@@ -113,6 +116,7 @@ dotenv.config();
     ReportesPerdidaModule,
     TagsBleModule,
     DeteccionesModule,
+    SobreturnosVeterinariosModule,
   ],
   controllers: [AppController],
   providers: [AppService],

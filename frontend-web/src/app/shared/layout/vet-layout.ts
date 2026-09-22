@@ -27,13 +27,17 @@ export class VetLayout {
   protected readonly isAttentionActive = () =>
     this.currentUrl().startsWith('/eventos-clinicos') &&
     !this.isDisponibilidadActive() &&
-    !this.isTurnosActive();
+    !this.isTurnosActive() &&
+    !this.isSobreturnosActive();
 
   protected readonly isDisponibilidadActive = () =>
     this.currentUrl().startsWith('/eventos-clinicos/disponibilidad');
 
   protected readonly isTurnosActive = () =>
     this.currentUrl().startsWith('/eventos-clinicos/turnos');
+
+  protected readonly isSobreturnosActive = () =>
+    this.currentUrl().startsWith('/eventos-clinicos/sobreturnos');
 
   protected readonly isServiciosActive = () => this.currentUrl().startsWith('/servicios');
 
