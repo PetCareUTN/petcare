@@ -1,0 +1,177 @@
+:host {
+  --chart-confirmados: var(--primary);
+  --chart-cancelados: #8a9a95;
+  --chart-nuevos: var(--primary);
+  --chart-recurrentes: #6f63b8;
+  --chart-horarios: var(--primary);
+
+  --kpi-good: #3f8f6b;
+  --kpi-warn: #c9862e;
+  --kpi-bad: var(--danger);
+}
+
+.reportes-page {
+  min-height: 100%;
+  padding: var(--spacing-xl) var(--spacing-lg);
+  box-sizing: border-box;
+  background-color: var(--background);
+}
+
+.reportes-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  width: min(100%, 1180px);
+  margin: 0 auto var(--spacing-lg);
+}
+
+.reportes-header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.reportes-header p {
+  margin: var(--spacing-xs) 0 0;
+  color: var(--text-secondary);
+}
+
+.rango-switch {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+.rango-switch button {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background-color: var(--surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rango-switch button:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.rango-switch button.active {
+  border-color: var(--primary);
+  background-color: var(--primary);
+  color: #ffffff;
+}
+
+.status-text {
+  width: min(100%, 1180px);
+  margin: 0 auto;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.banner {
+  width: min(100%, 1180px);
+  margin: 0 auto var(--spacing-md);
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+}
+
+.banner-error {
+  background-color: color-mix(in srgb, var(--danger) 14%, white);
+  color: var(--danger);
+}
+
+/* Tarjetas de resumen */
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--spacing-md);
+  width: min(100%, 1180px);
+  margin: 0 auto var(--spacing-lg);
+}
+
+.kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: var(--spacing-lg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.kpi-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.kpi-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.kpi-value.kpi-good {
+  color: var(--kpi-good);
+}
+
+.kpi-value.kpi-warn {
+  color: var(--kpi-warn);
+}
+
+.kpi-value.kpi-bad {
+  color: var(--kpi-bad);
+}
+
+/* Grilla de gráficos */
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-lg);
+  width: min(100%, 1180px);
+  margin: 0 auto;
+}
+
+.chart-card {
+  padding: var(--spacing-lg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background-color: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.chart-card h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.chart-subtitle {
+  margin: 0.2rem 0 var(--spacing-md);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 900px) {
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .kpi-value {
+    font-size: 1.6rem;
+  }
+
+  .reportes-header {
+    flex-direction: column;
+  }
+}

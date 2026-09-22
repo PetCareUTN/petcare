@@ -52,6 +52,7 @@ import { Deteccion } from './detecciones/entities/deteccion.entity';
 import { DeteccionesModule } from './detecciones/detecciones.module';
 import { SobreturnoVeterinario } from './sobreturnos-veterinarios/entities/sobreturno-veterinario.entity';
 import { SobreturnosVeterinariosModule } from './sobreturnos-veterinarios/sobreturnos-veterinarios.module';
+import { ReportesVeterinariosModule } from './reportes-veterinarios/reportes-veterinarios.module';
 
 dotenv.config();
 
@@ -117,6 +118,7 @@ dotenv.config();
     TagsBleModule,
     DeteccionesModule,
     SobreturnosVeterinariosModule,
+    ReportesVeterinariosModule,
   ],
   controllers: [AppController],
   providers: [AppService],

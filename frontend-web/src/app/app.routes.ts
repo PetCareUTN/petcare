@@ -118,6 +118,13 @@ export const routes: Routes = [
             './features/turnos-veterinarios/pages/gestion-turnos/gestion-turnos'
           ).then((m) => m.GestionTurnosVeterinariosPage),
       },
+      {
+        path: 'reportes',
+        loadComponent: () =>
+          import(
+            './features/reportes-veterinarios/pages/dashboard/dashboard-reportes'
+          ).then((m) => m.DashboardReportesPage),
+      },
     ],
   },
   {
