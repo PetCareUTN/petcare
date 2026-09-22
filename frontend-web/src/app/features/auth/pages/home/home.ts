@@ -14,7 +14,7 @@ export class HomePage {
     const router = inject(Router);
 
     if (authService.isVeterinario()) {
-      router.navigateByUrl('/eventos-clinicos');
+      router.navigateByUrl('/eventos-clinicos/inicio');
     } else if (authService.isAdmin()) {
       router.navigateByUrl('/admin');
     }

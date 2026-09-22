@@ -54,6 +54,13 @@ export const routes: Routes = [
     canActivate: [authGuard],
     children: [
       {
+        path: 'inicio',
+        loadComponent: () =>
+          import('./features/inicio-veterinario/pages/inicio/inicio-veterinario').then(
+            (m) => m.InicioVeterinarioPage,
+          ),
+      },
+      {
         path: '',
         loadComponent: () =>
           import('./features/eventos-clinicos/pages/buscar/buscar-mascota').then(
