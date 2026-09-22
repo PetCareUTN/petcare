@@ -1,8 +1,32 @@
 import { Component, OnInit, inject, output, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
+  Validators,
+} from '@angular/forms';
 import { ApiError } from '../../../auth/models/user';
 import { SobreturnoVeterinarioResponse } from '../../../sobreturnos-veterinarios/models/sobreturno-veterinario';
 import { SobreturnosVeterinariosService } from '../../../sobreturnos-veterinarios/services/sobreturnos-veterinarios-service';
+
+/** Rechaza una fecha (YYYY-MM-DD) anterior a hoy, en el huso horario local. */
+function fechaNoPasadaValidator(): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    if (!control.value) {
+      return null;
+    }
+    return control.value < hoyIso() ? { fechaPasada: true } : null;
+  };
+}
+
+function hoyIso(): string {
+  const hoy = new Date();
+  const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+  const dia = String(hoy.getDate()).padStart(2, '0');
+  return `${hoy.getFullYear()}-${mes}-${dia}`;
+}
 
 @Component({
   selector: 'app-sobreturnos-modal',
@@ -23,8 +47,10 @@ export class SobreturnosModalComponent implements OnInit {
   protected readonly sobreturnos = signal<SobreturnoVeterinarioResponse[]>([]);
   protected readonly eliminandoId = signal<number | null>(null);
 
+  protected readonly hoy = hoyIso();
+
   protected readonly form = this.formBuilder.group({
-    fecha: ['', [Validators.required]],
+    fecha: ['', [Validators.required, fechaNoPasadaValidator()]],
     hora: ['', [Validators.required]],
     cupos: [1, [Validators.required, Validators.min(1), Validators.max(20)]],
   });
@@ -50,7 +76,11 @@ export class SobreturnosModalComponent implements OnInit {
   protected agregar(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
-      this.errorMessage.set('Completá la fecha, la hora y la cantidad de cupos.');
+      this.errorMessage.set(
+        this.form.controls.fecha.hasError('fechaPasada')
+          ? 'No se puede agregar un sobreturno en una fecha que ya pasó.'
+          : 'Completá la fecha, la hora y la cantidad de cupos.',
+      );
       return;
     }
 

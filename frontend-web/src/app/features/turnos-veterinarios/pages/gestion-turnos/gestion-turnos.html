@@ -132,6 +132,23 @@
                           <span class="event-pet">{{ etiquetaCorta(turno) }}</span>
                         </button>
                       }
+                      @for (sobreturno of dia.sobreturnos; track sobreturno.idSobreturno) {
+                        <button
+                          type="button"
+                          class="event-chip sobreturno"
+                          [class.selected]="sobreturnoSeleccionadoId() === sobreturno.idSobreturno"
+                          [attr.aria-label]="
+                            'Sobreturno ' + formatTime(sobreturno.hora) + ' ' +
+                            etiquetaCupos(sobreturno.cupos)
+                          "
+                          (click)="seleccionarSobreturno(sobreturno)"
+                        >
+                          <span class="event-time">{{ formatTime(sobreturno.hora) }}</span>
+                          <span class="event-pet">
+                            Sobreturno · {{ etiquetaCupos(sobreturno.cupos) }}
+                          </span>
+                        </button>
+                      }
                     </div>
                   </div>
                 }
@@ -178,6 +195,19 @@
                             <span class="event-pet">{{ etiquetaCorta(turno) }}</span>
                           </button>
                         }
+                        @for (sobreturno of celda.sobreturnos; track sobreturno.idSobreturno) {
+                          <button
+                            type="button"
+                            class="event-block sobreturno"
+                            [class.selected]="sobreturnoSeleccionadoId() === sobreturno.idSobreturno"
+                            (click)="seleccionarSobreturno(sobreturno)"
+                          >
+                            <span class="event-time">{{ formatTime(sobreturno.hora) }}</span>
+                            <span class="event-pet">
+                              Sobreturno · {{ etiquetaCupos(sobreturno.cupos) }}
+                            </span>
+                          </button>
+                        }
                       </div>
                     }
                   </div>
@@ -188,7 +218,39 @@
         </div>
 
         <aside class="detail-panel" aria-live="polite">
-          @if (turnoSeleccionado(); as turno) {
+          @if (sobreturnoSeleccionado(); as sobreturno) {
+            <div class="detail-head">
+              <div class="detail-badges">
+                <span class="tipo-badge sobreturno">Sobreturno</span>
+              </div>
+              <button
+                type="button"
+                class="close-button"
+                aria-label="Cerrar detalle"
+                (click)="cerrarPanel()"
+              >
+                ×
+              </button>
+            </div>
+
+            <p class="appointment-date">
+              {{ formatDate(sobreturno.fecha) }} · {{ formatTime(sobreturno.hora) }}
+            </p>
+            <p class="appointment-owner">
+              {{ etiquetaCupos(sobreturno.cupos) }} extra disponibles para este horario.
+            </p>
+
+            <div class="appointment-actions">
+              <button
+                type="button"
+                class="btn-danger"
+                [disabled]="processingSobreturnoId() === sobreturno.idSobreturno"
+                (click)="eliminarSobreturno(sobreturno)"
+              >
+                Eliminar sobreturno
+              </button>
+            </div>
+          } @else if (turnoSeleccionado(); as turno) {
             <div class="detail-head">
               <div class="detail-badges">
                 <span class="tipo-badge" [class]="turno.tipo">

@@ -28,6 +28,7 @@
         <input
           id="modal-fecha"
           type="date"
+          [attr.min]="hoy"
           formControlName="fecha"
           [class.field-invalid]="form.get('fecha')?.invalid && form.get('fecha')?.touched"
         />
