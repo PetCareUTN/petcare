@@ -24,9 +24,9 @@
     <section class="form-grid">
       <div class="field">
         <label for="idMascota">Mascota</label>
-        <input id="idMascota" type="number" min="1" step="1" formControlName="idMascota" />
+        <input id="idMascota" type="text" [value]="mascotaDisplayText()" disabled readonly />
         @if (form.controls.idMascota.invalid && form.controls.idMascota.touched) {
-          <p class="field-error">Ingresá el identificador de una mascota.</p>
+          <p class="field-error">No se pudo identificar la mascota. Volvé a la búsqueda.</p>
         }
       </div>
 

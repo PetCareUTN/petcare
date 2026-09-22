@@ -96,6 +96,12 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
+.field input:disabled {
+  background-color: var(--background);
+  color: var(--text-secondary);
+  cursor: default;
+}
+
 .clinical-event-form > button {
   align-self: flex-start;
   padding: 0.7rem 1.4rem;
