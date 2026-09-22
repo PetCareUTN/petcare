@@ -7,6 +7,7 @@ import {
   TurnoServicioResponse,
 } from '../../../turnos-servicios/models/turno-servicio';
 import { TurnosServiciosService } from '../../../turnos-servicios/services/turnos-servicios-service';
+import { SobreturnosModalComponent } from '../../components/sobreturnos-modal/sobreturnos-modal';
 import {
   AppointmentStatus,
   TurnoVeterinarioResponse,
@@ -95,13 +96,15 @@ const HORA_FIN_POR_DEFECTO = 20;
 
 @Component({
   selector: 'app-gestion-turnos-veterinarios',
-  imports: [FormsModule],
+  imports: [FormsModule, SobreturnosModalComponent],
   templateUrl: './gestion-turnos.html',
   styleUrl: './gestion-turnos.css',
 })
 export class GestionTurnosVeterinariosPage implements OnInit {
   private readonly turnosService = inject(TurnosVeterinariosService);
   private readonly turnosServiciosService = inject(TurnosServiciosService);
+
+  protected readonly mostrarSobreturnos = signal(false);
 
   protected readonly estados: EstadoOption[] = [
     { value: 'confirmado', label: 'Confirmados' },
@@ -284,6 +287,14 @@ export class GestionTurnosVeterinariosPage implements OnInit {
 
   protected setVista(vista: VistaCalendario): void {
     this.vista.set(vista);
+  }
+
+  protected abrirSobreturnos(): void {
+    this.mostrarSobreturnos.set(true);
+  }
+
+  protected cerrarSobreturnos(): void {
+    this.mostrarSobreturnos.set(false);
   }
 
   /** Abre el día indicado en la vista de detalle (zoom desde mes o semana). */

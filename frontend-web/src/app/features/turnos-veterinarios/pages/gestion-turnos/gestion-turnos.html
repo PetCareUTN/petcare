@@ -5,6 +5,9 @@
         <h1>Turnos</h1>
         <p>Organizá tu agenda de veterinaria y de servicios en un solo calendario.</p>
       </div>
+      <button type="button" class="btn-secondary" (click)="abrirSobreturnos()">
+        Agregar sobreturno
+      </button>
     </header>
 
     <div class="calendar-toolbar">
@@ -287,4 +290,8 @@
       </div>
     }
   </section>
+
+  @if (mostrarSobreturnos()) {
+    <app-sobreturnos-modal (close)="cerrarSobreturnos()" />
+  }
 </main>

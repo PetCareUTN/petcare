@@ -1,0 +1,99 @@
+<div class="modal-backdrop" (click)="cerrar()">
+  <div class="modal-card" (click)="$event.stopPropagation()">
+    <header class="modal-header">
+      <div>
+        <h2>Sobreturnos</h2>
+        <p>
+          Agregá turnos extra puntuales para una fecha y hora específica, aunque estén fuera de
+          tu disponibilidad habitual. Los dueños van a poder reservarlos como cualquier otro
+          turno.
+        </p>
+      </div>
+      <button type="button" class="close-button" aria-label="Cerrar" (click)="cerrar()">
+        ×
+      </button>
+    </header>
+
+    @if (successMessage()) {
+      <p class="banner banner-success">{{ successMessage() }}</p>
+    }
+
+    @if (errorMessage()) {
+      <p class="banner banner-error">{{ errorMessage() }}</p>
+    }
+
+    <form class="sobreturno-form" [formGroup]="form" (ngSubmit)="agregar()">
+      <div class="field">
+        <label for="modal-fecha">Fecha</label>
+        <input
+          id="modal-fecha"
+          type="date"
+          formControlName="fecha"
+          [class.field-invalid]="form.get('fecha')?.invalid && form.get('fecha')?.touched"
+        />
+      </div>
+
+      <div class="field">
+        <label for="modal-hora">Hora</label>
+        <input
+          id="modal-hora"
+          type="time"
+          formControlName="hora"
+          [class.field-invalid]="form.get('hora')?.invalid && form.get('hora')?.touched"
+        />
+      </div>
+
+      <div class="field">
+        <label for="modal-cupos">Cupos</label>
+        <input
+          id="modal-cupos"
+          type="number"
+          min="1"
+          max="20"
+          formControlName="cupos"
+          [class.field-invalid]="form.get('cupos')?.invalid && form.get('cupos')?.touched"
+        />
+      </div>
+
+      <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Agregando...' : 'Agregar' }}
+      </button>
+    </form>
+
+    <section class="sobreturnos-list-section">
+      <h3>Mis sobreturnos</h3>
+
+      @if (isLoading()) {
+        <p class="status-text">Cargando sobreturnos...</p>
+      }
+
+      @if (!isLoading() && sobreturnos().length === 0) {
+        <p class="status-text">Todavía no agregaste ningún sobreturno.</p>
+      }
+
+      @if (!isLoading() && sobreturnos().length > 0) {
+        <ul class="sobreturnos-list">
+          @for (sobreturno of sobreturnos(); track sobreturno.idSobreturno) {
+            <li class="sobreturno-row">
+              <div class="sobreturno-info">
+                <span class="sobreturno-fecha">{{ sobreturno.fecha }}</span>
+                <span class="sobreturno-hora">{{ sobreturno.hora.slice(0, 5) }} hs</span>
+                <span class="sobreturno-cupos">
+                  {{ sobreturno.cupos }} {{ sobreturno.cupos === 1 ? 'cupo' : 'cupos' }}
+                </span>
+              </div>
+              <button
+                type="button"
+                class="btn-remove"
+                [disabled]="eliminandoId() === sobreturno.idSobreturno"
+                (click)="eliminar(sobreturno)"
+              >
+                {{ eliminandoId() === sobreturno.idSobreturno ? 'Eliminando...' : 'Eliminar' }}
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  </div>
+</div>

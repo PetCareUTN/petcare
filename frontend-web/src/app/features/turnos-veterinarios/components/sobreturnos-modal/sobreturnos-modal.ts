@@ -1,18 +1,20 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ApiError } from '../../../auth/models/user';
-import { SobreturnoVeterinarioResponse } from '../../models/sobreturno-veterinario';
-import { SobreturnosVeterinariosService } from '../../services/sobreturnos-veterinarios-service';
+import { SobreturnoVeterinarioResponse } from '../../../sobreturnos-veterinarios/models/sobreturno-veterinario';
+import { SobreturnosVeterinariosService } from '../../../sobreturnos-veterinarios/services/sobreturnos-veterinarios-service';
 
 @Component({
-  selector: 'app-gestion-sobreturnos',
+  selector: 'app-sobreturnos-modal',
   imports: [ReactiveFormsModule],
-  templateUrl: './gestion-sobreturnos.html',
-  styleUrl: './gestion-sobreturnos.css',
+  templateUrl: './sobreturnos-modal.html',
+  styleUrl: './sobreturnos-modal.css',
 })
-export class GestionSobreturnosPage implements OnInit {
+export class SobreturnosModalComponent implements OnInit {
   private readonly formBuilder = inject(FormBuilder);
   private readonly sobreturnosService = inject(SobreturnosVeterinariosService);
+
+  readonly close = output<void>();
 
   protected readonly isLoading = signal(true);
   protected readonly isSubmitting = signal(false);
@@ -94,6 +96,10 @@ export class GestionSobreturnosPage implements OnInit {
         this.errorMessage.set(error.mensaje ?? 'No se pudo eliminar el sobreturno.');
       },
     });
+  }
+
+  protected cerrar(): void {
+    this.close.emit();
   }
 
   private ordenar(
