@@ -1,17 +1,9 @@
 <main class="availability-page">
-  <form class="availability-form" [formGroup]="form" (ngSubmit)="submit()">
+  <section class="availability-card">
     <header class="availability-header">
       <div>
         <h1>Disponibilidad</h1>
-        <p>
-          Configurá los días y horarios de atención de la veterinaria, y cuántos turnos podés
-          ofrecer en simultáneo en cada franja (por ejemplo, 2 si atienden dos veterinarios a la
-          misma hora).
-        </p>
       </div>
-      <button type="button" class="btn-secondary" (click)="agregarFranja()">
-        Agregar franja
-      </button>
     </header>
 
     @if (isLoading()) {
@@ -27,65 +19,115 @@
     }
 
     @if (!isLoading()) {
-      <section class="availability-list" formArrayName="disponibilidades">
-        @for (grupo of disponibilidades.controls; track grupo; let i = $index) {
-          <div class="availability-row" [formGroupName]="i">
-            <div class="field">
-              <label [for]="'dia-' + i">Día</label>
-              <select [id]="'dia-' + i" formControlName="diaSemana">
-                @for (dia of dias; track dia.value) {
-                  <option [value]="dia.value">{{ dia.label }}</option>
-                }
-              </select>
-            </div>
-
-            <div class="field">
-              <label [for]="'inicio-' + i">Desde</label>
-              <input
-                [id]="'inicio-' + i"
-                type="time"
-                formControlName="horaInicio"
-                [class.field-invalid]="grupo.get('horaInicio')?.invalid && grupo.get('horaInicio')?.touched"
-              />
-            </div>
-
-            <div class="field">
-              <label [for]="'fin-' + i">Hasta</label>
-              <input
-                [id]="'fin-' + i"
-                type="time"
-                formControlName="horaFin"
-                [class.field-invalid]="grupo.get('horaFin')?.invalid && grupo.get('horaFin')?.touched"
-              />
-            </div>
-
-            <div class="field">
-              <label [for]="'cupos-' + i">Turnos por hora</label>
-              <input
-                [id]="'cupos-' + i"
-                type="number"
-                min="1"
-                max="20"
-                formControlName="cuposPorTurno"
-                [class.field-invalid]="grupo.get('cuposPorTurno')?.invalid && grupo.get('cuposPorTurno')?.touched"
-              />
-            </div>
-
-            <button
-              type="button"
-              class="btn-remove"
-              [disabled]="disponibilidades.length <= 1"
-              (click)="quitarFranja(i)"
-            >
-              Quitar
-            </button>
+      <div class="add-form">
+        <div class="field">
+          <label>Días</label>
+          <div class="dias-selector">
+            @for (dia of dias; track dia.value) {
+              <button
+                type="button"
+                class="dia-circle"
+                [class.active]="esDiaSeleccionado(dia.value)"
+                [attr.aria-pressed]="esDiaSeleccionado(dia.value)"
+                [attr.aria-label]="dia.label"
+                [title]="dia.label"
+                (click)="toggleDia(dia.value)"
+              >
+                {{ dia.letra }}
+              </button>
+            }
           </div>
+        </div>
+
+        <div class="horario-row">
+          <div class="field">
+            <label for="hora-inicio">Desde</label>
+            <input
+              id="hora-inicio"
+              type="time"
+              [value]="horaInicio()"
+              (input)="setHoraInicio($any($event.target).value)"
+            />
+          </div>
+
+          <div class="field">
+            <label for="hora-fin">Hasta</label>
+            <input
+              id="hora-fin"
+              type="time"
+              [value]="horaFin()"
+              (input)="setHoraFin($any($event.target).value)"
+            />
+          </div>
+
+          <div class="field">
+            <label for="cantidad-turnos">Cantidad de turnos</label>
+            <input
+              id="cantidad-turnos"
+              type="number"
+              min="1"
+              max="20"
+              [value]="cantidadTurnos()"
+              (input)="setCantidadTurnos($any($event.target).value)"
+            />
+          </div>
+
+          <button type="button" class="btn-secondary" (click)="agregarRegla()">
+            Agregar horario
+          </button>
+        </div>
+
+        @if (formError()) {
+          <p class="banner banner-error">{{ formError() }}</p>
+        }
+      </div>
+
+      <section class="reglas-list">
+        <h2>Horarios configurados</h2>
+
+        @if (reglas().length === 0) {
+          <p class="status-text">Todavía no agregaste ningún horario de atención.</p>
+        }
+
+        @if (reglas().length > 0) {
+          <ul>
+            @for (regla of reglas(); track regla.id) {
+              <li class="regla-row">
+                <div class="regla-dias">
+                  @for (dia of dias; track dia.value) {
+                    <span
+                      class="dia-badge"
+                      [class.active]="regla.dias.includes(dia.value)"
+                      [title]="dia.label"
+                    >
+                      {{ dia.letra }}
+                    </span>
+                  }
+                </div>
+                <div class="regla-info">
+                  <span class="regla-horario">{{ regla.horaInicio }} a {{ regla.horaFin }}</span>
+                  <span class="regla-cantidad">
+                    {{ regla.cantidadTurnos }}
+                    {{ regla.cantidadTurnos === 1 ? 'turno' : 'turnos' }}
+                  </span>
+                </div>
+                <button type="button" class="btn-remove" (click)="quitarRegla(regla.id)">
+                  Quitar
+                </button>
+              </li>
+            }
+          </ul>
         }
       </section>
 
-      <button type="submit" class="btn-primary" [disabled]="isSubmitting()">
+      <button
+        type="button"
+        class="btn-primary"
+        [disabled]="isSubmitting()"
+        (click)="guardar()"
+      >
         {{ isSubmitting() ? 'Guardando...' : 'Guardar disponibilidad' }}
       </button>
     }
-  </form>
+  </section>
 </main>
