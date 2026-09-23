@@ -1,16 +1,22 @@
+import { join } from 'path';
 import { DataSource } from 'typeorm';
 import * as dotenv from 'dotenv';
+import { buildDatabaseConnection } from './config/database.config';
 
 dotenv.config();
 
+/*
+ * Los patrones se arman con __dirname para que el mismo archivo sirva en los
+ * dos escenarios: en desarrollo __dirname apunta a src/ y matchean los .ts, y
+ * en produccion apunta a dist/ y matchean los .js compilados. Con rutas
+ * relativas fijas ("src/**") el CLI no encontraba nada corriendo desde dist.
+ */
+// En Windows join() devuelve separadores "\", que el glob de TypeORM no matchea.
+const raiz = join(__dirname).replace(/\\/g, '/');
+
 export default new DataSource({
-  type: 'postgres',
-  host: process.env.DATABASE_HOST,
-  port: Number(process.env.DATABASE_PORT) || 5432,
-  username: process.env.DATABASE_USER,
-  password: process.env.DATABASE_PASSWORD,
-  database: process.env.DATABASE_NAME,
-  entities: ['src/**/*.entity.ts'],
-  migrations: ['src/migrations/*.ts'],
+  ...buildDatabaseConnection(),
+  entities: [`${raiz}/**/*.entity.{ts,js}`],
+  migrations: [`${raiz}/migrations/*.{ts,js}`],
   synchronize: false,
 });

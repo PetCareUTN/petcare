@@ -511,10 +511,14 @@ la configuración de branch protection que falta aplicar en GitHub están en
 Se contemplan los siguientes ambientes:
 
 - Desarrollo: trabajo local del equipo.
-- Staging: validación integrada y pruebas.
-- Demo o producción académica: versión estable para presentaciones.
+- Staging: validación integrada y pruebas. Se despliega desde `develop`.
+- Demo o producción académica: versión estable para presentaciones. Se despliega desde `main`.
 
 Cada ambiente debe contar con variables de configuración independientes.
+
+El backend y la base se despliegan en Railway y el frontend web en Vercel, según
+el ADR-007. El paso a paso, las variables de entorno de cada ambiente y cómo
+generar el APK de release están en [docs/deploy.md](docs/deploy.md).
 
 ---
 
