@@ -577,7 +577,6 @@ private fun iconoTipoTurno(tipo: TipoTurnoItem): Int = when (tipo) {
 fun PetCareBottomBar(
     selectedItem: String,
     onInicioClick: () -> Unit = {},
-    onServiciosClick: () -> Unit,
     onTurnosClick: () -> Unit,
     onAdopcionClick: () -> Unit,
     onPerfilClick: () -> Unit
@@ -586,11 +585,10 @@ fun PetCareBottomBar(
         containerColor = MaterialTheme.colorScheme.surface,
         tonalElevation = 0.dp
     ) {
-        val items = listOf("Inicio", "Servicios", "Adopción", "Turnos", "Localización", "Perfil")
+        val items = listOf("Inicio", "Adopción", "Turnos", "Localización", "Perfil")
         items.forEach { item ->
             val isInicio = item == "Inicio"
             val isTurnos = item == "Turnos"
-            val isServicios = item == "Servicios"
             val isAdopcion = item == "Adopción"
             val isPerfil = item == "Perfil"
             // La localizacion se agrega para el sprint que viene (BLE); por ahora no hace nada.
@@ -599,13 +597,11 @@ fun PetCareBottomBar(
                 onClick = {
                     if (isInicio) onInicioClick()
                     if (isTurnos) onTurnosClick()
-                    if (isServicios) onServiciosClick()
                     if (isAdopcion) onAdopcionClick()
                     if (isPerfil) onPerfilClick()
                 },
                 icon = {
                     val iconRes = when (item) {
-                        "Servicios" -> R.drawable.ic_services
                         "Adopción" -> R.drawable.ic_heart
                         "Turnos" -> R.drawable.ic_calendar
                         "Localización" -> R.drawable.ic_location
