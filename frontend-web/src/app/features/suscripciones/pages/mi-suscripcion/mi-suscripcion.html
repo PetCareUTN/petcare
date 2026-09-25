@@ -1,0 +1,115 @@
+<main class="pet-page">
+  <div class="pet-form">
+    <header class="pet-header">
+      <div>
+        <h1>Mi suscripción</h1>
+        <p>Gestioná tu suscripción mensual para usar la plataforma.</p>
+      </div>
+      <div class="pet-header-actions">
+        <app-notification-bell />
+        @if (suscripcion()?.accesoPermitido) {
+          <a routerLink="/eventos-clinicos">Volver</a>
+        }
+      </div>
+    </header>
+
+    @if (isLoading()) {
+      <p class="estado-loading">Cargando...</p>
+    }
+
+    @if (errorMessage()) {
+      <p class="banner banner-error">{{ errorMessage() }}</p>
+    }
+
+    @if (successMessage()) {
+      <p class="banner banner-ok">{{ successMessage() }}</p>
+    }
+
+    @if (suscripcion(); as sub) {
+      <div class="estado-card">
+        <div class="estado-row">
+          <span class="estado-label">Estado:</span>
+          <span class="estado-badge" [class]="getEstadoClass(sub.estado)">
+            {{ getEstadoLabel(sub.estado) }}
+          </span>
+        </div>
+
+        <div class="estado-row">
+          <span class="estado-label">Monto mensual:</span>
+          <span>{{ sub.monto | currency: sub.moneda : 'symbol-narrow' : '1.0-0' }}</span>
+        </div>
+
+        @if (sub.fechaInicio) {
+          <div class="estado-row">
+            <span class="estado-label">Inicio del período:</span>
+            <span>{{ sub.fechaInicio | date: 'dd/MM/yyyy' }}</span>
+          </div>
+        }
+
+        @if (sub.fechaFin) {
+          <div class="estado-row">
+            <span class="estado-label">Vence:</span>
+            <span>{{ sub.fechaFin | date: 'dd/MM/yyyy' }}</span>
+          </div>
+        }
+
+        @if (sub.estado !== 'ACTIVA') {
+          <div class="suscripcion-accion">
+            <p class="suscripcion-aviso">{{ getAviso(sub) }}</p>
+            @if (puedePagar(sub)) {
+              <button
+                type="button"
+                class="btn-primary btn-pagar"
+                [disabled]="isPaying()"
+                (click)="pagar()"
+              >
+                @if (isPaying()) {
+                  Redirigiendo a Mercado Pago...
+                } @else {
+                  Suscribirme / Pagar
+                }
+              </button>
+              <p class="suscripcion-test">
+                Entorno de prueba de Mercado Pago: no se cobra dinero real.
+              </p>
+            }
+          </div>
+        }
+
+        @if (sub.estado === 'ACTIVA') {
+          <div class="suscripcion-ok">
+            <p>Tu suscripción está activa. Se renueva automáticamente cada mes.</p>
+          </div>
+        }
+      </div>
+    }
+
+    @if (pagos().length > 0) {
+      <section class="historial">
+        <h2>Historial de pagos</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Monto</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (pago of pagos(); track pago.idPago) {
+              <tr>
+                <td>{{ pago.fechaPago ?? pago.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+                <td>{{ pago.monto | currency: pago.moneda : 'symbol-narrow' : '1.0-0' }}</td>
+                <td>
+                  <span class="pago-badge" [class]="'pago-' + pago.estado">
+                    {{ pago.estado }}
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </section>
+    }
+  </div>
+</main>

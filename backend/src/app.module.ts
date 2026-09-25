@@ -53,6 +53,9 @@ import { DeteccionesModule } from './detecciones/detecciones.module';
 import { SobreturnoVeterinario } from './sobreturnos-veterinarios/entities/sobreturno-veterinario.entity';
 import { SobreturnosVeterinariosModule } from './sobreturnos-veterinarios/sobreturnos-veterinarios.module';
 import { ReportesVeterinariosModule } from './reportes-veterinarios/reportes-veterinarios.module';
+import { Suscripcion } from './suscripciones/entities/suscripcion.entity';
+import { PagoSuscripcion } from './suscripciones/entities/pago-suscripcion.entity';
+import { SuscripcionesModule } from './suscripciones/suscripciones.module';
 
 dotenv.config();
 
@@ -70,7 +73,10 @@ dotenv.config();
       password: process.env.DATABASE_PASSWORD,
       database: process.env.DATABASE_NAME,
       entities: [
-        SolicitudPrestador, DocumentoPrestador, ResenaServicio, ReporteServicio,
+        SolicitudPrestador,
+        DocumentoPrestador,
+        ResenaServicio,
+        ReporteServicio,
         User,
         Role,
         Mascota,
@@ -93,6 +99,8 @@ dotenv.config();
         TagBle,
         Deteccion,
         SobreturnoVeterinario,
+        Suscripcion,
+        PagoSuscripcion,
       ],
       synchronize: false,
     }),
@@ -119,6 +127,7 @@ dotenv.config();
     DeteccionesModule,
     SobreturnosVeterinariosModule,
     ReportesVeterinariosModule,
+    SuscripcionesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
