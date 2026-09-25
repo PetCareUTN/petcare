@@ -16,7 +16,6 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { VeterinarioValidadoGuard } from '../auth/guards/veterinario-validado.guard';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { AppointmentStatus } from '../common/enums/appointment-status.enum';
 import { RoleName } from '../common/enums/role-name.enum';
@@ -49,11 +48,14 @@ export class TurnosVeterinariosController {
     @Query('idVeterinario', ParseIntPipe) idVeterinario: number,
     @Query('fecha') fecha: string,
   ): Promise<string[]> {
-    return this.turnosVeterinariosService.horariosDisponibles(idVeterinario, fecha);
+    return this.turnosVeterinariosService.horariosDisponibles(
+      idVeterinario,
+      fecha,
+    );
   }
 
   @Get('mia')
-  @UseGuards(JwtAuthGuard, RolesGuard, VeterinarioValidadoGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleName.VETERINARIO)
   findMine(
     @CurrentUser() user: JwtPayload,

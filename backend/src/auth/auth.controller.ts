@@ -20,7 +20,6 @@ import { RegisterResponseDto } from './dto/register-response.dto';
 import { CreateAssistedOwnerDto } from './dto/create-assisted-owner.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
-import { VeterinarioValidadoGuard } from './guards/veterinario-validado.guard';
 import type { JwtPayload } from './interfaces/jwt-payload.interface';
 import { UserPublicDto } from '../users/dto/user-public.dto';
 import { CambiarContraseñaDto } from './dto/cambiar-contrasena.dto';
@@ -64,7 +63,7 @@ export class AuthController {
 
   @Post('duenos/alta-asistida')
   @HttpCode(HttpStatus.CREATED)
-  @UseGuards(JwtAuthGuard, RolesGuard, VeterinarioValidadoGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleName.VETERINARIO)
   createAssistedOwner(
     @CurrentUser() user: JwtPayload,
@@ -88,27 +87,24 @@ export class AuthController {
     return { mensaje: 'Acceso autorizado para administrador' };
   }
 
-@Patch('cambiar-contrasena')
-@UseGuards(JwtAuthGuard)
-async changePassword(
-  @CurrentUser() user: JwtPayload,
-  @Body() dto: CambiarContraseñaDto,
-) {
-  return this.authService.changePassword(user.sub, dto);
-} 
+  @Patch('cambiar-contrasena')
+  @UseGuards(JwtAuthGuard)
+  async changePassword(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: CambiarContraseñaDto,
+  ) {
+    return this.authService.changePassword(user.sub, dto);
+  }
 
-@Post('olvide-contrasena')
-@HttpCode(HttpStatus.OK)
-async forgotPassword(@Body() dto: OlvideContrasenaDto) {
-  return  this.authService.forgotPassword(dto.email);
-}
+  @Post('olvide-contrasena')
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(@Body() dto: OlvideContrasenaDto) {
+    return this.authService.forgotPassword(dto.email);
+  }
 
-@Patch('restablecer-contrasena')
-@HttpCode(HttpStatus.OK)
-resetPassword(
-  @Body() dto: RestablecerContrasenaDto,
-) {
-  return this.authService.resetPassword(dto);
-}
-
+  @Patch('restablecer-contrasena')
+  @HttpCode(HttpStatus.OK)
+  resetPassword(@Body() dto: RestablecerContrasenaDto) {
+    return this.authService.resetPassword(dto);
+  }
 }
