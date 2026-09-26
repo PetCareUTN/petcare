@@ -15,6 +15,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { mkdirSync } from 'fs';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { randomUUID } from 'crypto';
@@ -33,6 +34,13 @@ import { VeterinariosService } from './veterinarios.service';
 
 const MATRICULAS_DIR = join(process.cwd(), 'uploads', 'matriculas');
 const HABILITACIONES_DIR = join(process.cwd(), 'uploads', 'habilitaciones');
+
+// multer no crea el directorio de destino: si falta, la subida muere con
+// ENOENT y el registro del veterinario devuelve 500. En las maquinas del
+// equipo estos directorios existen desde hace rato, pero uploads/ esta
+// gitignoreado, asi que en un despliegue nuevo el volumen arranca vacio.
+mkdirSync(MATRICULAS_DIR, { recursive: true });
+mkdirSync(HABILITACIONES_DIR, { recursive: true });
 
 const documentoFilter = (_req: any, file: any, cb: any) => {
   const allowed = ['.jpg', '.jpeg', '.png', '.pdf'];
