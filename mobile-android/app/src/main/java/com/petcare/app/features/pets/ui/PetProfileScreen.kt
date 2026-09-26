@@ -23,14 +23,22 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.petcare.app.features.ble.data.local.MonitoreoSeparacionPreferences
 import com.petcare.app.features.ble.data.remote.TagBleResponse
+import com.petcare.app.features.ble.service.ServicioEscaneoBle
 import com.petcare.app.features.perdidas.data.remote.ReportePerdidaResponse
 import com.petcare.app.features.pets.data.remote.PetResponse
 import com.petcare.app.ui.theme.PetCareError
@@ -300,6 +308,11 @@ private fun PetProfileContent(
         }
     }
 
+    if (tagBle != null) {
+        Spacer(modifier = Modifier.height(10.dp))
+        MonitoreoSeparacionSwitch(tagId = tagBle.tagId)
+    }
+
     Spacer(modifier = Modifier.height(18.dp))
 
     Button(
@@ -443,6 +456,58 @@ private fun String.aFechaHoraLegible(): String =
         val iso = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.US)
         SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(iso.parse(this)!!)
     }.getOrDefault(this)
+
+/**
+ * Prende/apaga el monitoreo de separacion de esta mascota (US-34).
+ *
+ * Version minima a proposito: todavia no tiene el flujo de permisos guiado que si
+ * tiene [com.petcare.app.features.ble.ui.ColaboracionBleCard], ni el umbral
+ * configurable ni el silenciado de US-35 (P1-174). Sirve para que el dueño pueda
+ * activarlo de verdad desde la app mientras esas historias se terminan de definir.
+ */
+@Composable
+private fun MonitoreoSeparacionSwitch(tagId: String) {
+    val context = LocalContext.current
+    val preferencias = remember { MonitoreoSeparacionPreferences(context) }
+    var activo by remember { mutableStateOf(preferencias.tagsMonitoreados().contains(tagId)) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, PetCareLine),
+        shape = MaterialTheme.shapes.extraLarge
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Avisarme si se aleja", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Version de prueba (US-34): todavia sin ajustes de sensibilidad.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = PetCareMuted,
+                )
+            }
+            Switch(
+                checked = activo,
+                onCheckedChange = { encender ->
+                    if (encender) {
+                        preferencias.activarSeguimiento(tagId)
+                        ServicioEscaneoBle.iniciar(context)
+                    } else {
+                        preferencias.desactivarSeguimiento(tagId)
+                        ServicioEscaneoBle.detener(context)
+                    }
+                    activo = encender
+                }
+            )
+        }
+    }
+}
 
 @Composable
 private fun DetailRow(label: String, value: String) {

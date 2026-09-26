@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import type ms from 'ms';
+import { Suscripcion } from '../suscripciones/entities/suscripcion.entity';
 import { Veterinario } from '../veterinarios/entities/veterinario.entity';
 import { UsersModule } from '../users/users.module';
 import { RolesModule } from '../roles/roles.module';
@@ -10,7 +11,6 @@ import { AuthService } from './auth.service';
 import { GoogleTokenVerifierService } from './google-token-verifier.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
-import { VeterinarioValidadoGuard } from './guards/veterinario-validado.guard';
 import { MailModule } from '../mail/mail.module';
 
 @Module({
@@ -18,7 +18,7 @@ import { MailModule } from '../mail/mail.module';
     UsersModule,
     RolesModule,
     MailModule,
-    TypeOrmModule.forFeature([Veterinario]),
+    TypeOrmModule.forFeature([Veterinario, Suscripcion]),
     // registerAsync + useFactory: los valores se leen cuando Nest instancia el
     // módulo (ya con dotenv.config() ejecutado en app.module), no en tiempo de
     // import, para que JWT_SECRET esté disponible.
@@ -37,7 +37,6 @@ import { MailModule } from '../mail/mail.module';
     GoogleTokenVerifierService,
     JwtAuthGuard,
     RolesGuard,
-    VeterinarioValidadoGuard,
   ],
   exports: [JwtAuthGuard, RolesGuard, JwtModule],
 })

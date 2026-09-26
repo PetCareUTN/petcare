@@ -87,6 +87,33 @@ export class TagsBleService {
     return tagBle ? TagBleResponseDto.fromEntity(tagBle) : null;
   }
 
+  /**
+   * Mascota del dueño a la que pertenece `tagId`.
+   *
+   * A diferencia del resto de los métodos, este entra por el tag y no por la
+   * mascota: quien avisa una separación (US-34) solo conoce el tagId que venía
+   * leyendo, porque es lo único que viaja en el frame Eddystone.
+   *
+   * Verifica igual que el tag sea de una mascota del usuario autenticado, así
+   * nadie puede generar avisos sobre mascotas ajenas conociendo un tagId, que
+   * viaja en claro y cualquiera con un scanner puede leer.
+   */
+  async buscarMascotaPorTag(idUsuario: number, tagId: string): Promise<Mascota> {
+    const tagBle = await this.tagsBleRepository.findOne({
+      where: { tagId },
+      relations: ['mascota'],
+    });
+
+    if (!tagBle) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'No hay ninguna mascota con ese tag vinculado',
+      });
+    }
+
+    return this.findMascotaAndVerifyOwner(tagBle.mascota.idMascota, idUsuario);
+  }
+
   private async findMascotaAndVerifyOwner(
     idMascota: number,
     idUsuario: number,

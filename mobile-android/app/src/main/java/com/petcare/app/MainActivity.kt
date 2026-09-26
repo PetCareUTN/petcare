@@ -2364,6 +2364,17 @@ class MainActivity : ComponentActivity() {
                                                 ultimaUbicacion = null
                                                 ultimaUbicacionError = null
                                                 ultimaUbicacionIdReporte = idReporte
+                                            },
+                                            // El aviso de separación abre directo el
+                                            // reporte de pérdida de esa mascota (US-34):
+                                            // es lo que el dueño va a querer hacer si no
+                                            // la encuentra.
+                                            onReportarPerdida = { idMascota ->
+                                                isViewingNotificaciones = false
+                                                cerradoEnMs = System.currentTimeMillis()
+                                                selectedPetId = idMascota
+                                                loadPetProfile(idMascota)
+                                                isReportandoPerdidaScreen = true
                                             }
                                         )
                                     }
@@ -2373,13 +2384,6 @@ class MainActivity : ComponentActivity() {
                                 PetCareBottomBar(
                                     selectedItem = seccionActual,
                                     onInicioClick = { volverAInicio() },
-                                    onServiciosClick = {
-                                        volverAInicio()
-                                        saveServicioError = null
-                                        serviciosError = null
-                                        isViewingServicios = true
-                                        loadServicios()
-                                    },
                                     onTurnosClick = {
                                         volverAInicio()
                                         misTurnosError = null

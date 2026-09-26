@@ -3,8 +3,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import type ms from 'ms';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { VeterinarioValidadoGuard } from '../auth/guards/veterinario-validado.guard';
 import { EventoClinico } from '../eventos-clinicos/entities/evento-clinico.entity';
+import { Suscripcion } from '../suscripciones/entities/suscripcion.entity';
 import { User } from '../users/entities/user.entity';
 import { Veterinario } from '../veterinarios/entities/veterinario.entity';
 import { Mascota } from './entities/mascota.entity';
@@ -13,7 +13,13 @@ import { MascotasService } from './mascotas.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Mascota, User, Veterinario, EventoClinico]),
+    TypeOrmModule.forFeature([
+      Mascota,
+      User,
+      Veterinario,
+      EventoClinico,
+      Suscripcion,
+    ]),
     JwtModule.registerAsync({
       useFactory: () => ({
         secret: process.env.JWT_SECRET,
@@ -24,7 +30,7 @@ import { MascotasService } from './mascotas.service';
     }),
   ],
   controllers: [MascotasController],
-  providers: [MascotasService, RolesGuard, VeterinarioValidadoGuard],
+  providers: [MascotasService, RolesGuard],
   exports: [MascotasService],
 })
 export class MascotasModule {}

@@ -7,8 +7,8 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   // Permite que el frontend web (Angular) consuma la API desde otro origen.
-  // Acepta varios origenes separados por coma: en produccion conviven el
-  // dominio propio y el que asigna Vercel, y en staging ademas los previews.
+  // CORS_ORIGIN admite varios orígenes separados por coma, p. ej. para usar
+  // localhost y un túnel (ngrok) al mismo tiempo.
   app.enableCors({
     origin: (process.env.CORS_ORIGIN ?? 'http://localhost:4200')
       .split(',')

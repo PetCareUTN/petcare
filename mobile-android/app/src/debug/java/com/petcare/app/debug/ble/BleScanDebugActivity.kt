@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -44,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.MultiplePermissionsState
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.petcare.app.features.ble.data.local.MonitoreoSeparacionPreferences
 import com.petcare.app.features.ble.domain.APPLE_COMPANY_ID
 import com.petcare.app.features.ble.domain.BeaconFrame
 import com.petcare.app.features.ble.domain.EDDYSTONE_SERVICE_UUID
@@ -51,6 +53,7 @@ import com.petcare.app.features.ble.domain.clave
 import com.petcare.app.features.ble.domain.decodificarEddystone
 import com.petcare.app.features.ble.domain.decodificarIBeacon
 import com.petcare.app.features.ble.domain.estimarDistanciaMetros
+import com.petcare.app.features.ble.service.ServicioEscaneoBle
 import com.petcare.app.ui.theme.PetCareTheme
 import java.util.concurrent.TimeUnit
 
@@ -343,8 +346,55 @@ private fun TarjetaLectura(lectura: Lectura) {
                     fontFamily = FontFamily.Monospace,
                     color = MaterialTheme.colorScheme.primary,
                 )
+
+                if (frame is BeaconFrame.EddystoneUid) {
+                    Spacer(Modifier.height(4.dp))
+                    BotonMonitorearSeparacion(tagId = frame.instance)
+                }
             }
         }
+    }
+}
+
+/**
+ * Banco de pruebas de US-34: prende/apaga el monitoreo de separacion real (el mismo
+ * que usaria la app en produccion, via [ServicioEscaneoBle]) para el tagId de este
+ * frame, sin esperar a que exista la pantalla definitiva.
+ *
+ * Al activarlo arranca el foreground service real con [ServicioEscaneoBle.iniciar]:
+ * alejate con el tag y mira el Logcat filtrando por "ServicioEscaneoBle" — a los 3
+ * minutos sin verlo (el intervalo por defecto de [com.petcare.app.features.ble.domain.DetectorDeSeparacion])
+ * deberia aparecer la linea "Separacion detectada para el tag ... (pendiente US-35)".
+ *
+ * Se borra junto con el resto de este sourceSet cuando termine el spike.
+ */
+@Composable
+private fun BotonMonitorearSeparacion(tagId: String) {
+    val context = LocalContext.current
+    val preferencias = remember { MonitoreoSeparacionPreferences(context) }
+    var monitoreado by remember { mutableStateOf(preferencias.tagsMonitoreados().contains(tagId)) }
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            if (monitoreado) "Monitoreando separacion (US-34)" else "Monitorear separacion (US-34)",
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Spacer(Modifier.width(8.dp))
+        Switch(
+            checked = monitoreado,
+            onCheckedChange = { activar ->
+                if (activar) {
+                    preferencias.activarSeguimiento(tagId)
+                } else {
+                    preferencias.desactivarSeguimiento(tagId)
+                }
+                monitoreado = activar
+                // iniciar()/detener() solo despiertan al service para que reevalue si
+                // debe seguir corriendo: no fuerzan nada por si solos (ver
+                // ServicioEscaneoBle.onStartCommand).
+                if (activar) ServicioEscaneoBle.iniciar(context) else ServicioEscaneoBle.detener(context)
+            },
+        )
     }
 }
 

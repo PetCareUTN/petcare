@@ -24,7 +24,9 @@
       >
         Disponibilidad
       </a>
-      <a routerLink="/servicios" [class.active]="isServiciosActive()"> Servicios </a>
+      <a routerLink="/servicios" [class.active]="isServiciosActive()">
+        Servicios
+      </a>
       <a routerLink="/eventos-clinicos/reportes" [class.active]="isReportesActive()">
         Reportes
       </a>
@@ -33,6 +35,9 @@
         [class.active]="isConfiguracionActive()"
       >
         Configuración
+      </a>
+      <a routerLink="/suscripciones" [class.active]="isSuscripcionActive()">
+        Mi suscripción
       </a>
     </nav>
 

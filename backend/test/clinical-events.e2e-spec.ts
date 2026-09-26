@@ -13,11 +13,13 @@ import { AppModule } from './../src/app.module';
 import { ClinicalEventType } from './../src/common/enums/clinical-event-type.enum';
 import { PetSex } from './../src/common/enums/pet-sex.enum';
 import { RoleName } from './../src/common/enums/role-name.enum';
+import { SuscripcionEstado } from './../src/common/enums/suscripcion-estado.enum';
 import { ValidationStatus } from './../src/common/enums/validation-status.enum';
 import { EventoClinico } from './../src/eventos-clinicos/entities/evento-clinico.entity';
 import { HistoriaClinica } from './../src/historias-clinicas/entities/historia-clinica.entity';
 import { Mascota } from './../src/mascotas/entities/mascota.entity';
 import { Role } from './../src/roles/entities/role.entity';
+import { Suscripcion } from './../src/suscripciones/entities/suscripcion.entity';
 import { User } from './../src/users/entities/user.entity';
 import { Veterinario } from './../src/veterinarios/entities/veterinario.entity';
 
@@ -67,6 +69,7 @@ describe('POST /eventos-clinicos (contract)', () => {
   let usersRepository: Repository<User>;
   let mascotasRepository: Repository<Mascota>;
   let veterinariosRepository: Repository<Veterinario>;
+  let suscripcionesRepository: Repository<Suscripcion>;
   let eventosClinicosRepository: Repository<EventoClinico>;
 
   beforeAll(async () => {
@@ -94,6 +97,7 @@ describe('POST /eventos-clinicos (contract)', () => {
     usersRepository = moduleFixture.get(getRepositoryToken(User));
     mascotasRepository = moduleFixture.get(getRepositoryToken(Mascota));
     veterinariosRepository = moduleFixture.get(getRepositoryToken(Veterinario));
+    suscripcionesRepository = moduleFixture.get(getRepositoryToken(Suscripcion));
     eventosClinicosRepository = moduleFixture.get(getRepositoryToken(EventoClinico));
   });
 
@@ -117,6 +121,9 @@ describe('POST /eventos-clinicos (contract)', () => {
     await dataSource.query('DELETE FROM "mascotas"');
     await dataSource.query('DELETE FROM "historias_clinicas"');
     await dataSource.query('DELETE FROM "veterinarios"');
+    // Orden por FK: pagos → suscripciones → usuarios.
+    await dataSource.query('DELETE FROM "pagos_suscripcion"');
+    await dataSource.query('DELETE FROM "suscripciones"');
     await dataSource.query('DELETE FROM "usuarios"');
   };
 
@@ -159,6 +166,21 @@ describe('POST /eventos-clinicos (contract)', () => {
         provinciaMatricula: 'Buenos Aires',
         matriculaUrl: 'uploads/matriculas/e2e-approved.pdf',
         estadoValidacion: ValidationStatus.APROBADO,
+      }),
+    );
+
+    // El control de acceso (AccesoPlataformaInterceptor → evaluarAcceso)
+    // exige una suscripción ACTIVA para el veterinario aprobado: sin ella,
+    // POST /eventos-clinicos responde 402 y los casos CLIN-01/02/03 no
+    // llegan a comprobar 201/400/404. Fechas dentro de 30 días.
+    const en30Dias = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    await suscripcionesRepository.save(
+      suscripcionesRepository.create({
+        usuario: approvedVetUser,
+        estado: SuscripcionEstado.ACTIVA,
+        fechaInicio: new Date(),
+        fechaFin: en30Dias,
+        fechaVencimiento: en30Dias,
       }),
     );
     await veterinariosRepository.save(

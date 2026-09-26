@@ -254,7 +254,7 @@ export class VeterinariosService {
       veterinario.usuario.idUsuario,
       NotificationType.APROBACION,
       'Cuenta aprobada',
-      'Tu cuenta de veterinario ha sido validada correctamente. Ya podés acceder a las funcionalidades profesionales.',
+      'Tu cuenta de veterinario ha sido validada. Para usar la plataforma, suscribite desde "Mis suscripción".',
     );
 
     return { mensaje: 'Solicitud aprobada correctamente' };

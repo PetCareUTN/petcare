@@ -1,7 +1,9 @@
 package com.petcare.app.features.notificaciones.data.remote
 
+import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.PATCH
+import retrofit2.http.POST
 import retrofit2.http.Path
 
 /** Notificación interna del usuario autenticado (US-22). */
@@ -15,15 +17,28 @@ data class NotificacionResponse(
     /**
      * Registro que abre la notificación al tocarla (US-41). Qué representa
      * depende del `tipo`: en `mascota_detectada` es el id del reporte de
-     * pérdida. Null en los tipos que todavía no llevan a ninguna pantalla.
+     * pérdida, y en `mascota_separada` el id de la mascota (US-34), porque
+     * cuando llega ese aviso todavía no hay ningún reporte creado. Null en los
+     * tipos que todavía no llevan a ninguna pantalla.
      */
     val idReferencia: Int? = null
 )
+
+/** Pide dejar en el historial el aviso de separación del tag (US-34). */
+data class AvisarSeparacionRequest(val tagId: String)
+
+/** `creada` en false significa que el backend lo agrupó con un aviso anterior. */
+data class AvisarSeparacionResponse(val creada: Boolean)
 
 interface NotificacionesApi {
 
     @GET("notificaciones")
     suspend fun getMisNotificaciones(): List<NotificacionResponse>
+
+    @POST("notificaciones/separacion")
+    suspend fun avisarSeparacion(
+        @Body request: AvisarSeparacionRequest
+    ): AvisarSeparacionResponse
 
     @PATCH("notificaciones/{idNotificacion}/leer")
     suspend fun marcarLeida(@Path("idNotificacion") idNotificacion: Int)

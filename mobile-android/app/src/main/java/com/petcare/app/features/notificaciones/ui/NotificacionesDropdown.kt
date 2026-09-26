@@ -46,7 +46,9 @@ fun NotificacionesDropdown(
     onMarcarLeida: (NotificacionResponse) -> Unit,
     onMarcarTodasLeidas: () -> Unit,
     /** Abre la última ubicación del reporte que indica la notificación (US-41). */
-    onAbrirUltimaUbicacion: (Int) -> Unit = {}
+    onAbrirUltimaUbicacion: (Int) -> Unit = {},
+    /** Abre el reporte de pérdida de la mascota que se alejó (US-34). */
+    onReportarPerdida: (Int) -> Unit = {}
 ) {
     val noLeidas = notificaciones.count { !it.leida }
 
@@ -144,6 +146,8 @@ fun NotificacionesDropdown(
                         onMarcarLeida = { onMarcarLeida(notificacion) },
                         onAbrir = destinoDe(notificacion)?.let { idReporte ->
                             { onAbrirUltimaUbicacion(idReporte) }
+                        } ?: mascotaAReportar(notificacion)?.let { idMascota ->
+                            { onReportarPerdida(idMascota) }
                         }
                     )
                     if (indice < notificaciones.lastIndex) {
@@ -204,7 +208,13 @@ private fun NotificacionItem(
 
         if (onAbrir != null) {
             Text(
-                text = "Ver ultima ubicacion",
+                // El destino depende del tipo: la deteccion lleva al mapa, y la
+                // separacion a crear el reporte de perdida.
+                text = if (notificacion.tipo == "mascota_separada") {
+                    "Reportar como perdida"
+                } else {
+                    "Ver ultima ubicacion"
+                },
                 color = PetCareTealDark,
                 style = MaterialTheme.typography.labelMedium
             )
@@ -227,10 +237,21 @@ private fun NotificacionItem(
 
 /**
  * Id del reporte al que lleva la notificación, o null si no lleva a ninguna
- * pantalla. Hoy solo las de detección navegan (US-41).
+ * pantalla. Hoy solo las de detección navegan ahí (US-41).
  */
 private fun destinoDe(notificacion: NotificacionResponse): Int? =
     notificacion.idReferencia?.takeIf { notificacion.tipo == "mascota_detectada" }
+
+/**
+ * Id de la mascota que hay que reportar como perdida, o null si la
+ * notificación no es de separación (US-34).
+ *
+ * Va aparte de [destinoDe] porque el `idReferencia` significa otra cosa según
+ * el tipo: en detección es un reporte que ya existe, y acá es la mascota sobre
+ * la que el dueño todavía tiene que crear uno.
+ */
+private fun mascotaAReportar(notificacion: NotificacionResponse): Int? =
+    notificacion.idReferencia?.takeIf { notificacion.tipo == "mascota_separada" }
 
 internal fun tipoLabel(tipo: String): String = when (tipo) {
     "solicitud_recibida" -> "Solicitud"
@@ -240,6 +261,7 @@ internal fun tipoLabel(tipo: String): String = when (tipo) {
     "turno_cancelado" -> "Turno cancelado"
     "recordatorio_vacuna" -> "Vacunación"
     "mascota_detectada" -> "Mascota detectada"
+    "mascota_separada" -> "Se alejó"
     else -> tipo
 }
 

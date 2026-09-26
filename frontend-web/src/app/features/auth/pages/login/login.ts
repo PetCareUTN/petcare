@@ -9,6 +9,7 @@ import {
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../services/auth-service';
+import { SuscripcionesService } from '../../../suscripciones/services/suscripciones-service';
 import { ApiError } from '../../models/user';
 
 @Component({
@@ -23,6 +24,7 @@ export class LoginPage implements AfterViewInit {
 
   private readonly formBuilder = inject(FormBuilder);
   private readonly authService = inject(AuthService);
+  private readonly suscripcionesService = inject(SuscripcionesService);
   private readonly router = inject(Router);
 
   protected readonly isSubmitting = signal(false);
@@ -70,11 +72,22 @@ export class LoginPage implements AfterViewInit {
         this.isSubmitting.set(false);
         this.authService.saveToken(response.token);
         this.authService.saveRole(response.usuario.id_rol);
-        const destino = this.authService.isVeterinario()
+
+        if (this.authService.isVeterinario()) {
+  this.suscripcionesService.miSuscripcion().subscribe({
+    next: (suscripcion) =>
+      this.router.navigateByUrl(
+        suscripcion.accesoPermitido
           ? '/eventos-clinicos/inicio'
-          : this.authService.isAdmin()
-            ? '/admin'
-            : '/';
+          : '/suscripciones',
+      ),
+    error: () => this.router.navigateByUrl('/suscripciones'),
+  });
+  return;
+}
+
+const destino = this.authService.isAdmin() ? '/admin' : '/';
+
         this.router.navigateByUrl(destino);
       },
       error: (error: ApiError) => {

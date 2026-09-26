@@ -49,6 +49,9 @@ export class VetLayout {
 
   protected readonly isServiciosActive = () => this.currentUrl().startsWith('/servicios');
 
+  protected readonly isSuscripcionActive = () =>
+    this.currentUrl().startsWith('/suscripciones');
+
   logout(): void {
     this.authService.clearToken();
     this.router.navigateByUrl('/login');

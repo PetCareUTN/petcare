@@ -7,7 +7,6 @@ import { RegisterDto } from './dto/register.dto';
 import { RegisterResponseDto } from './dto/register-response.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CreateAssistedOwnerDto } from './dto/create-assisted-owner.dto';
-import { VeterinarioValidadoGuard } from './guards/veterinario-validado.guard';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -34,8 +33,6 @@ describe('AuthController', () => {
       // El guard JWT depende de JwtService; en el test de unidad del
       // controlador lo reemplazamos por uno que siempre permite el acceso.
       .overrideGuard(JwtAuthGuard)
-      .useValue({ canActivate: () => true })
-      .overrideGuard(VeterinarioValidadoGuard)
       .useValue({ canActivate: () => true })
       .compile();
 
@@ -101,7 +98,8 @@ describe('AuthController', () => {
       telefono: '3511234567',
     };
     const response = {
-      mensaje: 'Cuenta de dueño creada. Se envió un código para activar la contraseña.',
+      mensaje:
+        'Cuenta de dueño creada. Se envió un código para activar la contraseña.',
       usuario: {
         id_usuario: 22,
         nombre: dto.nombre,

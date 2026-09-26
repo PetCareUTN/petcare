@@ -13,7 +13,6 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { VeterinarioValidadoGuard } from '../auth/guards/veterinario-validado.guard';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { RoleName } from '../common/enums/role-name.enum';
 import { DisponibilidadesVeterinariasService } from './disponibilidades-veterinarias.service';
@@ -27,7 +26,7 @@ export class DisponibilidadesVeterinariasController {
   ) {}
 
   @Get('mia')
-  @UseGuards(JwtAuthGuard, RolesGuard, VeterinarioValidadoGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleName.VETERINARIO)
   findMine(
     @CurrentUser() user: JwtPayload,
@@ -36,7 +35,7 @@ export class DisponibilidadesVeterinariasController {
   }
 
   @Put('mia')
-  @UseGuards(JwtAuthGuard, RolesGuard, VeterinarioValidadoGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleName.VETERINARIO)
   @HttpCode(HttpStatus.OK)
   replaceMine(
