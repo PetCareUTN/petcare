@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Post,
   Query,
+  Res,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
@@ -16,7 +17,8 @@ import {
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { randomUUID } from 'crypto';
 import { diskStorage } from 'multer';
-import { extname, join } from 'path';
+import type { Response } from 'express';
+import { extname } from 'path';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -27,10 +29,12 @@ import { ArchivoMedicoResponseDto } from './dto/archivo-medico-response.dto';
 import { CreateEventoClinicoDto } from './dto/create-evento-clinico.dto';
 import { EventoClinicoResponseDto } from './dto/evento-clinico-response.dto';
 import { HistoriaClinicaResponseDto } from './dto/historia-clinica-response.dto';
-import { EventosClinicosService } from './eventos-clinicos.service';
+import {
+  ARCHIVOS_MEDICOS_DIR,
+  EventosClinicosService,
+} from './eventos-clinicos.service';
 import type { UploadedMedicalFile } from './types/uploaded-medical-file.type';
 
-const ARCHIVOS_MEDICOS_DIR = join(process.cwd(), 'uploads', 'eventos-clinicos');
 const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.pdf'];
 const MAX_ARCHIVO_SIZE_IN_BYTES = 10 * 1024 * 1024;
 const MAX_ARCHIVOS_POR_SOLICITUD = 5;
@@ -95,6 +99,31 @@ export class EventosClinicosController {
       user,
       { ownerDocument, ownerEmail },
     );
+  }
+
+  @Get('archivos-medicos/:idArchivo')
+  @UseGuards(JwtAuthGuard)
+  async descargarArchivoMedico(
+    @CurrentUser() user: JwtPayload,
+    @Param('idArchivo', ParseIntPipe) idArchivo: number,
+    @Res() res: Response,
+    // Mismo contexto de atención que la historia clínica: el veterinario que
+    // llegó a la mascota buscando al dueño por DNI o email.
+    @Query('ownerDocument') ownerDocument?: string,
+    @Query('ownerEmail') ownerEmail?: string,
+  ): Promise<void> {
+    const archivo = await this.eventosClinicosService.obtenerArchivoMedico(
+      idArchivo,
+      user,
+      { ownerDocument, ownerEmail },
+    );
+    res.set({
+      'Content-Type': archivo.mimeType,
+      'Content-Disposition': `inline; filename*=UTF-8''${encodeURIComponent(archivo.nombreOriginal)}`,
+      'Cache-Control': 'private, no-store',
+      'X-Content-Type-Options': 'nosniff',
+    });
+    res.sendFile(archivo.ruta);
   }
 
   @Post(':idEvento/archivos-medicos')

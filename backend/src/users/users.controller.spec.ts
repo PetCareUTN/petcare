@@ -1,3 +1,4 @@
+import { ThrottlerModule } from '@nestjs/throttler';
 import { Test, TestingModule } from '@nestjs/testing';
 import { RoleName } from '../common/enums/role-name.enum';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -19,6 +20,8 @@ describe('UsersController', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
+      // Los endpoints de cambio de email usan LimiteIntentosGuard, que necesita la config del throttler.
+      imports: [ThrottlerModule.forRoot([{ ttl: 60_000, limit: 20 }])],
       controllers: [UsersController],
       providers: [
         {

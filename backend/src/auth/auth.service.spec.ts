@@ -695,5 +695,37 @@ describe('AuthService', () => {
         user.idUsuario,
       );
     });
+
+    it('invalidates the recovery code after 5 wrong attempts', async () => {
+      const user = {
+        idUsuario: 34,
+        email: 'marta@petcare.test',
+        codigoRecuperacion: await bcrypt.hash('123456', 10),
+        fechaExpiracionCodigo: new Date(Date.now() + 10 * 60 * 1000),
+      } as unknown as User;
+      usersService.findByEmail.mockResolvedValue(user);
+      const intentoFallido = () =>
+        service.resetPassword({
+          email: user.email,
+          codigo: '000000',
+          nuevaContraseña: 'NuevaClave123',
+        });
+
+      // Los primeros 4 fallan sin tocar el código guardado.
+      for (let i = 0; i < 4; i++) {
+        await expect(intentoFallido()).rejects.toMatchObject({
+          response: { mensaje: 'Código de recuperación incorrecto' },
+        });
+      }
+      expect(usersService.clearRecoveryData).not.toHaveBeenCalled();
+
+      // El quinto borra el código: adivinarlo exige pedir uno nuevo, que le
+      // llega por mail al dueño de la cuenta.
+      await expect(intentoFallido()).rejects.toMatchObject({
+        response: { mensaje: expect.stringContaining('Demasiados intentos') },
+      });
+      expect(usersService.clearRecoveryData).toHaveBeenCalledWith(34);
+      expect(usersService.updatePassword).not.toHaveBeenCalled();
+    });
   });
 });

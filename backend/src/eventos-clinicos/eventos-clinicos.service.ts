@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { join } from 'path';
 import { Repository } from 'typeorm';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { ClinicalEventType } from '../common/enums/clinical-event-type.enum';
@@ -20,6 +21,13 @@ import { HistoriaClinicaResponseDto } from './dto/historia-clinica-response.dto'
 import { ArchivoMedico } from './entities/archivo-medico.entity';
 import { EventoClinico } from './entities/evento-clinico.entity';
 import type { UploadedMedicalFile } from './types/uploaded-medical-file.type';
+
+/** Carpeta de los archivos médicos. No se sirve estática: ver obtenerArchivoMedico. */
+export const ARCHIVOS_MEDICOS_DIR = join(
+  process.cwd(),
+  'uploads',
+  'eventos-clinicos',
+);
 
 type VetAttentionContext = {
   ownerDocument?: string;
@@ -190,6 +198,44 @@ export class EventosClinicosService {
     return savedArchivos.map((archivo) =>
       ArchivoMedicoResponseDto.fromEntity(archivo, idEvento),
     );
+  }
+
+  /**
+   * Devuelve dónde está un archivo médico, si quien lo pide puede verlo.
+   *
+   * Los archivos antes se servían sin sesión desde /uploads: cualquiera que
+   * tuviera la URL (un veterinario que atendió una vez, un link reenviado)
+   * podía abrirlo para siempre. Ahora el acceso sigue la misma regla que la
+   * historia clínica: el dueño, o un veterinario validado del que la mascota
+   * ya sea paciente.
+   */
+  async obtenerArchivoMedico(
+    idArchivo: number,
+    requester: JwtPayload,
+    attentionContext?: VetAttentionContext,
+  ): Promise<{ ruta: string; nombreOriginal: string; mimeType: string }> {
+    const archivo = await this.archivosMedicosRepository.findOne({
+      where: { idArchivo },
+      relations: ['evento', 'evento.historia', 'evento.historia.mascota'],
+    });
+
+    if (!archivo) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Archivo no encontrado',
+      });
+    }
+
+    const mascota = await this.findMascota(
+      archivo.evento.historia.mascota.idMascota,
+    );
+    await this.verificarPermisoConsulta(mascota, requester, attentionContext);
+
+    return {
+      ruta: join(ARCHIVOS_MEDICOS_DIR, archivo.nombreArchivo),
+      nombreOriginal: archivo.nombreOriginal,
+      mimeType: archivo.mimeType,
+    };
   }
 
   /**

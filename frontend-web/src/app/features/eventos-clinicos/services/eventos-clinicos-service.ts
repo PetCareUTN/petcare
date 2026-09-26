@@ -4,6 +4,7 @@ import { Observable, catchError, throwError } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import { ApiError } from '../../auth/models/user';
 import { AuthService } from '../../auth/services/auth-service';
+import { ArchivoProtegidoService } from '../../../shared/services/archivo-protegido-service';
 import {
   ArchivoMedicoResponse,
   CreateEventoClinicoRequest,
@@ -15,6 +16,7 @@ import {
 export class EventosClinicosService {
   private readonly http = inject(HttpClient);
   private readonly authService = inject(AuthService);
+  private readonly archivoProtegido = inject(ArchivoProtegidoService);
   private readonly baseUrl = `${environment.apiUrl}/eventos-clinicos`;
 
   create(data: CreateEventoClinicoRequest): Observable<EventoClinicoResponse> {
@@ -50,12 +52,20 @@ export class EventosClinicosService {
   }
 
   /**
-   * El backend guarda `url` como ruta relativa (p. ej. `/uploads/eventos-clinicos/x.pdf`),
-   * servida desde su propio origen. El frontend corre en otro puerto, así que hay
-   * que anteponerle la URL de la API para que el navegador la resuelva bien.
+   * Abre un archivo médico en otra pestaña. El backend lo entrega solo con
+   * sesión (ver ArchivoProtegidoService), y con el mismo contexto de atención
+   * que se usó para ver la historia: sin él, un veterinario que llegó a la
+   * mascota buscando al dueño recibiría un 403 al abrir el archivo.
    */
-  resolveArchivoUrl(url: string): string {
-    return url.startsWith('http') ? url : `${environment.apiUrl}${url}`;
+  abrirArchivo(
+    url: string,
+    context?: { ownerDocument?: string; ownerEmail?: string },
+  ): Observable<void> {
+    const params = new URLSearchParams();
+    if (context?.ownerDocument) params.set('ownerDocument', context.ownerDocument);
+    if (context?.ownerEmail) params.set('ownerEmail', context.ownerEmail);
+    const query = params.toString();
+    return this.archivoProtegido.abrir(query ? `${url}?${query}` : url);
   }
 
   private authHeaders(): HttpHeaders | undefined {

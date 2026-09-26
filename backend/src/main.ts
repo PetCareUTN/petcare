@@ -27,9 +27,17 @@ async function bootstrap() {
         }),
     }),
   );
-  app.useStaticAssets(join(process.cwd(), 'uploads'), {
-    prefix: '/uploads/',
+  // Solo las fotos de mascotas son públicas: se muestran en listados de
+  // adopción y perdidas, a gente sin relación con la mascota. Los archivos
+  // médicos y los documentos de veterinarios viven en la misma carpeta
+  // uploads/, pero se sirven por endpoints que piden sesión y permisos.
+  app.useStaticAssets(join(process.cwd(), 'uploads', 'mascotas'), {
+    prefix: '/uploads/mascotas/',
   });
+  // Railway (y cualquier proxy delante) hace que todas las requests lleguen
+  // desde su IP. Sin esto, el límite de intentos del login se aplicaría a
+  // todos los usuarios juntos en vez de a cada IP.
+  app.set('trust proxy', 1);
   await app.listen(process.env.PORT ?? 3000);
 }
 void bootstrap();

@@ -165,8 +165,11 @@ export class HistoriaClinicaPage implements OnInit {
     });
   }
 
-  protected resolveArchivoUrl(url: string): string {
-    return this.eventosClinicosService.resolveArchivoUrl(url);
+  protected abrirArchivo(evento: Event, url: string): void {
+    evento.preventDefault();
+    this.eventosClinicosService.abrirArchivo(url, this.attentionContext()).subscribe({
+      error: () => this.errorMessage.set('No se pudo abrir el archivo.'),
+    });
   }
 
   protected subirArchivos(idEvento: number, input: HTMLInputElement): void {

@@ -30,6 +30,7 @@ describe('EventosClinicosService', () => {
   let archivosMedicosRepository: {
     create: jest.Mock;
     save: jest.Mock;
+    findOne: jest.Mock;
   };
   let historiasClinicasRepository: {
     create: jest.Mock;
@@ -67,6 +68,7 @@ describe('EventosClinicosService', () => {
     archivosMedicosRepository = {
       create: jest.fn(),
       save: jest.fn(),
+      findOne: jest.fn(),
     };
     historiasClinicasRepository = {
       create: jest.fn(),
@@ -640,7 +642,7 @@ describe('EventosClinicosService', () => {
           idArchivo: 1,
           idEvento: 30,
           nombreOriginal: archivo.originalname,
-          url: '/uploads/eventos-clinicos/a1b2c3.pdf',
+          url: '/eventos-clinicos/archivos-medicos/1',
         }),
       ]);
     });
@@ -720,6 +722,92 @@ describe('EventosClinicosService', () => {
         ForbiddenException,
       );
       expect(eventosClinicosRepository.findOne).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('obtenerArchivoMedico', () => {
+    const duenio = {
+      idUsuario: 7,
+      email: 'sofia@petcare.com',
+      numeroDocumento: '30111222',
+    };
+    const historia = { idHistoria: 20 } as HistoriaClinica;
+    const mascota = {
+      idMascota: 10,
+      usuarios: [duenio],
+      historiaClinica: historia,
+    } as unknown as Mascota;
+    const archivo = {
+      idArchivo: 1,
+      nombreOriginal: 'radiografia.pdf',
+      nombreArchivo: 'a1b2c3.pdf',
+      mimeType: 'application/pdf',
+      evento: { historia: { ...historia, mascota: { idMascota: 10 } } },
+    } as unknown as ArchivoMedico;
+
+    const comoDuenio = (sub: number): JwtPayload => ({
+      sub,
+      email: 'x@petcare.com',
+      idRol: 1,
+      rol: RoleName.DUENO_MASCOTA,
+    });
+
+    beforeEach(() => {
+      archivosMedicosRepository.findOne.mockResolvedValue(archivo);
+      mascotasRepository.findOne.mockResolvedValue(mascota);
+    });
+
+    it('el dueño obtiene el archivo de su mascota', async () => {
+      const result = await service.obtenerArchivoMedico(1, comoDuenio(7));
+
+      expect(result.ruta).toMatch(/eventos-clinicos[\\/]a1b2c3\.pdf$/);
+      expect(result.nombreOriginal).toBe('radiografia.pdf');
+      expect(result.mimeType).toBe('application/pdf');
+    });
+
+    it('otro dueño no puede abrir el archivo aunque conozca el id', async () => {
+      await expect(
+        service.obtenerArchivoMedico(1, comoDuenio(99)),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('un veterinario sin relacion con la mascota no puede abrirlo', async () => {
+      veterinariosRepository.findOne.mockResolvedValue(veterinario);
+      eventosClinicosRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.obtenerArchivoMedico(1, {
+          sub: 50,
+          email: 'vet@petcare.com',
+          idRol: 2,
+          rol: RoleName.VETERINARIO,
+        }),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('el veterinario que busco al dueño por DNI puede abrirlo', async () => {
+      veterinariosRepository.findOne.mockResolvedValue(veterinario);
+
+      const result = await service.obtenerArchivoMedico(
+        1,
+        {
+          sub: 50,
+          email: 'vet@petcare.com',
+          idRol: 2,
+          rol: RoleName.VETERINARIO,
+        },
+        { ownerDocument: '30111222' },
+      );
+
+      expect(result.nombreOriginal).toBe('radiografia.pdf');
+    });
+
+    it('un archivo inexistente da 404', async () => {
+      archivosMedicosRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.obtenerArchivoMedico(999, comoDuenio(7)),
+      ).rejects.toBeInstanceOf(NotFoundException);
     });
   });
 });

@@ -1,3 +1,4 @@
+import { ThrottlerModule } from '@nestjs/throttler';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -18,6 +19,8 @@ describe('AuthController', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
+      // Los endpoints de auth usan LimiteIntentosGuard, que necesita la config del throttler.
+      imports: [ThrottlerModule.forRoot([{ ttl: 60_000, limit: 20 }])],
       controllers: [AuthController],
       providers: [
         {

@@ -1,12 +1,15 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
+import { join } from 'path';
 import { Repository } from 'typeorm';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { RoleName } from '../common/enums/role-name.enum';
 import { ValidationStatus } from '../common/enums/validation-status.enum';
 import { NotificationType } from '../common/enums/notification-type.enum';
@@ -15,7 +18,11 @@ import { NotificacionesService } from '../notificaciones/notificaciones.service'
 import { Role } from '../roles/entities/role.entity';
 import { UsersService } from '../users/users.service';
 import { RegisterVeterinarioDto } from './dto/register-veterinario.dto';
-import { VeterinarioResponseDto } from './dto/veterinario-response.dto';
+import {
+  TipoDocumentoVeterinario,
+  urlDocumentoVeterinario,
+  VeterinarioResponseDto,
+} from './dto/veterinario-response.dto';
 import { Veterinario } from './entities/veterinario.entity';
 import type { UploadedDocumentFile } from './types/uploaded-document-file.type';
 
@@ -33,9 +40,44 @@ export class VeterinariosService {
     private readonly geocoding: GeocodingService,
   ) {}
 
-  private getPublicUrl(relativePath: string): string {
-    const baseUrl = process.env.API_URL ?? 'http://localhost:3000';
-    return `${baseUrl}/${relativePath}`;
+  /**
+   * Dónde está un documento del veterinario (matrícula o habilitación), si
+   * quien lo pide puede verlo: un administrador o el propio veterinario.
+   *
+   * Antes se servían sin sesión desde /uploads, y son documentos con datos
+   * personales: cualquiera con la URL podía abrirlos.
+   */
+  async obtenerDocumento(
+    idVeterinario: number,
+    tipo: TipoDocumentoVeterinario,
+    requester: JwtPayload,
+  ): Promise<string> {
+    const veterinario = await this.veterinariosRepository.findOne({
+      where: { idVeterinario },
+      relations: ['usuario'],
+    });
+
+    const esAdmin = requester.rol === RoleName.ADMINISTRADOR;
+    const esElMismo = veterinario?.usuario.idUsuario === requester.sub;
+    if (veterinario && !esAdmin && !esElMismo) {
+      throw new ForbiddenException({
+        codigoEstado: 403,
+        mensaje: 'No tiene permisos para acceder a este recurso',
+      });
+    }
+
+    const rutaRelativa =
+      tipo === 'matricula'
+        ? veterinario?.matriculaUrl
+        : veterinario?.habilitacionUrl;
+    if (!rutaRelativa) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Documento no encontrado',
+      });
+    }
+
+    return join(process.cwd(), rutaRelativa);
   }
 
   private getRelativeMatriculaUrl(file: UploadedDocumentFile): string {
@@ -211,9 +253,12 @@ export class VeterinariosService {
       numeroDocumento: veterinario.numeroDocumento,
       numeroMatricula: veterinario.numeroMatricula,
       provinciaMatricula: veterinario.provinciaMatricula,
-      matriculaUrl: this.getPublicUrl(veterinario.matriculaUrl),
+      matriculaUrl: urlDocumentoVeterinario(
+        veterinario.idVeterinario,
+        'matricula',
+      ),
       habilitacionUrl: veterinario.habilitacionUrl
-        ? this.getPublicUrl(veterinario.habilitacionUrl)
+        ? urlDocumentoVeterinario(veterinario.idVeterinario, 'habilitacion')
         : null,
       estadoValidacion: veterinario.estadoValidacion,
       motivoRechazo: veterinario.motivoRechazo,

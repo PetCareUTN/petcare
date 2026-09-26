@@ -6,6 +6,7 @@ import { AuthService } from '../../../auth/services/auth-service';
 import { SolicitudDetalle } from '../../../veterinarios/models/veterinario';
 import { VeterinariosService } from '../../../veterinarios/services/veterinarios-service';
 import { NotificationBellComponent } from '../../../notificaciones/components/notification-bell/notification-bell';
+import { ArchivoProtegidoService } from '../../../../shared/services/archivo-protegido-service';
 
 @Component({
   selector: 'app-validacion-detalle',
@@ -18,6 +19,7 @@ export class ValidacionDetallePage implements OnInit {
   private readonly router = inject(Router);
   private readonly veterinariosService = inject(VeterinariosService);
   private readonly authService = inject(AuthService);
+  private readonly archivoProtegido = inject(ArchivoProtegidoService);
 
   protected readonly isLoading = signal(true);
   protected readonly isProcessing = signal(false);
@@ -96,5 +98,13 @@ export class ValidacionDetallePage implements OnInit {
 
   onMotivoChange(value: string): void {
     this.motivoRechazo.set(value);
+  }
+
+  /** Los documentos piden sesión: ver ArchivoProtegidoService. */
+  protected abrirDocumento(evento: Event, url: string): void {
+    evento.preventDefault();
+    this.archivoProtegido.abrir(url).subscribe({
+      error: () => this.errorMessage.set('No se pudo abrir el documento.'),
+    });
   }
 }
