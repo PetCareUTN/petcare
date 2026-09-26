@@ -15,6 +15,7 @@ import {
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { randomUUID } from 'crypto';
+import { mkdirSync } from 'fs';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -31,6 +32,11 @@ import { EventosClinicosService } from './eventos-clinicos.service';
 import type { UploadedMedicalFile } from './types/uploaded-medical-file.type';
 
 const ARCHIVOS_MEDICOS_DIR = join(process.cwd(), 'uploads', 'eventos-clinicos');
+
+// Igual que en veterinarios.controller.ts: multer no crea el destino, y
+// uploads/ esta gitignoreado, asi que en un despliegue nuevo no existe y
+// adjuntar un estudio a la historia clinica falla con ENOENT.
+mkdirSync(ARCHIVOS_MEDICOS_DIR, { recursive: true });
 const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.pdf'];
 const MAX_ARCHIVO_SIZE_IN_BYTES = 10 * 1024 * 1024;
 const MAX_ARCHIVOS_POR_SOLICITUD = 5;
