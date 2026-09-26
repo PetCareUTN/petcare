@@ -16,6 +16,23 @@ val localProperties = Properties().apply {
 }
 val mapsApiKey: String = localProperties.getProperty("MAPS_API_KEY") ?: "change_me"
 
+// URL del backend por variante. La de release se puede pisar sin tocar el
+// repo, para compilar contra staging o contra un backend propio:
+//   ./gradlew assembleRelease -PPETCARE_API_URL=https://loquesea/
+// o poniendo PETCARE_API_URL en local.properties. Ver docs/deploy.md.
+fun apiUrl(porDefecto: String): String =
+    (project.findProperty("PETCARE_API_URL") as String?)
+        ?: localProperties.getProperty("PETCARE_API_URL")
+        ?: porDefecto
+
+// Desde el emulador Android, 10.0.2.2 representa la computadora donde corre el
+// emulador: es el backend levantado con npm run start:dev.
+val API_URL_LOCAL = "http://10.0.2.2:3000/"
+
+// TODO: reemplazar por el dominio real del backend en Railway apenas se cree
+// el servicio de produccion. Tiene que terminar en barra (lo exige Retrofit).
+val API_URL_PRODUCCION = "https://petcare-backend-production.up.railway.app/"
+
 android {
     namespace = "com.petcare.app"
     compileSdk {
@@ -36,7 +53,17 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "API_BASE_URL", "\"${apiUrl(API_URL_LOCAL)}\"")
+            // El backend local habla HTTP plano; sin esto Android bloquea las
+            // llamadas desde el emulador.
+            manifestPlaceholders["usesCleartextTraffic"] = "true"
+        }
         release {
+            buildConfigField("String", "API_BASE_URL", "\"${apiUrl(API_URL_PRODUCCION)}\"")
+            // En produccion todo va por HTTPS: si algo quedo apuntando a http://
+            // queremos que falle en desarrollo y no que viaje en texto plano.
+            manifestPlaceholders["usesCleartextTraffic"] = "false"
             optimization {
                 enable = false
             }
@@ -48,6 +75,8 @@ android {
     }
     buildFeatures {
         compose = true
+        // Necesario para que se genere BuildConfig con API_BASE_URL.
+        buildConfig = true
     }
     testOptions {
         unitTests {
