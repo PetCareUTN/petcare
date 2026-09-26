@@ -22,18 +22,37 @@ Railway cobra por asiento. Ver los costos estimados en Instancia 1, sección
 "Costo operativo mensual futuro en producción".
 
 1. Crear un proyecto nuevo conectado al repo `PetCareUTN/petcare`.
+
+   Si el repo no aparece en la lista, es porque la GitHub App de Railway se
+   instala por cuenta y `petcare` es de la organizacion, no de la cuenta
+   personal. Se arregla instalandola en la organizacion desde
+   <https://github.com/apps/railway-app/installations/new> (ojo: el slug es
+   `railway-app`, no `railway`), eligiendo PetCareUTN y solo el repo `petcare`.
+
+   Conviene crear el proyecto en el workspace personal: un workspace de
+   organizacion cobra asiento a cada miembro.
 2. Crear dos **environments**: `staging` y `production`.
 3. En cada uno, agregar dos servicios:
    - **PostgreSQL**, desde el catálogo de Railway.
+   - **PostgreSQL**: dejarle el nombre `Postgres`, porque las variables del
+     backend lo referencian por ese nombre.
    - **Backend**, desde el repo, con estos ajustes:
      - Root Directory: `backend`
      - Build Command: `npm ci && npm run build`
      - Pre-deploy Command: `npm run migration:run:prod`
-     - Start Command: `npm run start:prod`
+     - Start Command: `npm run start:prod`. Hay que ponerlo a mano: el
+       `npm start` que detecta Railway levanta el modo desarrollo, que necesita
+       el CLI de Nest y no está en produccion.
+     - Watch Paths: `/backend/**`, para que un cambio en la app Android o en el
+       frontend no redespliegue la API.
      - Branch: `develop` en staging, `main` en producción.
 4. Agregar un **volumen** al servicio de backend, montado en `/app/uploads`.
    Sin esto, las fotos de mascotas y los archivos clínicos se borran en cada
    deploy, porque se guardan en el disco del contenedor (`process.cwd()/uploads`).
+
+   El volumen **no se monta durante el pre-deploy**, solo cuando arranca el
+   servicio. No nos afecta porque las migraciones no tocan archivos, pero hay
+   que tenerlo en cuenta si alguna vez se agrega un script que sí lo haga.
 5. Cargar las variables de entorno (sección 3).
 6. Sembrar los roles **una vez por base nueva**, porque el sistema no arranca
    sin ellos. Desde la máquina de uno, con la URL pública de la base:
@@ -68,8 +87,8 @@ la lista completa con sus explicaciones.
 
 | Variable | Producción | Notas |
 | --- | --- | --- |
-| `DATABASE_URL` | la que expone el Postgres de Railway | reemplaza a las cinco `DATABASE_*` |
-| `DATABASE_SSL` | `true` | sin esto la conexión falla por el certificado |
+| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` | variable de referencia al otro servicio; reemplaza a las cinco `DATABASE_*` |
+| `DATABASE_SSL` | `true` | si el deploy falla con "the server does not support SSL connections", poner `false`: la conexión entre servicios ya va por la red privada |
 | `TZ` | `America/Argentina/Cordoba` | si no, el recordatorio de vacunas sale a las 5 AM |
 | `JWT_SECRET` | uno largo y aleatorio, distinto por ambiente | |
 | `JWT_EXPIRES_IN` | `1d` | |
@@ -80,6 +99,12 @@ la lista completa con sus explicaciones.
 | `GOOGLE_GEOCODING_API_KEY` | la de Google Cloud | conviene ponerle límite de cuota |
 
 `PORT` lo inyecta Railway solo: no hay que definirlo.
+
+Dos advertencias al cargarlas:
+
+- Si Railway ofrece **importar las variables sugeridas del `.env.example`**, no
+  aceptar: carga los `change_me` como si fueran valores reales.
+- Cada cambio queda **staged**. Hay que apretar **Deploy** para que se aplique.
 
 ## 4. App Android
 
