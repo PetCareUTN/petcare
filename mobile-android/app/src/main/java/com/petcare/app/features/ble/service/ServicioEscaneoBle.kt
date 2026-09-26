@@ -34,6 +34,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * Mantiene vivo el escaneo BLE con la app en segundo plano (US-30).
@@ -159,17 +162,38 @@ class ServicioEscaneoBle : Service() {
         }
     }
 
-    /** Da de alta en [detectorSeparacion] cualquier tag nuevo que se haya activado. */
-    private fun sincronizarTagsMonitoreados() {
+    /**
+     * Pone a [detectorSeparacion] en linea con lo que eligio el usuario: da de alta los
+     * tags nuevos, de baja los que apago, y aplica el umbral de sensibilidad de cada uno
+     * (US-35), que puede haber cambiado desde el perfil mientras el service corria.
+     *
+     * Dar de baja importa aunque la vigilancia solo recorra los tags de las
+     * preferencias: si no, un tag apagado y vuelto a prender conservaria la ultima
+     * lectura de antes de apagarlo y podria avisar apenas se reactiva.
+     */
+    private fun sincronizarTagsMonitoreados() = synchronized(detectorSeparacion) {
         val ahora = System.currentTimeMillis()
-        for (tagId in monitoreoSeparacion.tagsMonitoreados()) {
-            if (!detectorSeparacion.monitoreoActivo(tagId)) {
-                detectorSeparacion.activarMonitoreo(tagId, ahora)
+        val intervaloEscaneo = preferencias.getIntervaloMillis()
+        val activos = monitoreoSeparacion.tagsMonitoreados()
+
+        for (tagId in detectorSeparacion.tagsMonitoreados() - activos) {
+            detectorSeparacion.desactivarMonitoreo(tagId)
+        }
+
+        for (tagId in activos) {
+            val umbral = monitoreoSeparacion.sensibilidad(tagId)
+                .intervaloEfectivoMillis(intervaloEscaneo)
+            if (detectorSeparacion.monitoreoActivo(tagId)) {
+                detectorSeparacion.cambiarIntervalo(tagId, umbral)
+            } else {
+                detectorSeparacion.activarMonitoreo(tagId, ahora, umbral)
             }
         }
     }
 
-    private fun procesarSeparacion(lectura: TagDetectado) {
+    // synchronized porque las lecturas y la vigilancia corren en corrutinas distintas
+    // sobre Dispatchers.Default, y el detector no es thread-safe.
+    private fun procesarSeparacion(lectura: TagDetectado) = synchronized(detectorSeparacion) {
         if (!detectorSeparacion.monitoreoActivo(lectura.tagId)) return
 
         detectorSeparacion.registrarLectura(lectura.tagId, lectura.detectadoEnMillis)
@@ -199,16 +223,19 @@ class ServicioEscaneoBle : Service() {
 
                 val ahora = System.currentTimeMillis()
                 for (tagId in monitoreoSeparacion.tagsMonitoreados()) {
-                    // La alerta definitiva (umbral configurable, silenciado por mascota,
-                    // texto final) es US-35 (P1-174) y todavia no esta implementada.
-                    // Esta notificacion es solo para probar HOY que la deteccion real
-                    // funciona con el tag fisico, sin depender de tener el celular
-                    // enchufado a una compu mirando el Logcat.
-                    if (detectorSeparacion.separacionNuevaDetectada(tagId, ahora)) {
-                        Log.i(TAG, "Separacion detectada para el tag $tagId (pendiente US-35)")
-                        mostrarNotificacionDebugDeSeparacion(tagId)
-                        avisarSeparacionAlBackend(tagId)
+                    val separado = synchronized(detectorSeparacion) {
+                        detectorSeparacion.separacionNuevaDetectada(tagId, ahora)
                     }
+                    if (!separado) continue
+
+                    Log.i(TAG, "Separacion detectada para el tag $tagId")
+                    // Silenciar corta solo la alerta que suena en el momento: el aviso
+                    // sigue quedando en la campanita (ver
+                    // MonitoreoSeparacionPreferences.estaSilenciada).
+                    if (!monitoreoSeparacion.estaSilenciada(tagId)) {
+                        mostrarAlertaDeSeparacion(tagId, ahora)
+                    }
+                    avisarSeparacionAlBackend(tagId)
                 }
             }
         }
@@ -246,11 +273,37 @@ class ServicioEscaneoBle : Service() {
         }
     }
 
-    private fun mostrarNotificacionDebugDeSeparacion(tagId: String) {
-        val notificacion = NotificationCompat.Builder(this, ID_CANAL_DEBUG_SEPARACION)
-            .setContentTitle("[DEBUG US-34] Separación detectada")
-            .setContentText("Hace rato que no se ve el tag $tagId")
-            .setSmallIcon(android.R.drawable.stat_notify_sync)
+    /**
+     * Alerta en el celular de que una mascota se alejo (US-35).
+     *
+     * Dice de que mascota se trata y a que hora se detecto, como pide el criterio de
+     * aceptacion. La hora va en el texto y no solo en el `setWhen`, porque el sistema
+     * la muestra relativa ("hace 20 min") y lo que le sirve al dueño es saber desde
+     * cuando buscar.
+     */
+    private fun mostrarAlertaDeSeparacion(tagId: String, detectadoEnMillis: Long) {
+        val nombre = monitoreoSeparacion.nombreMascota(tagId)
+        val hora = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(detectadoEnMillis))
+
+        val abrirApp = PendingIntent.getActivity(
+            this,
+            tagId.hashCode(),
+            Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        val notificacion = NotificationCompat.Builder(this, ID_CANAL_ALERTA_SEPARACION)
+            .setContentTitle(getString(R.string.separacion_alerta_titulo, nombre ?: getString(R.string.separacion_alerta_sin_nombre)))
+            .setContentText(getString(R.string.separacion_alerta_texto, hora))
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText(getString(R.string.separacion_alerta_texto_largo, hora))
+            )
+            .setSmallIcon(android.R.drawable.stat_notify_error)
+            .setWhen(detectadoEnMillis)
+            .setShowWhen(true)
+            .setContentIntent(abrirApp)
+            .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .build()
@@ -260,9 +313,9 @@ class ServicioEscaneoBle : Service() {
         runCatching {
             NotificationManagerCompat.from(this).notify(tagId.hashCode(), notificacion)
         }.onFailure {
-            // Sin permiso POST_NOTIFICATIONS (API 33+) no se puede mostrar: el Logcat
-            // de arriba sigue sirviendo como respaldo para confirmar la deteccion.
-            Log.w(TAG, "No se pudo mostrar la notificacion de debug", it)
+            // Sin permiso POST_NOTIFICATIONS (API 33+) no se puede mostrar. El aviso de
+            // la campanita sale igual, asi que el dueño no se queda sin rastro.
+            Log.w(TAG, "No se pudo mostrar la alerta de separacion", it)
         }
     }
 
@@ -315,21 +368,24 @@ class ServicioEscaneoBle : Service() {
             setShowBadge(false)
         }
 
-        // Canal aparte para la notificacion de prueba de US-34: a diferencia del de
-        // arriba (silencioso, porque es obligatorio y el usuario no lo pidio), esta
-        // tiene que hacerse notar para poder probarla sin mirar el celular todo el
-        // tiempo. Se borra junto con mostrarNotificacionDebugDeSeparacion() cuando
-        // llegue la alerta definitiva de US-35.
-        val canalDebug = NotificationChannel(
-            ID_CANAL_DEBUG_SEPARACION,
-            "[DEBUG] Separación detectada (US-34)",
+        // Canal aparte para la alerta de separacion (US-35): a diferencia del de arriba
+        // (silencioso, porque es obligatorio y el usuario no lo pidio), esta es una
+        // alerta que el dueño activo y tiene que hacerse notar.
+        val canalAlerta = NotificationChannel(
+            ID_CANAL_ALERTA_SEPARACION,
+            getString(R.string.separacion_canal_nombre),
             NotificationManager.IMPORTANCE_HIGH,
         ).apply {
-            description = "Notificacion de prueba para validar la deteccion de separacion con hardware real."
+            description = getString(R.string.separacion_canal_descripcion)
         }
 
-        getSystemService(NotificationManager::class.java)?.createNotificationChannel(canal)
-        getSystemService(NotificationManager::class.java)?.createNotificationChannel(canalDebug)
+        getSystemService(NotificationManager::class.java)?.apply {
+            createNotificationChannel(canal)
+            createNotificationChannel(canalAlerta)
+            // El canal de prueba de US-34 queda huerfano en los celulares que ya lo
+            // tenian creado: se borra para que no aparezca en los ajustes de la app.
+            deleteNotificationChannel(ID_CANAL_DEBUG_SEPARACION_US34)
+        }
     }
 
     private fun detenerse() {
@@ -352,7 +408,8 @@ class ServicioEscaneoBle : Service() {
         private const val ID_CANAL = "petcare_colaboracion_ble"
         private const val ID_NOTIFICACION = 1001
 
-        private const val ID_CANAL_DEBUG_SEPARACION = "petcare_debug_separacion_us34"
+        private const val ID_CANAL_ALERTA_SEPARACION = "petcare_alerta_separacion"
+        private const val ID_CANAL_DEBUG_SEPARACION_US34 = "petcare_debug_separacion_us34"
 
         private const val ACCION_DETENER = "com.petcare.app.ble.DETENER"
 

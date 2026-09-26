@@ -136,4 +136,50 @@ class DetectorDeSeparacionTest {
 
         assertEquals(false, detector.separacionNuevaDetectada("TAG1", ahoraMillis = 999_999L))
     }
+
+    // --- US-35 (P1-174): umbral configurable por mascota ---
+
+    @Test
+    fun `cada tag se evalua contra su propio umbral`() {
+        val detector = DetectorDeSeparacion()
+        detector.activarMonitoreo("SENSIBLE", ahoraMillis = 0L, intervaloMillis = 120_000L)
+        detector.activarMonitoreo("TOLERANTE", ahoraMillis = 0L, intervaloMillis = 300_000L)
+
+        // A los 2 min sin lecturas solo el de umbral bajo se considera separado.
+        assertEquals(EstadoSeparacion.SEPARADO, detector.evaluar("SENSIBLE", ahoraMillis = 120_000L))
+        assertEquals(EstadoSeparacion.CERCA, detector.evaluar("TOLERANTE", ahoraMillis = 120_000L))
+
+        assertEquals(EstadoSeparacion.SEPARADO, detector.evaluar("TOLERANTE", ahoraMillis = 300_000L))
+    }
+
+    @Test
+    fun `modificar el umbral cambia el comportamiento sin reiniciar la cuenta`() {
+        val detector = DetectorDeSeparacion()
+        detector.activarMonitoreo("TAG1", ahoraMillis = 0L, intervaloMillis = 300_000L)
+
+        // Con 5 min de umbral, a los 2:30 sigue cerca.
+        assertEquals(false, detector.separacionNuevaDetectada("TAG1", ahoraMillis = 150_000L))
+
+        // El dueño sube la sensibilidad a 2 min: la misma ausencia ya alcanza, sin
+        // esperar otros 2 min desde el cambio.
+        detector.cambiarIntervalo("TAG1", 120_000L)
+        assertEquals(true, detector.separacionNuevaDetectada("TAG1", ahoraMillis = 150_000L))
+    }
+
+    @Test
+    fun `cambiar el umbral de un tag no monitoreado no lo activa`() {
+        val detector = DetectorDeSeparacion()
+        detector.cambiarIntervalo("TAG1", 120_000L)
+
+        assertEquals(false, detector.monitoreoActivo("TAG1"))
+        assertEquals(emptySet<String>(), detector.tagsMonitoreados())
+    }
+
+    @Test
+    fun `sin umbral propio vale el del detector`() {
+        val detector = DetectorDeSeparacion(intervaloSeparacionMillis = 60_000L)
+        detector.activarMonitoreo("TAG1", ahoraMillis = 0L)
+
+        assertEquals(EstadoSeparacion.SEPARADO, detector.evaluar("TAG1", ahoraMillis = 60_000L))
+    }
 }

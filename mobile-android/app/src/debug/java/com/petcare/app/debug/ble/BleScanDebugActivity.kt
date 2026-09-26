@@ -363,8 +363,9 @@ private fun TarjetaLectura(lectura: Lectura) {
  *
  * Al activarlo arranca el foreground service real con [ServicioEscaneoBle.iniciar]:
  * alejate con el tag y mira el Logcat filtrando por "ServicioEscaneoBle" — a los 3
- * minutos sin verlo (el intervalo por defecto de [com.petcare.app.features.ble.domain.DetectorDeSeparacion])
- * deberia aparecer la linea "Separacion detectada para el tag ... (pendiente US-35)".
+ * minutos sin verlo (la sensibilidad por defecto, ver
+ * [com.petcare.app.features.ble.domain.SensibilidadSeparacion]) deberia aparecer la
+ * linea "Separacion detectada para el tag ..." y la alerta de US-35.
  *
  * Se borra junto con el resto de este sourceSet cuando termine el spike.
  */
