@@ -15,6 +15,7 @@ import {
   DatosTurno,
   NotificacionesTurnosService,
 } from '../notificaciones/notificaciones-turnos.service';
+import { SobreturnosVeterinariosService } from '../sobreturnos-veterinarios/sobreturnos-veterinarios.service';
 import { User } from '../users/entities/user.entity';
 import { Veterinario } from '../veterinarios/entities/veterinario.entity';
 import { CancelarTurnoVeterinarioDto } from './dto/cancelar-turno-veterinario.dto';
@@ -47,6 +48,7 @@ export class TurnosVeterinariosService {
     @InjectRepository(DisponibilidadVeterinaria)
     private readonly disponibilidadesRepository: Repository<DisponibilidadVeterinaria>,
     private readonly notificacionesTurnosService: NotificacionesTurnosService,
+    private readonly sobreturnosVeterinariosService: SobreturnosVeterinariosService,
   ) {}
 
   async solicitar(
@@ -87,8 +89,21 @@ export class TurnosVeterinariosService {
     }
 
     const horaFin = this.sumarMinutos(dto.hora, DURACION_TURNO_MINUTOS);
-    const franja = await this.obtenerFranjaDisponible(dto.idVeterinario, dto.fecha, dto.hora, horaFin);
-    await this.verificarCupoDisponible(dto.idVeterinario, dto.fecha, dto.hora, horaFin, franja.cuposPorTurno);
+    const franja = await this.buscarFranjaDisponible(dto.idVeterinario, dto.fecha, dto.hora, horaFin);
+    const cuposExtra = await this.sobreturnosVeterinariosService.obtenerCuposExtraPorHora(
+      dto.idVeterinario,
+      dto.fecha,
+    );
+    const cuposPorTurno = (franja?.cuposPorTurno ?? 0) + (cuposExtra.get(dto.hora) ?? 0);
+
+    if (cuposPorTurno === 0) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje: 'El horario solicitado no está disponible para esa veterinaria',
+      });
+    }
+
+    await this.verificarCupoDisponible(dto.idVeterinario, dto.fecha, dto.hora, horaFin, cuposPorTurno);
 
     const turno = this.turnosRepository.create({
       veterinario,
@@ -113,12 +128,12 @@ export class TurnosVeterinariosService {
     return TurnoVeterinarioResponseDto.fromEntity(turnoCompleto!);
   }
 
-  private async obtenerFranjaDisponible(
+  private async buscarFranjaDisponible(
     idVeterinario: number,
     fecha: string,
     horaInicio: string,
     horaFin: string,
-  ): Promise<DisponibilidadVeterinaria> {
+  ): Promise<DisponibilidadVeterinaria | null> {
     const diaSemana = this.obtenerDiaSemana(fecha);
     const disponibilidades = await this.disponibilidadesRepository.find({
       where: { veterinario: { idVeterinario }, diaSemana },
@@ -126,20 +141,13 @@ export class TurnosVeterinariosService {
 
     const inicioMinutos = this.aMinutos(horaInicio);
     const finMinutos = this.aMinutos(horaFin);
-    const franja = disponibilidades.find(
-      (disponibilidad) =>
-        inicioMinutos >= this.aMinutos(disponibilidad.horaInicio) &&
-        finMinutos <= this.aMinutos(disponibilidad.horaFin),
+    return (
+      disponibilidades.find(
+        (disponibilidad) =>
+          inicioMinutos >= this.aMinutos(disponibilidad.horaInicio) &&
+          finMinutos <= this.aMinutos(disponibilidad.horaFin),
+      ) ?? null
     );
-
-    if (!franja) {
-      throw new BadRequestException({
-        codigoEstado: 400,
-        mensaje: 'El horario solicitado no está disponible para esa veterinaria',
-      });
-    }
-
-    return franja;
   }
 
   /**
@@ -207,7 +215,7 @@ export class TurnosVeterinariosService {
       ocupadosPorHora.set(hora, (ocupadosPorHora.get(hora) ?? 0) + 1);
     }
 
-    const slots = new Set<string>();
+    const capacidadPorHora = new Map<string, number>();
     for (const disponibilidad of disponibilidades) {
       const inicio = this.aMinutos(disponibilidad.horaInicio);
       const fin = this.aMinutos(disponibilidad.horaFin);
@@ -217,10 +225,26 @@ export class TurnosVeterinariosService {
         minuto += DURACION_TURNO_MINUTOS
       ) {
         const hora = this.deMinutos(minuto);
-        const ocupados = ocupadosPorHora.get(hora) ?? 0;
-        if (ocupados < disponibilidad.cuposPorTurno) {
-          slots.add(hora);
-        }
+        capacidadPorHora.set(
+          hora,
+          (capacidadPorHora.get(hora) ?? 0) + disponibilidad.cuposPorTurno,
+        );
+      }
+    }
+
+    const cuposExtra = await this.sobreturnosVeterinariosService.obtenerCuposExtraPorHora(
+      idVeterinario,
+      fecha,
+    );
+    for (const [hora, cupoExtra] of cuposExtra) {
+      capacidadPorHora.set(hora, (capacidadPorHora.get(hora) ?? 0) + cupoExtra);
+    }
+
+    const slots = new Set<string>();
+    for (const [hora, capacidad] of capacidadPorHora) {
+      const ocupados = ocupadosPorHora.get(hora) ?? 0;
+      if (ocupados < capacidad) {
+        slots.add(hora);
       }
     }
 

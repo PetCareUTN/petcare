@@ -2384,13 +2384,6 @@ class MainActivity : ComponentActivity() {
                                 PetCareBottomBar(
                                     selectedItem = seccionActual,
                                     onInicioClick = { volverAInicio() },
-                                    onServiciosClick = {
-                                        volverAInicio()
-                                        saveServicioError = null
-                                        serviciosError = null
-                                        isViewingServicios = true
-                                        loadServicios()
-                                    },
                                     onTurnosClick = {
                                         volverAInicio()
                                         misTurnosError = null

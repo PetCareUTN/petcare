@@ -142,6 +142,7 @@ export class VeterinariosService {
       direccion: string | null;
       latitud: number | null;
       longitud: number | null;
+      telefono: string | null;
     }[]
   > {
     const veterinarios = await this.veterinariosRepository.find({
@@ -156,6 +157,7 @@ export class VeterinariosService {
         direccion: veterinario.usuario.direccion,
         latitud: veterinario.usuario.latitud,
         longitud: veterinario.usuario.longitud,
+        telefono: veterinario.usuario.telefono,
       }))
       .sort((a, b) => a.nombre.localeCompare(b.nombre));
   }
@@ -252,7 +254,7 @@ export class VeterinariosService {
       veterinario.usuario.idUsuario,
       NotificationType.APROBACION,
       'Cuenta aprobada',
-      'Tu cuenta de veterinario ha sido validada correctamente. Ya podés acceder a las funcionalidades profesionales.',
+      'Tu cuenta de veterinario ha sido validada. Para usar la plataforma, suscribite desde "Mis suscripción".',
     );
 
     return { mensaje: 'Solicitud aprobada correctamente' };

@@ -26,8 +26,14 @@ export class VetLayout {
 
   protected readonly isAttentionActive = () =>
     this.currentUrl().startsWith('/eventos-clinicos') &&
+    !this.isInicioActive() &&
     !this.isDisponibilidadActive() &&
-    !this.isTurnosActive();
+    !this.isTurnosActive() &&
+    !this.isReportesActive() &&
+    !this.isConfiguracionActive();
+
+  protected readonly isInicioActive = () =>
+    this.currentUrl().startsWith('/eventos-clinicos/inicio');
 
   protected readonly isDisponibilidadActive = () =>
     this.currentUrl().startsWith('/eventos-clinicos/disponibilidad');
@@ -35,7 +41,16 @@ export class VetLayout {
   protected readonly isTurnosActive = () =>
     this.currentUrl().startsWith('/eventos-clinicos/turnos');
 
+  protected readonly isReportesActive = () =>
+    this.currentUrl().startsWith('/eventos-clinicos/reportes');
+
+  protected readonly isConfiguracionActive = () =>
+    this.currentUrl().startsWith('/eventos-clinicos/configuracion');
+
   protected readonly isServiciosActive = () => this.currentUrl().startsWith('/servicios');
+
+  protected readonly isSuscripcionActive = () =>
+    this.currentUrl().startsWith('/suscripciones');
 
   logout(): void {
     this.authService.clearToken();

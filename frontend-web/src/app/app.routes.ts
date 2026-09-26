@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { accesoSuscripcionGuard } from './features/auth/guards/acceso-suscripcion.guard';
 import { authGuard } from './features/auth/guards/auth.guard';
 
 export const routes: Routes = [
@@ -51,8 +52,15 @@ export const routes: Routes = [
   {
     path: 'eventos-clinicos',
     loadComponent: () => import('./shared/layout/vet-layout').then((m) => m.VetLayout),
-    canActivate: [authGuard],
+    canActivate: [authGuard, accesoSuscripcionGuard],
     children: [
+      {
+        path: 'inicio',
+        loadComponent: () =>
+          import('./features/inicio-veterinario/pages/inicio/inicio-veterinario').then(
+            (m) => m.InicioVeterinarioPage,
+          ),
+      },
       {
         path: '',
         loadComponent: () =>
@@ -118,12 +126,26 @@ export const routes: Routes = [
             './features/turnos-veterinarios/pages/gestion-turnos/gestion-turnos'
           ).then((m) => m.GestionTurnosVeterinariosPage),
       },
+      {
+        path: 'reportes',
+        loadComponent: () =>
+          import(
+            './features/reportes-veterinarios/pages/dashboard/dashboard-reportes'
+          ).then((m) => m.DashboardReportesPage),
+      },
+      {
+        path: 'configuracion',
+        loadComponent: () =>
+          import(
+            './features/configuracion-veterinario/pages/configuracion/configuracion-veterinario'
+          ).then((m) => m.ConfiguracionVeterinarioPage),
+      },
     ],
   },
   {
     path: 'servicios',
     loadComponent: () => import('./shared/layout/vet-layout').then((m) => m.VetLayout),
-    canActivate: [authGuard],
+    canActivate: [authGuard, accesoSuscripcionGuard],
     children: [
       {
         path: '',
@@ -153,6 +175,14 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/veterinarios/pages/estado-validacion/estado-validacion').then(
         (m) => m.EstadoValidacionPage,
+      ),
+    canActivate: [authGuard],
+  },
+  {
+    path: 'suscripciones',
+    loadComponent: () =>
+      import('./features/suscripciones/pages/mi-suscripcion/mi-suscripcion').then(
+        (m) => m.MiSuscripcionPage,
       ),
     canActivate: [authGuard],
   },

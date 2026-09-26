@@ -14,6 +14,12 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         authService.clearToken();
         router.navigateByUrl('/login');
       }
+      // 402: el veterinario no tiene suscripción vigente. La pantalla de
+      // "Mi suscripción" es la única que lo puede resolver, y el backend la
+      // deja pasar siempre (sin loop).
+      if (error.status === 402 && !router.url.startsWith('/suscripciones')) {
+        router.navigateByUrl('/suscripciones');
+      }
       return throwError(() => error);
     }),
   );

@@ -19,7 +19,6 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
-import { VeterinarioValidadoGuard } from '../auth/guards/veterinario-validado.guard';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { RoleName } from '../common/enums/role-name.enum';
 import { UserPublicDto } from '../users/dto/user-public.dto';
@@ -73,7 +72,7 @@ export class MascotasController {
   }
 
   @Get('duenos/buscar')
-  @UseGuards(JwtAuthGuard, RolesGuard, VeterinarioValidadoGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleName.VETERINARIO)
   findOwner(
     @Query('email') email?: string,
@@ -83,7 +82,7 @@ export class MascotasController {
   }
 
   @Get('duenos')
-  @UseGuards(JwtAuthGuard, RolesGuard, VeterinarioValidadoGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleName.VETERINARIO)
   findAllOwners(
     @Query('nombre') nombre?: string,
@@ -93,7 +92,7 @@ export class MascotasController {
   }
 
   @Get('duenos/:idUsuario')
-  @UseGuards(JwtAuthGuard, RolesGuard, VeterinarioValidadoGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleName.VETERINARIO)
   findByOwner(
     @Param('idUsuario', ParseIntPipe) idUsuario: number,
@@ -102,7 +101,7 @@ export class MascotasController {
   }
 
   @Post('duenos/:idUsuario')
-  @UseGuards(JwtAuthGuard, RolesGuard, VeterinarioValidadoGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @UseInterceptors(
     FileInterceptor('foto', {
       fileFilter: imageFileFilter,
@@ -133,7 +132,10 @@ export class MascotasController {
     @Query('ownerDocument') ownerDocument?: string,
     @Query('ownerEmail') ownerEmail?: string,
   ): Promise<MascotaResponseDto> {
-    return this.mascotasService.findOne(id, user, { ownerDocument, ownerEmail });
+    return this.mascotasService.findOne(id, user, {
+      ownerDocument,
+      ownerEmail,
+    });
   }
 
   @Patch(':id')

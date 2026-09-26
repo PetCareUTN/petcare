@@ -1,6 +1,8 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -561,6 +563,89 @@ describe('AuthService', () => {
       const result = await service.login(loginDto);
 
       expect(result.token).toBe('signed-jwt');
+    });
+  });
+
+  describe('changePassword', () => {
+    const buildUserConPassword = async (password: string | null): Promise<User> => ({
+      idUsuario: 55,
+      nombre: 'Peteco',
+      apellido: null,
+      email: 'peteco@petcare.test',
+      numeroDocumento: null,
+      telefono: null,
+      direccion: null,
+      latitud: null,
+      longitud: null,
+      password: password === null ? null : await bcrypt.hash(password, 10),
+      googleId: password === null ? 'google-id-123' : null,
+      fechaRegistro: new Date('2026-08-07T00:00:00.000Z'),
+      estado: 'activo',
+      idVeterinarioAltaAsistida: null,
+      rol: defaultRole,
+      mascotas: [],
+      codigoRecuperacion: null,
+      fechaExpiracionCodigo: null,
+      emailNuevo: null,
+      codigoCambioEmail: null,
+      fechaExpiracionCodigoEmail: null,
+      updatedAt: new Date('2026-08-07T00:00:00.000Z'),
+    });
+
+    it('updates the password when the current one matches', async () => {
+      const user = await buildUserConPassword('ClaveVieja123');
+      usersService.findById.mockResolvedValue(user);
+
+      const result = await service.changePassword(user.idUsuario, {
+        viejaContraseña: 'ClaveVieja123',
+        nuevaContraseña: 'ClaveNueva123',
+      });
+
+      expect(usersService.updatePassword).toHaveBeenCalledWith(
+        user.idUsuario,
+        expect.any(String),
+      );
+      expect(result).toEqual({ mensaje: 'Contraseña cambiada exitosamente' });
+    });
+
+    it('rejects with 400 (no 401) when the current password is wrong, para no disparar el logout automático', async () => {
+      const user = await buildUserConPassword('ClaveVieja123');
+      usersService.findById.mockResolvedValue(user);
+
+      await expect(
+        service.changePassword(user.idUsuario, {
+          viejaContraseña: 'ClaveIncorrecta',
+          nuevaContraseña: 'ClaveNueva123',
+        }),
+      ).rejects.toMatchObject({
+        status: 400,
+        response: { codigoEstado: 400, mensaje: 'Contraseña actual incorrecta' },
+      });
+      expect(usersService.updatePassword).not.toHaveBeenCalled();
+    });
+
+    it('rejects a google-linked account that has no password to change', async () => {
+      const user = await buildUserConPassword(null);
+      usersService.findById.mockResolvedValue(user);
+
+      await expect(
+        service.changePassword(user.idUsuario, {
+          viejaContraseña: 'cualquiera',
+          nuevaContraseña: 'ClaveNueva123',
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(usersService.updatePassword).not.toHaveBeenCalled();
+    });
+
+    it('rejects when the user does not exist', async () => {
+      usersService.findById.mockResolvedValue(null);
+
+      await expect(
+        service.changePassword(999, {
+          viejaContraseña: 'a',
+          nuevaContraseña: 'ClaveNueva123',
+        }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 

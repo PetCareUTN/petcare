@@ -97,6 +97,7 @@ describe('VeterinariosService', () => {
             direccion: 'Calle 2',
             latitud: -31.42,
             longitud: -64.18,
+            telefono: '+5493511111111',
           },
         },
         {
@@ -106,6 +107,7 @@ describe('VeterinariosService', () => {
             direccion: 'Calle 1',
             latitud: null,
             longitud: null,
+            telefono: null,
           },
         },
       ]);
@@ -123,6 +125,7 @@ describe('VeterinariosService', () => {
           direccion: 'Calle 1',
           latitud: null,
           longitud: null,
+          telefono: null,
         },
         {
           idVeterinario: 2,
@@ -130,6 +133,7 @@ describe('VeterinariosService', () => {
           direccion: 'Calle 2',
           latitud: -31.42,
           longitud: -64.18,
+          telefono: '+5493511111111',
         },
       ]);
     });

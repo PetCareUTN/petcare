@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiError } from '../../../auth/models/user';
 import { AuthService } from '../../../auth/services/auth-service';
 import { RichTextEditorComponent } from '../../../../shared/components/rich-text-editor/rich-text-editor';
+import { MascotasService } from '../../../mascotas/services/mascotas-service';
 import {
   ArchivoMedicoResponse,
   ClinicalEventType,
@@ -41,6 +42,7 @@ const CAMPO_CORTO_MAX_LENGTH = 500;
 export class CreateEventoClinicoPage implements OnInit {
   private readonly formBuilder = inject(FormBuilder);
   private readonly eventosClinicosService = inject(EventosClinicosService);
+  private readonly mascotasService = inject(MascotasService);
   protected readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -79,6 +81,8 @@ export class CreateEventoClinicoPage implements OnInit {
   protected readonly uploadingArchivos = signal(false);
   protected readonly uploadError = signal<string | null>(null);
   protected readonly backQueryParams = signal<Record<string, string | number>>({});
+  protected readonly mascotaNombre = signal<string | null>(null);
+  protected readonly isLoadingMascota = signal(false);
 
   protected readonly descripcionMaxLength = DESCRIPCION_MAX_LENGTH;
   protected readonly campoCortoMaxLength = CAMPO_CORTO_MAX_LENGTH;
@@ -107,6 +111,7 @@ export class CreateEventoClinicoPage implements OnInit {
     );
     if (Number.isInteger(idMascota) && idMascota > 0) {
       this.form.patchValue({ idMascota });
+      this.cargarNombreMascota(idMascota);
     }
 
     this.backQueryParams.set(this.buildBackQueryParams());
@@ -232,9 +237,38 @@ export class CreateEventoClinicoPage implements OnInit {
     return this.form.controls.tipo.value === 'vacuna';
   }
 
+  protected mascotaDisplayText(): string {
+    if (this.isLoadingMascota()) {
+      return 'Cargando...';
+    }
+    const nombre = this.mascotaNombre();
+    if (nombre) {
+      return nombre;
+    }
+    const idMascota = this.form.controls.idMascota.value;
+    return idMascota ? `Mascota #${idMascota}` : 'Sin mascota seleccionada';
+  }
+
   private optionalText(value: string | null | undefined): string | undefined {
     const trimmed = value?.trim();
     return trimmed ? trimmed : undefined;
+  }
+
+  private cargarNombreMascota(idMascota: number): void {
+    const ownerDocument = this.route.snapshot.queryParamMap.get('ownerDocument') ?? undefined;
+    const ownerEmail = this.route.snapshot.queryParamMap.get('ownerEmail') ?? undefined;
+
+    this.isLoadingMascota.set(true);
+    this.mascotasService.getById(idMascota, { ownerDocument, ownerEmail }).subscribe({
+      next: (mascota) => {
+        this.isLoadingMascota.set(false);
+        this.mascotaNombre.set(mascota.nombre);
+      },
+      error: () => {
+        this.isLoadingMascota.set(false);
+        this.mascotaNombre.set(null);
+      },
+    });
   }
 
   private buildBackQueryParams(): Record<string, string | number> {
