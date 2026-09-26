@@ -29,9 +29,8 @@ fun apiUrl(porDefecto: String): String =
 // emulador: es el backend levantado con npm run start:dev.
 val API_URL_LOCAL = "http://10.0.2.2:3000/"
 
-// TODO: reemplazar por el dominio real del backend en Railway apenas se cree
-// el servicio de produccion. Tiene que terminar en barra (lo exige Retrofit).
-val API_URL_PRODUCCION = "https://petcare-backend-production.up.railway.app/"
+// Backend en Railway. Tiene que terminar en barra (lo exige Retrofit).
+val API_URL_PRODUCCION = "https://backend-production-4169.up.railway.app/"
 
 android {
     namespace = "com.petcare.app"

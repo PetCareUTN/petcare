@@ -117,12 +117,25 @@ la lista completa con sus explicaciones.
 | `JWT_SECRET` | uno largo y aleatorio, distinto por ambiente | |
 | `JWT_EXPIRES_IN` | `1d` | |
 | `CORS_ORIGIN` | dominio del frontend, sin barra final | acepta varios separados por coma |
+| `API_URL` | el dominio del backend en Railway | con esto se arman los links de matrículas y habilitaciones; si falta, apuntan a `localhost:3000` y no abren |
+| `MP_ACCESS_TOKEN` | el de **pruebas** de Mercado Pago | ver la advertencia de abajo |
+| `MP_PUBLIC_KEY` | la de pruebas | no es secreta |
+| `MP_WEBHOOK_SECRET` | el de "Tus integraciones" → Webhooks | sin esto el webhook se procesa sin validar firma |
 | `BREVO_API_KEY` | la del panel de Brevo | |
 | `MAIL_FROM` | remitente verificado en Brevo | si no, los mails caen en spam |
 | `GOOGLE_CLIENT_ID` | el client "Web application" | no es secreto |
 | `GOOGLE_GEOCODING_API_KEY` | la de Google Cloud | conviene ponerle límite de cuota |
 
 `PORT` lo inyecta Railway solo: no hay que definirlo.
+
+**Mercado Pago: usar siempre las credenciales de prueba.** El backend en
+Railway tiene una URL pública real, así que con un access token productivo los
+cobros de la suscripción de veterinarios serían cobros de verdad, con plata de
+verdad. Para la tesis y para el piloto van las de test.
+
+`API_PUBLIC_URL` no hace falta en Railway: existe para exponer el backend local
+mediante un túnel durante el desarrollo (ver `docs/suscripciones-mp-local.md`).
+En producción el backend ya es público y alcanza con `API_URL`.
 
 Dos advertencias al cargarlas:
 
