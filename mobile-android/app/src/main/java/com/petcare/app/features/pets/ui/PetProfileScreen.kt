@@ -1,5 +1,7 @@
 package com.petcare.app.features.pets.ui
 
+import android.Manifest
+import android.os.Build
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,6 +21,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -27,6 +30,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,9 +42,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.petcare.app.features.ble.data.local.MonitoreoSeparacionPreferences
 import com.petcare.app.features.ble.data.remote.TagBleResponse
+import com.petcare.app.features.ble.domain.SensibilidadSeparacion
 import com.petcare.app.features.ble.service.ServicioEscaneoBle
 import com.petcare.app.features.perdidas.data.remote.ReportePerdidaResponse
 import com.petcare.app.features.pets.data.remote.PetResponse
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
 import com.petcare.app.ui.theme.PetCareError
 import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMuted
@@ -310,7 +318,7 @@ private fun PetProfileContent(
 
     if (tagBle != null) {
         Spacer(modifier = Modifier.height(10.dp))
-        MonitoreoSeparacionSwitch(tagId = tagBle.tagId)
+        MonitoreoSeparacionCard(tagId = tagBle.tagId, nombreMascota = pet.nombre)
     }
 
     Spacer(modifier = Modifier.height(18.dp))
@@ -458,18 +466,38 @@ private fun String.aFechaHoraLegible(): String =
     }.getOrDefault(this)
 
 /**
- * Prende/apaga el monitoreo de separacion de esta mascota (US-34).
+ * Monitoreo de separacion de esta mascota (US-34) y como avisa (US-35): sensibilidad
+ * del umbral y silenciado de la alerta.
  *
- * Version minima a proposito: todavia no tiene el flujo de permisos guiado que si
- * tiene [com.petcare.app.features.ble.ui.ColaboracionBleCard], ni el umbral
- * configurable ni el silenciado de US-35 (P1-174). Sirve para que el dueño pueda
- * activarlo de verdad desde la app mientras esas historias se terminan de definir.
+ * Todo se guarda en [MonitoreoSeparacionPreferences] apenas se toca, y el service lo
+ * lee en cada ciclo, asi que los cambios aplican sin reiniciar el escaneo y sobreviven
+ * a cerrar la app.
+ *
+ * Todavia no tiene el flujo de permisos de Bluetooth y ubicacion guiado que si tiene
+ * [com.petcare.app.features.ble.ui.ColaboracionBleCard]. Si pide el de notificaciones,
+ * que es el unico sin el cual la alerta de US-35 no puede mostrarse.
  */
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
-private fun MonitoreoSeparacionSwitch(tagId: String) {
+private fun MonitoreoSeparacionCard(tagId: String, nombreMascota: String) {
     val context = LocalContext.current
     val preferencias = remember { MonitoreoSeparacionPreferences(context) }
-    var activo by remember { mutableStateOf(preferencias.tagsMonitoreados().contains(tagId)) }
+    var activo by remember(tagId) { mutableStateOf(preferencias.tagsMonitoreados().contains(tagId)) }
+    var sensibilidad by remember(tagId) { mutableStateOf(preferencias.sensibilidad(tagId)) }
+    var silenciada by remember(tagId) { mutableStateOf(preferencias.estaSilenciada(tagId)) }
+
+    // La alerta sale del service, que no tiene de donde sacar el nombre: se lo deja
+    // guardado cada vez que se abre el perfil, asi tambien toma los cambios de nombre.
+    LaunchedEffect(tagId, nombreMascota) {
+        preferencias.setNombreMascota(tagId, nombreMascota)
+    }
+
+    val permisoNotificaciones = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS)
+    } else {
+        null
+    }
+    val puedeNotificar = permisoNotificaciones?.status?.isGranted ?: true
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -477,34 +505,94 @@ private fun MonitoreoSeparacionSwitch(tagId: String) {
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Avisarme si se aleja", style = MaterialTheme.typography.titleMedium)
+        Column(modifier = Modifier.padding(18.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Avisarme si se aleja", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Te avisamos cuando su tag deja de detectarse cerca tuyo.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = PetCareMuted,
+                    )
+                }
+                Switch(
+                    checked = activo,
+                    onCheckedChange = { encender ->
+                        if (encender) {
+                            preferencias.activarSeguimiento(tagId, nombreMascota)
+                            ServicioEscaneoBle.iniciar(context)
+                            if (!puedeNotificar) permisoNotificaciones?.launchPermissionRequest()
+                        } else {
+                            preferencias.desactivarSeguimiento(tagId)
+                            ServicioEscaneoBle.detener(context)
+                        }
+                        activo = encender
+                    }
+                )
+            }
+
+            if (activo) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Sensibilidad", style = MaterialTheme.typography.labelLarge)
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SensibilidadSeparacion.entries.forEach { opcion ->
+                        FilterChip(
+                            selected = sensibilidad == opcion,
+                            onClick = {
+                                preferencias.setSensibilidad(tagId, opcion)
+                                sensibilidad = opcion
+                            },
+                            label = { Text(opcion.etiqueta) }
+                        )
+                    }
+                }
                 Text(
-                    "Version de prueba (US-34): todavia sin ajustes de sensibilidad.",
+                    sensibilidad.descripcion,
                     style = MaterialTheme.typography.bodySmall,
                     color = PetCareMuted,
                 )
-            }
-            Switch(
-                checked = activo,
-                onCheckedChange = { encender ->
-                    if (encender) {
-                        preferencias.activarSeguimiento(tagId)
-                        ServicioEscaneoBle.iniciar(context)
-                    } else {
-                        preferencias.desactivarSeguimiento(tagId)
-                        ServicioEscaneoBle.detener(context)
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Silenciar alerta", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            "No suena en el celular, pero el aviso sigue quedando en la campanita.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = PetCareMuted,
+                        )
                     }
-                    activo = encender
+                    Switch(
+                        checked = silenciada,
+                        onCheckedChange = { silenciar ->
+                            preferencias.setSilenciada(tagId, silenciar)
+                            silenciada = silenciar
+                        }
+                    )
                 }
-            )
+
+                if (!puedeNotificar && !silenciada) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        "Las notificaciones de PetCare están desactivadas, así que la alerta " +
+                            "no se va a mostrar en el celular.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = PetCareError,
+                    )
+                    TextButton(onClick = { permisoNotificaciones?.launchPermissionRequest() }) {
+                        Text("Permitir notificaciones", color = PetCareTealDark)
+                    }
+                }
+            }
         }
     }
 }

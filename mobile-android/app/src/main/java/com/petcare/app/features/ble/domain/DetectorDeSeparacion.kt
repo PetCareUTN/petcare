@@ -48,6 +48,7 @@ class DetectorDeSeparacion(
 
     private class EstadoTag(
         var ultimaLecturaMillis: Long,
+        var intervaloMillis: Long,
         var episodioYaAvisado: Boolean = false,
     )
 
@@ -63,10 +64,34 @@ class DetectorDeSeparacion(
      * "nunca hubo lectura", un tag recien activado apareceria separado hasta que el
      * motor de escaneo entregue la primera lectura real, y esa demora no tiene nada que
      * ver con que la mascota se haya alejado.
+     *
+     * [intervaloMillis] es el umbral de sensibilidad de esa mascota (US-35); si no se
+     * pasa, vale el [intervaloSeparacionMillis] del detector.
      */
-    fun activarMonitoreo(tagId: String, ahoraMillis: Long) {
-        tagsMonitoreados[tagId] = EstadoTag(ultimaLecturaMillis = ahoraMillis)
+    fun activarMonitoreo(
+        tagId: String,
+        ahoraMillis: Long,
+        intervaloMillis: Long = intervaloSeparacionMillis,
+    ) {
+        tagsMonitoreados[tagId] = EstadoTag(
+            ultimaLecturaMillis = ahoraMillis,
+            intervaloMillis = intervaloMillis,
+        )
     }
+
+    /**
+     * Cambia el umbral de [tagId] sin reiniciar su cuenta (US-35).
+     *
+     * No toca la ultima lectura ni el episodio en curso: si el usuario baja el umbral
+     * mientras el tag ya lleva un rato sin verse, la proxima evaluacion lo mide contra
+     * el umbral nuevo, que es justamente lo que espera al cambiarlo.
+     */
+    fun cambiarIntervalo(tagId: String, intervaloMillis: Long) {
+        tagsMonitoreados[tagId]?.intervaloMillis = intervaloMillis
+    }
+
+    /** Tags con monitoreo activo, para poder dar de baja los que el usuario apago. */
+    fun tagsMonitoreados(): Set<String> = tagsMonitoreados.keys.toSet()
 
     /** Desactiva el monitoreo de [tagId]. Deja de poder evaluarse como separado. */
     fun desactivarMonitoreo(tagId: String) {
@@ -104,7 +129,7 @@ class DetectorDeSeparacion(
     fun evaluar(tagId: String, ahoraMillis: Long): EstadoSeparacion {
         val estado = tagsMonitoreados[tagId] ?: return EstadoSeparacion.CERCA
         val transcurridoMillis = ahoraMillis - estado.ultimaLecturaMillis
-        return if (transcurridoMillis >= intervaloSeparacionMillis) {
+        return if (transcurridoMillis >= estado.intervaloMillis) {
             EstadoSeparacion.SEPARADO
         } else {
             EstadoSeparacion.CERCA
@@ -135,8 +160,8 @@ class DetectorDeSeparacion(
 
     companion object {
         /**
-         * Punto de partida para el intervalo configurable del criterio de aceptacion,
-         * a validar con el tag fisico (ver docs/spike-escaneo-ble-segundo-plano.md).
+         * Umbral de la sensibilidad media ([SensibilidadSeparacion.MEDIA]), a validar con
+         * el tag fisico (ver docs/spike-escaneo-ble-segundo-plano.md).
          *
          * Tiene que quedar comodamente por encima de
          * [MotorEscaneoBle.INTERVALO_ESCANEO_MILLIS] (60 s): si quedara cerca, perderse
