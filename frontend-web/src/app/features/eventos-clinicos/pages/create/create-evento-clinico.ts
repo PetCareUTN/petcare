@@ -201,8 +201,13 @@ export class CreateEventoClinicoPage implements OnInit {
     });
   }
 
-  protected resolveArchivoUrl(url: string): string {
-    return this.eventosClinicosService.resolveArchivoUrl(url);
+  // Sin contexto de atención: el veterinario acaba de crear el evento, así que
+  // la mascota ya es su paciente.
+  protected abrirArchivo(evento: Event, url: string): void {
+    evento.preventDefault();
+    this.eventosClinicosService.abrirArchivo(url).subscribe({
+      error: () => this.uploadError.set('No se pudo abrir el archivo.'),
+    });
   }
 
   protected subirArchivos(input: HTMLInputElement): void {

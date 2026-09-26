@@ -1,6 +1,7 @@
 package com.petcare.app.features.historiaclinica.export
 
 import android.content.Context
+import com.petcare.app.features.auth.data.local.SessionManager
 import com.petcare.app.features.auth.data.remote.RetrofitClient
 import com.petcare.app.features.historiaclinica.data.remote.EventoClinicoResponse
 import kotlinx.coroutines.Dispatchers
@@ -14,8 +15,8 @@ import java.io.IOException
  * Descarga los archivos medicos originales (imagenes / PDF que subio la
  * veterinaria) que estan asociados a los eventos clinicos de una mascota.
  *
- * Los archivos se sirven de forma publica en el backend bajo /uploads/, por
- * lo que no requieren token de autenticacion.
+ * El backend entrega cada archivo por un endpoint que pide sesion (antes se
+ * servian publicos desde /uploads/), asi que cada descarga lleva el token.
  */
 object MedicalFilesDownloader {
 
@@ -36,6 +37,7 @@ object MedicalFilesDownloader {
         val archivos = collectArchivos(eventos)
         val baseDir = File(context.cacheDir, "exportaciones/archivos").apply { mkdirs() }
         val host = RetrofitClient.BASE_URL.trimEnd('/')
+        val token = SessionManager(context).getSession()?.token
 
         archivos.mapNotNull { archivo ->
             val fullUrl = host + archivo.url
@@ -43,7 +45,10 @@ object MedicalFilesDownloader {
             val target = File(targetDir, archivo.nombreOriginal)
 
             try {
-                val request = Request.Builder().url(fullUrl).build()
+                val request = Request.Builder()
+                    .url(fullUrl)
+                    .apply { token?.let { header("Authorization", "Bearer $it") } }
+                    .build()
                 client.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) return@mapNotNull null
                     val body = response.body ?: return@mapNotNull null

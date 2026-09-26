@@ -62,7 +62,7 @@
 
         @if (sol.matriculaUrl) {
           <div class="detalle-archivo">
-            <a [href]="sol.matriculaUrl" target="_blank" rel="noopener noreferrer">
+            <a [href]="sol.matriculaUrl" (click)="abrirDocumento($event, sol.matriculaUrl)">
               Ver matrícula adjunta
             </a>
           </div>
@@ -70,7 +70,7 @@
 
         @if (sol.habilitacionUrl) {
           <div class="detalle-archivo">
-            <a [href]="sol.habilitacionUrl" target="_blank" rel="noopener noreferrer">
+            <a [href]="sol.habilitacionUrl" (click)="abrirDocumento($event, sol.habilitacionUrl)">
               Ver certificado de habilitación adjunta
             </a>
           </div>

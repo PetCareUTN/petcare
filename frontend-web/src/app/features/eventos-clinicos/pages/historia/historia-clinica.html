@@ -165,7 +165,7 @@
                 <ul class="archivo-list">
                   @for (archivo of evento.archivos; track archivo.idArchivo) {
                     <li>
-                      <a [href]="resolveArchivoUrl(archivo.url)" target="_blank" rel="noopener">
+                      <a [href]="archivo.url" (click)="abrirArchivo($event, archivo.url)">
                         {{ archivo.nombreOriginal }}
                       </a>
                     </li>

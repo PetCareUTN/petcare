@@ -4,6 +4,7 @@ import { SolicitudPrestador } from './prestadores/entities/solicitud-prestador.e
 import { DocumentoPrestador } from './prestadores/entities/documento-prestador.entity';
 import { ResenaServicio } from './prestadores/entities/resena-servicio.entity';
 import { ReporteServicio } from './prestadores/entities/reporte-servicio.entity';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import * as dotenv from 'dotenv';
@@ -66,6 +67,12 @@ dotenv.config();
     // vacunacion de US-40; hasta ahora todas las notificaciones nacian de una
     // accion del usuario y ninguna del paso del tiempo.
     ScheduleModule.forRoot(),
+    // Límite de intentos por IP de los endpoints de autenticación (ver
+    // LimiteIntentosGuard). No es global: solo aplica donde se usa el guard.
+    // 20 por minuto deja margen para una clase entera logueándose detrás de
+    // la misma IP (el wifi de la facultad) y frena igual a quien prueba
+    // contraseñas en serie.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 20 }]),
     TypeOrmModule.forRoot({
       ...buildDatabaseConnection(),
       entities: [

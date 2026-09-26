@@ -1,6 +1,8 @@
 import { Body, Controller, Patch, Post, UseGuards } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Throttle } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { LimiteIntentosGuard } from '../auth/guards/limite-intentos.guard';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { ConfirmarCambioEmailDto } from './dto/confirmar-cambio-email.dto';
 import { SolicitarCambioEmailDto } from './dto/solicitar-cambio-email.dto';
@@ -37,8 +39,10 @@ export class UsersController {
     return UserPublicDto.fromEntity(updatedUser);
   }
 
+  // Manda un mail por llamada: mismo limite que olvide-contrasena.
   @Post('me/cambiar-email')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, LimiteIntentosGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   async cambiarEmail(
     @CurrentUser() user: JwtPayload,
     @Body() dto: SolicitarCambioEmailDto,
@@ -46,8 +50,10 @@ export class UsersController {
     return this.usersService.solicitarCambioEmail(user.sub, dto.nuevoEmail);
   }
 
+  // Codigo de 6 digitos: sin limite se podria adivinar.
   @Patch('me/confirmar-email')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, LimiteIntentosGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   async confirmarEmail(
     @CurrentUser() user: JwtPayload,
     @Body() dto: ConfirmarCambioEmailDto,

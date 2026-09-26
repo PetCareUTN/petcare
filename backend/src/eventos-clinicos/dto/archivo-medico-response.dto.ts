@@ -17,7 +17,9 @@ export class ArchivoMedicoResponseDto {
       idArchivo: archivo.idArchivo,
       idEvento,
       nombreOriginal: archivo.nombreOriginal,
-      url: `/uploads/eventos-clinicos/${archivo.nombreArchivo}`,
+      // Endpoint autenticado, no el archivo estático: ver
+      // EventosClinicosService.obtenerArchivoMedico.
+      url: `/eventos-clinicos/archivos-medicos/${archivo.idArchivo}`,
       mimeType: archivo.mimeType,
       tamanoBytes: archivo.tamanoBytes,
       createdAt: archivo.createdAt,

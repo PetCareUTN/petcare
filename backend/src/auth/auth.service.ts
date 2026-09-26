@@ -42,8 +42,20 @@ const ASSISTED_OWNER_PENDING_STATUS = 'pendiente_activacion';
 const DUMMY_HASH =
   '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
 
+// El código de recuperación tiene 6 dígitos: sin tope de intentos se puede
+// adivinar probando en los 10 minutos que dura. El límite por IP del
+// controller no alcanza, porque se puede repartir entre muchas IPs; este
+// tope es por cuenta.
+const MAX_INTENTOS_CODIGO_RECUPERACION = 5;
+
 @Injectable()
 export class AuthService {
+  // Intentos fallidos por usuario del código de recuperación vigente. Vive en
+  // memoria a propósito: al llegar al tope se borra el código de la base, que
+  // es lo que persiste. Si el proceso se reinicia, el contador vuelve a cero
+  // pero el código sigue expirando a los 10 minutos.
+  private readonly intentosFallidosRecuperacion = new Map<number, number>();
+
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
@@ -384,6 +396,7 @@ export class AuthService {
       const codigoHash = await bcrypt.hash(codigo, SALT_ROUNDS);
 
       await this.usersService.updatePasswordRecoveryData(user.idUsuario, codigoHash, fechaExpiracion);
+      this.intentosFallidosRecuperacion.delete(user.idUsuario);
       await this.mailService.sendRecoveryCode(user.email, codigo);
     }
 
@@ -424,11 +437,27 @@ export class AuthService {
   );
 
   if (!codigoValido) {
+    const intentos =
+      (this.intentosFallidosRecuperacion.get(user.idUsuario) ?? 0) + 1;
+
+    if (intentos >= MAX_INTENTOS_CODIGO_RECUPERACION) {
+      this.intentosFallidosRecuperacion.delete(user.idUsuario);
+      await this.usersService.clearRecoveryData(user.idUsuario);
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje:
+          'Demasiados intentos incorrectos. Pedí un código nuevo para restablecer la contraseña',
+      });
+    }
+
+    this.intentosFallidosRecuperacion.set(user.idUsuario, intentos);
     throw new BadRequestException({
       codigoEstado: 400,
       mensaje: 'Código de recuperación incorrecto',
     });
   }
+
+  this.intentosFallidosRecuperacion.delete(user.idUsuario);
 
   // Hashear la nueva contraseña
   const nuevaPasswordHash = await bcrypt.hash(

@@ -9,6 +9,7 @@ import {
   Request,
   Patch,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { RoleName } from '../common/enums/role-name.enum';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -19,6 +20,7 @@ import { RegisterDto } from './dto/register.dto';
 import { RegisterResponseDto } from './dto/register-response.dto';
 import { CreateAssistedOwnerDto } from './dto/create-assisted-owner.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { LimiteIntentosGuard } from './guards/limite-intentos.guard';
 import { RolesGuard } from './guards/roles.guard';
 import type { JwtPayload } from './interfaces/jwt-payload.interface';
 import { UserPublicDto } from '../users/dto/user-public.dto';
@@ -34,12 +36,14 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
+  @UseGuards(LimiteIntentosGuard)
   @HttpCode(HttpStatus.CREATED)
   register(@Body() dto: RegisterDto): Promise<RegisterResponseDto> {
     return this.authService.register(dto);
   }
 
   @Post('login')
+  @UseGuards(LimiteIntentosGuard)
   @HttpCode(HttpStatus.OK)
   login(@Body() dto: LoginDto): Promise<LoginResponseDto> {
     return this.authService.login(dto);
@@ -47,6 +51,7 @@ export class AuthController {
 
   // Paso 1: valida el token de Google. Devuelve la sesión, o avisa que falta el DNI.
   @Post('google')
+  @UseGuards(LimiteIntentosGuard)
   @HttpCode(HttpStatus.OK)
   loginConGoogle(@Body() dto: GoogleLoginDto): Promise<GoogleLoginResponseDto> {
     return this.authService.loginConGoogle(dto);
@@ -54,6 +59,7 @@ export class AuthController {
 
   // Paso 2: crea la cuenta con los datos de Google más el DNI.
   @Post('google/registro')
+  @UseGuards(LimiteIntentosGuard)
   @HttpCode(HttpStatus.CREATED)
   registrarConGoogle(
     @Body() dto: GoogleRegisterDto,
@@ -87,8 +93,11 @@ export class AuthController {
     return { mensaje: 'Acceso autorizado para administrador' };
   }
 
+  // Con sesión, pero pide la contraseña actual: sin límite, alguien con el
+  // celular desbloqueado de otro podría adivinarla.
   @Patch('cambiar-contrasena')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, LimiteIntentosGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   async changePassword(
     @CurrentUser() user: JwtPayload,
     @Body() dto: CambiarContraseñaDto,
@@ -96,13 +105,21 @@ export class AuthController {
     return this.authService.changePassword(user.sub, dto);
   }
 
+  // Más estricto que el login: cada llamada manda un mail, y sin límite se
+  // puede usar para inundar la casilla de alguien o gastar la cuota de envío.
   @Post('olvide-contrasena')
+  @UseGuards(LimiteIntentosGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
   async forgotPassword(@Body() dto: OlvideContrasenaDto) {
     return this.authService.forgotPassword(dto.email);
   }
 
+  // Además de este límite por IP, AuthService invalida el código a los 5
+  // intentos fallidos, que es lo que frena a quien reparte intentos entre IPs.
   @Patch('restablecer-contrasena')
+  @UseGuards(LimiteIntentosGuard)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
   resetPassword(@Body() dto: RestablecerContrasenaDto) {
     return this.authService.resetPassword(dto);

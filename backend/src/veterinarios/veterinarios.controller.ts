@@ -5,9 +5,11 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseEnumPipe,
   ParseIntPipe,
   Patch,
   Post,
+  Res,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
@@ -17,6 +19,7 @@ import { mkdirSync } from 'fs';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { randomUUID } from 'crypto';
+import type { Response } from 'express';
 import { RoleName } from '../common/enums/role-name.enum';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -25,6 +28,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { RechazarSolicitudDto } from './dto/aprobar-rechazar.dto';
 import { RegisterVeterinarioDto } from './dto/register-veterinario.dto';
+import type { TipoDocumentoVeterinario } from './dto/veterinario-response.dto';
 import type { UploadedDocumentFile } from './types/uploaded-document-file.type';
 import { VeterinariosService } from './veterinarios.service';
 
@@ -103,6 +107,34 @@ export class VeterinariosController {
   @Roles(RoleName.ADMINISTRADOR)
   listarPendientes() {
     return this.veterinariosService.listarPendientes();
+  }
+
+  @Get(':id/documentos/:tipo')
+  @UseGuards(JwtAuthGuard)
+  async descargarDocumento(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseIntPipe) id: number,
+    @Param(
+      'tipo',
+      new ParseEnumPipe({
+        matricula: 'matricula',
+        habilitacion: 'habilitacion',
+      }),
+    )
+    tipo: TipoDocumentoVeterinario,
+    @Res() res: Response,
+  ): Promise<void> {
+    const ruta = await this.veterinariosService.obtenerDocumento(
+      id,
+      tipo,
+      user,
+    );
+    res.set({
+      'Cache-Control': 'private, no-store',
+      'X-Content-Type-Options': 'nosniff',
+    });
+    // sendFile deduce el Content-Type por la extensión (solo se aceptan JPG, PNG y PDF).
+    res.sendFile(ruta);
   }
 
   @Get(':id/detalle')

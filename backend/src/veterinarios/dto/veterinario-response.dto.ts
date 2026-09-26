@@ -1,5 +1,19 @@
 import { ValidationStatus } from '../../common/enums/validation-status.enum';
 
+export type TipoDocumentoVeterinario = 'matricula' | 'habilitacion';
+
+/**
+ * URL del endpoint autenticado que devuelve el documento, no del archivo
+ * estático: ver VeterinariosService.obtenerDocumento.
+ */
+export function urlDocumentoVeterinario(
+  idVeterinario: number,
+  tipo: TipoDocumentoVeterinario,
+): string {
+  const baseUrl = process.env.API_URL ?? 'http://localhost:3000';
+  return `${baseUrl}/veterinarios/${idVeterinario}/documentos/${tipo}`;
+}
+
 export class VeterinarioResponseDto {
   idVeterinario: number;
   idUsuario: number;
@@ -14,16 +28,15 @@ export class VeterinarioResponseDto {
 
   static fromEntity(vet: any): VeterinarioResponseDto {
     const dto = new VeterinarioResponseDto();
-    const baseUrl = process.env.API_URL ?? 'http://localhost:3000';
 
     dto.idVeterinario = vet.idVeterinario;
     dto.idUsuario = vet.usuario?.idUsuario ?? vet.idUsuario;
     dto.numeroDocumento = vet.numeroDocumento;
     dto.numeroMatricula = vet.numeroMatricula;
     dto.provinciaMatricula = vet.provinciaMatricula;
-    dto.matriculaUrl = `${baseUrl}/${vet.matriculaUrl}`;
+    dto.matriculaUrl = urlDocumentoVeterinario(vet.idVeterinario, 'matricula');
     dto.habilitacionUrl = vet.habilitacionUrl
-      ? `${baseUrl}/${vet.habilitacionUrl}`
+      ? urlDocumentoVeterinario(vet.idVeterinario, 'habilitacion')
       : null;
     dto.estadoValidacion = vet.estadoValidacion;
     dto.motivoRechazo = vet.motivoRechazo;
