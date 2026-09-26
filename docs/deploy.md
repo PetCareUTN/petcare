@@ -118,9 +118,11 @@ la lista completa con sus explicaciones.
 | `JWT_EXPIRES_IN` | `1d` | |
 | `CORS_ORIGIN` | dominio del frontend, sin barra final | acepta varios separados por coma |
 | `API_URL` | el dominio del backend en Railway | con esto se arman los links de matrículas y habilitaciones; si falta, apuntan a `localhost:3000` y no abren |
-| `MP_ACCESS_TOKEN` | el de **pruebas** de Mercado Pago | ver la advertencia de abajo |
+| `MP_ACCESS_TOKEN` | el del **Seller Test User** de Mercado Pago | ver la advertencia de abajo |
 | `MP_PUBLIC_KEY` | la de pruebas | no es secreta |
 | `MP_WEBHOOK_SECRET` | el de "Tus integraciones" → Webhooks | sin esto el webhook se procesa sin validar firma |
+| `MP_PAYER_EMAIL` | el del **Buyer Test User** | mientras se use el entorno de prueba, sí va: ver abajo |
+| `FRONTEND_PUBLIC_URL` | el dominio de Vercel | a dónde vuelve el navegador después del checkout |
 | `BREVO_API_KEY` | la del panel de Brevo | |
 | `MAIL_FROM` | remitente verificado en Brevo | si no, los mails caen en spam |
 | `GOOGLE_CLIENT_ID` | el client "Web application" | no es secreto |
@@ -135,7 +137,22 @@ verdad. Para la tesis y para el piloto van las de test.
 
 `API_PUBLIC_URL` no hace falta en Railway: existe para exponer el backend local
 mediante un túnel durante el desarrollo (ver `docs/suscripciones-mp-local.md`).
-En producción el backend ya es público y alcanza con `API_URL`.
+En producción el backend ya es público y alcanza con `API_URL`. Dicho de otra
+forma: **en el ambiente desplegado no hace falta ngrok**, que es la única razón
+por la que esa guía existe.
+
+`MP_PAYER_EMAIL` pisa el mail del pagador en todas las suscripciones. En el
+entorno de prueba de Mercado Pago hay que configurarla con el Buyer Test User,
+porque MP no acepta como pagador el mail real de un veterinario. La consecuencia
+es que todos los veterinarios que se suscriban desde el ambiente desplegado
+pagan como ese mismo usuario de prueba: alcanza para la demo, pero hay que
+saberlo. El dia que exista una operacion real con credenciales productivas, esta
+variable se saca.
+
+Como el ambiente desplegado tiene un solo juego de credenciales, el Buyer Test
+User que se use para pagar tiene que ser el que corresponde al Seller Test User
+cargado en `MP_ACCESS_TOKEN`. Quien haga la demo necesita tambien la contraseña
+de ese usuario comprador para completar el checkout.
 
 Dos advertencias al cargarlas:
 
