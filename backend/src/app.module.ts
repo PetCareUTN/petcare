@@ -7,6 +7,7 @@ import { ReporteServicio } from './prestadores/entities/reporte-servicio.entity'
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import * as dotenv from 'dotenv';
+import { buildDatabaseConnection } from './config/database.config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -66,12 +67,7 @@ dotenv.config();
     // accion del usuario y ninguna del paso del tiempo.
     ScheduleModule.forRoot(),
     TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DATABASE_HOST,
-      port: Number(process.env.DATABASE_PORT) || 5432,
-      username: process.env.DATABASE_USER,
-      password: process.env.DATABASE_PASSWORD,
-      database: process.env.DATABASE_NAME,
+      ...buildDatabaseConnection(),
       entities: [
         SolicitudPrestador,
         DocumentoPrestador,

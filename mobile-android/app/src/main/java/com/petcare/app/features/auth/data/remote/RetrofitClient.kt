@@ -1,5 +1,6 @@
 package com.petcare.app.features.auth.data.remote
 
+import com.petcare.app.BuildConfig
 import com.petcare.app.features.adopciones.data.remote.AdopcionesApi
 import com.petcare.app.features.adopciones.data.remote.DescartesApi
 import com.petcare.app.features.adopciones.data.remote.FavoritosApi
@@ -21,10 +22,12 @@ import retrofit2.converter.gson.GsonConverterFactory
 object RetrofitClient {
 
     /*
-     * Desde el emulador Android, 10.0.2.2 representa
-     * la computadora donde se está ejecutando el emulador.
+     * La URL sale de BuildConfig y cambia segun la variante: la de debug apunta
+     * al backend local (10.0.2.2 es la computadora donde corre el emulador) y la
+     * de release al backend desplegado. Se configura en app/build.gradle.kts y
+     * se puede pisar con -PPETCARE_API_URL. Ver docs/deploy.md.
      */
-     const val BASE_URL = "http://10.0.2.2:3000/"
+    val BASE_URL: String = BuildConfig.API_BASE_URL
 
     fun authApi(sessionStore: SessionStore): AuthApi =
         createRetrofit(sessionStore)
