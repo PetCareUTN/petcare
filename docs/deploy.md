@@ -46,6 +46,11 @@ Railway cobra por asiento. Ver los costos estimados en Instancia 1, sección
      - Watch Paths: `/backend/**`, para que un cambio en la app Android o en el
        frontend no redespliegue la API.
      - Branch: `develop` en staging, `main` en producción.
+
+       Atención: hoy `main` está muy atrás de `develop` y su carpeta `backend/`
+       tiene solo el `.gitkeep` del scaffold inicial, así que un deploy desde
+       `main` falla con "Railpack failed to prepare the build". Hasta que se
+       haga el merge de release, producción también apunta a `develop`.
 4. Agregar un **volumen** al servicio de backend, montado en `/app/uploads`.
    Sin esto, las fotos de mascotas y los archivos clínicos se borran en cada
    deploy, porque se guardan en el disco del contenedor (`process.cwd()/uploads`).
@@ -54,12 +59,31 @@ Railway cobra por asiento. Ver los costos estimados en Instancia 1, sección
    servicio. No nos afecta porque las migraciones no tocan archivos, pero hay
    que tenerlo en cuenta si alguna vez se agrega un script que sí lo haga.
 5. Cargar las variables de entorno (sección 3).
-6. Sembrar los roles **una vez por base nueva**, porque el sistema no arranca
-   sin ellos. Desde la máquina de uno, con la URL pública de la base:
+6. Sembrar los roles **una vez por base nueva**, porque sin ellos no se puede
+   registrar ni un usuario. La via mas simple es pegar el contenido de
+   `database/seeders/01-roles.sql` en el editor de consultas del servicio
+   Postgres, en la pestaña **Data**. Desde la maquina de uno, con la URL
+   publica de la base, es equivalente:
 
    ```bash
    psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/seeders/01-roles.sql
    ```
+
+7. Crear el **primer administrador**, que tampoco viene sembrado. Sin el no hay
+   forma de aprobar veterinarios ni prestadores, y esas cuentas no pueden
+   siquiera iniciar sesion hasta que alguien las valide.
+
+   Registrar un usuario comun (desde la web, la app o `POST /auth/register`) y
+   despues promoverlo, una sola vez, en el editor de consultas:
+
+   ```sql
+   UPDATE usuarios
+   SET id_rol = (SELECT id_rol FROM roles WHERE nombre = 'administrador')
+   WHERE email = 'el-mail-del-admin@ejemplo.com';
+   ```
+
+   El cambio de rol recien se refleja cuando esa persona vuelve a iniciar
+   sesion, porque el rol viaja dentro del JWT.
 
 A partir de ahí, cada merge a `develop` despliega staging y cada merge a `main`
 despliega producción, que es exactamente el flujo del Working Agreement.
