@@ -181,15 +181,68 @@ La URL tiene que terminar en barra, porque lo exige Retrofit.
 no permite HTTP plano, así que el backend tiene que estar sí o sí en HTTPS
 (Railway ya lo da).
 
-### Firmar el APK
+### Un APK para probar, sin firmar nada
+
+Para que el equipo pruebe contra el backend desplegado alcanza con la variante
+de debug, pisando la URL:
+
+```bash
+./gradlew assembleDebug -PPETCARE_API_URL=https://backend-production-4169.up.railway.app/
+```
+
+Queda en `app/build/outputs/apk/debug/app-debug.apk`. Como va firmado con la
+keystore de debug de quien compila, y esos SHA-1 ya están registrados, el
+ingreso con Google funciona sin ningún paso extra.
+
+### Firmar el APK de release
 
 Para la entrega alcanza con distribuirlo por Drive; no hace falta Play Store.
 
-1. Generar una keystore y **guardarla fuera del repo**. Si se pierde, no se
-   puede volver a firmar la misma app.
-2. Registrar el SHA-1 de esa keystore en el client de Android del proyecto de
-   Google Cloud. Sin este paso **el ingreso con Google falla solo en release**,
-   mientras que en debug sigue andando. Ver `docs/ingreso-con-google.md`.
+1. **Generar la keystore**, una sola vez para todo el proyecto, y guardarla
+   fuera del repo:
+
+   ```bash
+   keytool -genkeypair -v -keystore petcare-release.jks \
+     -alias petcare -keyalg RSA -keysize 2048 -validity 10000
+   ```
+
+   Si se pierde, no se puede volver a firmar la misma app: Android trata una app
+   firmada con otra clave como una app distinta. Conviene que la tengan al menos
+   dos personas, y compartirla por un canal privado, nunca por el repo.
+
+2. **Configurar la firma**: copiar `mobile-android/keystore.properties.example`
+   a `keystore.properties` y completar las cuatro líneas. Ese archivo está
+   gitignoreado, igual que `*.jks`. Desde CI se pueden usar en su lugar las
+   variables `PETCARE_KEYSTORE_FILE`, `PETCARE_KEYSTORE_PASSWORD`,
+   `PETCARE_KEY_ALIAS` y `PETCARE_KEY_PASSWORD`.
+
+   Sin ninguna de las dos cosas el build no falla, pero genera un APK **sin
+   firmar**, que Android no instala.
+
+3. **Compilar**:
+
+   ```bash
+   ./gradlew assembleRelease
+   ```
+
+4. **Registrar el SHA-1** de esa keystore en el client de Android del proyecto
+   de Google Cloud. Sin este paso **el ingreso con Google falla solo en
+   release**, mientras que en debug sigue andando, y el error es confuso de
+   diagnosticar. Ver `docs/ingreso-con-google.md`.
+
+   El SHA-1 lo imprime Gradle, sin necesidad de andar con `keytool`:
+
+   ```bash
+   ./gradlew :app:signingReport
+   ```
+
+   Hay que copiar el de la línea `Variant: release`.
+
+**Ojo con OneDrive**: si el repo está dentro de una carpeta sincronizada, el
+APK de release puede no quedar en disco aunque Gradle diga BUILD SUCCESSFUL.
+Pasó varias veces armando esto, y deja una carpeta `app/build.onedrive-stale`.
+El APK que se vaya a repartir conviene generarlo desde una copia del repo fuera
+de OneDrive.
 
 ## 5. Checklist de la primera vez
 
