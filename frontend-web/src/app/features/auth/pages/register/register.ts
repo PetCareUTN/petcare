@@ -7,6 +7,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { PROVINCIAS_ARGENTINA } from '../../../../shared/constants/provincias';
 import { ApiError } from '../../models/user';
 import { VeterinariosService } from '../../../veterinarios/services/veterinarios-service';
 
@@ -31,32 +32,7 @@ export class RegisterPage {
   private readonly formBuilder = inject(FormBuilder);
   private readonly veterinariosService = inject(VeterinariosService);
 
-  protected readonly provincias = [
-    'Buenos Aires',
-    'Catamarca',
-    'Chaco',
-    'Chubut',
-    'Ciudad Autónoma de Buenos Aires',
-    'Corrientes',
-    'Córdoba',
-    'Entre Ríos',
-    'Formosa',
-    'Jujuy',
-    'La Pampa',
-    'La Rioja',
-    'Mendoza',
-    'Misiones',
-    'Neuquén',
-    'Río Negro',
-    'Salta',
-    'San Juan',
-    'San Luis',
-    'Santa Cruz',
-    'Santa Fe',
-    'Santiago del Estero',
-    'Tierra del Fuego',
-    'Tucumán',
-  ];
+  protected readonly provincias = PROVINCIAS_ARGENTINA;
 
   protected readonly isSubmitting = signal(false);
   protected readonly successMessage = signal<string | null>(null);
@@ -72,6 +48,7 @@ export class RegisterPage {
       confirmPassword: ['', [Validators.required]],
       telefono: ['', [Validators.required, Validators.pattern(TELEFONO_PATTERN)]],
       direccion: ['', [Validators.required, Validators.maxLength(255)]],
+      provincia: ['', [Validators.required]],
       numeroDocumento: ['', [Validators.required, Validators.pattern(DOCUMENTO_PATTERN)]],
       numeroMatricula: ['', [Validators.required, Validators.maxLength(50)]],
       provinciaMatricula: ['', [Validators.required]],
@@ -116,6 +93,7 @@ export class RegisterPage {
     formData.append('password', value.password!);
     formData.append('telefono', value.telefono!);
     formData.append('direccion', value.direccion!);
+    formData.append('provincia', value.provincia!);
     formData.append('numeroDocumento', value.numeroDocumento!);
     formData.append('numeroMatricula', value.numeroMatricula!);
     formData.append('provinciaMatricula', value.provinciaMatricula!);

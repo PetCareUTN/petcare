@@ -28,6 +28,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { RechazarSolicitudDto } from './dto/aprobar-rechazar.dto';
 import { RegisterVeterinarioDto } from './dto/register-veterinario.dto';
+import { UpdateProvinciaDto } from './dto/update-provincia.dto';
 import type { TipoDocumentoVeterinario } from './dto/veterinario-response.dto';
 import type { UploadedDocumentFile } from './types/uploaded-document-file.type';
 import { VeterinariosService } from './veterinarios.service';
@@ -94,6 +95,16 @@ export class VeterinariosController {
   @Roles(RoleName.VETERINARIO)
   obtenerEstado(@CurrentUser() user: JwtPayload) {
     return this.veterinariosService.obtenerEstado(user.sub);
+  }
+
+  @Patch('mi-provincia')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleName.VETERINARIO)
+  actualizarProvincia(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: UpdateProvinciaDto,
+  ) {
+    return this.veterinariosService.actualizarProvincia(user.sub, dto.provincia);
   }
 
   @Get('aprobados')

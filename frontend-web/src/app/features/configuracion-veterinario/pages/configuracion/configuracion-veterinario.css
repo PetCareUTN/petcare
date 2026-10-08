@@ -97,6 +97,27 @@
   text-align: right;
 }
 
+.provincia-edit {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.provincia-edit select {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background-color: var(--background);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.btn-chico {
+  padding: 0.45rem 0.9rem;
+}
+
 /* Formulario de cambio de contraseña */
 
 .password-form {

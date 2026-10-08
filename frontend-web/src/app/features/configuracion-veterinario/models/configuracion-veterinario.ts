@@ -5,6 +5,7 @@ export interface DatosCuentaVeterinario {
   email: string;
   telefono: string | null;
   direccion: string | null;
+  provincia: string | null;
   estado: string;
 }
 

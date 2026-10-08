@@ -94,6 +94,12 @@
   cursor: not-allowed;
 }
 
+.field-hint {
+  margin: var(--spacing-xs) 0 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
 .field-error {
   margin: var(--spacing-xs) 0 0;
   font-size: 0.8rem;

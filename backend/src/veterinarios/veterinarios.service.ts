@@ -136,7 +136,9 @@ export class VeterinariosService {
 
     // Best-effort: si Google no encuentra la dirección o la API key no está
     // configurada, el registro se completa igual, sin coordenadas.
-    const geocodificado = await this.geocoding.geocodificar(dto.direccion);
+    const geocodificado = await this.geocoding.geocodificar(
+      this.direccionCompleta(dto.direccion, dto.provincia),
+    );
 
     const usuario = await this.usersService.create({
       nombre: dto.nombre,
@@ -146,6 +148,7 @@ export class VeterinariosService {
       idRol: rolVeterinario.idRol,
       telefono: dto.telefono,
       direccion: dto.direccion,
+      provincia: dto.provincia,
       latitud: geocodificado?.latitud ?? null,
       longitud: geocodificado?.longitud ?? null,
     });
@@ -177,11 +180,53 @@ export class VeterinariosService {
     };
   }
 
+  /**
+   * Cambia la provincia de la veterinaria autenticada y vuelve a ubicarla en
+   * el mapa, porque las coordenadas dependen de la provincia (hay localidades
+   * con el mismo nombre en varias).
+   */
+  async actualizarProvincia(
+    idUsuario: number,
+    provincia: string,
+  ): Promise<{ provincia: string }> {
+    const veterinario = await this.veterinariosRepository.findOne({
+      where: { usuario: { idUsuario } },
+      relations: ['usuario'],
+    });
+    if (!veterinario) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'No se encontró la veterinaria',
+      });
+    }
+
+    const direccion = veterinario.usuario.direccion;
+    const geocodificado = direccion
+      ? await this.geocoding.geocodificar(
+          this.direccionCompleta(direccion, provincia),
+        )
+      : null;
+
+    await this.usersService.updateProvincia(
+      idUsuario,
+      provincia,
+      geocodificado,
+    );
+
+    return { provincia };
+  }
+
+  /** La provincia se guarda aparte, pero se suma al geocodificar para ubicar mejor. */
+  private direccionCompleta(direccion: string, provincia: string): string {
+    return `${direccion}, ${provincia}, Argentina`;
+  }
+
   async listarAprobados(): Promise<
     {
       idVeterinario: number;
       nombre: string;
       direccion: string | null;
+      provincia: string | null;
       latitud: number | null;
       longitud: number | null;
       telefono: string | null;
@@ -197,6 +242,7 @@ export class VeterinariosService {
         idVeterinario: veterinario.idVeterinario,
         nombre: veterinario.usuario.nombre,
         direccion: veterinario.usuario.direccion,
+        provincia: veterinario.usuario.provincia,
         latitud: veterinario.usuario.latitud,
         longitud: veterinario.usuario.longitud,
         telefono: veterinario.usuario.telefono,

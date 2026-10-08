@@ -26,6 +26,7 @@ describe('VeterinariosService', () => {
   let usersService: {
     findByEmail: jest.Mock;
     create: jest.Mock;
+    updateProvincia: jest.Mock;
   };
   let notificacionesService: {
     crear: jest.Mock;
@@ -50,6 +51,7 @@ describe('VeterinariosService', () => {
     password: 'ClaveSegura123',
     telefono: '3511234567',
     direccion: 'Av. Siempre Viva 123',
+    provincia: 'Córdoba',
     numeroDocumento: '12345678',
     numeroMatricula: 'MAT-001',
     provinciaMatricula: 'Buenos Aires',
@@ -65,7 +67,11 @@ describe('VeterinariosService', () => {
       find: jest.fn(),
     };
     rolesRepository = { findOne: jest.fn() };
-    usersService = { findByEmail: jest.fn(), create: jest.fn() };
+    usersService = {
+      findByEmail: jest.fn(),
+      create: jest.fn(),
+      updateProvincia: jest.fn(),
+    };
     notificacionesService = { crear: jest.fn() };
     geocodingService = { geocodificar: jest.fn().mockResolvedValue(null) };
 
@@ -95,6 +101,7 @@ describe('VeterinariosService', () => {
           usuario: {
             nombre: 'Veterinaria Zeta',
             direccion: 'Calle 2',
+            provincia: 'Córdoba',
             latitud: -31.42,
             longitud: -64.18,
             telefono: '+5493511111111',
@@ -105,6 +112,7 @@ describe('VeterinariosService', () => {
           usuario: {
             nombre: 'Veterinaria Alfa',
             direccion: 'Calle 1',
+            provincia: null,
             latitud: null,
             longitud: null,
             telefono: null,
@@ -123,6 +131,7 @@ describe('VeterinariosService', () => {
           idVeterinario: 1,
           nombre: 'Veterinaria Alfa',
           direccion: 'Calle 1',
+          provincia: null,
           latitud: null,
           longitud: null,
           telefono: null,
@@ -131,6 +140,7 @@ describe('VeterinariosService', () => {
           idVeterinario: 2,
           nombre: 'Veterinaria Zeta',
           direccion: 'Calle 2',
+          provincia: 'Córdoba',
           latitud: -31.42,
           longitud: -64.18,
           telefono: '+5493511111111',
@@ -167,7 +177,11 @@ describe('VeterinariosService', () => {
           idRol: vetRole.idRol,
           telefono: registroDto.telefono,
           direccion: registroDto.direccion,
+          provincia: registroDto.provincia,
         }),
+      );
+      expect(geocodingService.geocodificar).toHaveBeenCalledWith(
+        'Av. Siempre Viva 123, Córdoba, Argentina',
       );
       const createArgs = usersService.create.mock.calls[0][0];
       expect(createArgs.password).not.toBe(registroDto.password);
@@ -277,6 +291,55 @@ describe('VeterinariosService', () => {
       repository.findOne.mockResolvedValue(veterinario);
 
       await expect(service.rechazar(1, 'Motivo')).rejects.toThrow(ConflictException);
+    });
+  });
+  describe('actualizarProvincia', () => {
+    const veterinarioConUsuario = {
+      idVeterinario: 4,
+      usuario: { idUsuario: 9, direccion: 'Av. Colón 1250' },
+    };
+
+    it('guarda la provincia y actualiza la ubicación con la dirección + provincia', async () => {
+      repository.findOne.mockResolvedValue(veterinarioConUsuario);
+      geocodingService.geocodificar.mockResolvedValue({
+        latitud: -31.4,
+        longitud: -64.2,
+        precisionBaja: false,
+      });
+
+      const result = await service.actualizarProvincia(9, 'Córdoba');
+
+      expect(geocodingService.geocodificar).toHaveBeenCalledWith(
+        'Av. Colón 1250, Córdoba, Argentina',
+      );
+      expect(usersService.updateProvincia).toHaveBeenCalledWith(9, 'Córdoba', {
+        latitud: -31.4,
+        longitud: -64.2,
+        precisionBaja: false,
+      });
+      expect(result).toEqual({ provincia: 'Córdoba' });
+    });
+
+    it('guarda la provincia igual si no se puede geocodificar', async () => {
+      repository.findOne.mockResolvedValue(veterinarioConUsuario);
+      geocodingService.geocodificar.mockResolvedValue(null);
+
+      await service.actualizarProvincia(9, 'Santa Fe');
+
+      expect(usersService.updateProvincia).toHaveBeenCalledWith(
+        9,
+        'Santa Fe',
+        null,
+      );
+    });
+
+    it('rechaza si el usuario no es una veterinaria', async () => {
+      repository.findOne.mockResolvedValue(null);
+
+      await expect(service.actualizarProvincia(1, 'Córdoba')).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(usersService.updateProvincia).not.toHaveBeenCalled();
     });
   });
 });
