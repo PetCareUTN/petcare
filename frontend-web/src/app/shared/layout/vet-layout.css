@@ -23,10 +23,10 @@
   border-bottom: 1px solid var(--border);
 }
 
+/* Ver app-layout.css: el logo transparente no lleva recorte circular. */
 .vet-brand-logo {
   width: 36px;
   height: 36px;
-  border-radius: 50%;
 }
 
 /* Barra fija del contenido: sostiene la campana pegada al borde derecho. */
