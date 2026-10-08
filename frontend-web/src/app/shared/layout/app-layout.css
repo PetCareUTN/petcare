@@ -21,10 +21,11 @@
   gap: var(--spacing-sm);
 }
 
+/* El logo es un PNG con fondo transparente: no lleva recorte circular, que
+   existia para redondear el recuadro del JPG y ahora cortaria el dibujo. */
 .app-header-logo {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
 }
 
 .app-header-title {

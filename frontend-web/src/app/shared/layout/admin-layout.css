@@ -23,10 +23,10 @@
   border-bottom: 1px solid var(--border);
 }
 
+/* Ver app-layout.css: el logo transparente no lleva recorte circular. */
 .admin-brand-logo {
   width: 36px;
   height: 36px;
-  border-radius: 50%;
 }
 
 .admin-brand-title {
