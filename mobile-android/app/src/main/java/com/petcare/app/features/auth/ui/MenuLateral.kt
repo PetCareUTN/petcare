@@ -1,5 +1,6 @@
 package com.petcare.app.features.auth.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -51,17 +53,28 @@ fun MenuLateral(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "PetCare",
-                    color = PetCareTealDark,
-                    style = MaterialTheme.typography.titleLarge
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.logo_petcare_marca),
+                    contentDescription = null,
+                    modifier = Modifier.height(36.dp)
                 )
-                Text(
-                    text = userName.ifBlank { "Tutor" },
-                    color = PetCareMuted,
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Column {
+                    Text(
+                        text = "PetCare",
+                        color = PetCareTealDark,
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    Text(
+                        text = userName.ifBlank { "Tutor" },
+                        color = PetCareMuted,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
             IconButton(onClick = onCerrar) {
                 Icon(
