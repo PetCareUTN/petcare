@@ -29,6 +29,14 @@ export class ConfiguracionVeterinarioService {
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
   }
 
+  actualizarProvincia(provincia: string): Observable<{ provincia: string }> {
+    return this.http
+      .patch<{
+        provincia: string;
+      }>(`${this.apiUrl}/veterinarios/mi-provincia`, { provincia }, { headers: this.authHeaders() })
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
   private authHeaders(): HttpHeaders | undefined {
     const token = this.authService.getToken();
     return token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;

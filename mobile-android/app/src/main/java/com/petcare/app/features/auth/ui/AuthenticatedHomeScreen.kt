@@ -1,6 +1,7 @@
 package com.petcare.app.features.auth.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -160,6 +161,12 @@ private fun HomeHeader(
             modifier = Modifier.weight(1f),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Image(
+                painter = painterResource(R.drawable.logo_petcare_marca),
+                contentDescription = "PetCare",
+                modifier = Modifier.height(44.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(
                     text = "Hola,",

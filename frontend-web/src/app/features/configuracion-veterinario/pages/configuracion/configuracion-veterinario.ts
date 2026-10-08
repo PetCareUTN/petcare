@@ -6,6 +6,7 @@ import {
   ValidationErrors,
   Validators,
 } from '@angular/forms';
+import { PROVINCIAS_ARGENTINA } from '../../../../shared/constants/provincias';
 import { ApiError } from '../../../auth/models/user';
 import { DatosCuentaVeterinario } from '../../models/configuracion-veterinario';
 import { ConfiguracionVeterinarioService } from '../../services/configuracion-veterinario-service';
@@ -29,6 +30,12 @@ export class ConfiguracionVeterinarioPage implements OnInit {
   protected readonly isLoading = signal(true);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly datos = signal<DatosCuentaVeterinario | null>(null);
+
+  protected readonly provincias = PROVINCIAS_ARGENTINA;
+  protected readonly provinciaSeleccionada = signal('');
+  protected readonly isGuardandoProvincia = signal(false);
+  protected readonly provinciaError = signal<string | null>(null);
+  protected readonly provinciaSuccess = signal<string | null>(null);
 
   protected readonly isCambiandoContrasena = signal(false);
   protected readonly contrasenaError = signal<string | null>(null);
@@ -55,10 +62,37 @@ export class ConfiguracionVeterinarioPage implements OnInit {
       next: (datos) => {
         this.isLoading.set(false);
         this.datos.set(datos);
+        this.provinciaSeleccionada.set(datos.provincia ?? '');
       },
       error: (error: ApiError) => {
         this.isLoading.set(false);
         this.errorMessage.set(error.mensaje ?? 'No se pudieron cargar tus datos.');
+      },
+    });
+  }
+
+  protected guardarProvincia(): void {
+    const provincia = this.provinciaSeleccionada();
+    if (!provincia) {
+      this.provinciaError.set('Elegí una provincia.');
+      return;
+    }
+
+    this.provinciaError.set(null);
+    this.provinciaSuccess.set(null);
+    this.isGuardandoProvincia.set(true);
+
+    this.configuracionService.actualizarProvincia(provincia).subscribe({
+      next: (respuesta) => {
+        this.isGuardandoProvincia.set(false);
+        this.datos.update((datos) =>
+          datos ? { ...datos, provincia: respuesta.provincia } : datos,
+        );
+        this.provinciaSuccess.set('Provincia actualizada correctamente.');
+      },
+      error: (error: ApiError) => {
+        this.isGuardandoProvincia.set(false);
+        this.provinciaError.set(error.mensaje ?? 'No se pudo actualizar la provincia.');
       },
     });
   }
