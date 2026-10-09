@@ -127,6 +127,8 @@ la lista completa con sus explicaciones.
 | `MAIL_FROM` | remitente verificado en Brevo | si no, los mails caen en spam |
 | `GOOGLE_CLIENT_ID` | el client "Web application" | no es secreto |
 | `GOOGLE_GEOCODING_API_KEY` | la de Google Cloud | conviene ponerle límite de cuota |
+| `ANTHROPIC_API_KEY` | la de platform.claude.com → Claves de API | asistente de voz de la historia clínica (P1-182); sin ella el asistente responde "no disponible" y la carga sigue manual |
+| `ANTHROPIC_MODEL` | `claude-opus-5-5` | opcional; es el valor por defecto |
 
 `PORT` lo inyecta Railway solo: no hay que definirlo.
 
