@@ -245,6 +245,53 @@ describe('EventosClinicosService', () => {
     expect(eventosClinicosRepository.save).not.toHaveBeenCalled();
   });
 
+  it('registra la ultima dosis de una vacuna sin proxima aplicacion', async () => {
+    const historia = { idHistoria: 20 } as HistoriaClinica;
+    const mascota = {
+      idMascota: 10,
+      idHistoria: 20,
+      historiaClinica: historia,
+    } as Mascota;
+    const evento = {
+      idEvento: 33,
+      historia,
+      veterinario,
+      tipo: ClinicalEventType.VACUNA,
+      fecha: '2026-08-05',
+      descripcion: 'Ultima dosis de antirrabica',
+      diagnostico: null,
+      tratamiento: null,
+      observaciones: null,
+      vacuna: TipoVacuna.ANTIRRABICA,
+      proximaAplicacion: null,
+      createdAt: new Date('2026-08-05T10:00:00Z'),
+      updatedAt: new Date('2026-08-05T10:00:00Z'),
+    } as EventoClinico;
+
+    veterinariosRepository.findOne.mockResolvedValue(veterinario);
+    mascotasRepository.findOne.mockResolvedValue(mascota);
+    eventosClinicosRepository.create.mockReturnValue(evento);
+    eventosClinicosRepository.save.mockResolvedValue(evento);
+
+    await service.create(7, {
+      idMascota: 10,
+      tipo: ClinicalEventType.VACUNA,
+      fecha: '2026-08-05',
+      descripcion: 'Ultima dosis de antirrabica',
+      vacuna: TipoVacuna.ANTIRRABICA,
+      ultimaDosis: true,
+      // Si el cliente manda una fecha igual, se descarta: no hay refuerzo.
+      proximaAplicacion: '2027-08-05',
+    });
+
+    expect(eventosClinicosRepository.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        vacuna: TipoVacuna.ANTIRRABICA,
+        proximaAplicacion: null,
+      }),
+    );
+  });
+
   it('rechaza una proxima aplicacion anterior a la fecha de la vacuna (US-40)', async () => {
     // Un error de tipeo en el ano generaria un recordatorio inmediato para una
     // dosis que en realidad no vence.

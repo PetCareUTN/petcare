@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsInt,
@@ -76,7 +77,21 @@ export class CreateEventoClinicoDto {
    * No se prellena ni se calcula: el esquema depende del animal. Un cachorro
    * recibe varias dosis separadas por semanas antes de pasar al esquema anual.
    */
-  @ValidateIf((dto: CreateEventoClinicoDto) => dto.tipo === ClinicalEventType.VACUNA)
+  @ValidateIf(
+    (dto: CreateEventoClinicoDto) =>
+      dto.tipo === ClinicalEventType.VACUNA && !dto.ultimaDosis,
+  )
   @IsDateString()
   proximaAplicacion?: string;
+
+  /**
+   * La dosis es la última: no hay refuerzo, así que no se pide la próxima
+   * aplicación y no se envía recordatorio.
+   *
+   * Es un campo explícito, y no simplemente dejar la fecha vacía, para que
+   * olvidarse la fecha siga siendo un error y no deje al dueño sin aviso.
+   */
+  @IsOptional()
+  @IsBoolean()
+  ultimaDosis?: boolean;
 }

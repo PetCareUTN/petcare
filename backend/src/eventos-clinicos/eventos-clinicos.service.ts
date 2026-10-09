@@ -58,7 +58,9 @@ export class EventosClinicosService {
     const historia = await this.findOrCreateHistoriaClinica(mascota);
 
     const esVacuna = dto.tipo === ClinicalEventType.VACUNA;
-    if (esVacuna) {
+    // En la última dosis no hay próxima aplicación ni recordatorio.
+    const llevaProximaDosis = esVacuna && !dto.ultimaDosis;
+    if (llevaProximaDosis) {
       this.validarProximaAplicacion(dto.fecha, dto.proximaAplicacion);
     }
 
@@ -75,7 +77,9 @@ export class EventosClinicosService {
       // aunque el cliente los mande: que quedaran colgados en un evento que no
       // es una vacuna generaría recordatorios fantasma.
       vacuna: esVacuna ? (dto.vacuna ?? null) : null,
-      proximaAplicacion: esVacuna ? (dto.proximaAplicacion ?? null) : null,
+      proximaAplicacion: llevaProximaDosis
+        ? (dto.proximaAplicacion ?? null)
+        : null,
       recordatorioEnviadoAt: null,
     });
 
