@@ -33,6 +33,8 @@ export interface CreateEventoClinicoRequest {
   /** Obligatorios cuando `tipo` es 'vacuna' (US-40). */
   vacuna?: TipoVacuna;
   proximaAplicacion?: string;
+  /** Última dosis: no hay refuerzo, así que va sin `proximaAplicacion`. */
+  ultimaDosis?: boolean;
 }
 
 export interface ArchivoMedicoResponse {
@@ -68,4 +70,17 @@ export interface HistoriaClinicaResponse {
   idMascota: number;
   fechaCreacion: string | null;
   eventos: EventoClinicoResponse[];
+}
+
+/**
+ * Campos que sugiere el asistente de voz a partir de la consulta dictada
+ * (P1-182). null significa que el dictado no mencionaba ese dato.
+ */
+export interface SugerenciaEventoClinico {
+  tipo: ClinicalEventType | null;
+  descripcion: string | null;
+  diagnostico: string | null;
+  tratamiento: string | null;
+  observaciones: string | null;
+  vacuna: TipoVacuna | null;
 }

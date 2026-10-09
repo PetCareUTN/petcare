@@ -356,3 +356,38 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Etiqueta del campo con su botón de dictado (P1-182) */
+.field-label-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-xs);
+}
+
+/* Aclaración bajo un campo, sin connotación de error (US-40). */
+.field-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted, #6b7280);
+}
+
+/* Casilla de última dosis bajo la próxima aplicación. */
+.field .checkbox-ultima-dosis {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.field .checkbox-ultima-dosis input {
+  width: auto;
+  margin: 0;
+  padding: 0;
+  box-shadow: none;
+  accent-color: var(--primary);
+}

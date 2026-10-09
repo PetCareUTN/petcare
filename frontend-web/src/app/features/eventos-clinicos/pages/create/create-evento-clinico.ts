@@ -1,27 +1,27 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, viewChild } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiError } from '../../../auth/models/user';
 import { AuthService } from '../../../auth/services/auth-service';
 import { RichTextEditorComponent } from '../../../../shared/components/rich-text-editor/rich-text-editor';
+import { DictadoPorVozService } from '../../../../shared/services/dictado-por-voz-service';
 import { MascotasService } from '../../../mascotas/services/mascotas-service';
 import {
   ArchivoMedicoResponse,
   ClinicalEventType,
   CreateEventoClinicoRequest,
+  SugerenciaEventoClinico,
   TipoVacuna,
 } from '../../models/evento-clinico';
+import { VACUNA_OPCIONES } from '../../models/vacuna-opciones';
 import { EventosClinicosService } from '../../services/eventos-clinicos-service';
+import { AsistenteVozComponent } from '../../components/asistente-voz/asistente-voz';
+import { BotonDictadoComponent } from '../../components/boton-dictado/boton-dictado';
+import { agregarTextoDictado } from '../../utils/agregar-texto-dictado';
 
 type EventTypeOption = {
   value: ClinicalEventType;
   label: string;
-};
-
-type VacunaOption = {
-  value: TipoVacuna;
-  label: string;
-  especie: string;
 };
 
 /**
@@ -33,11 +33,21 @@ type VacunaOption = {
 const DESCRIPCION_MAX_LENGTH = 1000;
 const CAMPO_CORTO_MAX_LENGTH = 500;
 
+/** Campos de texto libre donde se puede dictar (P1-182). */
+type CampoDictable = 'descripcion' | 'diagnostico' | 'tratamiento' | 'observaciones';
+
 @Component({
   selector: 'app-create-evento-clinico',
-  imports: [ReactiveFormsModule, RouterLink, RichTextEditorComponent],
+  imports: [
+    ReactiveFormsModule,
+    RouterLink,
+    RichTextEditorComponent,
+    AsistenteVozComponent,
+    BotonDictadoComponent,
+  ],
   templateUrl: './create-evento-clinico.html',
   styleUrl: './create-evento-clinico.css',
+  providers: [DictadoPorVozService],
 })
 export class CreateEventoClinicoPage implements OnInit {
   private readonly formBuilder = inject(FormBuilder);
@@ -46,6 +56,7 @@ export class CreateEventoClinicoPage implements OnInit {
   protected readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly dictado = inject(DictadoPorVozService);
 
   protected readonly eventTypes: EventTypeOption[] = [
     { value: 'consulta', label: 'Consulta' },
@@ -58,20 +69,7 @@ export class CreateEventoClinicoPage implements OnInit {
     { value: 'otro', label: 'Otro' },
   ];
 
-  /**
-   * Se muestran todas las vacunas, con la especie como referencia visual: el
-   * formulario recibe el id de la mascota pero no su especie, y traerla solo
-   * para filtrar esta lista no justifica el pedido extra. El veterinario sabe
-   * cuál corresponde.
-   */
-  protected readonly vacunas: VacunaOption[] = [
-    { value: 'antirrabica', label: 'Antirrabica', especie: 'perros y gatos' },
-    { value: 'quintuple', label: 'Quintuple', especie: 'perros' },
-    { value: 'sextuple', label: 'Sextuple', especie: 'perros' },
-    { value: 'traqueobronquitis', label: 'Traqueobronquitis', especie: 'perros' },
-    { value: 'triple_felina', label: 'Triple felina', especie: 'gatos' },
-    { value: 'leucemia_felina', label: 'Leucemia felina', especie: 'gatos' },
-  ];
+  protected readonly vacunas = VACUNA_OPCIONES;
 
   protected readonly isSubmitting = signal(false);
   protected readonly successMessage = signal<string | null>(null);
@@ -83,6 +81,8 @@ export class CreateEventoClinicoPage implements OnInit {
   protected readonly backQueryParams = signal<Record<string, string | number>>({});
   protected readonly mascotaNombre = signal<string | null>(null);
   protected readonly isLoadingMascota = signal(false);
+
+  private readonly asistente = viewChild(AsistenteVozComponent);
 
   protected readonly descripcionMaxLength = DESCRIPCION_MAX_LENGTH;
   protected readonly campoCortoMaxLength = CAMPO_CORTO_MAX_LENGTH;
@@ -97,6 +97,7 @@ export class CreateEventoClinicoPage implements OnInit {
     observaciones: [''],
     vacuna: [null as TipoVacuna | null],
     proximaAplicacion: [''],
+    ultimaDosis: [false],
   });
 
   ngOnInit(): void {
@@ -119,21 +120,30 @@ export class CreateEventoClinicoPage implements OnInit {
     // Los campos de vacunación solo existen —y solo son obligatorios— cuando el
     // evento es una vacuna. Se enganchan y desenganchan al cambiar el tipo para
     // que el formulario no quede inválido por campos que ni se muestran.
-    this.form.controls.tipo.valueChanges.subscribe((tipo) => {
-      this.aplicarValidacionDeVacuna(tipo === 'vacuna');
-    });
-    this.aplicarValidacionDeVacuna(this.form.controls.tipo.value === 'vacuna');
+    this.form.controls.tipo.valueChanges.subscribe(() => this.actualizarValidacionDeVacuna());
+    this.form.controls.ultimaDosis.valueChanges.subscribe(() =>
+      this.actualizarValidacionDeVacuna(),
+    );
+    this.actualizarValidacionDeVacuna();
   }
 
-  private aplicarValidacionDeVacuna(esVacuna: boolean): void {
-    const { vacuna, proximaAplicacion } = this.form.controls;
-    if (esVacuna) {
-      vacuna.addValidators(Validators.required);
-      proximaAplicacion.addValidators(Validators.required);
-    } else {
-      vacuna.removeValidators(Validators.required);
-      proximaAplicacion.removeValidators(Validators.required);
+  /**
+   * La vacuna es obligatoria en todo evento de tipo vacuna. La próxima
+   * aplicación también, salvo que sea la última dosis: ahí no hay refuerzo
+   * ni recordatorio.
+   */
+  private actualizarValidacionDeVacuna(): void {
+    const { tipo, vacuna, proximaAplicacion, ultimaDosis } = this.form.controls;
+    const esVacuna = tipo.value === 'vacuna';
+    const pideProximaDosis = esVacuna && !ultimaDosis.value;
+
+    vacuna.setValidators(esVacuna ? Validators.required : null);
+    proximaAplicacion.setValidators(pideProximaDosis ? Validators.required : null);
+    if (!esVacuna) {
       vacuna.setValue(null);
+      ultimaDosis.setValue(false, { emitEvent: false });
+    }
+    if (!pideProximaDosis) {
       proximaAplicacion.setValue('');
     }
     vacuna.updateValueAndValidity();
@@ -151,6 +161,9 @@ export class CreateEventoClinicoPage implements OnInit {
       return;
     }
 
+    // Guardar es siempre una acción explícita: si quedó un dictado abierto se
+    // corta acá, para que no siga escribiendo en el formulario ya enviado.
+    this.dictado.detener();
     this.successMessage.set(null);
     this.errorMessage.set(null);
     this.createdEventId.set(null);
@@ -171,7 +184,11 @@ export class CreateEventoClinicoPage implements OnInit {
 
     if (value.tipo === 'vacuna') {
       payload.vacuna = value.vacuna!;
-      payload.proximaAplicacion = value.proximaAplicacion!;
+      if (value.ultimaDosis) {
+        payload.ultimaDosis = true;
+      } else {
+        payload.proximaAplicacion = value.proximaAplicacion!;
+      }
     }
 
     this.eventosClinicosService.create(payload).subscribe({
@@ -192,7 +209,9 @@ export class CreateEventoClinicoPage implements OnInit {
           observaciones: '',
           vacuna: null,
           proximaAplicacion: '',
+          ultimaDosis: false,
         });
+        this.asistente()?.reiniciar();
       },
       error: (error: ApiError) => {
         this.isSubmitting.set(false);
@@ -236,6 +255,38 @@ export class CreateEventoClinicoPage implements OnInit {
         this.uploadError.set(error.mensaje ?? 'No se pudo adjuntar el archivo.');
       },
     });
+  }
+
+  /**
+   * Vuelca la sugerencia del asistente de voz (P1-182) sin guardar. Lo que ya
+   * estaba escrito en un campo no se pisa: lo sugerido se agrega debajo.
+   */
+  protected aplicarSugerencia(sugerencia: SugerenciaEventoClinico): void {
+    if (sugerencia.tipo) {
+      this.form.controls.tipo.setValue(sugerencia.tipo);
+    }
+    if (sugerencia.tipo === 'vacuna' && sugerencia.vacuna) {
+      this.form.controls.vacuna.setValue(sugerencia.vacuna);
+    }
+
+    const campos: CampoDictable[] = ['descripcion', 'diagnostico', 'tratamiento', 'observaciones'];
+    for (const campo of campos) {
+      const texto = sugerencia[campo];
+      if (texto) {
+        this.agregarTexto(campo, texto, true);
+      }
+    }
+  }
+
+  /** Agrega texto dictado al final de un campo, sin perder lo que ya tenía. */
+  protected agregarTexto(campo: CampoDictable, texto: string, nuevoParrafo = false): void {
+    const control = this.form.controls[campo];
+    const max = campo === 'descripcion' ? DESCRIPCION_MAX_LENGTH : CAMPO_CORTO_MAX_LENGTH;
+    const html = agregarTextoDictado(control.value ?? '', texto, max, nuevoParrafo);
+    if (html !== null) {
+      control.setValue(html);
+      control.markAsDirty();
+    }
   }
 
   protected esVacuna(): boolean {
