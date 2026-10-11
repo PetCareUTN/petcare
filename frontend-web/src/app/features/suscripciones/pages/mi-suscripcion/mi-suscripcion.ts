@@ -65,13 +65,13 @@ export class MiSuscripcionPage implements OnInit, OnDestroy {
 
   protected getEstadoClass(estado: string): string {
     switch (estado) {
-      case 'ACTIVA':
+      case 'activa':
         return 'estado-activa';
-      case 'VENCIDA':
+      case 'vencida':
         return 'estado-vencida';
-      case 'SUSPENDIDA':
+      case 'suspendida':
         return 'estado-suspendida';
-      case 'CANCELADA':
+      case 'cancelada':
         return 'estado-cancelada';
       default:
         return 'estado-pendiente';
@@ -80,15 +80,15 @@ export class MiSuscripcionPage implements OnInit, OnDestroy {
 
   protected getEstadoLabel(estado: string): string {
     switch (estado) {
-      case 'PENDIENTE_PAGO':
+      case 'pendiente_pago':
         return 'Pendiente de pago';
-      case 'ACTIVA':
+      case 'activa':
         return 'Activa';
-      case 'VENCIDA':
+      case 'vencida':
         return 'Vencida';
-      case 'SUSPENDIDA':
+      case 'suspendida':
         return 'Suspendida';
-      case 'CANCELADA':
+      case 'cancelada':
         return 'Cancelada';
       default:
         return estado;
@@ -104,18 +104,18 @@ export class MiSuscripcionPage implements OnInit, OnDestroy {
       );
     }
     switch (sub.estado) {
-      case 'PENDIENTE_PAGO':
+      case 'pendiente_pago':
         return 'Completá el pago para activar tu suscripción y usar la plataforma.';
-      case 'VENCIDA':
+      case 'vencida':
         return sub.accesoPermitido
           ? 'Tu suscripción venció y estás en el período de gracia. Regularizá el pago para no perder el acceso.'
           : 'Terminó el período de gracia. Regularizá el pago para recuperar el acceso.';
-      case 'SUSPENDIDA':
+      case 'suspendida':
         return (
           sub.motivoBloqueo ??
           'Tu suscripción fue suspendida. Regularizá tu pago para volver a tener acceso.'
         );
-      case 'CANCELADA':
+      case 'cancelada':
         return (
           sub.motivoBloqueo ?? 'Tu suscripción fue cancelada. Suscribite de nuevo para continuar.'
         );
@@ -129,7 +129,7 @@ export class MiSuscripcionPage implements OnInit, OnDestroy {
     if (sub.codigoBloqueo === 'CUENTA_NO_APROBADA') {
       return false;
     }
-    return sub.estado !== 'ACTIVA';
+    return sub.estado !== 'activa';
   }
 
   private cargar(): void {
@@ -142,7 +142,7 @@ export class MiSuscripcionPage implements OnInit, OnDestroy {
         const vuelveDeMp = sessionStorage.getItem(CLAVE_RETORNO_MP) === '1';
         if (vuelveDeMp) {
           sessionStorage.removeItem(CLAVE_RETORNO_MP);
-          if (suscripcion.estado !== 'ACTIVA') {
+          if (suscripcion.estado !== 'activa') {
             this.iniciarPolling();
           } else {
             this.successMessage.set('Pago confirmado. Tu suscripción está activa.');
@@ -178,7 +178,7 @@ export class MiSuscripcionPage implements OnInit, OnDestroy {
       this.suscripcionesService.miSuscripcion().subscribe({
         next: (suscripcion) => {
           this.suscripcion.set(suscripcion);
-          if (suscripcion.estado === 'ACTIVA') {
+          if (suscripcion.estado === 'activa') {
             this.detenerPolling();
             this.successMessage.set('Pago confirmado. Tu suscripción está activa.');
             this.cargarHistorial();
