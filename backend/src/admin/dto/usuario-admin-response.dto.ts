@@ -1,3 +1,5 @@
+import { estadoRealDeVeterinario } from '../../common/utils/estado-real.util';
+import { Suscripcion } from '../../suscripciones/entities/suscripcion.entity';
 import { User } from '../../users/entities/user.entity';
 
 export class UsuarioAdminResponseDto {
@@ -10,10 +12,14 @@ export class UsuarioAdminResponseDto {
   direccion: string | null;
   id_rol: number;
   nombre_rol: string;
+  /** Estado real del usuario (ver estadoRealDeVeterinario), en minúsculas. */
   estado: string;
   fecha_registro: Date;
 
-  static fromEntity(user: User): UsuarioAdminResponseDto {
+  static fromEntity(
+    user: User,
+    suscripcion?: Suscripcion | null,
+  ): UsuarioAdminResponseDto {
     const dto = new UsuarioAdminResponseDto();
     dto.id_usuario = user.idUsuario;
     dto.nombre = user.nombre;
@@ -24,7 +30,11 @@ export class UsuarioAdminResponseDto {
     dto.direccion = user.direccion ?? null;
     dto.id_rol = user.rol.idRol;
     dto.nombre_rol = user.rol.nombre;
-    dto.estado = user.estado;
+    dto.estado = estadoRealDeVeterinario(
+      user.veterinario,
+      suscripcion,
+      user.estado,
+    );
     dto.fecha_registro = user.fechaRegistro;
     return dto;
   }

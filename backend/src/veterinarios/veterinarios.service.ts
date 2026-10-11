@@ -13,9 +13,11 @@ import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { RoleName } from '../common/enums/role-name.enum';
 import { ValidationStatus } from '../common/enums/validation-status.enum';
 import { NotificationType } from '../common/enums/notification-type.enum';
+import { estadoRealDeVeterinario } from '../common/utils/estado-real.util';
 import { GeocodingService } from '../geocoding/geocoding.service';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { Role } from '../roles/entities/role.entity';
+import { Suscripcion } from '../suscripciones/entities/suscripcion.entity';
 import { UsersService } from '../users/users.service';
 import { RegisterVeterinarioDto } from './dto/register-veterinario.dto';
 import {
@@ -35,6 +37,8 @@ export class VeterinariosService {
     private readonly veterinariosRepository: Repository<Veterinario>,
     @InjectRepository(Role)
     private readonly rolesRepository: Repository<Role>,
+    @InjectRepository(Suscripcion)
+    private readonly suscripcionesRepository: Repository<Suscripcion>,
     private readonly usersService: UsersService,
     private readonly notificacionesService: NotificacionesService,
     private readonly geocoding: GeocodingService,
@@ -248,6 +252,10 @@ export class VeterinariosService {
       });
     }
 
+    const suscripcion = await this.suscripcionesRepository.findOne({
+      where: { usuario: { idUsuario: veterinario.usuario.idUsuario } },
+    });
+
     return {
       idVeterinario: veterinario.idVeterinario,
       numeroDocumento: veterinario.numeroDocumento,
@@ -260,7 +268,12 @@ export class VeterinariosService {
       habilitacionUrl: veterinario.habilitacionUrl
         ? urlDocumentoVeterinario(veterinario.idVeterinario, 'habilitacion')
         : null,
-      estadoValidacion: veterinario.estadoValidacion,
+      // Minúsculas para unificar el criterio de presentación.
+      estadoValidacion: veterinario.estadoValidacion.toLowerCase() as
+        'pendiente' | 'aprobado' | 'rechazado',
+      // Estado real combinado (validación + suscripción), para que el
+      // admin vea el ciclo completo y no solo "pendiente".
+      estadoReal: estadoRealDeVeterinario(veterinario, suscripcion),
       motivoRechazo: veterinario.motivoRechazo,
       fechaSolicitud: veterinario.createdAt,
       usuario: {

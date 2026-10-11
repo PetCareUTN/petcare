@@ -1,9 +1,9 @@
 export type SuscripcionEstado =
-  | 'PENDIENTE_PAGO'
-  | 'ACTIVA'
-  | 'VENCIDA'
-  | 'SUSPENDIDA'
-  | 'CANCELADA';
+  | 'pendiente_pago'
+  | 'activa'
+  | 'vencida'
+  | 'suspendida'
+  | 'cancelada';
 
 /** Códigos internos de bloqueo que manda el backend en el HTTP 402. */
 export type CodigoBloqueo =
