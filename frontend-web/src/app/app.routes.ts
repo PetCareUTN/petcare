@@ -1,8 +1,17 @@
 import { Routes } from '@angular/router';
 import { accesoSuscripcionGuard } from './features/auth/guards/acceso-suscripcion.guard';
 import { authGuard } from './features/auth/guards/auth.guard';
+import { invitadoGuard } from './features/auth/guards/invitado.guard';
 
 export const routes: Routes = [
+  {
+    // Landing pública. Con sesión iniciada no matchea y "/" cae en el inicio de abajo.
+    path: '',
+    pathMatch: 'full',
+    canMatch: [invitadoGuard],
+    loadComponent: () =>
+      import('./features/landing/pages/landing/landing').then((m) => m.LandingPage),
+  },
   {
     path: 'register',
     loadComponent: () =>
