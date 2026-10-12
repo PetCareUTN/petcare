@@ -12,6 +12,7 @@ export class UserPublicDto {
   numero_documento: string | null;
   telefono: string | null;
   direccion: string | null;
+  provincia: string | null;
   id_rol: number;
   estado: string;
   fecha_registro: Date;
@@ -27,6 +28,7 @@ export class UserPublicDto {
     dto.numero_documento = user.numeroDocumento ?? null;
     dto.telefono = user.telefono ?? null;
     dto.direccion = user.direccion ?? null;
+    dto.provincia = user.provincia ?? null;
     dto.id_rol = user.rol.idRol;
     dto.estado = user.estado;
     dto.fecha_registro = user.fechaRegistro;

@@ -15,9 +15,16 @@
     <section class="config-card">
       <h2>Datos de la clínica</h2>
       <p class="card-subtitle">
-        Estos datos se cargaron al registrarte. Si necesitás modificarlos, contactate con
-        soporte.
+        Estos datos se cargaron al registrarte. La provincia la podés cambiar desde acá; para
+        modificar el resto, contactate con soporte.
       </p>
+
+      @if (provinciaSuccess()) {
+        <p class="banner banner-success">{{ provinciaSuccess() }}</p>
+      }
+      @if (provinciaError()) {
+        <p class="banner banner-error">{{ provinciaError() }}</p>
+      }
 
       <dl class="datos-list">
         <div class="datos-row">
@@ -27,6 +34,34 @@
         <div class="datos-row">
           <dt>Dirección</dt>
           <dd>{{ datos.direccion || 'Sin dirección cargada' }}</dd>
+        </div>
+        <div class="datos-row">
+          <dt>Provincia</dt>
+          <dd class="provincia-edit">
+            <select
+              id="provincia"
+              aria-label="Provincia"
+              [value]="provinciaSeleccionada()"
+              (change)="provinciaSeleccionada.set($any($event.target).value)"
+            >
+              <option value="" disabled>Seleccioná una provincia</option>
+              @for (prov of provincias; track prov) {
+                <option [value]="prov" [selected]="prov === provinciaSeleccionada()">
+                  {{ prov }}
+                </option>
+              }
+            </select>
+            <button
+              type="button"
+              class="btn-primary btn-chico"
+              [disabled]="
+                isGuardandoProvincia() || provinciaSeleccionada() === (datos.provincia ?? '')
+              "
+              (click)="guardarProvincia()"
+            >
+              {{ isGuardandoProvincia() ? 'Guardando...' : 'Guardar' }}
+            </button>
+          </dd>
         </div>
         <div class="datos-row">
           <dt>Teléfono</dt>
@@ -87,12 +122,12 @@
             type="password"
             formControlName="confirmarNueva"
             [class.field-invalid]="
-              formContrasena.controls.confirmarNueva.touched && formContrasena.hasError('noCoincide')
+              formContrasena.controls.confirmarNueva.touched &&
+              formContrasena.hasError('noCoincide')
             "
           />
           @if (
-            formContrasena.controls.confirmarNueva.touched &&
-            formContrasena.hasError('noCoincide')
+            formContrasena.controls.confirmarNueva.touched && formContrasena.hasError('noCoincide')
           ) {
             <p class="field-error">Las contraseñas no coinciden.</p>
           }

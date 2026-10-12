@@ -32,6 +32,35 @@ val API_URL_LOCAL = "http://10.0.2.2:3000/"
 // Backend en Railway. Tiene que terminar en barra (lo exige Retrofit).
 val API_URL_PRODUCCION = "https://backend-production-4169.up.railway.app/"
 
+// Firma del APK de release. Los datos salen de mobile-android/keystore.properties
+// (gitignoreado) o, si no existe, de variables de entorno, para poder firmar
+// desde CI sin dejar nada en el repo. Ver keystore.properties.example.
+//
+// Si no hay ninguna de las dos cosas, el build sigue funcionando pero genera un
+// APK sin firmar, que Android no instala. Es a proposito: asi CI puede compilar
+// la variante de release sin tener la keystore.
+val keystoreProperties = Properties().apply {
+    val keystorePropertiesFile = rootProject.file("keystore.properties")
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
+}
+
+fun datoDeFirma(clave: String, variableDeEntorno: String): String? =
+    (keystoreProperties.getProperty(clave) ?: System.getenv(variableDeEntorno))
+        ?.takeIf { it.isNotBlank() }
+
+val keystoreArchivo = datoDeFirma("storeFile", "PETCARE_KEYSTORE_FILE")
+val keystorePassword = datoDeFirma("storePassword", "PETCARE_KEYSTORE_PASSWORD")
+val keystoreAlias = datoDeFirma("keyAlias", "PETCARE_KEY_ALIAS")
+val keystoreAliasPassword = datoDeFirma("keyPassword", "PETCARE_KEY_PASSWORD")
+
+val hayDatosDeFirma =
+    keystoreArchivo != null &&
+        keystorePassword != null &&
+        keystoreAlias != null &&
+        keystoreAliasPassword != null
+
 android {
     namespace = "com.petcare.app"
     compileSdk {
@@ -51,6 +80,17 @@ android {
         manifestPlaceholders["mapsApiKey"] = mapsApiKey
     }
 
+    signingConfigs {
+        if (hayDatosDeFirma) {
+            create("release") {
+                storeFile = rootProject.file(keystoreArchivo!!)
+                storePassword = keystorePassword
+                keyAlias = keystoreAlias
+                keyPassword = keystoreAliasPassword
+            }
+        }
+    }
+
     buildTypes {
         debug {
             buildConfigField("String", "API_BASE_URL", "\"${apiUrl(API_URL_LOCAL)}\"")
@@ -63,6 +103,8 @@ android {
             // En produccion todo va por HTTPS: si algo quedo apuntando a http://
             // queremos que falle en desarrollo y no que viaje en texto plano.
             manifestPlaceholders["usesCleartextTraffic"] = "false"
+            // Sin keystore configurada queda null, y el APK sale sin firmar.
+            signingConfig = signingConfigs.findByName("release")
             optimization {
                 enable = false
             }

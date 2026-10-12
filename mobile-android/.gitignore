@@ -13,3 +13,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Firma del APK de release: ni la keystore ni sus contrasenas van al repo.
+keystore.properties
+*.jks
+*.keystore

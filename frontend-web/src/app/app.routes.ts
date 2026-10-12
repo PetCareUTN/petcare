@@ -180,11 +180,17 @@ export const routes: Routes = [
   },
   {
     path: 'suscripciones',
-    loadComponent: () =>
-      import('./features/suscripciones/pages/mi-suscripcion/mi-suscripcion').then(
-        (m) => m.MiSuscripcionPage,
-      ),
+    loadComponent: () => import('./shared/layout/vet-layout').then((m) => m.VetLayout),
     canActivate: [authGuard],
+    children: [
+      {
+        path: '',
+        loadComponent: () =>
+          import('./features/suscripciones/pages/mi-suscripcion/mi-suscripcion').then(
+            (m) => m.MiSuscripcionPage,
+          ),
+      },
+    ],
   },
   {
     path: 'admin',

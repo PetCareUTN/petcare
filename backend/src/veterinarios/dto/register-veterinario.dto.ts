@@ -1,4 +1,16 @@
-import { IsEmail, IsNotEmpty, IsString, Matches, MaxLength, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsIn,
+  IsNotEmpty,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
+import {
+  MENSAJE_PROVINCIA_INVALIDA,
+  PROVINCIAS_ARGENTINA,
+} from '../../common/constants/provincias';
 
 const TELEFONO_PATTERN = /^[0-9+\-\s()]+$/;
 
@@ -19,13 +31,21 @@ export class RegisterVeterinarioDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(30)
-  @Matches(TELEFONO_PATTERN, { message: 'El teléfono solo puede contener números.' })
+  @Matches(TELEFONO_PATTERN, {
+    message: 'El teléfono solo puede contener números.',
+  })
   telefono: string;
 
   @IsString()
   @IsNotEmpty()
   @MaxLength(255)
   direccion: string;
+
+  /** Provincia donde atiende la veterinaria; va aparte de la dirección. */
+  @IsString()
+  @IsNotEmpty({ message: 'La provincia es obligatoria' })
+  @IsIn(PROVINCIAS_ARGENTINA, { message: MENSAJE_PROVINCIA_INVALIDA })
+  provincia: string;
 
   @IsString()
   @IsNotEmpty({ message: 'El número de documento es obligatorio' })
