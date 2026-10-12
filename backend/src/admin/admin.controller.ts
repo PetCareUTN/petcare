@@ -15,7 +15,6 @@ import { RoleName } from '../common/enums/role-name.enum';
 import { AdminService } from './admin.service';
 import { CambiarRolDto } from './dto/cambiar-rol.dto';
 import { AuditoriaResponseDto } from './dto/auditoria-response.dto';
-import { UsuarioAdminResponseDto } from './dto/usuario-admin-response.dto';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -39,7 +38,7 @@ export class AdminController {
     );
 
     return {
-      usuarios: usuarios.map(UsuarioAdminResponseDto.fromEntity),
+      usuarios,
       total,
       pagina: pag,
       limite: lim,
@@ -48,8 +47,7 @@ export class AdminController {
 
   @Get('usuarios/:id')
   async obtenerUsuario(@Param('id', ParseIntPipe) id: number) {
-    const user = await this.adminService.obtenerUsuario(id);
-    return UsuarioAdminResponseDto.fromEntity(user);
+    return this.adminService.obtenerUsuarioAdmin(id);
   }
 
   @Patch('usuarios/:id/rol')
@@ -57,9 +55,8 @@ export class AdminController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: CambiarRolDto,
   ) {
-    
-    const user = await this.adminService.cambiarRol(id, dto.idRol);
-    return UsuarioAdminResponseDto.fromEntity(user);
+    await this.adminService.cambiarRol(id, dto.idRol);
+    return this.adminService.obtenerUsuarioAdmin(id);
   }
 
   @Get('roles')
@@ -70,6 +67,8 @@ export class AdminController {
   @Get('usuarios/:id/auditoria')
   async obtenerHistorial(@Param('id', ParseIntPipe) id: number) {
     const historial = await this.adminService.obtenerHistorial(id);
-    return historial.map(AuditoriaResponseDto.fromEntity);
+    return historial.map((registro) =>
+      AuditoriaResponseDto.fromEntity(registro),
+    );
   }
 }

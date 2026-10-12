@@ -10,6 +10,7 @@ import {
   CreateEventoClinicoRequest,
   EventoClinicoResponse,
   HistoriaClinicaResponse,
+  SugerenciaEventoClinico,
 } from '../models/evento-clinico';
 
 @Injectable({ providedIn: 'root' })
@@ -22,6 +23,17 @@ export class EventosClinicosService {
   create(data: CreateEventoClinicoRequest): Observable<EventoClinicoResponse> {
     return this.http
       .post<EventoClinicoResponse>(this.baseUrl, data, { headers: this.authHeaders() })
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
+  /** Ordena en campos una consulta dictada (P1-182). No guarda nada. */
+  sugerirCampos(transcripcion: string): Observable<SugerenciaEventoClinico> {
+    return this.http
+      .post<SugerenciaEventoClinico>(
+        `${this.baseUrl}/asistente`,
+        { transcripcion },
+        { headers: this.authHeaders() },
+      )
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
   }
 

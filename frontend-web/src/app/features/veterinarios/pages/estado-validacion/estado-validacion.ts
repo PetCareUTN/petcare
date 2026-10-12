@@ -40,9 +40,9 @@ export class EstadoValidacionPage implements OnInit {
 
   protected getEstadoClass(estado: string): string {
     switch (estado) {
-      case 'APROBADO':
+      case 'aprobado':
         return 'estado-aprobado';
-      case 'RECHAZADO':
+      case 'rechazado':
         return 'estado-rechazado';
       default:
         return 'estado-pendiente';

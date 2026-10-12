@@ -135,7 +135,8 @@ describe('SuscripcionesService', () => {
       const resultado = await service.obtenerMia(ID_VETERINARIO);
 
       expect(resultado.idSuscripcion).toBe(5);
-      expect(resultado.estado).toBe(SuscripcionEstado.PENDIENTE_PAGO);
+      // El DTO de salida expone el estado en minúsculas.
+      expect(resultado.estado).toBe('pendiente_pago');
       expect(suscripcionesRepository.create).not.toHaveBeenCalled();
     });
 
@@ -151,7 +152,7 @@ describe('SuscripcionesService', () => {
       const resultado = await service.obtenerMia(ID_VETERINARIO);
 
       expect(suscripcionesRepository.create).toHaveBeenCalled();
-      expect(resultado.estado).toBe(SuscripcionEstado.PENDIENTE_PAGO);
+      expect(resultado.estado).toBe('pendiente_pago');
     });
 
     it('no consulta MP si no hay preapproval asociado', async () => {
@@ -182,7 +183,7 @@ describe('SuscripcionesService', () => {
       expect(suscripcionesRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({ estado: SuscripcionEstado.ACTIVA }),
       );
-      expect(resultado.estado).toBe(SuscripcionEstado.ACTIVA);
+      expect(resultado.estado).toBe('activa');
       expect(resultado.accesoPermitido).toBe(true);
     });
 
@@ -199,7 +200,7 @@ describe('SuscripcionesService', () => {
       const resultado = await service.obtenerMia(ID_VETERINARIO);
 
       expect(suscripcionesRepository.save).not.toHaveBeenCalled();
-      expect(resultado.estado).toBe(SuscripcionEstado.PENDIENTE_PAGO);
+      expect(resultado.estado).toBe('pendiente_pago');
       expect(resultado.accesoPermitido).toBe(false);
     });
 
@@ -212,7 +213,7 @@ describe('SuscripcionesService', () => {
 
       const resultado = await service.obtenerMia(ID_VETERINARIO);
 
-      expect(resultado.estado).toBe(SuscripcionEstado.PENDIENTE_PAGO);
+      expect(resultado.estado).toBe('pendiente_pago');
       expect(resultado.accesoPermitido).toBe(false);
     });
 
@@ -229,7 +230,7 @@ describe('SuscripcionesService', () => {
       const resultado = await service.obtenerMia(ID_VETERINARIO);
 
       expect(suscripcionesRepository.save).not.toHaveBeenCalled();
-      expect(resultado.estado).toBe(SuscripcionEstado.PENDIENTE_PAGO);
+      expect(resultado.estado).toBe('pendiente_pago');
       expect(resultado.accesoPermitido).toBe(false);
     });
 
@@ -251,7 +252,7 @@ describe('SuscripcionesService', () => {
       expect(suscripcionesRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({ estado: SuscripcionEstado.CANCELADA }),
       );
-      expect(resultado.estado).toBe(SuscripcionEstado.CANCELADA);
+      expect(resultado.estado).toBe('cancelada');
     });
   });
 
@@ -388,9 +389,8 @@ describe('SuscripcionesService', () => {
 
       expect(preApprovalCreate).toHaveBeenCalledTimes(1);
       expect(resultado.initPoint).toContain('mp-pre-nuevo');
-      expect(resultado.suscripcion.estado).toBe(
-        SuscripcionEstado.PENDIENTE_PAGO,
-      );
+      // El DTO de salida expone el estado en minúsculas.
+      expect(resultado.suscripcion.estado).toBe('pendiente_pago');
       expect(suscripcionesRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({
           estado: SuscripcionEstado.PENDIENTE_PAGO,
