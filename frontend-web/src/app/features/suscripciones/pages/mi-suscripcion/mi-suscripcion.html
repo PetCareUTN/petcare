@@ -5,12 +5,6 @@
         <h1>Mi suscripción</h1>
         <p>Gestioná tu suscripción mensual para usar la plataforma.</p>
       </div>
-      <div class="pet-header-actions">
-        <app-notification-bell />
-        @if (suscripcion()?.accesoPermitido) {
-          <a routerLink="/eventos-clinicos">Volver</a>
-        }
-      </div>
     </header>
 
     @if (isLoading()) {

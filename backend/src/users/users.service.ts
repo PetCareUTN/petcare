@@ -54,6 +54,7 @@ export class UsersService {
     numeroDocumento?: string | null;
     telefono?: string | null;
     direccion?: string | null;
+    provincia?: string | null;
     latitud?: number | null;
     longitud?: number | null;
     estado?: string;
@@ -68,6 +69,7 @@ export class UsersService {
       googleId: data.googleId ?? null,
       telefono: data.telefono ?? null,
       direccion: data.direccion ?? null,
+      provincia: data.provincia ?? null,
       latitud: data.latitud ?? null,
       longitud: data.longitud ?? null,
       estado: data.estado ?? 'activo',
@@ -139,6 +141,29 @@ export class UsersService {
 
     if (dto.recordatoriosVacunas !== undefined) {
       user.recordatoriosVacunas = dto.recordatoriosVacunas;
+    }
+
+    return this.usersRepository.save(user);
+  }
+
+  async updateProvincia(
+    idUsuario: number,
+    provincia: string,
+    coordenadas?: { latitud: number; longitud: number } | null,
+  ): Promise<User> {
+    const user = await this.findById(idUsuario);
+
+    if (!user) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Usuario no encontrado',
+      });
+    }
+
+    user.provincia = provincia;
+    if (coordenadas) {
+      user.latitud = coordenadas.latitud;
+      user.longitud = coordenadas.longitud;
     }
 
     return this.usersRepository.save(user);

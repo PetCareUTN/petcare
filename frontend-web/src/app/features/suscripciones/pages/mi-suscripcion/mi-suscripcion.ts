@@ -1,9 +1,7 @@
 import { Component, OnDestroy, inject, OnInit, signal } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { ApiError } from '../../../auth/models/user';
 import { AuthService } from '../../../auth/services/auth-service';
-import { NotificationBellComponent } from '../../../notificaciones/components/notification-bell/notification-bell';
 import { PagoResponse, SuscripcionResponse } from '../../models/suscripcion';
 import { SuscripcionesService } from '../../services/suscripciones-service';
 
@@ -14,7 +12,7 @@ const MAX_INTENTOS_POLLING = 12;
 
 @Component({
   selector: 'app-mi-suscripcion',
-  imports: [RouterLink, DatePipe, CurrencyPipe, NotificationBellComponent],
+  imports: [DatePipe, CurrencyPipe],
   templateUrl: './mi-suscripcion.html',
   styleUrl: './mi-suscripcion.css',
 })
