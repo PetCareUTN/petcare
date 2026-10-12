@@ -85,6 +85,29 @@ Railway cobra por asiento. Ver los costos estimados en Instancia 1, sección
    El cambio de rol recien se refleja cuando esa persona vuelve a iniciar
    sesion, porque el rol viaja dentro del JWT.
 
+8. Cargar los **datos de demostración**, opcional pero necesario para mostrar
+   el sistema: una base recién creada no tiene veterinarias a las que pedirles
+   turno ni mascotas con historia clínica.
+
+   ```bash
+   cd backend
+   DATABASE_URL="<la de Railway>" DEMO_PASSWORD="<una que elijan>" npm run seed:demo
+   ```
+
+   Carga dos dueños con tres mascotas, una veterinaria **ya aprobada y con
+   suscripción activa**, un evento clínico y una publicación de adopción. Es
+   idempotente: correrlo dos veces no duplica nada.
+
+   La veterinaria se crea aprobada porque, pendiente, no podría ni iniciar
+   sesión hasta que un administrador la valide. Y se le deja una suscripción
+   `ACTIVA` sin pasar por Mercado Pago, porque sin eso el interceptor de acceso
+   la bloquea en casi toda la plataforma: eso permite probar los flujos de
+   veterinaria aunque todavía no estén cargadas las credenciales de MP.
+
+   Las cuentas usan el dominio `demo.petcare.test`, que no existe, así que
+   ningún mail del sistema puede llegarle a una persona real. La contraseña no
+   está versionada: se pasa al ejecutar.
+
 A partir de ahí, cada merge a `develop` despliega staging y cada merge a `main`
 despliega producción, que es exactamente el flujo del Working Agreement.
 

@@ -36,6 +36,11 @@ export class User {
   @Column({ type: 'varchar', length: 255, nullable: true })
   direccion: string | null;
 
+  // Provincia de la veterinaria, separada de `direccion` (calle, número y
+  // localidad). Nula en las cuentas que no son veterinarias.
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  provincia: string | null;
+
   // Resultado de geocodificar `direccion` (Google Geocoding API). Quedan en
   // NULL si la dirección no pudo geocodificarse (ver GeocodingService).
   @Column({ type: 'double precision', nullable: true })
