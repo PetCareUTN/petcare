@@ -21,6 +21,8 @@
       <p class="banner banner-error">{{ errorMessage() }}</p>
     }
 
+    <app-asistente-voz (sugerencia)="aplicarSugerencia($event)" />
+
     <section class="form-grid">
       <div class="field">
         <label for="idMascota">Mascota</label>
@@ -65,16 +67,24 @@
 
         <div class="field">
           <label for="proximaAplicacion">Proxima aplicacion</label>
-          <input
-            id="proximaAplicacion"
-            type="date"
-            formControlName="proximaAplicacion"
-            [min]="form.controls.fecha.value"
-          />
-          <p class="field-hint">
-            El dueño recibe un recordatorio antes de esta fecha. Depende del esquema
-            de cada animal, asi que no se completa automaticamente.
-          </p>
+          @if (!form.controls.ultimaDosis.value) {
+            <input
+              id="proximaAplicacion"
+              type="date"
+              formControlName="proximaAplicacion"
+              [min]="form.controls.fecha.value"
+            />
+            <p class="field-hint">
+              El dueño recibe un recordatorio antes de esta fecha. Depende del esquema
+              de cada animal, asi que no se completa automaticamente.
+            </p>
+          } @else {
+            <p class="field-hint">Sin refuerzo: no se envía recordatorio al dueño.</p>
+          }
+          <label class="checkbox-ultima-dosis">
+            <input type="checkbox" formControlName="ultimaDosis" />
+            Última dosis (sin refuerzo)
+          </label>
           @if (form.controls.proximaAplicacion.invalid && form.controls.proximaAplicacion.touched) {
             <p class="field-error">Debe indicar cuando corresponde la proxima dosis.</p>
           }
@@ -82,7 +92,10 @@
       }
 
       <div class="field field-wide">
-        <label for="descripcion">Descripcion</label>
+        <div class="field-label-row">
+          <label for="descripcion">Descripcion</label>
+          <app-boton-dictado campo="descripcion" etiqueta="descripcion" (texto)="agregarTexto('descripcion', $event)" />
+        </div>
         <app-rich-text-editor
           id="descripcion"
           formControlName="descripcion"
@@ -96,7 +109,10 @@
       </div>
 
       <div class="field field-wide">
-        <label for="diagnostico">Diagnostico</label>
+        <div class="field-label-row">
+          <label for="diagnostico">Diagnostico</label>
+          <app-boton-dictado campo="diagnostico" etiqueta="diagnostico" (texto)="agregarTexto('diagnostico', $event)" />
+        </div>
         <app-rich-text-editor
           id="diagnostico"
           formControlName="diagnostico"
@@ -105,7 +121,10 @@
       </div>
 
       <div class="field field-wide">
-        <label for="tratamiento">Tratamiento</label>
+        <div class="field-label-row">
+          <label for="tratamiento">Tratamiento</label>
+          <app-boton-dictado campo="tratamiento" etiqueta="tratamiento" (texto)="agregarTexto('tratamiento', $event)" />
+        </div>
         <app-rich-text-editor
           id="tratamiento"
           formControlName="tratamiento"
@@ -114,7 +133,10 @@
       </div>
 
       <div class="field field-wide">
-        <label for="observaciones">Observaciones</label>
+        <div class="field-label-row">
+          <label for="observaciones">Observaciones</label>
+          <app-boton-dictado campo="observaciones" etiqueta="observaciones" (texto)="agregarTexto('observaciones', $event)" />
+        </div>
         <app-rich-text-editor
           id="observaciones"
           formControlName="observaciones"

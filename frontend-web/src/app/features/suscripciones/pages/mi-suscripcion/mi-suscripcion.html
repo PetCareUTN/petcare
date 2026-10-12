@@ -53,7 +53,7 @@
           </div>
         }
 
-        @if (sub.estado !== 'ACTIVA') {
+        @if (sub.estado !== 'activa') {
           <div class="suscripcion-accion">
             <p class="suscripcion-aviso">{{ getAviso(sub) }}</p>
             @if (puedePagar(sub)) {
@@ -76,7 +76,7 @@
           </div>
         }
 
-        @if (sub.estado === 'ACTIVA') {
+        @if (sub.estado === 'activa') {
           <div class="suscripcion-ok">
             <p>Tu suscripción está activa. Se renueva automáticamente cada mes.</p>
           </div>

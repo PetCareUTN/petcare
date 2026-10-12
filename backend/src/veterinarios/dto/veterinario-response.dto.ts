@@ -1,5 +1,3 @@
-import { ValidationStatus } from '../../common/enums/validation-status.enum';
-
 export type TipoDocumentoVeterinario = 'matricula' | 'habilitacion';
 
 /**
@@ -22,7 +20,8 @@ export class VeterinarioResponseDto {
   provinciaMatricula: string;
   matriculaUrl: string;
   habilitacionUrl: string | null;
-  estadoValidacion: ValidationStatus;
+  /** Minúsculas para unificar el criterio de presentación. */
+  estadoValidacion: 'pendiente' | 'aprobado' | 'rechazado';
   motivoRechazo: string | null;
   createdAt: Date;
 
@@ -38,7 +37,8 @@ export class VeterinarioResponseDto {
     dto.habilitacionUrl = vet.habilitacionUrl
       ? urlDocumentoVeterinario(vet.idVeterinario, 'habilitacion')
       : null;
-    dto.estadoValidacion = vet.estadoValidacion;
+    dto.estadoValidacion = vet.estadoValidacion.toLowerCase() as
+      'pendiente' | 'aprobado' | 'rechazado';
     dto.motivoRechazo = vet.motivoRechazo;
     dto.createdAt = vet.createdAt;
     return dto;

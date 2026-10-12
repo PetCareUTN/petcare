@@ -4,6 +4,7 @@ import { AuthModule } from '../auth/auth.module';
 import { HistoriaClinica } from '../historias-clinicas/entities/historia-clinica.entity';
 import { Mascota } from '../mascotas/entities/mascota.entity';
 import { Veterinario } from '../veterinarios/entities/veterinario.entity';
+import { AsistenteEventoClinicoService } from './asistente-evento-clinico.service';
 import { EventosClinicosController } from './eventos-clinicos.controller';
 import { EventosClinicosService } from './eventos-clinicos.service';
 import { EventoClinico } from './entities/evento-clinico.entity';
@@ -21,7 +22,7 @@ import { ArchivoMedico } from './entities/archivo-medico.entity';
     ]),
   ],
   controllers: [EventosClinicosController],
-  providers: [EventosClinicosService],
+  providers: [EventosClinicosService, AsistenteEventoClinicoService],
   exports: [TypeOrmModule],
 })
 export class EventosClinicosModule {}

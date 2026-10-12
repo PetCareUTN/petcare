@@ -52,7 +52,7 @@
 
         <div class="detalle-row">
           <span class="detalle-label">Estado:</span>
-          <span class="detalle-estado">{{ sol.estadoValidacion }}</span>
+          <span class="detalle-estado">{{ sol.estadoReal }}</span>
         </div>
 
         <div class="detalle-row">
@@ -77,7 +77,7 @@
         }
       </div>
 
-      @if (sol.estadoValidacion === 'PENDIENTE') {
+      @if (sol.estadoValidacion === 'pendiente') {
         <div class="acciones">
           <button class="btn-aprobar" (click)="onAprobar()" [disabled]="isProcessing()">
             {{ isProcessing() ? 'Procesando...' : 'Aprobar' }}

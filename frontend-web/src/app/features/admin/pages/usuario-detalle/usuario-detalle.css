@@ -71,14 +71,34 @@
   font-weight: 600;
 }
 
-.estado-activo {
+.estado-activo,
+.estado-activa {
   background: #e6f4ea;
   color: #1e7e34;
 }
 
-.estado-pendiente_activacion {
+.estado-pendiente_activacion,
+.estado-pendiente_validacion,
+.estado-pendiente_pago {
   background: #fff3cd;
   color: #856404;
+}
+
+.estado-rechazado,
+.estado-suspendida {
+  background: #f8d7da;
+  color: #c82333;
+}
+
+.estado-vencida {
+  background: #ffe0b2;
+  color: #e65100;
+}
+
+.estado-inactivo,
+.estado-cancelada {
+  background: #e0e0e0;
+  color: #616161;
 }
 
 .rol-section {

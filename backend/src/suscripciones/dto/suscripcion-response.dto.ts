@@ -1,10 +1,10 @@
-import { SuscripcionEstado } from '../../common/enums/suscripcion-estado.enum';
 import { Suscripcion } from '../entities/suscripcion.entity';
 
 export class SuscripcionResponseDto {
   idSuscripcion: number;
   idUsuario: number;
-  estado: SuscripcionEstado;
+  /** SuscripcionEstado en minúsculas ('activa', 'pendiente_pago', ...). */
+  estado: string;
   monto: number;
   moneda: string;
   fechaInicio: Date | null;
@@ -30,7 +30,7 @@ export class SuscripcionResponseDto {
     const dto = new SuscripcionResponseDto();
     dto.idSuscripcion = suscripcion.idSuscripcion;
     dto.idUsuario = suscripcion.usuario?.idUsuario;
-    dto.estado = suscripcion.estado;
+    dto.estado = suscripcion.estado.toLowerCase();
     dto.monto = Number(suscripcion.monto);
     dto.moneda = suscripcion.moneda;
     dto.fechaInicio = suscripcion.fechaInicio;

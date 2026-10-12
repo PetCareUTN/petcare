@@ -15,6 +15,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
+import { Throttle } from '@nestjs/throttler';
 import { randomUUID } from 'crypto';
 import { mkdirSync } from 'fs';
 import { diskStorage } from 'multer';
@@ -23,10 +24,16 @@ import { extname } from 'path';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { LimiteIntentosGuard } from '../auth/guards/limite-intentos.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { RoleName } from '../common/enums/role-name.enum';
+import { AsistenteEventoClinicoService } from './asistente-evento-clinico.service';
 import { ArchivoMedicoResponseDto } from './dto/archivo-medico-response.dto';
+import {
+  AsistenteEventoClinicoDto,
+  SugerenciaEventoClinicoDto,
+} from './dto/asistente-evento-clinico.dto';
 import { CreateEventoClinicoDto } from './dto/create-evento-clinico.dto';
 import { EventoClinicoResponseDto } from './dto/evento-clinico-response.dto';
 import { HistoriaClinicaResponseDto } from './dto/historia-clinica-response.dto';
@@ -77,6 +84,7 @@ const archivosMedicosInterceptor = FilesInterceptor(
 export class EventosClinicosController {
   constructor(
     private readonly eventosClinicosService: EventosClinicosService,
+    private readonly asistenteEventoClinicoService: AsistenteEventoClinicoService,
   ) {}
 
   @Post()
@@ -88,6 +96,19 @@ export class EventosClinicosController {
     @Body() dto: CreateEventoClinicoDto,
   ): Promise<EventoClinicoResponseDto> {
     return this.eventosClinicosService.create(user.sub, dto);
+  }
+
+  // Asistente de voz (P1-182): ordena en campos la consulta dictada, sin
+  // guardar nada. Cada llamada gasta crédito de IA, de ahí el límite por IP.
+  @Post('asistente')
+  @UseGuards(JwtAuthGuard, RolesGuard, LimiteIntentosGuard)
+  @Roles(RoleName.VETERINARIO)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @HttpCode(HttpStatus.OK)
+  sugerirCampos(
+    @Body() dto: AsistenteEventoClinicoDto,
+  ): Promise<SugerenciaEventoClinicoDto> {
+    return this.asistenteEventoClinicoService.sugerirCampos(dto.transcripcion);
   }
 
   @Get('mascota/:idMascota')

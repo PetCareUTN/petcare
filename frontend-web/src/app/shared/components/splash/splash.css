@@ -1,6 +1,7 @@
 /*
- * El fondo es exactamente el verde del logo.jpg para que el recuadro
- * de la imagen se funda con la pantalla y no se note el borde.
+ * El verde es el de la marca. Antes tenia que coincidir exactamente con el
+ * fondo del logo.jpg para disimular su recuadro; ahora el logo es un PNG con
+ * transparencia, asi que el color se puede cambiar sin romper nada.
  */
 :host {
   --splash-green: #aacbc0;
@@ -43,9 +44,6 @@
   width: min(72vw, 340px);
   height: auto;
   display: block;
-  /* Suaviza los bordes del JPG por si la compresion deja algun artefacto. */
-  mask-image: radial-gradient(circle at center, #000 68%, transparent 88%);
-  -webkit-mask-image: radial-gradient(circle at center, #000 68%, transparent 88%);
   animation: splash-logo-in 900ms var(--splash-ease) both;
 }
 

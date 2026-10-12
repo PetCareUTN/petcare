@@ -6,18 +6,40 @@ import { forkJoin } from 'rxjs';
 import { ApiError } from '../../../auth/models/user';
 import { AuthService } from '../../../auth/services/auth-service';
 import { RichTextEditorComponent } from '../../../../shared/components/rich-text-editor/rich-text-editor';
+import { DictadoPorVozService } from '../../../../shared/services/dictado-por-voz-service';
 import { MascotaResponse } from '../../../mascotas/models/mascota';
 import { MascotasService } from '../../../mascotas/services/mascotas-service';
 import {
   ClinicalEventType,
   CreateEventoClinicoRequest,
   EventoClinicoResponse,
+  SugerenciaEventoClinico,
+  TipoVacuna,
 } from '../../models/evento-clinico';
+import { VACUNA_OPCIONES } from '../../models/vacuna-opciones';
 import { EventosClinicosService } from '../../services/eventos-clinicos-service';
+import { AsistenteVozComponent } from '../../components/asistente-voz/asistente-voz';
+import { BotonDictadoComponent } from '../../components/boton-dictado/boton-dictado';
+import { agregarTextoDictado } from '../../utils/agregar-texto-dictado';
 
 type EventTypeOption = {
   value: ClinicalEventType;
   label: string;
+};
+
+/** Campos de texto libre donde se puede dictar (P1-182). */
+type CampoDictable = 'descripcion' | 'diagnostico' | 'tratamiento' | 'observaciones';
+
+/**
+ * Tope de caracteres visibles que puede agregar el dictado. Son los mismos
+ * del formulario de registrar evento clínico, que entran holgados en los
+ * límites del backend aun con el markup HTML del editor.
+ */
+const DICTADO_MAX_CARACTERES: Record<CampoDictable, number> = {
+  descripcion: 1000,
+  diagnostico: 500,
+  tratamiento: 500,
+  observaciones: 500,
 };
 
 const EVENT_TYPE_LABELS: Record<ClinicalEventType, string> = {
@@ -33,9 +55,17 @@ const EVENT_TYPE_LABELS: Record<ClinicalEventType, string> = {
 
 @Component({
   selector: 'app-historia-clinica',
-  imports: [RouterLink, DatePipe, ReactiveFormsModule, RichTextEditorComponent],
+  imports: [
+    RouterLink,
+    DatePipe,
+    ReactiveFormsModule,
+    RichTextEditorComponent,
+    AsistenteVozComponent,
+    BotonDictadoComponent,
+  ],
   templateUrl: './historia-clinica.html',
   styleUrl: './historia-clinica.css',
+  providers: [DictadoPorVozService],
 })
 export class HistoriaClinicaPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
@@ -43,6 +73,7 @@ export class HistoriaClinicaPage implements OnInit {
   private readonly eventosClinicosService = inject(EventosClinicosService);
   protected readonly mascotasService = inject(MascotasService);
   protected readonly authService = inject(AuthService);
+  private readonly dictado = inject(DictadoPorVozService);
 
   protected readonly eventTypes: EventTypeOption[] = [
     { value: 'consulta', label: 'Consulta' },
@@ -54,6 +85,8 @@ export class HistoriaClinicaPage implements OnInit {
     { value: 'observacion', label: 'Observacion' },
     { value: 'otro', label: 'Otro' },
   ];
+
+  protected readonly vacunas = VACUNA_OPCIONES;
 
   protected readonly idMascota = signal<number | null>(null);
   protected readonly isLoading = signal(true);
@@ -76,6 +109,9 @@ export class HistoriaClinicaPage implements OnInit {
     diagnostico: ['', [Validators.maxLength(2000)]],
     tratamiento: ['', [Validators.maxLength(2000)]],
     observaciones: ['', [Validators.maxLength(2000)]],
+    vacuna: [null as TipoVacuna | null],
+    proximaAplicacion: [''],
+    ultimaDosis: [false],
   });
 
   ngOnInit(): void {
@@ -83,6 +119,41 @@ export class HistoriaClinicaPage implements OnInit {
     this.idMascota.set(idMascota);
     this.backQueryParams.set(this.buildBackQueryParams(idMascota));
     this.cargarHistoria(idMascota);
+
+    // Igual que en Registrar evento clínico: los campos de vacunación solo se
+    // muestran, y solo son obligatorios, cuando el evento es una vacuna.
+    this.form.controls.tipo.valueChanges.subscribe(() => this.actualizarValidacionDeVacuna());
+    this.form.controls.ultimaDosis.valueChanges.subscribe(() =>
+      this.actualizarValidacionDeVacuna(),
+    );
+    this.actualizarValidacionDeVacuna();
+  }
+
+  protected esVacuna(): boolean {
+    return this.form.controls.tipo.value === 'vacuna';
+  }
+
+  /**
+   * La vacuna es obligatoria en todo evento de tipo vacuna. La próxima
+   * aplicación también, salvo que sea la última dosis: ahí no hay refuerzo
+   * ni recordatorio.
+   */
+  private actualizarValidacionDeVacuna(): void {
+    const { tipo, vacuna, proximaAplicacion, ultimaDosis } = this.form.controls;
+    const esVacuna = tipo.value === 'vacuna';
+    const pideProximaDosis = esVacuna && !ultimaDosis.value;
+
+    vacuna.setValidators(esVacuna ? Validators.required : null);
+    proximaAplicacion.setValidators(pideProximaDosis ? Validators.required : null);
+    if (!esVacuna) {
+      vacuna.setValue(null);
+      ultimaDosis.setValue(false, { emitEvent: false });
+    }
+    if (!pideProximaDosis) {
+      proximaAplicacion.setValue('');
+    }
+    vacuna.updateValueAndValidity();
+    proximaAplicacion.updateValueAndValidity();
   }
 
   protected reintentar(): void {
@@ -115,6 +186,7 @@ export class HistoriaClinicaPage implements OnInit {
   }
 
   protected cerrarFormulario(): void {
+    this.dictado.detener();
     this.isFormOpen.set(false);
     this.submitError.set(null);
     this.form.reset({
@@ -124,6 +196,9 @@ export class HistoriaClinicaPage implements OnInit {
       diagnostico: '',
       tratamiento: '',
       observaciones: '',
+      vacuna: null,
+      proximaAplicacion: '',
+      ultimaDosis: false,
     });
   }
 
@@ -138,6 +213,9 @@ export class HistoriaClinicaPage implements OnInit {
       return;
     }
 
+    // Guardar es siempre una acción explícita: si quedó un dictado abierto se
+    // corta acá, para que no siga escribiendo en el formulario ya enviado.
+    this.dictado.detener();
     this.submitError.set(null);
     this.isSubmitting.set(true);
 
@@ -152,6 +230,15 @@ export class HistoriaClinicaPage implements OnInit {
       observaciones: this.optionalText(value.observaciones),
     };
 
+    if (value.tipo === 'vacuna') {
+      payload.vacuna = value.vacuna!;
+      if (value.ultimaDosis) {
+        payload.ultimaDosis = true;
+      } else {
+        payload.proximaAplicacion = value.proximaAplicacion!;
+      }
+    }
+
     this.eventosClinicosService.create(payload).subscribe({
       next: (evento) => {
         this.isSubmitting.set(false);
@@ -163,6 +250,42 @@ export class HistoriaClinicaPage implements OnInit {
         this.submitError.set(error.mensaje ?? 'Ocurrio un error al registrar el evento.');
       },
     });
+  }
+
+  /**
+   * Vuelca la sugerencia del asistente de voz (P1-182) sin guardar. Lo que ya
+   * estaba escrito en un campo no se pisa: lo sugerido se agrega debajo.
+   */
+  protected aplicarSugerencia(sugerencia: SugerenciaEventoClinico): void {
+    if (sugerencia.tipo) {
+      this.form.controls.tipo.setValue(sugerencia.tipo);
+    }
+    if (sugerencia.tipo === 'vacuna' && sugerencia.vacuna) {
+      this.form.controls.vacuna.setValue(sugerencia.vacuna);
+    }
+
+    const campos: CampoDictable[] = ['descripcion', 'diagnostico', 'tratamiento', 'observaciones'];
+    for (const campo of campos) {
+      const texto = sugerencia[campo];
+      if (texto) {
+        this.agregarTexto(campo, texto, true);
+      }
+    }
+  }
+
+  /** Agrega texto dictado al final de un campo, sin perder lo que ya tenía. */
+  protected agregarTexto(campo: CampoDictable, texto: string, nuevoParrafo = false): void {
+    const control = this.form.controls[campo];
+    const html = agregarTextoDictado(
+      control.value ?? '',
+      texto,
+      DICTADO_MAX_CARACTERES[campo],
+      nuevoParrafo,
+    );
+    if (html !== null) {
+      control.setValue(html);
+      control.markAsDirty();
+    }
   }
 
   protected abrirArchivo(evento: Event, url: string): void {
