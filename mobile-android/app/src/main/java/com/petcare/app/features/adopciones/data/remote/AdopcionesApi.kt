@@ -10,6 +10,9 @@ import retrofit2.http.Query
 data class PublicarAdopcionRequest(
     val idMascota: Int,
     val descripcion: String,
+    // Obligatoria: es lo que permite que la publicacion aparezca cuando
+    // alguien filtra por su provincia.
+    val provincia: String,
     val tamano: String? = null,
     val vacunado: Boolean? = null,
     val compatiblePerros: Boolean? = null,
@@ -41,6 +44,7 @@ data class PublicacionAdopcionResponse(
     val compatibleGatos: Boolean,
     val compatibleNinos: Boolean,
     val necesitaPatio: Boolean,
+    val provincia: String?,
     val ubicacion: String?,
     val createdAt: String,
     val mascota: MascotaAdopcionResponse
@@ -55,6 +59,7 @@ interface AdopcionesApi {
 
     @GET("adopciones")
     suspend fun listar(
+        @Query("provincia") provincia: String? = null,
         @Query("especie") especie: String? = null,
         @Query("tamano") tamano: String? = null,
         @Query("sexo") sexo: String? = null,
@@ -92,6 +97,7 @@ interface AdopcionesApi {
 
 /** Filtros de búsqueda para el descubrimiento de mascotas en adopción. */
 data class FiltrosAdopcion(
+    val provincia: String? = null,
     val especie: String? = null,
     val tamano: String? = null,
     val sexo: String? = null,
@@ -103,7 +109,7 @@ data class FiltrosAdopcion(
     val necesitaPatio: Boolean? = null
 ) {
     val estaVacio: Boolean
-        get() = especie == null && tamano == null && sexo == null &&
+        get() = provincia == null && especie == null && tamano == null && sexo == null &&
             esterilizado == null && vacunado == null && compatiblePerros == null &&
             compatibleGatos == null && compatibleNinos == null && necesitaPatio == null
 }
