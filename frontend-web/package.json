@@ -1,6 +1,10 @@
 {
   "name": "frontend-web",
   "version": "0.0.0",
+  "engines": {
+    "node": "22.x",
+    "npm": "10.x"
+  },
   "scripts": {
     "ng": "ng",
     "start": "ng serve",

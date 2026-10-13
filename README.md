@@ -148,8 +148,7 @@ petcare/
 Antes de ejecutar el proyecto, se deberá contar con:
 
 - Git
-- Node.js
-- npm
+- Node.js 22 y npm 10 (ver más abajo)
 - Docker
 - Docker Compose
 - PostgreSQL, si no se utiliza Docker
@@ -158,6 +157,29 @@ Antes de ejecutar el proyecto, se deberá contar con:
 - Un editor como Visual Studio Code o IntelliJ IDEA
 
 Las versiones exactas deberán mantenerse documentadas en esta sección o en los README de cada componente.
+
+### Versión de Node
+
+El proyecto usa **Node 22**, que trae npm 10. La versión está en el archivo
+`.nvmrc` de la raíz, y es la misma que usa la integración continua: el workflow
+la lee de ahí, así no hay dos lugares que se puedan desincronizar.
+
+Con [nvm](https://github.com/nvm-sh/nvm) (o nvm-windows), basta con pararse en
+la raíz del repositorio:
+
+```bash
+nvm use
+```
+
+**Por qué importa:** instalar dependencias con otra versión de npm reescribe
+`package-lock.json`. Las versiones nuevas de npm podan del lockfile las
+dependencias opcionales que no corresponden a tu sistema operativo, y entonces
+la integración continua, que corre sobre Linux, falla con
+`npm ci can only install packages when your package.json and package-lock.json
+are in sync`.
+
+Los `package.json` declaran la versión esperada en `engines`, así que npm avisa
+si estás usando otra.
 
 ---
 
@@ -381,6 +403,7 @@ Una historia se considera terminada cuando:
 - No existen errores críticos conocidos.
 - La funcionalidad fue integrada correctamente.
 - La documentación fue actualizada.
+- Todo endpoint nuevo o modificado quedó documentado en OpenAPI (ver Documentación de la API).
 - La historia puede demostrarse en una Sprint Review.
 
 ---
@@ -462,6 +485,48 @@ Incluye:
 - Documentación de despliegue.
 
 Los documentos deben actualizarse cuando una decisión técnica o funcional cambie.
+
+---
+
+## Documentación de la API
+
+El backend publica la documentación de sus endpoints en `/docs`, con el estándar
+OpenAPI:
+
+- En local: `http://localhost:3000/docs`
+- En el ambiente desplegado: `<URL del backend>/docs`
+
+La especificación en crudo, por si alguna herramienta la necesita (Postman,
+generadores de cliente), está en `/docs-json`.
+
+### Cómo probar un endpoint protegido
+
+1. Abrir `POST /auth/login`, tocar **Try it out** y enviar un usuario válido.
+2. Copiar el `accessToken` de la respuesta.
+3. Tocar **Authorize**, arriba a la derecha, y pegarlo.
+
+El token queda guardado entre recargas, así que se carga una sola vez por
+sesión de pruebas.
+
+### Cómo documentar un endpoint nuevo
+
+Los esquemas de los DTO **no se escriben a mano**: los genera el plugin de
+`@nestjs/swagger` configurado en `nest-cli.json`, leyendo los tipos de
+TypeScript, los decoradores de `class-validator` y los comentarios. Por eso la
+documentación no se desactualiza cuando alguien cambia un DTO.
+
+En el controlador sólo hay que agregar lo que el plugin no puede deducir:
+
+| Decorador | Para qué |
+|---|---|
+| `@ApiTags(EtiquetasApi.LO_QUE_SEA)` | A qué módulo pertenece. Las etiquetas están en `src/common/constants/documentacion-api.ts`. |
+| `@ApiOperation({ summary, description })` | Qué hace el endpoint. |
+| `@ApiProtegido(rol?)` | Pide sesión. Declara de una vez el candado y los errores 401 y 403. |
+| `@ApiResponse({ status, description, type })` | Qué devuelve en cada caso. |
+| `@ApiNoEncontrado` / `@ApiDatosInvalidos` / `@ApiConflicto` | Atajos para los errores 404, 400 y 409. |
+
+Los tres últimos y `ApiProtegido` están en
+`src/common/decorators/api-protegido.decorator.ts`.
 
 ---
 

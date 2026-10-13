@@ -1,6 +1,12 @@
 import { Body, Controller, Patch, Post, UseGuards } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Throttle } from '@nestjs/throttler';
+import { EtiquetasApi } from '../common/constants/documentacion-api';
+import {
+  ApiDatosInvalidos,
+  ApiProtegido,
+} from '../common/decorators/api-protegido.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { LimiteIntentosGuard } from '../auth/guards/limite-intentos.guard';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
@@ -11,12 +17,21 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UserPublicDto } from './dto/user-public.dto';
 import { UsersService } from './users.service';
 
+@ApiTags(EtiquetasApi.USUARIOS)
+@ApiProtegido()
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Patch('me')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Editar mi perfil',
+    description:
+      'Se mandan sólo los campos que cambian. El teléfono tiene que incluir el código de país para poder usar adopciones.',
+  })
+  @ApiResponse({ status: 200, description: 'Perfil actualizado.', type: UserPublicDto })
+  @ApiDatosInvalidos()
   async updateMe(
     @CurrentUser() user: JwtPayload,
     @Body() dto: UpdateUserDto,
@@ -28,6 +43,12 @@ export class UsersController {
   /** Preferencias de notificaciones del usuario autenticado (US-40). */
   @Patch('me/preferencias')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Cambiar mis preferencias de notificaciones' })
+  @ApiResponse({
+    status: 200,
+    description: 'Preferencias actualizadas.',
+    type: UserPublicDto,
+  })
   async updatePreferencias(
     @CurrentUser() user: JwtPayload,
     @Body() dto: UpdatePreferenciasDto,
@@ -43,6 +64,13 @@ export class UsersController {
   @Post('me/cambiar-email')
   @UseGuards(JwtAuthGuard, LimiteIntentosGuard)
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({
+    summary: 'Pedir el cambio de email',
+    description:
+      'Envía un código de 6 dígitos al email nuevo. El cambio recién se aplica al confirmarlo. Límite: 5 por minuto y por IP.',
+  })
+  @ApiResponse({ status: 201, description: 'Código enviado al email nuevo.' })
+  @ApiDatosInvalidos('El email ya está en uso o no es válido.')
   async cambiarEmail(
     @CurrentUser() user: JwtPayload,
     @Body() dto: SolicitarCambioEmailDto,
@@ -54,6 +82,12 @@ export class UsersController {
   @Patch('me/confirmar-email')
   @UseGuards(JwtAuthGuard, LimiteIntentosGuard)
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({
+    summary: 'Confirmar el cambio de email con el código',
+    description: 'Límite: 5 intentos por minuto y por IP.',
+  })
+  @ApiResponse({ status: 200, description: 'Email cambiado.' })
+  @ApiDatosInvalidos('El código es incorrecto o venció.')
   async confirmarEmail(
     @CurrentUser() user: JwtPayload,
     @Body() dto: ConfirmarCambioEmailDto,
