@@ -5,11 +5,22 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
 import { Mascota } from '../mascotas/entities/mascota.entity';
 import { TagBleResponseDto } from './dto/tag-ble-response.dto';
 import { VincularTagBleDto } from './dto/vincular-tag-ble.dto';
 import { TagBle } from './entities/tag-ble.entity';
+
+/** Código de Postgres para una violación de restricción UNIQUE. */
+const VIOLACION_UNIQUE = '23505';
+
+/** Índices únicos de tags_ble (ver migración CrearTablaTagsBle). */
+const UQ_TAG_ID = 'UQ_tags_ble_tag_id';
+const UQ_MASCOTA = 'UQ_tags_ble_mascota';
+
+const MENSAJE_TAG_EN_USO = 'Ese tag ya está vinculado a otra mascota';
+const MENSAJE_MASCOTA_CON_TAG =
+  'Esta mascota ya tiene un tag vinculado. Desvinculalo antes de asociar uno nuevo';
 
 @Injectable()
 export class TagsBleService {
@@ -31,30 +42,61 @@ export class TagsBleService {
       where: { mascota: { idMascota } },
     });
     if (tagDeLaMascota) {
-      throw new ConflictException({
-        codigoEstado: 409,
-        mensaje: 'Esta mascota ya tiene un tag vinculado. Desvinculalo antes de asociar uno nuevo',
-      });
+      throw this.conflicto(MENSAJE_MASCOTA_CON_TAG);
     }
 
     const tagEnUso = await this.tagsBleRepository.findOne({
       where: { tagId: dto.tagId },
     });
     if (tagEnUso) {
-      throw new ConflictException({
-        codigoEstado: 409,
-        mensaje: 'Ese tag ya está vinculado a otra mascota',
-      });
+      throw this.conflicto(MENSAJE_TAG_EN_USO);
     }
 
     const tagBle = this.tagsBleRepository.create({
       tagId: dto.tagId,
       mascota,
     });
-    const guardado = await this.tagsBleRepository.save(tagBle);
+    const guardado = await this.guardarSinDuplicar(tagBle);
     guardado.mascota = mascota;
 
     return TagBleResponseDto.fromEntity(guardado);
+  }
+
+  /**
+   * Guarda el tag traduciendo las violaciones de unicidad a un 409.
+   *
+   * Los chequeos de arriba cubren el caso normal, pero no una carrera: si dos
+   * pedidos llegan juntos, los dos ven el tag libre y los dos intentan
+   * insertar. Los índices únicos de la base garantizan que solo uno quede
+   * guardado; esto hace que el que pierde reciba el mismo mensaje claro que
+   * en el caso normal, y no un 500 genérico.
+   */
+  private async guardarSinDuplicar(tagBle: TagBle): Promise<TagBle> {
+    try {
+      return await this.tagsBleRepository.save(tagBle);
+    } catch (error) {
+      const restriccion = this.restriccionUnicaViolada(error);
+      if (restriccion === UQ_TAG_ID) throw this.conflicto(MENSAJE_TAG_EN_USO);
+      if (restriccion === UQ_MASCOTA)
+        throw this.conflicto(MENSAJE_MASCOTA_CON_TAG);
+      throw error;
+    }
+  }
+
+  /** Nombre de la restricción UNIQUE que violó el error, o null si es otro error. */
+  private restriccionUnicaViolada(error: unknown): string | null {
+    if (!(error instanceof QueryFailedError)) return null;
+    const driverError = error.driverError as {
+      code?: string;
+      constraint?: string;
+    };
+    return driverError?.code === VIOLACION_UNIQUE
+      ? (driverError.constraint ?? null)
+      : null;
+  }
+
+  private conflicto(mensaje: string): ConflictException {
+    return new ConflictException({ codigoEstado: 409, mensaje });
   }
 
   async desvincular(idUsuario: number, idMascota: number): Promise<void> {
@@ -98,7 +140,10 @@ export class TagsBleService {
    * nadie puede generar avisos sobre mascotas ajenas conociendo un tagId, que
    * viaja en claro y cualquiera con un scanner puede leer.
    */
-  async buscarMascotaPorTag(idUsuario: number, tagId: string): Promise<Mascota> {
+  async buscarMascotaPorTag(
+    idUsuario: number,
+    tagId: string,
+  ): Promise<Mascota> {
     const tagBle = await this.tagsBleRepository.findOne({
       where: { tagId },
       relations: ['mascota'],

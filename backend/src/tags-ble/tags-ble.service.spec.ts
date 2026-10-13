@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { QueryFailedError } from 'typeorm';
 import { Mascota } from '../mascotas/entities/mascota.entity';
 import { TagBle } from './entities/tag-ble.entity';
 import { TagsBleService } from './tags-ble.service';
@@ -87,18 +88,18 @@ describe('TagsBleService', () => {
         usuarios: [{ idUsuario: 999 }],
       });
 
-      await expect(
-        service.vincular(idDuenio, idMascota, dto),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(service.vincular(idDuenio, idMascota, dto)).rejects.toThrow(
+        ForbiddenException,
+      );
       expect(tagsBleRepository.save).not.toHaveBeenCalled();
     });
 
     it('rechaza vincular a una mascota inexistente', async () => {
       mascotasRepository.findOne.mockResolvedValue(null);
 
-      await expect(
-        service.vincular(idDuenio, idMascota, dto),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.vincular(idDuenio, idMascota, dto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('rechaza vincular cuando la mascota ya tiene un tag', async () => {
@@ -108,9 +109,9 @@ describe('TagsBleService', () => {
         tagId: 'AAAAAAAAAAAA',
       });
 
-      await expect(
-        service.vincular(idDuenio, idMascota, dto),
-      ).rejects.toThrow(ConflictException);
+      await expect(service.vincular(idDuenio, idMascota, dto)).rejects.toThrow(
+        ConflictException,
+      );
       expect(tagsBleRepository.save).not.toHaveBeenCalled();
     });
 
@@ -121,7 +122,9 @@ describe('TagsBleService', () => {
         .mockResolvedValueOnce(null) // la mascota no tiene tag propio
         .mockResolvedValueOnce({ idTagBle: 3, tagId: dto.tagId }); // el tag ya esta en uso
 
-      await expect(service.vincular(idDuenio, idMascota, dto)).rejects.toMatchObject({
+      await expect(
+        service.vincular(idDuenio, idMascota, dto),
+      ).rejects.toMatchObject({
         response: {
           codigoEstado: 409,
           mensaje: 'Ese tag ya está vinculado a otra mascota',
@@ -171,6 +174,65 @@ describe('TagsBleService', () => {
 
       expect(resultado.tagId).toBe(dto.tagId);
       expect(resultado.idMascota).toBe(46);
+    });
+
+    // P1-187: dos pedidos simultáneos pasan los dos chequeos previos y el
+    // índice único de la base rechaza al segundo. Ese rechazo tiene que llegar
+    // como el mismo 409 claro del caso normal, no como un 500 genérico.
+    describe('cuando dos pedidos simultáneos pasan los chequeos previos', () => {
+      const violacionUnique = (constraint: string) =>
+        new QueryFailedError('INSERT INTO "tags_ble" ...', [], {
+          code: '23505',
+          constraint,
+        } as any);
+
+      beforeEach(() => {
+        mascotasRepository.findOne.mockResolvedValue(mascota);
+        tagsBleRepository.findOne.mockResolvedValue(null); // los dos chequeos pasan
+        tagsBleRepository.create.mockReturnValue({ tagId: dto.tagId });
+      });
+
+      it('responde 409 con mensaje claro si el tag se vinculó a otra mascota en el medio', async () => {
+        tagsBleRepository.save.mockRejectedValue(
+          violacionUnique('UQ_tags_ble_tag_id'),
+        );
+
+        await expect(
+          service.vincular(idDuenio, idMascota, dto),
+        ).rejects.toMatchObject({
+          response: {
+            codigoEstado: 409,
+            mensaje: 'Ese tag ya está vinculado a otra mascota',
+          },
+        });
+      });
+
+      it('responde 409 con mensaje claro si la mascota recibió otro tag en el medio', async () => {
+        tagsBleRepository.save.mockRejectedValue(
+          violacionUnique('UQ_tags_ble_mascota'),
+        );
+
+        await expect(
+          service.vincular(idDuenio, idMascota, dto),
+        ).rejects.toMatchObject({
+          response: {
+            codigoEstado: 409,
+            mensaje:
+              'Esta mascota ya tiene un tag vinculado. Desvinculalo antes de asociar uno nuevo',
+          },
+        });
+      });
+
+      it('no oculta otros errores de la base', async () => {
+        const otroError = new QueryFailedError('INSERT ...', [], {
+          code: '08006',
+        } as any);
+        tagsBleRepository.save.mockRejectedValue(otroError);
+
+        await expect(service.vincular(idDuenio, idMascota, dto)).rejects.toBe(
+          otroError,
+        );
+      });
     });
   });
 
