@@ -148,8 +148,7 @@ petcare/
 Antes de ejecutar el proyecto, se deberá contar con:
 
 - Git
-- Node.js
-- npm
+- Node.js 22 y npm 10 (ver más abajo)
 - Docker
 - Docker Compose
 - PostgreSQL, si no se utiliza Docker
@@ -158,6 +157,29 @@ Antes de ejecutar el proyecto, se deberá contar con:
 - Un editor como Visual Studio Code o IntelliJ IDEA
 
 Las versiones exactas deberán mantenerse documentadas en esta sección o en los README de cada componente.
+
+### Versión de Node
+
+El proyecto usa **Node 22**, que trae npm 10. La versión está en el archivo
+`.nvmrc` de la raíz, y es la misma que usa la integración continua: el workflow
+la lee de ahí, así no hay dos lugares que se puedan desincronizar.
+
+Con [nvm](https://github.com/nvm-sh/nvm) (o nvm-windows), basta con pararse en
+la raíz del repositorio:
+
+```bash
+nvm use
+```
+
+**Por qué importa:** instalar dependencias con otra versión de npm reescribe
+`package-lock.json`. Las versiones nuevas de npm podan del lockfile las
+dependencias opcionales que no corresponden a tu sistema operativo, y entonces
+la integración continua, que corre sobre Linux, falla con
+`npm ci can only install packages when your package.json and package-lock.json
+are in sync`.
+
+Los `package.json` declaran la versión esperada en `engines`, así que npm avisa
+si estás usando otra.
 
 ---
 
