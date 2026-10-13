@@ -269,6 +269,51 @@ Pasó varias veces armando esto, y deja una carpeta `app/build.onedrive-stale`.
 El APK que se vaya a repartir conviene generarlo desde una copia del repo fuera
 de OneDrive.
 
+### Generar el APK desde GitHub Actions
+
+Compilar a mano tiene dos problemas: depende de la única máquina que tiene la
+keystore, y hay que acordarse de subir la versión en cada entrega. El workflow
+**APK de release** (`.github/workflows/apk-release.yml`) resuelve los dos.
+
+Se dispara a mano desde la pestaña **Actions** del repositorio, pidiendo la
+versión visible (por ejemplo `1.2`) y, opcionalmente, una URL de backend
+distinta para compilar contra otro ambiente. El APK queda como artefacto
+descargable de esa corrida, así que **cualquiera del equipo lo baja sin tener
+la keystore ni Android Studio**.
+
+El `versionCode` sale del número de corrida de GitHub, que siempre sube: no hay
+que acordarse de incrementarlo, y dos APK nunca comparten versión.
+
+Antes de publicar el artefacto, el workflow verifica con `apksigner` con qué
+llave quedó firmado y lo imprime en el log. Esa verificación corre contra el
+APK construido, no contra la configuración, que es la única forma de detectar
+que alguien dejó una keystore de prueba configurada.
+
+Hay que cargar cinco secrets en **Settings → Secrets and variables → Actions**:
+
+| Secret | Valor |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | la keystore `.jks` en base64 (ver abajo) |
+| `ANDROID_KEYSTORE_PASSWORD` | contraseña del almacén |
+| `ANDROID_KEY_ALIAS` | alias de la clave (`petcare`) |
+| `ANDROID_KEY_PASSWORD` | contraseña de la clave |
+| `MAPS_API_KEY` | key de Maps SDK for Android |
+
+La keystore es un archivo binario y un secret solo guarda texto, por eso va en
+base64:
+
+```bash
+# PowerShell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("petcare-release.jks")) | Set-Clipboard
+```
+
+Eso deja el valor en el portapapeles, listo para pegar en el secret. El
+workflow lo reconstruye en el runner, fuera del workspace, y el runner se
+destruye al terminar.
+
+Si falta algún secret, el workflow **falla antes de compilar** y dice cuál,
+en vez de entregar un APK sin firmar o con el mapa en gris.
+
 ## 5. Checklist de la primera vez
 
 - [ ] Proyecto de Railway creado, con environments `staging` y `production`
