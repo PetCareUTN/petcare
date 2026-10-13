@@ -117,6 +117,7 @@ export class AdopcionesService {
       compatibleGatos: dto.compatibleGatos ?? false,
       compatibleNinos: dto.compatibleNinos ?? false,
       necesitaPatio: dto.necesitaPatio ?? false,
+      provincia: dto.provincia,
       ubicacion: dto.ubicacion ?? null,
     });
     const guardada = await this.publicacionesRepository.save(publicacion);
@@ -129,7 +130,11 @@ export class AdopcionesService {
    * Lista las publicaciones de adopción activas de otros usuarios, más
    * recientes primero. Excluye las publicaciones propias y aquellas que el
    * usuario ya solicitó, para no volver a ofrecerlas en el descubrimiento.
-   * Acepta filtros opcionales (especie, tamaño, sexo, vacunación, etc.).
+   * Acepta filtros opcionales (provincia, especie, tamaño, sexo, etc.).
+   *
+   * Filtrar por provincia deja afuera las publicaciones sin provincia
+   * cargada: son las anteriores a que el campo existiera, y no sabemos dónde
+   * están. Sin ese filtro se devuelven todas.
    */
   async findAll(
     idUsuario: number,
@@ -140,6 +145,7 @@ export class AdopcionesService {
       usuario: { idUsuario: Not(idUsuario) },
     };
 
+    if (filtros.provincia) where.provincia = filtros.provincia;
     if (filtros.tamano) where.tamano = filtros.tamano;
     if (filtros.vacunado !== undefined) where.vacunado = filtros.vacunado;
     if (filtros.compatiblePerros !== undefined)

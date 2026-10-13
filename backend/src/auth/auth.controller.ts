@@ -9,7 +9,18 @@ import {
   Request,
   Patch,
 } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import {
+  ESQUEMA_AUTENTICACION,
+  EtiquetasApi,
+} from '../common/constants/documentacion-api';
+import { ErrorRespuestaDto } from '../common/dto/error-respuesta.dto';
 import { RoleName } from '../common/enums/role-name.enum';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -31,6 +42,13 @@ import { GoogleLoginDto } from './dto/google-login.dto';
 import { GoogleRegisterDto } from './dto/google-register.dto';
 import { GoogleLoginResponseDto } from './dto/google-login-response.dto';
 
+@ApiTags(EtiquetasApi.USUARIOS)
+@ApiResponse({
+  status: 429,
+  description:
+    'Demasiados intentos desde la misma IP. Hay que esperar antes de reintentar.',
+  type: ErrorRespuestaDto,
+})
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -38,6 +56,22 @@ export class AuthController {
   @Post('register')
   @UseGuards(LimiteIntentosGuard)
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Registrar una cuenta nueva',
+    description:
+      'Crea un usuario con rol dueño de mascota. El email y el documento no se pueden repetir.',
+  })
+  @ApiResponse({ status: 201, description: 'Cuenta creada.', type: RegisterResponseDto })
+  @ApiResponse({
+    status: 400,
+    description: 'Campos obligatorios faltantes o inválidos.',
+    type: ErrorRespuestaDto,
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Ya existe una cuenta con ese email o documento.',
+    type: ErrorRespuestaDto,
+  })
   register(@Body() dto: RegisterDto): Promise<RegisterResponseDto> {
     return this.authService.register(dto);
   }
@@ -45,22 +79,61 @@ export class AuthController {
   @Post('login')
   @UseGuards(LimiteIntentosGuard)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Iniciar sesión',
+    description:
+      'Devuelve el token JWT que piden el resto de los endpoints protegidos. Es el que se pega en el botón Authorize.',
+  })
+  @ApiResponse({ status: 200, description: 'Sesión iniciada.', type: LoginResponseDto })
+  @ApiResponse({
+    status: 401,
+    description: 'Email o contraseña incorrectos.',
+    type: ErrorRespuestaDto,
+  })
   login(@Body() dto: LoginDto): Promise<LoginResponseDto> {
     return this.authService.login(dto);
   }
 
-  // Paso 1: valida el token de Google. Devuelve la sesión, o avisa que falta el DNI.
   @Post('google')
   @UseGuards(LimiteIntentosGuard)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Iniciar sesión con Google (paso 1)',
+    description:
+      'Valida el token de Google. Si la persona ya tiene cuenta devuelve la sesión; si es la primera vez avisa que falta el documento y hay que seguir por POST /auth/google/registro.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Sesión iniciada, o aviso de que falta completar el documento.',
+    type: GoogleLoginResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'El token de Google no es válido.',
+    type: ErrorRespuestaDto,
+  })
   loginConGoogle(@Body() dto: GoogleLoginDto): Promise<GoogleLoginResponseDto> {
     return this.authService.loginConGoogle(dto);
   }
 
-  // Paso 2: crea la cuenta con los datos de Google más el DNI.
   @Post('google/registro')
   @UseGuards(LimiteIntentosGuard)
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Iniciar sesión con Google (paso 2)',
+    description:
+      'Crea la cuenta con los datos que trae Google más el documento, que Google no provee.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Cuenta creada y sesión iniciada.',
+    type: GoogleLoginResponseDto,
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Ya existe una cuenta con ese email o documento.',
+    type: ErrorRespuestaDto,
+  })
   registrarConGoogle(
     @Body() dto: GoogleRegisterDto,
   ): Promise<GoogleLoginResponseDto> {
@@ -71,6 +144,18 @@ export class AuthController {
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleName.VETERINARIO)
+  @ApiBearerAuth(ESQUEMA_AUTENTICACION)
+  @ApiOperation({
+    summary: 'Dar de alta a un dueño desde la veterinaria',
+    description:
+      'Rol requerido: veterinario. Crea la cuenta de un dueño que llegó al consultorio sin registrarse, para poder cargarle la mascota y la atención.',
+  })
+  @ApiResponse({ status: 201, description: 'Dueño creado.' })
+  @ApiResponse({
+    status: 403,
+    description: 'La sesión no es de un veterinario.',
+    type: ErrorRespuestaDto,
+  })
   createAssistedOwner(
     @CurrentUser() user: JwtPayload,
     @Body() dto: CreateAssistedOwnerDto,
@@ -78,17 +163,38 @@ export class AuthController {
     return this.authService.createAssistedOwner(dto, user.sub);
   }
 
-  /** Ruta protegida de demostración: devuelve el perfil del usuario autenticado. */
   @Get('me')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth(ESQUEMA_AUTENTICACION)
+  @ApiOperation({
+    summary: 'Ver el perfil de la sesión actual',
+    description: 'Devuelve los datos del usuario dueño del token.',
+  })
+  @ApiResponse({ status: 200, description: 'Perfil del usuario.', type: UserPublicDto })
+  @ApiResponse({
+    status: 401,
+    description: 'Falta el token o venció.',
+    type: ErrorRespuestaDto,
+  })
   me(@CurrentUser() user: JwtPayload): Promise<UserPublicDto> {
     return this.authService.getProfile(user.sub);
   }
 
-  /** Ruta protegida de prueba: requiere JWT válido y rol administrador. */
   @Get('admin-test')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleName.ADMINISTRADOR)
+  @ApiBearerAuth(ESQUEMA_AUTENTICACION)
+  @ApiOperation({
+    summary: 'Comprobar el acceso de administrador',
+    description:
+      'Rol requerido: administrador. Endpoint de prueba, sirve para verificar que el token y el rol funcionan.',
+  })
+  @ApiResponse({ status: 200, description: 'El token corresponde a un administrador.' })
+  @ApiResponse({
+    status: 403,
+    description: 'La sesión no es de un administrador.',
+    type: ErrorRespuestaDto,
+  })
   adminTest(): { mensaje: string } {
     return { mensaje: 'Acceso autorizado para administrador' };
   }
@@ -98,6 +204,18 @@ export class AuthController {
   @Patch('cambiar-contrasena')
   @UseGuards(JwtAuthGuard, LimiteIntentosGuard)
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiBearerAuth(ESQUEMA_AUTENTICACION)
+  @ApiOperation({
+    summary: 'Cambiar la contraseña con la sesión abierta',
+    description:
+      'Pide la contraseña actual además de la nueva. Límite: 5 intentos por minuto y por IP.',
+  })
+  @ApiResponse({ status: 200, description: 'Contraseña cambiada.' })
+  @ApiResponse({
+    status: 401,
+    description: 'La contraseña actual no coincide, o falta el token.',
+    type: ErrorRespuestaDto,
+  })
   async changePassword(
     @CurrentUser() user: JwtPayload,
     @Body() dto: CambiarContraseñaDto,
@@ -111,6 +229,12 @@ export class AuthController {
   @UseGuards(LimiteIntentosGuard)
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Pedir el código para restablecer la contraseña',
+    description:
+      'Envía por mail un código de un solo uso. Responde lo mismo exista o no la cuenta, para no revelar qué emails están registrados. Límite: 5 por minuto y por IP.',
+  })
+  @ApiResponse({ status: 200, description: 'Si la cuenta existe, se envió el mail.' })
   async forgotPassword(@Body() dto: OlvideContrasenaDto) {
     return this.authService.forgotPassword(dto.email);
   }
@@ -121,6 +245,17 @@ export class AuthController {
   @UseGuards(LimiteIntentosGuard)
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Restablecer la contraseña con el código del mail',
+    description:
+      'El código se invalida a los 5 intentos fallidos. Límite: 5 llamadas por minuto y por IP.',
+  })
+  @ApiResponse({ status: 200, description: 'Contraseña restablecida.' })
+  @ApiResponse({
+    status: 400,
+    description: 'El código es incorrecto o venció.',
+    type: ErrorRespuestaDto,
+  })
   resetPassword(@Body() dto: RestablecerContrasenaDto) {
     return this.authService.resetPassword(dto);
   }

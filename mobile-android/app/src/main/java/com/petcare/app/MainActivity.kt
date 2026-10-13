@@ -1795,7 +1795,7 @@ class MainActivity : ComponentActivity() {
                             isPublishing = isSavingAdopcion,
                             errorMessage = adopcionError,
                             successMessage = adopcionSuccess,
-                            onPublish = { petId, descripcion, tamano, vacunado, compatiblePerros, compatibleGatos, compatibleNinos, necesitaPatio, ubicacion, fotoUri ->
+                            onPublish = { petId, descripcion, tamano, vacunado, compatiblePerros, compatibleGatos, compatibleNinos, necesitaPatio, provincia, ubicacion, fotoUri ->
                                 isSavingAdopcion = true
                                 adopcionError = null
 
@@ -1833,6 +1833,7 @@ class MainActivity : ComponentActivity() {
                                                 compatibleGatos = compatibleGatos,
                                                 compatibleNinos = compatibleNinos,
                                                 necesitaPatio = necesitaPatio,
+                                                provincia = provincia,
                                                 ubicacion = ubicacion
                                             )
                                         )

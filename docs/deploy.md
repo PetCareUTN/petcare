@@ -85,6 +85,29 @@ Railway cobra por asiento. Ver los costos estimados en Instancia 1, sección
    El cambio de rol recien se refleja cuando esa persona vuelve a iniciar
    sesion, porque el rol viaja dentro del JWT.
 
+8. Cargar los **datos de demostración**, opcional pero necesario para mostrar
+   el sistema: una base recién creada no tiene veterinarias a las que pedirles
+   turno ni mascotas con historia clínica.
+
+   ```bash
+   cd backend
+   DATABASE_URL="<la de Railway>" DEMO_PASSWORD="<una que elijan>" npm run seed:demo
+   ```
+
+   Carga dos dueños con tres mascotas, una veterinaria **ya aprobada y con
+   suscripción activa**, un evento clínico y una publicación de adopción. Es
+   idempotente: correrlo dos veces no duplica nada.
+
+   La veterinaria se crea aprobada porque, pendiente, no podría ni iniciar
+   sesión hasta que un administrador la valide. Y se le deja una suscripción
+   `ACTIVA` sin pasar por Mercado Pago, porque sin eso el interceptor de acceso
+   la bloquea en casi toda la plataforma: eso permite probar los flujos de
+   veterinaria aunque todavía no estén cargadas las credenciales de MP.
+
+   Las cuentas usan el dominio `demo.petcare.test`, que no existe, así que
+   ningún mail del sistema puede llegarle a una persona real. La contraseña no
+   está versionada: se pasa al ejecutar.
+
 A partir de ahí, cada merge a `develop` despliega staging y cada merge a `main`
 despliega producción, que es exactamente el flujo del Working Agreement.
 
@@ -263,6 +286,51 @@ el mismo que está registrado en Google Cloud.
 **La key de Maps también hace falta.** Si `local.properties` no tiene
 `MAPS_API_KEY`, el build no falla, pero la app sale con un placeholder inválido
 y el mapa de veterinarias cercanas queda en gris.
+
+### Generar el APK desde GitHub Actions
+
+Compilar a mano tiene dos problemas: depende de la única máquina que tiene la
+keystore, y hay que acordarse de subir la versión en cada entrega. El workflow
+**APK de release** (`.github/workflows/apk-release.yml`) resuelve los dos.
+
+Se dispara a mano desde la pestaña **Actions** del repositorio, pidiendo la
+versión visible (por ejemplo `1.2`) y, opcionalmente, una URL de backend
+distinta para compilar contra otro ambiente. El APK queda como artefacto
+descargable de esa corrida, así que **cualquiera del equipo lo baja sin tener
+la keystore ni Android Studio**.
+
+El `versionCode` sale del número de corrida de GitHub, que siempre sube: no hay
+que acordarse de incrementarlo, y dos APK nunca comparten versión.
+
+Antes de publicar el artefacto, el workflow verifica con `apksigner` con qué
+llave quedó firmado y lo imprime en el log. Esa verificación corre contra el
+APK construido, no contra la configuración, que es la única forma de detectar
+que alguien dejó una keystore de prueba configurada.
+
+Hay que cargar cinco secrets en **Settings → Secrets and variables → Actions**:
+
+| Secret | Valor |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | la keystore `.jks` en base64 (ver abajo) |
+| `ANDROID_KEYSTORE_PASSWORD` | contraseña del almacén |
+| `ANDROID_KEY_ALIAS` | alias de la clave (`petcare`) |
+| `ANDROID_KEY_PASSWORD` | contraseña de la clave |
+| `MAPS_API_KEY` | key de Maps SDK for Android |
+
+La keystore es un archivo binario y un secret solo guarda texto, por eso va en
+base64:
+
+```bash
+# PowerShell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("petcare-release.jks")) | Set-Clipboard
+```
+
+Eso deja el valor en el portapapeles, listo para pegar en el secret. El
+workflow lo reconstruye en el runner, fuera del workspace, y el runner se
+destruye al terminar.
+
+Si falta algún secret, el workflow **falla antes de compilar** y dice cuál,
+en vez de entregar un APK sin firmar o con el mapa en gris.
 
 ## 5. Checklist de la primera vez
 

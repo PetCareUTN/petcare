@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.petcare.app.R
 import com.petcare.app.features.adopciones.data.remote.FiltrosAdopcion
+import com.petcare.app.features.adopciones.domain.TODAS_LAS_PROVINCIAS
 import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMuted
 import com.petcare.app.ui.theme.PetCareTeal
@@ -49,6 +50,7 @@ fun FiltrosAdopcionScreen(
     onAplicar: (FiltrosAdopcion) -> Unit,
     onBack: () -> Unit
 ) {
+    var provincia by rememberSaveable { mutableStateOf(filtrosActuales.provincia) }
     var especie by rememberSaveable { mutableStateOf(filtrosActuales.especie) }
     var tamano by rememberSaveable { mutableStateOf(filtrosActuales.tamano) }
     var sexo by rememberSaveable { mutableStateOf(filtrosActuales.sexo) }
@@ -81,6 +83,16 @@ fun FiltrosAdopcionScreen(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        SeccionTitulo("Zona")
+        SelectorProvincia(
+            provincia = provincia,
+            textoSinSeleccion = TODAS_LAS_PROVINCIAS,
+            incluirOpcionTodas = true,
+            modifier = Modifier.fillMaxWidth()
+        ) { provincia = it }
+
+        Spacer(modifier = Modifier.height(18.dp))
 
         SeccionTitulo("Especie")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -135,6 +147,7 @@ fun FiltrosAdopcionScreen(
             onClick = {
                 onAplicar(
                     FiltrosAdopcion(
+                        provincia = provincia,
                         especie = especie,
                         tamano = tamano,
                         sexo = sexo,

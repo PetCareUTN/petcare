@@ -2,12 +2,17 @@ import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
 } from 'class-validator';
+import {
+  MENSAJE_PROVINCIA_INVALIDA,
+  PROVINCIAS_ARGENTINA,
+} from '../../common/constants/provincias';
 import { TamanoMascota } from '../../common/enums/tamano-mascota.enum';
 
 export class CreatePublicacionAdopcionDto {
@@ -49,6 +54,17 @@ export class CreatePublicacionAdopcionDto {
   @IsBoolean()
   necesitaPatio?: boolean;
 
+  /**
+   * Provincia donde está la mascota. Obligatoria: es lo que permite que
+   * alguien que busca adoptar filtre por su zona, y sin ella la publicación
+   * quedaría invisible en ese filtro.
+   */
+  @IsString()
+  @IsNotEmpty({ message: 'La provincia es obligatoria' })
+  @IsIn(PROVINCIAS_ARGENTINA, { message: MENSAJE_PROVINCIA_INVALIDA })
+  provincia: string;
+
+  /** Detalle dentro de la provincia (barrio, ciudad). No se filtra por esto. */
   @IsOptional()
   @IsString()
   @MaxLength(150)

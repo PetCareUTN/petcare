@@ -455,9 +455,16 @@ private fun TarjetaMascota(
                     color = PetCareMuted,
                     style = MaterialTheme.typography.bodyMedium
                 )
-                publicacion.ubicacion?.takeIf { it.isNotBlank() }?.let {
+                // "Nueva Córdoba, Córdoba": el barrio si lo cargaron, y la
+                // provincia, que es por lo que se filtra. Las publicaciones
+                // anteriores al filtro no tienen provincia y muestran solo el
+                // barrio, o nada.
+                listOfNotNull(
+                    publicacion.ubicacion?.takeIf { it.isNotBlank() },
+                    publicacion.provincia?.takeIf { it.isNotBlank() }
+                ).takeIf { it.isNotEmpty() }?.let { partes ->
                     Text(
-                        text = "📍 $it",
+                        text = "📍 ${partes.joinToString(", ")}",
                         color = PetCareMuted,
                         style = MaterialTheme.typography.bodyMedium
                     )

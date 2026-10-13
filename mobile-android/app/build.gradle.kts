@@ -14,7 +14,33 @@ val localProperties = Properties().apply {
         localPropertiesFile.inputStream().use { load(it) }
     }
 }
-val mapsApiKey: String = localProperties.getProperty("MAPS_API_KEY") ?: "change_me"
+// En CI no hay local.properties, asi que tambien se acepta por variable de
+// entorno. El placeholder solo aplica si no hay ninguna de las dos: el build no
+// falla, pero el mapa queda en gris.
+val mapsApiKey: String =
+    localProperties.getProperty("MAPS_API_KEY")
+        ?: System.getenv("MAPS_API_KEY")
+        ?: "change_me"
+
+/*
+ * Version del APK. Se puede pisar desde afuera para que cada APK distribuido
+ * sea distinguible, que es lo que permite saber quien tiene cual:
+ *
+ *   ./gradlew assembleRelease -PPETCARE_VERSION_NAME=1.2 -PPETCARE_VERSION_CODE=7
+ *
+ * Android usa versionCode (un entero que solo sube) para decidir si un APK es
+ * mas nuevo que el instalado; versionName es el texto que ve la persona.
+ */
+val versionCodeDelBuild: Int =
+    ((project.findProperty("PETCARE_VERSION_CODE") as String?)
+        ?: System.getenv("PETCARE_VERSION_CODE"))
+        ?.toIntOrNull()
+        ?: 1
+
+val versionNameDelBuild: String =
+    (project.findProperty("PETCARE_VERSION_NAME") as String?)
+        ?: System.getenv("PETCARE_VERSION_NAME")
+        ?: "1.0"
 
 // URL del backend por variante. La de release se puede pisar sin tocar el
 // repo, para compilar contra staging o contra un backend propio:
@@ -73,8 +99,8 @@ android {
         applicationId = "com.petcare.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = versionCodeDelBuild
+        versionName = versionNameDelBuild
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders["mapsApiKey"] = mapsApiKey

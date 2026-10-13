@@ -14,6 +14,7 @@ class AdopcionesController(
 
     suspend fun listar(filtros: FiltrosAdopcion = FiltrosAdopcion()): List<PublicacionAdopcionResponse> =
         adopcionesApi.listar(
+            provincia = filtros.provincia,
             especie = filtros.especie,
             tamano = filtros.tamano,
             sexo = filtros.sexo,

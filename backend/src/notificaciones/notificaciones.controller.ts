@@ -10,14 +10,22 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { EtiquetasApi } from '../common/constants/documentacion-api';
+import {
+  ApiNoEncontrado,
+  ApiProtegido,
+} from '../common/decorators/api-protegido.decorator';
 import { TagsBleService } from '../tags-ble/tags-ble.service';
 import { AvisarSeparacionDto } from './dto/avisar-separacion.dto';
 import { NotificacionesSeparacionService } from './notificaciones-separacion.service';
 import { NotificacionesService } from './notificaciones.service';
 
+@ApiTags(EtiquetasApi.NOTIFICACIONES)
+@ApiProtegido()
 @Controller('notificaciones')
 export class NotificacionesController {
   constructor(
@@ -37,6 +45,13 @@ export class NotificacionesController {
    */
   @Post('separacion')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Avisar que una mascota se alejó',
+    description:
+      'Lo llama la app del dueño cuando deja de ver el tag de su mascota. Pide sesión y valida que el tag sea de una mascota propia, así conocer un tagId ajeno no alcanza para generarle avisos a otra persona. Devuelve creada: false si el aviso se omitió por repetido.',
+  })
+  @ApiResponse({ status: 201, description: 'Aviso procesado.' })
+  @ApiNoEncontrado('Ese tag no corresponde a una mascota de esta sesión.')
   async avisarSeparacion(
     @CurrentUser() user: JwtPayload,
     @Body() dto: AvisarSeparacionDto,
@@ -58,6 +73,11 @@ export class NotificacionesController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Listar mis notificaciones',
+    description: 'Las más nuevas primero, con su marca de leída o no leída.',
+  })
+  @ApiResponse({ status: 200, description: 'Notificaciones de la sesión actual.' })
   listar(@CurrentUser() user: JwtPayload) {
     return this.notificacionesService.listarPorUsuario(user.sub);
   }
@@ -66,6 +86,8 @@ export class NotificacionesController {
   @Patch('leer-todas')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Marcar todas mis notificaciones como leídas' })
+  @ApiResponse({ status: 200, description: 'Notificaciones marcadas como leídas.' })
   marcarTodasLeidas(@CurrentUser() user: JwtPayload) {
     return this.notificacionesService.marcarTodasLeidas(user.sub);
   }
@@ -73,6 +95,9 @@ export class NotificacionesController {
   @Patch(':id/leer')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Marcar una notificación como leída' })
+  @ApiResponse({ status: 200, description: 'Notificación marcada como leída.' })
+  @ApiNoEncontrado('La notificación no existe o no es de esta sesión.')
   marcarLeida(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: JwtPayload,

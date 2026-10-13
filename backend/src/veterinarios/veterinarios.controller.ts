@@ -15,11 +15,24 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import {
+  ApiConsumes,
+  ApiOperation,
+  ApiProduces,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { mkdirSync } from 'fs';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { randomUUID } from 'crypto';
 import type { Response } from 'express';
+import { EtiquetasApi } from '../common/constants/documentacion-api';
+import {
+  ApiConflicto,
+  ApiNoEncontrado,
+  ApiProtegido,
+} from '../common/decorators/api-protegido.decorator';
 import { RoleName } from '../common/enums/role-name.enum';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -28,6 +41,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { RechazarSolicitudDto } from './dto/aprobar-rechazar.dto';
 import { RegisterVeterinarioDto } from './dto/register-veterinario.dto';
+import { UpdateProvinciaDto } from './dto/update-provincia.dto';
 import type { TipoDocumentoVeterinario } from './dto/veterinario-response.dto';
 import type { UploadedDocumentFile } from './types/uploaded-document-file.type';
 import { VeterinariosService } from './veterinarios.service';
@@ -73,6 +87,7 @@ const registrarDocumentosInterceptor = FileFieldsInterceptor(
   },
 );
 
+@ApiTags(EtiquetasApi.VETERINARIOS)
 @Controller('veterinarios')
 export class VeterinariosController {
   constructor(private readonly veterinariosService: VeterinariosService) {}
@@ -80,6 +95,14 @@ export class VeterinariosController {
   @Post('registro')
   @UseInterceptors(registrarDocumentosInterceptor)
   @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Registrar una veterinaria',
+    description:
+      'Endpoint público: crea la cuenta junto con la matrícula y la habilitación (5 MB cada archivo). Queda pendiente de validación hasta que un administrador la apruebe.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 201, description: 'Veterinaria registrada, pendiente de validación.' })
+  @ApiConflicto('Ya existe una cuenta con ese email, documento o matrícula.')
   registro(
     @Body() dto: RegisterVeterinarioDto,
     @UploadedFiles() files: { matricula?: Express.Multer.File[]; habilitacion?: Express.Multer.File[] },
@@ -92,12 +115,41 @@ export class VeterinariosController {
   @Get('mi-estado')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleName.VETERINARIO)
+  @ApiProtegido(RoleName.VETERINARIO)
+  @ApiOperation({
+    summary: 'Ver el estado de validación de mi veterinaria',
+    description: 'Pendiente, aprobado o rechazado. La app lo consulta para saber qué habilitar.',
+  })
+  @ApiResponse({ status: 200, description: 'Estado de la veterinaria.' })
   obtenerEstado(@CurrentUser() user: JwtPayload) {
     return this.veterinariosService.obtenerEstado(user.sub);
   }
 
+  @Patch('mi-provincia')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleName.VETERINARIO)
+  @ApiProtegido(RoleName.VETERINARIO)
+  @ApiOperation({
+    summary: 'Actualizar la provincia de mi matrícula',
+    description: 'Completa el dato en las cuentas creadas antes de que el campo existiera.',
+  })
+  @ApiResponse({ status: 200, description: 'Provincia actualizada.' })
+  actualizarProvincia(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: UpdateProvinciaDto,
+  ) {
+    return this.veterinariosService.actualizarProvincia(user.sub, dto.provincia);
+  }
+
   @Get('aprobados')
   @UseGuards(JwtAuthGuard)
+  @ApiProtegido()
+  @ApiOperation({
+    summary: 'Listar las veterinarias aprobadas',
+    description:
+      'Es el listado que ve el dueño al pedir un turno. Trae la dirección y las coordenadas para el mapa.',
+  })
+  @ApiResponse({ status: 200, description: 'Veterinarias habilitadas.' })
   listarAprobados() {
     return this.veterinariosService.listarAprobados();
   }
@@ -105,12 +157,24 @@ export class VeterinariosController {
   @Get('pendientes')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleName.ADMINISTRADOR)
+  @ApiProtegido(RoleName.ADMINISTRADOR)
+  @ApiOperation({ summary: 'Listar las veterinarias pendientes de validación' })
+  @ApiResponse({ status: 200, description: 'Veterinarias a revisar.' })
   listarPendientes() {
     return this.veterinariosService.listarPendientes();
   }
 
   @Get(':id/documentos/:tipo')
   @UseGuards(JwtAuthGuard)
+  @ApiProtegido()
+  @ApiOperation({
+    summary: 'Descargar la matrícula o la habilitación',
+    description:
+      'Devuelve el archivo, no un JSON. Lo baja el administrador para validar, o la propia veterinaria.',
+  })
+  @ApiProduces('image/jpeg', 'image/png', 'application/pdf')
+  @ApiResponse({ status: 200, description: 'Contenido del documento.' })
+  @ApiNoEncontrado('El documento no existe o no es accesible para esta sesión.')
   async descargarDocumento(
     @CurrentUser() user: JwtPayload,
     @Param('id', ParseIntPipe) id: number,
@@ -140,6 +204,13 @@ export class VeterinariosController {
   @Get(':id/detalle')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleName.ADMINISTRADOR)
+  @ApiProtegido(RoleName.ADMINISTRADOR)
+  @ApiOperation({
+    summary: 'Ver el detalle de una veterinaria',
+    description: 'Los datos y documentos que el administrador revisa antes de aprobar.',
+  })
+  @ApiResponse({ status: 200, description: 'Detalle de la veterinaria.' })
+  @ApiNoEncontrado('La veterinaria no existe.')
   obtenerDetalle(@Param('id', ParseIntPipe) id: number) {
     return this.veterinariosService.obtenerDetalle(id);
   }
@@ -148,6 +219,13 @@ export class VeterinariosController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleName.ADMINISTRADOR)
   @HttpCode(HttpStatus.OK)
+  @ApiProtegido(RoleName.ADMINISTRADOR)
+  @ApiOperation({
+    summary: 'Aprobar una veterinaria',
+    description: 'A partir de acá puede publicar disponibilidad y recibir turnos.',
+  })
+  @ApiResponse({ status: 200, description: 'Veterinaria aprobada.' })
+  @ApiNoEncontrado('La veterinaria no existe.')
   aprobar(@Param('id', ParseIntPipe) id: number) {
     return this.veterinariosService.aprobar(id);
   }
@@ -156,6 +234,13 @@ export class VeterinariosController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleName.ADMINISTRADOR)
   @HttpCode(HttpStatus.OK)
+  @ApiProtegido(RoleName.ADMINISTRADOR)
+  @ApiOperation({
+    summary: 'Rechazar una veterinaria',
+    description: 'Se indica el motivo, que la veterinaria ve en su estado.',
+  })
+  @ApiResponse({ status: 200, description: 'Veterinaria rechazada.' })
+  @ApiNoEncontrado('La veterinaria no existe.')
   rechazar(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: RechazarSolicitudDto,

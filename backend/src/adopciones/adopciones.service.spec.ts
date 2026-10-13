@@ -43,6 +43,7 @@ describe('AdopcionesService', () => {
   const dto: CreatePublicacionAdopcionDto = {
     idMascota: 10,
     descripcion: 'Rocky es muy carinoso y busca un hogar con patio.',
+    provincia: 'Córdoba',
   };
 
   const mascotaPropia = {
@@ -143,6 +144,7 @@ describe('AdopcionesService', () => {
       compatibleGatos: false,
       compatibleNinos: false,
       necesitaPatio: false,
+      provincia: 'Córdoba',
       ubicacion: null,
     });
     expect(result.idPublicacion).toBe(1);
@@ -257,6 +259,31 @@ describe('AdopcionesService', () => {
       relations: ['mascota'],
       order: { createdAt: 'DESC' },
     });
+  });
+
+  it('filtra el listado por provincia', async () => {
+    publicacionesRepository.find.mockResolvedValue([]);
+
+    await service.findAll(99, { provincia: 'Córdoba' });
+
+    expect(publicacionesRepository.find).toHaveBeenCalledWith({
+      where: {
+        estado: AdopcionStatus.ACTIVA,
+        usuario: { idUsuario: Not(99) },
+        provincia: 'Córdoba',
+      },
+      relations: ['mascota'],
+      order: { createdAt: 'DESC' },
+    });
+  });
+
+  it('sin filtro de provincia no condiciona la busqueda por provincia', async () => {
+    publicacionesRepository.find.mockResolvedValue([]);
+
+    await service.findAll(99, {});
+
+    const where = publicacionesRepository.find.mock.calls[0][0].where;
+    expect(where).not.toHaveProperty('provincia');
   });
 
   it('no publica una mascota sin foto', async () => {

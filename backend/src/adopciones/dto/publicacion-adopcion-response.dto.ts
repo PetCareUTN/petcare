@@ -28,6 +28,7 @@ export class PublicacionAdopcionResponseDto {
   compatibleGatos: boolean;
   compatibleNinos: boolean;
   necesitaPatio: boolean;
+  provincia: string | null;
   ubicacion: string | null;
   createdAt: Date;
   mascota: MascotaAdopcionDto;
@@ -46,6 +47,7 @@ export class PublicacionAdopcionResponseDto {
       compatibleGatos: publicacion.compatibleGatos,
       compatibleNinos: publicacion.compatibleNinos,
       necesitaPatio: publicacion.necesitaPatio,
+      provincia: publicacion.provincia,
       ubicacion: publicacion.ubicacion,
       createdAt: publicacion.createdAt,
       mascota: {
