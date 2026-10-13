@@ -57,6 +57,13 @@ export class PublicacionAdopcion {
   @Column({ name: 'necesita_patio', type: 'boolean', default: false })
   necesitaPatio: boolean;
 
+  // Provincia donde está la mascota. Es el campo por el que se filtra el
+  // listado, por eso es una de las provincias de PROVINCIAS_ARGENTINA y no
+  // texto libre. `ubicacion` la complementa con el detalle (barrio, ciudad),
+  // que no se filtra.
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  provincia: string | null;
+
   @Column({ type: 'varchar', length: 150, nullable: true })
   ubicacion: string | null;
 

@@ -62,6 +62,7 @@ fun PublicarAdopcionScreen(
         compatibleGatos: Boolean,
         compatibleNinos: Boolean,
         necesitaPatio: Boolean,
+        provincia: String,
         ubicacion: String?,
         fotoUri: Uri?
     ) -> Unit,
@@ -77,6 +78,7 @@ fun PublicarAdopcionScreen(
     var compatibleGatos by rememberSaveable { mutableStateOf(false) }
     var compatibleNinos by rememberSaveable { mutableStateOf(false) }
     var necesitaPatio by rememberSaveable { mutableStateOf(false) }
+    var provincia by rememberSaveable { mutableStateOf<String?>(null) }
     var ubicacion by rememberSaveable { mutableStateOf("") }
     var formError by rememberSaveable { mutableStateOf<String?>(null) }
 
@@ -223,11 +225,20 @@ fun PublicarAdopcionScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            SelectorProvincia(
+                provincia = provincia,
+                textoSinSeleccion = "Elegí la provincia",
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isPublishing
+            ) { provincia = it }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             OutlinedTextField(
                 value = ubicacion,
                 onValueChange = { ubicacion = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Ubicación (ej. Córdoba)") },
+                label = { Text("Barrio o ciudad (opcional)") },
                 enabled = !isPublishing,
                 singleLine = true
             )
@@ -261,6 +272,8 @@ fun PublicarAdopcionScreen(
                             formError = "Agregá una foto de la mascota para publicarla"
                         descripcion.isBlank() ->
                             formError = "Agregá una descripción o comentario"
+                        provincia == null ->
+                            formError = "Elegí la provincia donde está la mascota"
                         else -> onPublish(
                             petId,
                             descripcion.trim(),
@@ -270,6 +283,7 @@ fun PublicarAdopcionScreen(
                             compatibleGatos,
                             compatibleNinos,
                             necesitaPatio,
+                            provincia!!,
                             ubicacion.trim().ifBlank { null },
                             fotoUri
                         )

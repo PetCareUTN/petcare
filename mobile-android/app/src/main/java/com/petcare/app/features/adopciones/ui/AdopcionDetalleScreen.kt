@@ -197,7 +197,11 @@ fun AdopcionDetalleScreen(
                         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             mascota.raza?.let { DatoFila("Raza", it) }
                             tamanoLabel(publicacion.tamano)?.let { DatoFila("Tamaño", it) }
-                            publicacion.ubicacion?.takeIf { it.isNotBlank() }?.let { DatoFila("Ubicación", it) }
+                            listOfNotNull(
+                                publicacion.ubicacion?.takeIf { it.isNotBlank() },
+                                publicacion.provincia?.takeIf { it.isNotBlank() }
+                            ).takeIf { it.isNotEmpty() }
+                                ?.let { DatoFila("Ubicación", it.joinToString(", ")) }
                         }
                     }
 
