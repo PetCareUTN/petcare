@@ -12,11 +12,23 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import {
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { EtiquetasApi } from '../common/constants/documentacion-api';
+import {
+  ApiConflicto,
+  ApiNoEncontrado,
+  ApiProtegido,
+} from '../common/decorators/api-protegido.decorator';
 import { AppointmentStatus } from '../common/enums/appointment-status.enum';
 import { RoleName } from '../common/enums/role-name.enum';
 import { CancelarTurnoVeterinarioDto } from './dto/cancelar-turno-veterinario.dto';
@@ -25,6 +37,8 @@ import { TurnoDuenioResponseDto } from './dto/turno-duenio-response.dto';
 import { TurnoVeterinarioResponseDto } from './dto/turno-veterinario-response.dto';
 import { TurnosVeterinariosService } from './turnos-veterinarios.service';
 
+@ApiTags(EtiquetasApi.TURNOS)
+@ApiProtegido()
 @Controller('turnos-veterinarios')
 export class TurnosVeterinariosController {
   constructor(
@@ -35,6 +49,19 @@ export class TurnosVeterinariosController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleName.DUENO_MASCOTA)
   @HttpCode(HttpStatus.CREATED)
+  @ApiProtegido(RoleName.DUENO_MASCOTA)
+  @ApiOperation({
+    summary: 'Pedir un turno en una veterinaria',
+    description:
+      'La fecha y hora tienen que ser uno de los horarios que devuelve GET /turnos-veterinarios/horarios-disponibles.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Turno solicitado.',
+    type: TurnoVeterinarioResponseDto,
+  })
+  @ApiConflicto('Ese horario ya está ocupado o quedó fuera de la disponibilidad.')
+  @ApiNoEncontrado('La veterinaria o la mascota no existen.')
   solicitar(
     @CurrentUser() user: JwtPayload,
     @Body() dto: CreateTurnoVeterinarioDto,
@@ -44,6 +71,18 @@ export class TurnosVeterinariosController {
 
   @Get('horarios-disponibles')
   @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Ver los horarios libres de una veterinaria en un día',
+    description:
+      'Descuenta de la disponibilidad los turnos ya tomados. Es lo que llena el selector de hora.',
+  })
+  @ApiQuery({ name: 'idVeterinario', example: 2 })
+  @ApiQuery({ name: 'fecha', example: '2026-10-20', description: 'Fecha en formato AAAA-MM-DD.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Horarios libres, en formato HH:mm.',
+    type: [String],
+  })
   horariosDisponibles(
     @Query('idVeterinario', ParseIntPipe) idVeterinario: number,
     @Query('fecha') fecha: string,
@@ -57,6 +96,17 @@ export class TurnosVeterinariosController {
   @Get('mia')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleName.VETERINARIO)
+  @ApiProtegido(RoleName.VETERINARIO)
+  @ApiOperation({
+    summary: 'Listar los turnos de mi veterinaria',
+    description: 'Se puede filtrar por estado del turno.',
+  })
+  @ApiQuery({ name: 'estado', required: false, enum: AppointmentStatus })
+  @ApiResponse({
+    status: 200,
+    description: 'Turnos recibidos por la veterinaria.',
+    type: [TurnoVeterinarioResponseDto],
+  })
   findMine(
     @CurrentUser() user: JwtPayload,
     @Query('estado', new ParseEnumPipe(AppointmentStatus, { optional: true }))
@@ -68,6 +118,14 @@ export class TurnosVeterinariosController {
   @Get('mios')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleName.DUENO_MASCOTA)
+  @ApiProtegido(RoleName.DUENO_MASCOTA)
+  @ApiOperation({ summary: 'Listar los turnos que pedí' })
+  @ApiQuery({ name: 'estado', required: false, enum: AppointmentStatus })
+  @ApiResponse({
+    status: 200,
+    description: 'Turnos de la sesión actual.',
+    type: [TurnoDuenioResponseDto],
+  })
   findMisTurnos(
     @CurrentUser() user: JwtPayload,
     @Query('estado', new ParseEnumPipe(AppointmentStatus, { optional: true }))
@@ -80,6 +138,18 @@ export class TurnosVeterinariosController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleName.DUENO_MASCOTA, RoleName.VETERINARIO)
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Cancelar un turno',
+    description:
+      'Lo pueden cancelar tanto el dueño como la veterinaria, indicando el motivo.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Turno cancelado.',
+    type: TurnoVeterinarioResponseDto,
+  })
+  @ApiConflicto('El turno ya estaba cancelado o finalizado.')
+  @ApiNoEncontrado('El turno no existe o no es de esta sesión.')
   cancelar(
     @CurrentUser() user: JwtPayload,
     @Param('idTurno', ParseIntPipe) idTurno: number,

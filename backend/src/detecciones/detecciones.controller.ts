@@ -9,9 +9,16 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { EtiquetasApi } from '../common/constants/documentacion-api';
+import {
+  ApiDatosInvalidos,
+  ApiNoEncontrado,
+  ApiProtegido,
+} from '../common/decorators/api-protegido.decorator';
 import { DeteccionesService } from './detecciones.service';
 import { RegistrarDeteccionDto } from './dto/registrar-deteccion.dto';
 import { UltimaDeteccionResponseDto } from './dto/ultima-deteccion-response.dto';
@@ -34,12 +41,20 @@ import { UltimaDeteccionResponseDto } from './dto/ultima-deteccion-response.dto'
  *
  * Solo un request mal formado recibe 400 (lo arma el ValidationPipe global).
  */
+@ApiTags(EtiquetasApi.LOCALIZACION_BLE)
 @Controller('detecciones')
 export class DeteccionesController {
   constructor(private readonly deteccionesService: DeteccionesService) {}
 
   @Post()
   @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({
+    summary: 'Informar una detección de tag Bluetooth',
+    description:
+      'Endpoint público y anónimo a propósito: lo llama el celular de cualquier persona que pasa cerca de una mascota perdida, y no se identifica a quien detecta. Siempre responde 202 si el cuerpo está bien formado, se guarde la detección o no (tag sin vincular, mascota que no está perdida, detección repetida). Responder distinto permitiría averiguar qué tags existen probando identificadores.',
+  })
+  @ApiResponse({ status: 202, description: 'Detección recibida.' })
+  @ApiDatosInvalidos('El cuerpo de la detección está mal formado.')
   async registrar(@Body() dto: RegistrarDeteccionDto): Promise<void> {
     await this.deteccionesService.registrar(dto);
   }
@@ -53,6 +68,18 @@ export class DeteccionesController {
    */
   @Get('reporte/:idReporte/ultima')
   @UseGuards(JwtAuthGuard)
+  @ApiProtegido()
+  @ApiOperation({
+    summary: 'Ver la última ubicación conocida de una mascota perdida',
+    description:
+      'A diferencia del POST, éste sí pide sesión: devuelve datos de una mascota concreta y sólo su dueño puede verlos.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Última detección registrada.',
+    type: UltimaDeteccionResponseDto,
+  })
+  @ApiNoEncontrado('El reporte no existe, no es de esta sesión, o todavía no hay detecciones.')
   buscarUltima(
     @CurrentUser() user: JwtPayload,
     @Param('idReporte', ParseIntPipe) idReporte: number,
