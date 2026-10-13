@@ -240,11 +240,29 @@ Para la entrega alcanza con distribuirlo por Drive; no hace falta Play Store.
 
    Hay que copiar el de la línea `Variant: release`.
 
-**Ojo con OneDrive**: si el repo está dentro de una carpeta sincronizada, el
-APK de release puede no quedar en disco aunque Gradle diga BUILD SUCCESSFUL.
-Pasó varias veces armando esto, y deja una carpeta `app/build.onedrive-stale`.
-El APK que se vaya a repartir conviene generarlo desde una copia del repo fuera
-de OneDrive.
+**Dónde queda el APK**: no necesariamente en `app/build/outputs/`. El proyecto
+permite redirigir la carpeta de build con la propiedad `petcare.android.buildDir`
+de `local.properties`, algo que conviene cuando el repo vive dentro de una
+carpeta sincronizada (OneDrive, Drive), porque el sincronizador compite con
+Gradle por esos archivos. Si esa propiedad está configurada, el APK sale en
+
+```
+<petcare.android.buildDir>/app/outputs/apk/release/app-release.apk
+```
+
+Antes de repartir un APK conviene verificar con qué llave quedó firmado, sobre
+todo si alguien probó la configuración con una keystore de prueba:
+
+```bash
+apksigner verify --print-certs app-release.apk
+```
+
+El SHA-1 que imprime tiene que coincidir con el de `:app:signingReport`, y ser
+el mismo que está registrado en Google Cloud.
+
+**La key de Maps también hace falta.** Si `local.properties` no tiene
+`MAPS_API_KEY`, el build no falla, pero la app sale con un placeholder inválido
+y el mapa de veterinarias cercanas queda en gris.
 
 ## 5. Checklist de la primera vez
 
