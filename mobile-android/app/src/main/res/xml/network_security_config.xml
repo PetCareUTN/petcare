@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  El backend esta detras de un certificado de Let's Encrypt cuya cadena termina
+  en ISRG Root X2, firmada a su vez por ISRG Root X1. Ninguna de esas dos raices
+  existe en el almacen de certificados de Android 7.0 (X1 recien se incorporo en
+  7.1.1), asi que en esos telefonos el handshake TLS falla y la app muestra
+  "No se pudo conectar con el servidor", aunque el navegador del mismo telefono
+  abra la URL sin problema: Chrome usa su propio almacen.
+
+  Como minSdk es 24 (Android 7.0), la app tiene que llevar esas raices adentro.
+  Se suman a las del sistema, no las reemplazan: en un telefono moderno todo
+  sigue validandose igual que antes.
+
+  Las dos raices son publicas y de larga vida (2035 y 2040). Si alguna vez
+  Let's Encrypt rota a una raiz nueva, hay que agregarla aca.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="@raw/isrg_root_x1" />
+            <certificates src="@raw/isrg_root_x2" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
