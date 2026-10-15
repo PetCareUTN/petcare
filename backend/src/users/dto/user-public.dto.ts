@@ -13,6 +13,8 @@ export class UserPublicDto {
   telefono: string | null;
   direccion: string | null;
   provincia: string | null;
+  /** Ruta de la foto de perfil, relativa al servidor. */
+  foto: string | null;
   id_rol: number;
   estado: string;
   fecha_registro: Date;
@@ -29,6 +31,7 @@ export class UserPublicDto {
     dto.telefono = user.telefono ?? null;
     dto.direccion = user.direccion ?? null;
     dto.provincia = user.provincia ?? null;
+    dto.foto = user.foto ?? null;
     dto.id_rol = user.rol.idRol;
     dto.estado = user.estado;
     dto.fecha_registro = user.fechaRegistro;

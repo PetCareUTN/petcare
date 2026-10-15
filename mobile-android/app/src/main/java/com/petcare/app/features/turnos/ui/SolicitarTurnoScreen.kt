@@ -1147,20 +1147,17 @@ private fun TurnoDatePickerField(
         }
     )
 
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(text = "Fecha", style = MaterialTheme.typography.labelLarge)
-
-        OutlinedButton(
-            onClick = { showPicker = true },
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-            border = BorderStroke(1.dp, PetCareLine)
-        ) {
-            Text(
-                text = selectedDate.ifBlank { "Seleccionar fecha" },
-                color = if (selectedDate.isBlank()) PetCareMuted else MaterialTheme.colorScheme.onSurface
-            )
-        }
+    // El título "Fecha" ya lo pone la sección que contiene el carrusel y este campo.
+    OutlinedButton(
+        onClick = { showPicker = true },
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        border = BorderStroke(1.dp, PetCareLine)
+    ) {
+        Text(
+            text = selectedDate.ifBlank { "Seleccionar fecha" },
+            color = if (selectedDate.isBlank()) PetCareMuted else MaterialTheme.colorScheme.onSurface
+        )
     }
 
     if (showPicker) {

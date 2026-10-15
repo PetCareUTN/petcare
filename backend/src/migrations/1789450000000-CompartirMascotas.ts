@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class CompartirMascotas1789440000000 implements MigrationInterface {
-  name = 'CompartirMascotas1789440000000';
+export class CompartirMascotas1789450000000 implements MigrationInterface {
+  name = 'CompartirMascotas1789450000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Quién registró la mascota. Es el único que puede compartirla. La tabla

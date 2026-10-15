@@ -1,7 +1,9 @@
 package com.petcare.app.features.profile.ui
 
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,6 +39,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.petcare.app.features.pets.ui.PetAvatar
+import com.petcare.app.features.pets.ui.rememberAdjustedPhotoPicker
 import com.petcare.app.features.profile.data.remote.UserProfileResponse
 import com.petcare.app.R
 import com.petcare.app.ui.theme.PetCareError
@@ -54,6 +59,9 @@ fun ProfileScreen(
     onEdit: () -> Unit,
     onConfiguracion: () -> Unit,
     onLogout: () -> Unit,
+    isUploadingPhoto: Boolean = false,
+    photoError: String? = null,
+    onPhotoSelected: (Uri) -> Unit = {},
     // Null cuando la pantalla se abre como pestaña: ahí no hay a dónde volver.
     onBack: (() -> Unit)? = null
 ) {
@@ -132,7 +140,13 @@ fun ProfileScreen(
             }
 
             profile != null -> {
-                ProfileContent(profile = profile, onEdit = onEdit)
+                ProfileContent(
+                    profile = profile,
+                    isUploadingPhoto = isUploadingPhoto,
+                    photoError = photoError,
+                    onPhotoSelected = onPhotoSelected,
+                    onEdit = onEdit
+                )
             }
         }
 
@@ -209,18 +223,20 @@ private fun AccesoPerfil(texto: String, iconRes: Int, onClick: () -> Unit) {
 }
 
 @Composable
-private fun ProfileContent(profile: UserProfileResponse, onEdit: () -> Unit) {
+private fun ProfileContent(
+    profile: UserProfileResponse,
+    isUploadingPhoto: Boolean,
+    photoError: String?,
+    onPhotoSelected: (Uri) -> Unit,
+    onEdit: () -> Unit
+) {
     val nombreCompleto = listOf(profile.nombre, profile.apellido)
         .filter { it.isNotBlank() }
         .joinToString(" ")
-    val iniciales = listOf(profile.nombre, profile.apellido)
-        .mapNotNull { it.firstOrNull()?.uppercase() }
-        .take(2)
-        .joinToString("")
-        .ifBlank { "U" }
+    val elegirFoto = rememberAdjustedPhotoPicker(onPhotoAdjusted = onPhotoSelected)
 
-    // Cabecera: franja de color, avatar con iniciales apoyado en el borde y
-    // los datos principales de la persona.
+    // Cabecera: franja de color, avatar (con la foto si la cargó) apoyado en el
+    // borde y los datos principales de la persona.
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -243,24 +259,38 @@ private fun ProfileContent(profile: UserProfileResponse, onEdit: () -> Unit) {
                     .padding(top = 56.dp, start = 20.dp, end = 20.dp, bottom = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Surface(
-                    modifier = Modifier.size(96.dp),
-                    shape = CircleShape,
-                    color = PetCareTealSoft,
-                    border = BorderStroke(4.dp, MaterialTheme.colorScheme.surface),
-                    shadowElevation = 4.dp
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = iniciales,
-                            color = PetCareTealDark,
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold
-                        )
+                Box(contentAlignment = Alignment.Center) {
+                    // PetAvatar sirve igual para personas: inicial de fondo y la foto encima.
+                    PetAvatar(
+                        petName = profile.nombre.ifBlank { "U" },
+                        photoPath = profile.foto,
+                        modifier = Modifier
+                            .size(96.dp)
+                            .border(4.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                            .clickable(enabled = !isUploadingPhoto, onClick = elegirFoto),
+                        textStyle = MaterialTheme.typography.headlineMedium
+                    )
+                    if (isUploadingPhoto) {
+                        CircularProgressIndicator(modifier = Modifier.size(96.dp))
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                TextButton(onClick = elegirFoto, enabled = !isUploadingPhoto) {
+                    Text(
+                        text = if (profile.foto.isNullOrBlank()) "Agregar foto" else "Cambiar foto",
+                        color = PetCareTealDark
+                    )
+                }
+
+                photoError?.let { mensaje ->
+                    Text(
+                        text = mensaje,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
                     text = nombreCompleto,

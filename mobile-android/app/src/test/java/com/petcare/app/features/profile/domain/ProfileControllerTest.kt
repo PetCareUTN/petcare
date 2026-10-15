@@ -8,6 +8,9 @@ import com.petcare.app.features.profile.data.remote.UpdatePreferenciasRequest
 import com.petcare.app.features.profile.data.remote.UpdateProfileRequest
 import com.petcare.app.features.profile.data.remote.UserProfileResponse
 import kotlinx.coroutines.runBlocking
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -49,8 +52,28 @@ class ProfileControllerTest {
             assertEquals("+54 11 4444-4444", profile.telefono)
         }
 
+    @Test
+    fun `updateMyPhoto sube la foto y devuelve el perfil con su ruta`() =
+        runBlocking {
+            val fakeProfileApi = FakeProfileApi()
+            val controller = ProfileController(
+                profileApi = fakeProfileApi
+            )
+            val foto = MultipartBody.Part.createFormData(
+                name = "foto",
+                filename = "yo.jpg",
+                body = byteArrayOf(1, 2, 3).toRequestBody("image/jpeg".toMediaType())
+            )
+
+            val profile = controller.updateMyPhoto(foto)
+
+            assertEquals(foto, fakeProfileApi.uploadedPhoto)
+            assertEquals("/uploads/usuarios/usuario-1.jpg", profile.foto)
+        }
+
     private class FakeProfileApi : ProfileApi {
         var updatedRequest: UpdateProfileRequest? = null
+        var uploadedPhoto: MultipartBody.Part? = null
 
         override suspend fun getMyProfile(): UserProfileResponse =
             UserProfileResponse(
@@ -79,6 +102,11 @@ class ProfileControllerTest {
             request: UpdatePreferenciasRequest
         ): UserProfileResponse =
             getMyProfile().copy(recordatoriosVacunas = request.recordatoriosVacunas)
+
+        override suspend fun updateMyPhoto(foto: MultipartBody.Part): UserProfileResponse {
+            uploadedPhoto = foto
+            return getMyProfile().copy(foto = "/uploads/usuarios/usuario-1.jpg")
+        }
 
         override suspend fun requestEmailChange(request: RequestEmailChangeRequest): MessageResponse =
             throw UnsupportedOperationException("No usado en este test")

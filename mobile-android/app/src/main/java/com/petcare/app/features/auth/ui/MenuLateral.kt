@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.petcare.app.R
+import com.petcare.app.ui.theme.PetCareError
 import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMuted
 import com.petcare.app.ui.theme.PetCareTealDark
@@ -42,7 +43,8 @@ fun MenuLateral(
     onRequestTurno: () -> Unit,
     onViewMisTurnos: () -> Unit,
     onServiciosClick: () -> Unit,
-    onMascotasCompartidasClick: () -> Unit = {}
+    onMascotasCompartidasClick: () -> Unit = {},
+    onLogout: () -> Unit
 ) {
     ModalDrawerSheet(
         drawerContainerColor = MaterialTheme.colorScheme.surface
@@ -119,6 +121,27 @@ fun MenuLateral(
             texto = "Mascotas compartidas",
             iconRes = R.drawable.ic_person,
             onClick = onMascotasCompartidasClick
+        )
+
+        Spacer(modifier = Modifier.weight(1f))
+        HorizontalDivider(color = PetCareLine)
+        NavigationDrawerItem(
+            label = { Text("Cerrar sesión") },
+            selected = false,
+            onClick = onLogout,
+            icon = {
+                Icon(
+                    painter = painterResource(R.drawable.ic_logout),
+                    contentDescription = null,
+                    modifier = Modifier.size(22.dp)
+                )
+            },
+            colors = NavigationDrawerItemDefaults.colors(
+                unselectedContainerColor = MaterialTheme.colorScheme.surface,
+                unselectedIconColor = PetCareError,
+                unselectedTextColor = PetCareError
+            ),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp)
         )
     }
 }
