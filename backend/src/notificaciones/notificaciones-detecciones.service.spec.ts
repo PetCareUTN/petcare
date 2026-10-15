@@ -19,7 +19,7 @@ describe('NotificacionesDeteccionesService', () => {
 
   const datos = () => ({
     idReporte: ID_REPORTE,
-    idDuenio: ID_DUENIO,
+    idsDuenios: [ID_DUENIO],
     nombreMascota: 'Firulais',
     detectadoEn: DETECTADO_EN,
   });
@@ -67,6 +67,33 @@ describe('NotificacionesDeteccionesService', () => {
     expect(idReferencia).toBe(ID_REPORTE);
   });
 
+  it('avisa a todos los dueños de la mascota', async () => {
+    notificacionesRepository.findOne.mockResolvedValue(null);
+
+    await expect(
+      service.notificarDeteccion({ ...datos(), idsDuenios: [ID_DUENIO, 9] }),
+    ).resolves.toBe(true);
+
+    const destinatarios = notificacionesService.crear.mock.calls.map(
+      ([idUsuario]) => idUsuario as number,
+    );
+    expect(destinatarios).toEqual([ID_DUENIO, 9]);
+  });
+
+  it('agrupa por dueño: el que ya tiene un aviso reciente no recibe otro', async () => {
+    // Solo el primer dueño tiene un aviso dentro de la ventana.
+    notificacionesRepository.findOne
+      .mockResolvedValueOnce({ idNotificacion: 1 })
+      .mockResolvedValueOnce(null);
+
+    await expect(
+      service.notificarDeteccion({ ...datos(), idsDuenios: [ID_DUENIO, 9] }),
+    ).resolves.toBe(true);
+
+    expect(notificacionesService.crear).toHaveBeenCalledTimes(1);
+    expect(notificacionesService.crear.mock.calls[0][0]).toBe(9);
+  });
+
   it('agrupa las detecciones seguidas en un solo aviso', async () => {
     // Ya hay un aviso de este reporte dentro de la ventana.
     notificacionesRepository.findOne.mockResolvedValue({ idNotificacion: 1 });
@@ -84,6 +111,7 @@ describe('NotificacionesDeteccionesService', () => {
     const [consulta] = notificacionesRepository.findOne.mock.calls[0] as [
       { where: Record<string, unknown> },
     ];
+    expect(consulta.where.usuario).toEqual({ idUsuario: ID_DUENIO });
     expect(consulta.where.tipo).toBe(NotificationType.MASCOTA_DETECTADA);
     expect(consulta.where.idReferencia).toBe(ID_REPORTE);
     // La ventana se aplica sobre la fecha de envío del aviso anterior.
