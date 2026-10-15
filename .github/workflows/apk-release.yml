@@ -17,16 +17,27 @@ name: APK de release
 # Si falta alguno, el APK sale sin firmar o con el mapa en gris, asi que el
 # workflow lo verifica antes de compilar y falla con un mensaje claro.
 on:
+  # Cada merge a main genera el APK de esa version, sin que nadie tenga que
+  # acordarse de pedirlo.
+  push:
+    branches: [main]
+  # Y se puede pedir a mano en cualquier momento, por ejemplo para compilar
+  # contra otro backend o para fijar una version distinta.
   workflow_dispatch:
     inputs:
       version_name:
-        description: 'Version visible, por ejemplo 1.2'
-        required: true
-        default: '1.0'
+        description: 'Version visible. Vacio = <base>.<numero de corrida>'
+        required: false
+        default: ''
       api_url:
         description: 'URL del backend (con barra final). Vacio = la de produccion'
         required: false
         default: ''
+
+env:
+  # Parte fija de la version. Subir a mano cuando el release lo amerite:
+  # cambiar esto a 1.1 hace que las siguientes salgan 1.1.57, 1.1.58, etc.
+  VERSION_BASE: '1.0'
 
 jobs:
   apk:
@@ -55,6 +66,20 @@ jobs:
             exit 1
           fi
 
+      # El numero de corrida de GitHub siempre sube, asi que sirve de contador
+      # sin guardar estado en el repo ni commitear nada. El mismo numero va al
+      # versionCode, que es lo que Android usa para saber que un APK es mas
+      # nuevo que el instalado.
+      - name: Definir la version
+        run: |
+          if [ -n "${{ inputs.version_name }}" ]; then
+            VERSION="${{ inputs.version_name }}"
+          else
+            VERSION="${VERSION_BASE}.${{ github.run_number }}"
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "Version de este APK: $VERSION (versionCode ${{ github.run_number }})"
+
       # JDK 21: es el que trae el JBR de Android Studio con el que compila el equipo.
       - uses: actions/setup-java@v4
         with:
@@ -80,7 +105,7 @@ jobs:
           PETCARE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           PETCARE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
-          PETCARE_VERSION_NAME: ${{ inputs.version_name }}
+          PETCARE_VERSION_NAME: ${{ env.VERSION }}
           # El numero de corrida sirve de versionCode: siempre sube y no hay que
           # acordarse de incrementarlo a mano.
           PETCARE_VERSION_CODE: ${{ github.run_number }}
@@ -104,11 +129,17 @@ jobs:
           echo "APK: $APK"
           APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort | tail -1)
           "$APKSIGNER" verify --print-certs "$APK"
-          echo "APK_PATH=mobile-android/${APK#./}" >> "$GITHUB_ENV"
+          # Se renombra el archivo, no solo el artefacto: lo que la gente baja e
+          # instala es el .apk, y "app-release.apk" no dice nada. Varios APK con
+          # el mismo nombre en la carpeta de Descargas es una fuente conocida de
+          # instalar el que no era.
+          FINAL="petcare-${VERSION}.apk"
+          mv "$APK" "$(dirname "$APK")/$FINAL"
+          echo "APK_PATH=mobile-android/$(dirname "${APK#./}")/$FINAL" >> "$GITHUB_ENV"
 
       - name: Publicar APK
         uses: actions/upload-artifact@v4
         with:
-          name: petcare-release-${{ inputs.version_name }}-build${{ github.run_number }}
+          name: petcare-${{ env.VERSION }}
           path: ${{ env.APK_PATH }}
           retention-days: 90
