@@ -1,5 +1,7 @@
 package com.petcare.app.features.ble.ui
 
+import com.petcare.app.ui.components.elevacionTarjeta
+import com.petcare.app.ui.components.elevacionBoton
 import android.Manifest
 import android.os.Build
 import androidx.compose.foundation.BorderStroke
@@ -154,6 +156,7 @@ private fun TagVinculadoContent(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge
@@ -174,6 +177,7 @@ private fun TagVinculadoContent(
     Spacer(modifier = Modifier.height(18.dp))
 
     Button(
+        elevation = elevacionBoton(),
         onClick = onDesvincular,
         enabled = !isDesvinculando,
         modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -289,6 +293,7 @@ private fun ColumnScope.BuscarTagContent(
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
+                elevation = elevacionBoton(),
                 onClick = { tagSeleccionado?.let(onVincular) },
                 enabled = tagSeleccionado != null && !isVinculando,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -315,6 +320,7 @@ private fun TagDetectadoRow(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, if (seleccionado) PetCareTealDark else PetCareLine),
         shape = MaterialTheme.shapes.extraLarge
@@ -341,6 +347,7 @@ private fun TagDetectadoRow(
 private fun PermisoBanner(onActivar: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge

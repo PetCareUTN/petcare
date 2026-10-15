@@ -1,5 +1,6 @@
 package com.petcare.app.features.auth.ui
 
+import com.petcare.app.ui.components.elevacionBoton
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -211,6 +212,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(6.dp))
 
             Button(
+                elevation = elevacionBoton(),
                 onClick = {
                     emailError = LoginValidator.validateEmail(email)
                     passwordError = LoginValidator.validatePassword(password)

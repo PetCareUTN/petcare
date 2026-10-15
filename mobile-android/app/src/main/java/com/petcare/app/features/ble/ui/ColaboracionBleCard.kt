@@ -1,5 +1,6 @@
 package com.petcare.app.features.ble.ui
 
+import com.petcare.app.ui.components.elevacionTarjeta
 import android.Manifest
 import android.content.Intent
 import android.net.Uri
@@ -133,6 +134,7 @@ fun ColaboracionBleCard() {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),

@@ -1,25 +1,30 @@
 package com.petcare.app.features.adopciones.ui
 
+import com.petcare.app.ui.components.elevacionTarjeta
+import com.petcare.app.ui.components.elevacionBoton
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -33,14 +38,24 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.petcare.app.R
 import com.petcare.app.features.pets.data.remote.PetResponse
+import com.petcare.app.features.pets.ui.PetAvatar
 import com.petcare.app.features.pets.ui.PetPhotoField
+import com.petcare.app.ui.components.AvisoFormulario
+import com.petcare.app.ui.components.BarraAccionFormulario
+import com.petcare.app.ui.components.EncabezadoFormulario
+import com.petcare.app.ui.components.FilaInterruptor
+import com.petcare.app.ui.components.GrupoChips
+import com.petcare.app.ui.components.SeccionFormulario
+import com.petcare.app.ui.components.SeparadorFila
 import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMint
 import com.petcare.app.ui.theme.PetCareMuted
-import com.petcare.app.ui.theme.PetCareSurfaceSoft
 import com.petcare.app.ui.theme.PetCareTeal
 import com.petcare.app.ui.theme.PetCareTealDark
 import com.petcare.app.ui.theme.PetCareTealSoft
@@ -82,187 +97,173 @@ fun PublicarAdopcionScreen(
     var ubicacion by rememberSaveable { mutableStateOf("") }
     var formError by rememberSaveable { mutableStateOf<String?>(null) }
 
+    val mascotaElegida = pets.firstOrNull { it.id == selectedPetId }
+    val necesitaFoto = mascotaElegida != null && mascotaElegida.foto.isNullOrBlank()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .systemBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.Start
     ) {
-        Text(
-            text = "Publicar en adopción",
-            style = MaterialTheme.typography.headlineMedium
+        EncabezadoFormulario(
+            titulo = "Publicar en adopción",
+            subtitulo = "Ayudá a que encuentre un nuevo hogar",
+            onBack = onBack,
+            enabled = !isPublishing
         )
-        Text(
-            text = "Elegí una de tus mascotas y contá por qué busca un nuevo hogar.",
-            color = PetCareMuted,
-            style = MaterialTheme.typography.bodyMedium
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
 
         if (successMessage != null) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = PetCareTealSoft,
-                shape = MaterialTheme.shapes.large
-            ) {
-                Text(
-                    text = successMessage,
-                    modifier = Modifier.padding(16.dp),
-                    color = PetCareTeal,
-                    style = MaterialTheme.typography.bodyLarge
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = onBack,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = MaterialTheme.shapes.large
-            ) {
-                Text("Volver")
-            }
+            PublicacionExitosa(mensaje = successMessage, onVolver = onBack)
             return@Column
         }
 
-        if (pets.isEmpty()) {
-            EmptyPetsCard(onRegisterNewPet = onRegisterNewPet)
-        } else {
-            Text(
-                text = "Mascota a publicar",
-                style = MaterialTheme.typography.titleSmall
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            pets.forEach { pet ->
-                SelectablePetCard(
-                    pet = pet,
-                    selected = pet.id == selectedPetId,
-                    onClick = {
-                        selectedPetId = pet.id
-                        fotoUri = null
-                        formError = null
-                    }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            OutlinedButton(
-                onClick = onRegisterNewPet,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("+ Registrar nueva mascota")
-            }
-
-            val mascotaElegida = pets.firstOrNull { it.id == selectedPetId }
-            val necesitaFoto = mascotaElegida != null && mascotaElegida.foto.isNullOrBlank()
-
-            if (necesitaFoto) {
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Text(text = "Foto de la mascota", style = MaterialTheme.typography.titleSmall)
-                Text(
-                    text = "${mascotaElegida.nombre} todavía no tiene foto y hace falta una " +
-                        "para publicarla. La foto queda guardada en su perfil.",
-                    color = PetCareMuted,
-                    style = MaterialTheme.typography.bodySmall
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                PetPhotoField(
-                    photoUri = fotoUri,
-                    enabled = !isPublishing,
-                    onPhotoAdjusted = {
-                        fotoUri = it
-                        formError = null
-                    },
-                    tituloSinFoto = "Foto obligatoria"
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            OutlinedTextField(
-                value = descripcion,
-                onValueChange = {
-                    descripcion = it
-                    formError = null
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp),
-                label = { Text("Descripción o comentario") },
-                enabled = !isPublishing,
-                singleLine = false
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Text(text = "Tamaño", style = MaterialTheme.typography.titleSmall)
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TAMANOS.forEach { (valor, etiqueta) ->
-                    TamanoChip(
-                        texto = etiqueta,
-                        seleccionado = tamano == valor,
-                        onClick = { tamano = if (tamano == valor) null else valor },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(text = "Características", style = MaterialTheme.typography.titleSmall)
-            OpcionCheckbox("Vacunado/a", vacunado) { vacunado = it }
-            OpcionCheckbox("Convive bien con perros", compatiblePerros) { compatiblePerros = it }
-            OpcionCheckbox("Convive bien con gatos", compatibleGatos) { compatibleGatos = it }
-            OpcionCheckbox("Convive bien con niños", compatibleNinos) { compatibleNinos = it }
-            OpcionCheckbox("Necesita patio", necesitaPatio) { necesitaPatio = it }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            SelectorProvincia(
-                provincia = provincia,
-                textoSinSeleccion = "Elegí la provincia",
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !isPublishing
-            ) { provincia = it }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedTextField(
-                value = ubicacion,
-                onValueChange = { ubicacion = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text("Barrio o ciudad (opcional)") },
-                enabled = !isPublishing,
-                singleLine = true
-            )
-
-            val error = formError ?: errorMessage
-            if (error != null) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = PetCareTealSoft,
-                    shape = MaterialTheme.shapes.medium
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            if (pets.isEmpty()) {
+                EmptyPetsCard(onRegisterNewPet = onRegisterNewPet)
+            } else {
+                SeccionFormulario(
+                    titulo = "¿A quién querés publicar?",
+                    iconRes = R.drawable.ic_paw
                 ) {
-                    Text(
-                        text = error,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(12.dp),
-                        style = MaterialTheme.typography.bodyMedium
+                    pets.forEach { pet ->
+                        SelectablePetCard(
+                            pet = pet,
+                            selected = pet.id == selectedPetId,
+                            onClick = {
+                                selectedPetId = pet.id
+                                fotoUri = null
+                                formError = null
+                            }
+                        )
+                    }
+                    TextButton(
+                        onClick = onRegisterNewPet,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("+ Registrar nueva mascota", color = PetCareTealDark)
+                    }
+                }
+
+                if (necesitaFoto && mascotaElegida != null) {
+                    SeccionFormulario(
+                        titulo = "Foto de ${mascotaElegida.nombre}",
+                        iconRes = R.drawable.ic_info,
+                        descripcion = "Hace falta una foto para publicarla. " +
+                            "También queda en su perfil."
+                    ) {
+                        PetPhotoField(
+                            photoUri = fotoUri,
+                            enabled = !isPublishing,
+                            onPhotoAdjusted = {
+                                fotoUri = it
+                                formError = null
+                            },
+                            tituloSinFoto = "Foto obligatoria"
+                        )
+                    }
+                }
+
+                SeccionFormulario(
+                    titulo = "Sobre la mascota",
+                    iconRes = R.drawable.ic_edit
+                ) {
+                    OutlinedTextField(
+                        value = descripcion,
+                        onValueChange = {
+                            descripcion = it
+                            formError = null
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 120.dp),
+                        label = { Text("Contá cómo es y por qué busca hogar") },
+                        enabled = !isPublishing,
+                        singleLine = false
+                    )
+
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(text = "Tamaño", style = MaterialTheme.typography.labelLarge)
+                        GrupoChips(
+                            opciones = TAMANOS,
+                            seleccionado = tamano,
+                            enabled = !isPublishing,
+                            onSelect = { tamano = if (tamano == it) null else it }
+                        )
+                    }
+                }
+
+                SeccionFormulario(
+                    titulo = "Características",
+                    iconRes = R.drawable.ic_check,
+                    descripcion = "Activá las que correspondan."
+                ) {
+                    FilaInterruptor("Vacunado/a", vacunado, { vacunado = it }, enabled = !isPublishing)
+                    SeparadorFila()
+                    FilaInterruptor(
+                        "Convive bien con perros",
+                        compatiblePerros,
+                        { compatiblePerros = it },
+                        enabled = !isPublishing
+                    )
+                    SeparadorFila()
+                    FilaInterruptor(
+                        "Convive bien con gatos",
+                        compatibleGatos,
+                        { compatibleGatos = it },
+                        enabled = !isPublishing
+                    )
+                    SeparadorFila()
+                    FilaInterruptor(
+                        "Convive bien con niños",
+                        compatibleNinos,
+                        { compatibleNinos = it },
+                        enabled = !isPublishing
+                    )
+                    SeparadorFila()
+                    FilaInterruptor(
+                        "Necesita patio",
+                        necesitaPatio,
+                        { necesitaPatio = it },
+                        enabled = !isPublishing
+                    )
+                }
+
+                SeccionFormulario(
+                    titulo = "¿Dónde está?",
+                    iconRes = R.drawable.ic_location,
+                    descripcion = "Para que lo encuentre quien vive cerca."
+                ) {
+                    SelectorProvincia(
+                        provincia = provincia,
+                        textoSinSeleccion = "Elegí la provincia",
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isPublishing
+                    ) { provincia = it }
+
+                    OutlinedTextField(
+                        value = ubicacion,
+                        onValueChange = { ubicacion = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Barrio o ciudad (opcional)") },
+                        enabled = !isPublishing,
+                        singleLine = true
                     )
                 }
             }
+        }
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Button(
+        if (pets.isNotEmpty()) {
+            BarraAccionFormulario(
+                texto = "Publicar en adopción",
+                isLoading = isPublishing,
+                enabled = !(necesitaFoto && fotoUri == null),
+                aviso = formError ?: errorMessage,
                 onClick = {
                     val petId = selectedPetId
                     when {
@@ -288,71 +289,61 @@ fun PublicarAdopcionScreen(
                             fotoUri
                         )
                     }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                enabled = !isPublishing && !(necesitaFoto && fotoUri == null),
-                shape = MaterialTheme.shapes.large
-            ) {
-                if (isPublishing) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.height(22.dp),
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                } else {
-                    Text("Publicar en adopción")
                 }
+            )
+        }
+    }
+}
+
+/** Confirmación al publicar: un cierre claro en vez de un texto suelto. */
+@Composable
+private fun PublicacionExitosa(mensaje: String, onVolver: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(28.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Surface(
+            modifier = Modifier.size(96.dp),
+            shape = CircleShape,
+            color = PetCareTealSoft
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_check),
+                    contentDescription = null,
+                    tint = PetCareTeal,
+                    modifier = Modifier.size(48.dp)
+                )
             }
         }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        TextButton(
-            onClick = onBack,
-            enabled = !isPublishing,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Cancelar")
-        }
-    }
-}
-
-@Composable
-private fun OpcionCheckbox(texto: String, valor: Boolean, onChange: (Boolean) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onChange(!valor) },
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Checkbox(checked = valor, onCheckedChange = onChange)
-        Text(text = texto, style = MaterialTheme.typography.bodyMedium)
-    }
-}
-
-@Composable
-private fun TamanoChip(
-    texto: String,
-    seleccionado: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier.clickable(onClick = onClick),
-        color = if (seleccionado) PetCareTeal else MaterialTheme.colorScheme.surface,
-        shape = MaterialTheme.shapes.large,
-        border = BorderStroke(1.dp, if (seleccionado) PetCareTeal else PetCareLine)
-    ) {
+        Spacer(modifier = Modifier.height(20.dp))
         Text(
-            text = texto,
+            text = "¡Publicación creada!",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = mensaje,
+            color = PetCareMuted,
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(28.dp))
+        Button(
+            elevation = elevacionBoton(),
+            onClick = onVolver,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 10.dp),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            color = if (seleccionado) androidx.compose.ui.graphics.Color.White else PetCareTealDark,
-            style = MaterialTheme.typography.labelLarge
-        )
+                .height(54.dp),
+            shape = MaterialTheme.shapes.large
+        ) {
+            Text("Volver")
+        }
     }
 }
 
@@ -362,27 +353,28 @@ private fun SelectablePetCard(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    Card(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = if (selected) PetCareTealSoft else MaterialTheme.colorScheme.surface
-        ),
-        border = BorderStroke(
-            1.dp,
-            if (selected) PetCareTeal else PetCareLine
-        ),
+        color = if (selected) PetCareTealSoft else MaterialTheme.colorScheme.surface,
+        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) PetCareTeal else PetCareLine),
         shape = MaterialTheme.shapes.large
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Column {
+            PetAvatar(
+                petName = pet.nombre,
+                photoPath = pet.foto,
+                modifier = Modifier.size(48.dp),
+                textStyle = MaterialTheme.typography.titleMedium
+            )
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = pet.nombre,
                     style = MaterialTheme.typography.titleMedium,
@@ -395,11 +387,20 @@ private fun SelectablePetCard(
                 )
             }
             if (selected) {
-                Text(
-                    text = "Seleccionada",
-                    color = PetCareTeal,
-                    style = MaterialTheme.typography.labelLarge
-                )
+                Surface(
+                    modifier = Modifier.size(26.dp),
+                    shape = CircleShape,
+                    color = PetCareTeal
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_check),
+                            contentDescription = "Seleccionada",
+                            tint = androidx.compose.ui.graphics.Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
             }
         }
     }
@@ -409,6 +410,7 @@ private fun SelectablePetCard(
 private fun EmptyPetsCard(onRegisterNewPet: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = PetCareMint),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge
@@ -416,22 +418,40 @@ private fun EmptyPetsCard(onRegisterNewPet: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
-            horizontalAlignment = Alignment.Start
+                .padding(22.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Surface(
+                modifier = Modifier.size(72.dp),
+                shape = CircleShape,
+                color = PetCareTealSoft
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_paw),
+                        contentDescription = null,
+                        tint = PetCareTeal,
+                        modifier = Modifier.size(34.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(14.dp))
             Text(
                 text = "Todavía no tenés mascotas registradas",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = "Registrá una mascota para poder publicarla en adopción.",
                 color = PetCareMuted,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(18.dp))
             Button(
+                elevation = elevacionBoton(),
                 onClick = onRegisterNewPet,
                 modifier = Modifier
                     .fillMaxWidth()

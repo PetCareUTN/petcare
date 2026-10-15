@@ -1,5 +1,6 @@
 package com.petcare.app.features.adopciones.ui
 
+import com.petcare.app.ui.components.elevacionBoton
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -163,6 +164,7 @@ fun SolicitarAdopcionFormScreen(
         Spacer(modifier = Modifier.height(20.dp))
 
         Button(
+            elevation = elevacionBoton(),
             onClick = {
                 if (motivo.isBlank()) {
                     formError = "Contanos por qué querés adoptarla"
