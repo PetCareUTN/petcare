@@ -443,6 +443,12 @@ class MainActivity : ComponentActivity() {
                 var profileError by rememberSaveable {
                     mutableStateOf<String?>(null)
                 }
+                var isUploadingProfilePhoto by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var profilePhotoError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
                 var saveProfileError by rememberSaveable {
                     mutableStateOf<String?>(null)
                 }
@@ -2819,7 +2825,34 @@ class MainActivity : ComponentActivity() {
                             isEditingProfile = true
                         },
                         onConfiguracion = { isViewingSettings = true },
-                        onLogout = { logout() }
+                        onLogout = { logout() },
+                        isUploadingPhoto = isUploadingProfilePhoto,
+                        photoError = profilePhotoError,
+                        onPhotoSelected = { photoUri ->
+                            isUploadingProfilePhoto = true
+                            profilePhotoError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    profile = profileController.updateMyPhoto(
+                                        buildPhotoPart(photoUri)
+                                    )
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        profilePhotoError = "No se pudo actualizar la foto"
+                                    }
+                                } catch (exception: IOException) {
+                                    profilePhotoError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    profilePhotoError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isUploadingProfilePhoto = false
+                                }
+                            }
+                        }
                     )
                 } else if (loggedUserName != null && selectedPetId != null && isViewingHistoria) {
                     HistoriaClinicaScreen(

@@ -243,6 +243,34 @@ internal fun PetPhotoField(
     }
 }
 
+/**
+ * Galeria + dialogo de encuadre sin la tarjeta de [PetPhotoField], para pantallas
+ * que muestran la foto a su manera (por ejemplo el avatar del perfil). Devuelve
+ * la accion que abre el selector.
+ */
+@Composable
+internal fun rememberAdjustedPhotoPicker(onPhotoAdjusted: (Uri) -> Unit): () -> Unit {
+    var uriBeingEdited by remember { mutableStateOf<Uri?>(null) }
+    val photoPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) uriBeingEdited = uri
+    }
+
+    uriBeingEdited?.let { sourceUri ->
+        PhotoAdjustmentDialog(
+            sourceUri = sourceUri,
+            onDismiss = { uriBeingEdited = null },
+            onConfirm = { adjustedUri ->
+                onPhotoAdjusted(adjustedUri)
+                uriBeingEdited = null
+            }
+        )
+    }
+
+    return { photoPicker.launch("image/*") }
+}
+
 @Composable
 private fun PhotoAdjustmentDialog(
     sourceUri: Uri,

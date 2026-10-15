@@ -1,6 +1,5 @@
 import {
   Body,
-  BadRequestException,
   Controller,
   Get,
   HttpCode,
@@ -40,28 +39,10 @@ import { MascotaResponseDto } from './dto/mascota-response.dto';
 import { UpdateMascotaDto } from './dto/update-mascota.dto';
 import { MascotasService } from './mascotas.service';
 import type { UploadedImageFile } from './types/uploaded-image-file.type';
-
-const ALLOWED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const MAX_IMAGE_SIZE_IN_BYTES = 2 * 1024 * 1024;
-
-const imageFileFilter = (
-  _req: unknown,
-  file: UploadedImageFile,
-  callback: (error: Error | null, acceptFile: boolean) => void,
-) => {
-  if (!ALLOWED_IMAGE_MIME_TYPES.includes(file.mimetype)) {
-    callback(
-      new BadRequestException({
-        codigoEstado: 400,
-        mensaje: 'La foto debe ser una imagen JPG, PNG o WEBP',
-      }),
-      false,
-    );
-    return;
-  }
-
-  callback(null, true);
-};
+import {
+  imageFileFilter,
+  MAX_IMAGE_SIZE_IN_BYTES,
+} from '../common/utils/image-file-filter.util';
 
 @ApiTags(EtiquetasApi.MASCOTAS)
 @ApiProtegido()

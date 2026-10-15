@@ -7,6 +7,7 @@ import com.petcare.app.features.profile.data.remote.RequestEmailChangeRequest
 import com.petcare.app.features.profile.data.remote.UpdatePreferenciasRequest
 import com.petcare.app.features.profile.data.remote.UpdateProfileRequest
 import com.petcare.app.features.profile.data.remote.UserProfileResponse
+import okhttp3.MultipartBody
 
 class ProfileController(
     private val profileApi: ProfileApi
@@ -16,6 +17,9 @@ class ProfileController(
 
     suspend fun updateMyProfile(request: UpdateProfileRequest): UserProfileResponse =
         profileApi.updateMyProfile(request)
+
+    suspend fun updateMyPhoto(foto: MultipartBody.Part): UserProfileResponse =
+        profileApi.updateMyPhoto(foto)
 
     suspend fun requestEmailChange(nuevoEmail: String): MessageResponse =
         profileApi.requestEmailChange(RequestEmailChangeRequest(nuevoEmail))
