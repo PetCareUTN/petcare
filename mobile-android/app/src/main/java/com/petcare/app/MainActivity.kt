@@ -3324,8 +3324,14 @@ class MainActivity : ComponentActivity() {
                         }
                     )
                         } else {
+                    // El encabezado muestra la foto de perfil: sin esto el perfil
+                    // recien se cargaba al entrar a "Mi perfil".
+                    LaunchedEffect(loggedUserName) {
+                        if (profile == null && !isLoadingProfile) loadProfile()
+                    }
                     AuthenticatedHomeScreen(
                         userName = loggedUserName.orEmpty(),
+                        userPhoto = profile?.foto,
                         pets = pets,
                         isLoadingPets = isLoadingPets,
                         petsError = petsError,
