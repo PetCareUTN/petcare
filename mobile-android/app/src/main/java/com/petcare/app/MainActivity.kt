@@ -2273,7 +2273,9 @@ class MainActivity : ComponentActivity() {
                                     serviciosError = null
                                     isViewingServicios = true
                                     loadServicios()
-                                }
+                                },
+                                // El drawer vive dentro de la rama logueada: al salir se descarta solo.
+                                onLogout = { logout() }
                             )
                         }
                     ) {
