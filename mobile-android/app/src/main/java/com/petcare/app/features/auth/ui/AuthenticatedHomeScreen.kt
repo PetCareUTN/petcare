@@ -542,7 +542,8 @@ private fun ProximoTurnoCard(turno: TurnoUnificado, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        elevation = elevacionTarjeta(),
+        // Más suave que el resto de las tarjetas: son filas de una lista corta.
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge
