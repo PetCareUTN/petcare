@@ -1,0 +1,187 @@
+import java.util.Properties
+
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.compose)
+}
+
+// La API key de Maps SDK for Android no se commitea: se lee de local.properties
+// (gitignored) igual que sdk.dir. Si falta, se deja un placeholder inválido para
+// que el build no rompa, pero el mapa no va a cargar tiles hasta configurarla.
+val localProperties = Properties().apply {
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localPropertiesFile.inputStream().use { load(it) }
+    }
+}
+// En CI no hay local.properties, asi que tambien se acepta por variable de
+// entorno. El placeholder solo aplica si no hay ninguna de las dos: el build no
+// falla, pero el mapa queda en gris.
+val mapsApiKey: String =
+    localProperties.getProperty("MAPS_API_KEY")
+        ?: System.getenv("MAPS_API_KEY")
+        ?: "change_me"
+
+/*
+ * Version del APK. Se puede pisar desde afuera para que cada APK distribuido
+ * sea distinguible, que es lo que permite saber quien tiene cual:
+ *
+ *   ./gradlew assembleRelease -PPETCARE_VERSION_NAME=1.2 -PPETCARE_VERSION_CODE=7
+ *
+ * Android usa versionCode (un entero que solo sube) para decidir si un APK es
+ * mas nuevo que el instalado; versionName es el texto que ve la persona.
+ */
+val versionCodeDelBuild: Int =
+    ((project.findProperty("PETCARE_VERSION_CODE") as String?)
+        ?: System.getenv("PETCARE_VERSION_CODE"))
+        ?.toIntOrNull()
+        ?: 1
+
+val versionNameDelBuild: String =
+    (project.findProperty("PETCARE_VERSION_NAME") as String?)
+        ?: System.getenv("PETCARE_VERSION_NAME")
+        ?: "1.0"
+
+// URL del backend por variante. La de release se puede pisar sin tocar el
+// repo, para compilar contra staging o contra un backend propio:
+//   ./gradlew assembleRelease -PPETCARE_API_URL=https://loquesea/
+// o poniendo PETCARE_API_URL en local.properties. Ver docs/deploy.md.
+fun apiUrl(porDefecto: String): String =
+    (project.findProperty("PETCARE_API_URL") as String?)
+        ?: localProperties.getProperty("PETCARE_API_URL")
+        ?: porDefecto
+
+// Desde el emulador Android, 10.0.2.2 representa la computadora donde corre el
+// emulador: es el backend levantado con npm run start:dev.
+val API_URL_LOCAL = "http://10.0.2.2:3000/"
+
+// Backend en Railway. Tiene que terminar en barra (lo exige Retrofit).
+val API_URL_PRODUCCION = "https://backend-production-4169.up.railway.app/"
+
+// Firma del APK de release. Los datos salen de mobile-android/keystore.properties
+// (gitignoreado) o, si no existe, de variables de entorno, para poder firmar
+// desde CI sin dejar nada en el repo. Ver keystore.properties.example.
+//
+// Si no hay ninguna de las dos cosas, el build sigue funcionando pero genera un
+// APK sin firmar, que Android no instala. Es a proposito: asi CI puede compilar
+// la variante de release sin tener la keystore.
+val keystoreProperties = Properties().apply {
+    val keystorePropertiesFile = rootProject.file("keystore.properties")
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use { load(it) }
+    }
+}
+
+fun datoDeFirma(clave: String, variableDeEntorno: String): String? =
+    (keystoreProperties.getProperty(clave) ?: System.getenv(variableDeEntorno))
+        ?.takeIf { it.isNotBlank() }
+
+val keystoreArchivo = datoDeFirma("storeFile", "PETCARE_KEYSTORE_FILE")
+val keystorePassword = datoDeFirma("storePassword", "PETCARE_KEYSTORE_PASSWORD")
+val keystoreAlias = datoDeFirma("keyAlias", "PETCARE_KEY_ALIAS")
+val keystoreAliasPassword = datoDeFirma("keyPassword", "PETCARE_KEY_PASSWORD")
+
+val hayDatosDeFirma =
+    keystoreArchivo != null &&
+        keystorePassword != null &&
+        keystoreAlias != null &&
+        keystoreAliasPassword != null
+
+android {
+    namespace = "com.petcare.app"
+    compileSdk {
+        version = release(36) {
+            minorApiLevel = 1
+        }
+    }
+
+    defaultConfig {
+        applicationId = "com.petcare.app"
+        minSdk = 24
+        targetSdk = 36
+        versionCode = versionCodeDelBuild
+        versionName = versionNameDelBuild
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders["mapsApiKey"] = mapsApiKey
+    }
+
+    signingConfigs {
+        if (hayDatosDeFirma) {
+            create("release") {
+                storeFile = rootProject.file(keystoreArchivo!!)
+                storePassword = keystorePassword
+                keyAlias = keystoreAlias
+                keyPassword = keystoreAliasPassword
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            buildConfigField("String", "API_BASE_URL", "\"${apiUrl(API_URL_LOCAL)}\"")
+            // El backend local habla HTTP plano; sin esto Android bloquea las
+            // llamadas desde el emulador.
+            manifestPlaceholders["usesCleartextTraffic"] = "true"
+        }
+        release {
+            buildConfigField("String", "API_BASE_URL", "\"${apiUrl(API_URL_PRODUCCION)}\"")
+            // En produccion todo va por HTTPS: si algo quedo apuntando a http://
+            // queremos que falle en desarrollo y no que viaje en texto plano.
+            manifestPlaceholders["usesCleartextTraffic"] = "false"
+            // Sin keystore configurada queda null, y el APK sale sin firmar.
+            signingConfig = signingConfigs.findByName("release")
+            optimization {
+                enable = false
+            }
+        }
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+    buildFeatures {
+        compose = true
+        // Necesario para que se genere BuildConfig con API_BASE_URL.
+        buildConfig = true
+    }
+    testOptions {
+        unitTests {
+            // Sin esto, cualquier llamada a android.util.Log desde código testeado
+            // revienta con "Method w in android.util.Log not mocked". Con el flag,
+            // los métodos del framework devuelven su valor por defecto y no estorban.
+            isReturnDefaultValues = true
+        }
+    }
+}
+
+dependencies {
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    testImplementation(libs.junit)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.junit)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
+    debugImplementation(libs.androidx.compose.ui.tooling)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.gson)
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
+    // Ingreso con Google (Credential Manager, el reemplazo de GoogleSignIn).
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
+    // Mapa con pines de veterinarias/prestadores cercanos + ubicación del usuario.
+    implementation(libs.play.services.maps)
+    implementation(libs.play.services.location)
+    implementation(libs.maps.compose)
+    implementation(libs.accompanist.permissions)
+}

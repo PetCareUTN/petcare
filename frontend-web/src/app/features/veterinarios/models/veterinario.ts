@@ -1,0 +1,40 @@
+export interface VeterinarioResponse {
+  idVeterinario: number;
+  idUsuario: number;
+  numeroDocumento: string;
+  numeroMatricula: string;
+  provinciaMatricula: string;
+  matriculaUrl: string;
+  habilitacionUrl: string | null;
+  estadoValidacion: 'pendiente' | 'aprobado' | 'rechazado';
+  motivoRechazo: string | null;
+  createdAt: string;
+}
+
+export interface SolicitudPendiente {
+  idVeterinario: number;
+  nombre: string;
+  apellido: string;
+  email: string;
+  fechaSolicitud: string;
+}
+
+export interface SolicitudDetalle {
+  idVeterinario: number;
+  numeroDocumento: string;
+  numeroMatricula: string;
+  provinciaMatricula: string;
+  matriculaUrl: string;
+  habilitacionUrl: string | null;
+  estadoValidacion: 'pendiente' | 'aprobado' | 'rechazado';
+  /** Estado real combinado (validación + suscripción), minúsculas. */
+  estadoReal: string;
+  motivoRechazo: string | null;
+  fechaSolicitud: string;
+  usuario: {
+    idUsuario: number;
+    nombre: string;
+    apellido: string;
+    email: string;
+  };
+}

@@ -1,0 +1,154 @@
+.bell-container {
+  position: relative;
+}
+
+.bell-button {
+  position: relative;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #555866;
+  padding: 0.35rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bell-button:hover {
+  background: #f0f0f0;
+}
+
+.badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: #b3261e;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+.dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  /* Se achica solo si la ventana es angosta, para no cortarse contra el borde. */
+  width: min(380px, calc(100vw - 2rem));
+  max-height: 400px;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  z-index: 1000;
+}
+
+.dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  border-bottom: 1px solid #eee;
+}
+
+.btn-leer-todas {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #6750a4;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.btn-leer-todas:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.btn-leer-todas:disabled {
+  color: #aaa;
+  cursor: default;
+}
+
+.dropdown-empty {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.notification-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.notification-item:last-child {
+  border-bottom: none;
+}
+
+.notification-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+/* Las leídas se quedan en el panel, apagadas; las nuevas resaltan. */
+.notification-item.no-leida {
+  background: #f6f3fb;
+}
+
+.notification-titulo {
+  font-weight: 400;
+  font-size: 0.85rem;
+}
+
+.notification-item.no-leida .notification-titulo {
+  font-weight: 700;
+}
+
+/* Sin recorte: el mensaje del turno tiene que leerse completo. */
+.notification-cuerpo {
+  font-size: 0.8rem;
+  color: #555866;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.notification-fecha {
+  font-size: 0.75rem;
+  color: #aaa;
+}
+
+.btn-leer {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid #6750a4;
+  color: #6750a4;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.7rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-leer:hover {
+  background: #6750a4;
+  color: #ffffff;
+}

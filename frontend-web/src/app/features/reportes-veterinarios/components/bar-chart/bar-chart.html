@@ -1,0 +1,46 @@
+<div class="bar-chart">
+  @if (series().length > 1) {
+    <div class="legend">
+      @for (serie of series(); track serie.nombre) {
+        <span class="legend-item">
+          <span class="legend-dot" [style.background-color]="serie.color"></span>
+          {{ serie.nombre }}
+        </span>
+      }
+    </div>
+  }
+
+  <svg [attr.viewBox]="'0 0 ' + ancho() + ' ' + alto" class="chart-svg" preserveAspectRatio="xMidYMid meet">
+    @for (linea of lineasGrilla(); track linea.y) {
+      <line
+        class="grid-line"
+        x1="30"
+        [attr.x2]="ancho() - 4"
+        [attr.y1]="linea.y"
+        [attr.y2]="linea.y"
+      />
+      <text class="grid-label" x="26" [attr.y]="linea.y + 3" text-anchor="end">
+        {{ linea.valor }}
+      </text>
+    }
+
+    @for (columna of columnas(); track columna.categoria; let i = $index) {
+      @for (segmento of columna.segmentos; track segmento.serie) {
+        <rect
+          class="bar-segment"
+          [attr.x]="segmento.x"
+          [attr.y]="segmento.y"
+          [attr.width]="segmento.width"
+          [attr.height]="segmento.height"
+          [attr.fill]="segmento.color"
+          rx="3"
+        >
+          <title>{{ columna.categoria }} · {{ segmento.serie }}: {{ segmento.valor }}{{ sufijo() }}</title>
+        </rect>
+      }
+      <text class="category-label" [attr.x]="xCategoria(i)" [attr.y]="alto - 8" text-anchor="middle">
+        {{ columna.categoria }}
+      </text>
+    }
+  </svg>
+</div>

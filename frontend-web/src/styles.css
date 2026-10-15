@@ -1,0 +1,154 @@
+/* You can add global styles to this file, and also import other style files */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nunito:wght@400;600;700&display=swap');
+
+:root {
+  /* Paleta */
+  --primary: #4f7f73;
+  --primary-light: #a9cabf;
+  --background: #f7faf9;
+  --surface: #ffffff;
+  --border: #dde8e4;
+  --text-primary: #25332f;
+  --text-secondary: #657570;
+  --danger: #d96c6c;
+
+  /* Tipografía */
+  --font-family: 'Inter', 'Nunito', sans-serif;
+
+  /* Radios */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  /* Espaciados */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+
+  /* Sombras */
+  --shadow-sm: 0 1px 3px rgba(37, 51, 47, 0.06);
+  --shadow-md: 0 4px 16px rgba(37, 51, 47, 0.08);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-family);
+  background-color: var(--background);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0 0 var(--spacing-sm);
+  color: var(--text-primary);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+p {
+  margin: 0 0 var(--spacing-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+a {
+  color: var(--primary);
+}
+
+@media (max-width: 640px) {
+  :root {
+    --spacing-lg: 1rem;
+    --spacing-xl: 1.5rem;
+  }
+}
+
+/* Aspecto base y consistente para los campos de texto en toda la app. */
+input[type='text'],
+input[type='email'],
+input[type='password'],
+input[type='search'],
+input[type='number'],
+input[type='date'],
+input[type='tel'],
+input[type='url'],
+textarea,
+select {
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.75rem;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+input[type='text']:focus,
+input[type='email']:focus,
+input[type='password']:focus,
+input[type='search']:focus,
+input[type='number']:focus,
+input[type='date']:focus,
+input[type='tel']:focus,
+input[type='url']:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+textarea {
+  resize: vertical;
+  line-height: 1.5;
+}
+
+/* Renderizado de contenido con formato (negrita, subrayado, listas) generado
+   por el editor de texto enriquecido. */
+.rich-text-content {
+  line-height: 1.5;
+}
+
+.rich-text-content p {
+  margin: 0 0 var(--spacing-xs);
+}
+
+.rich-text-content p:last-child {
+  margin-bottom: 0;
+}
+
+.rich-text-content ul,
+.rich-text-content ol {
+  margin: 0 0 var(--spacing-xs);
+  padding-left: 1.25rem;
+}
+
+.rich-text-content strong {
+  font-weight: 700;
+}
+
+.rich-text-content u {
+  text-decoration: underline;
+}

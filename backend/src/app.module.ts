@@ -1,0 +1,138 @@
+import { Module } from '@nestjs/common';
+import { PrestadoresModule } from './prestadores/prestadores.module';
+import { SolicitudPrestador } from './prestadores/entities/solicitud-prestador.entity';
+import { DocumentoPrestador } from './prestadores/entities/documento-prestador.entity';
+import { ResenaServicio } from './prestadores/entities/resena-servicio.entity';
+import { ReporteServicio } from './prestadores/entities/reporte-servicio.entity';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import * as dotenv from 'dotenv';
+import { buildDatabaseConnection } from './config/database.config';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
+import { RolesModule } from './roles/roles.module';
+import { User } from './users/entities/user.entity';
+import { Role } from './roles/entities/role.entity';
+import { MascotasModule } from './mascotas/mascotas.module';
+import { Mascota } from './mascotas/entities/mascota.entity';
+import { Veterinario } from './veterinarios/entities/veterinario.entity';
+import { VeterinariosModule } from './veterinarios/veterinarios.module';
+import { Notificacion } from './notificaciones/entities/notificacion.entity';
+import { NotificacionesModule } from './notificaciones/notificaciones.module';
+import { MailModule } from './mail/mail.module';
+import { EventoClinico } from './eventos-clinicos/entities/evento-clinico.entity';
+import { ArchivoMedico } from './eventos-clinicos/entities/archivo-medico.entity';
+import { EventosClinicosModule } from './eventos-clinicos/eventos-clinicos.module';
+import { HistoriaClinica } from './historias-clinicas/entities/historia-clinica.entity';
+import { AdopcionesModule } from './adopciones/adopciones.module';
+import { PublicacionAdopcion } from './adopciones/entities/publicacion-adopcion.entity';
+import { Servicio } from './servicios/entities/servicio.entity';
+import { DisponibilidadServicio } from './servicios/entities/disponibilidad-servicio.entity';
+import { ServiciosModule } from './servicios/servicios.module';
+import { DisponibilidadesVeterinariasModule } from './disponibilidades-veterinarias/disponibilidades-veterinarias.module';
+import { DisponibilidadVeterinaria } from './disponibilidades-veterinarias/entities/disponibilidad-veterinaria.entity';
+import { TurnoVeterinario } from './turnos-veterinarios/entities/turno-veterinario.entity';
+import { TurnosVeterinariosModule } from './turnos-veterinarios/turnos-veterinarios.module';
+import { AuditoriaUsuario } from './admin/entities/auditoria-usuario.entity';
+import { AdminModule } from './admin/admin.module';
+import { SolicitudAdopcion } from './solicitudes-adopcion/entities/solicitud-adopcion.entity';
+import { SolicitudesAdopcionModule } from './solicitudes-adopcion/solicitudes-adopcion.module';
+import { TurnoServicio } from './turnos-servicios/entities/turno-servicio.entity';
+import { TurnosServiciosModule } from './turnos-servicios/turnos-servicios.module';
+import { Favorito } from './favoritos/entities/favorito.entity';
+import { FavoritosModule } from './favoritos/favoritos.module';
+import { DescarteAdopcion } from './descartes/entities/descarte-adopcion.entity';
+import { DescartesModule } from './descartes/descartes.module';
+import { ReportePerdida } from './reportes-perdida/entities/reporte-perdida.entity';
+import { ReportesPerdidaModule } from './reportes-perdida/reportes-perdida.module';
+import { TagBle } from './tags-ble/entities/tag-ble.entity';
+import { TagsBleModule } from './tags-ble/tags-ble.module';
+import { Deteccion } from './detecciones/entities/deteccion.entity';
+import { DeteccionesModule } from './detecciones/detecciones.module';
+import { SobreturnoVeterinario } from './sobreturnos-veterinarios/entities/sobreturno-veterinario.entity';
+import { SobreturnosVeterinariosModule } from './sobreturnos-veterinarios/sobreturnos-veterinarios.module';
+import { ReportesVeterinariosModule } from './reportes-veterinarios/reportes-veterinarios.module';
+import { Suscripcion } from './suscripciones/entities/suscripcion.entity';
+import { PagoSuscripcion } from './suscripciones/entities/pago-suscripcion.entity';
+import { SuscripcionesModule } from './suscripciones/suscripciones.module';
+
+dotenv.config();
+
+@Module({
+  imports: [
+    // Habilita las tareas programadas. La primera es el recordatorio de
+    // vacunacion de US-40; hasta ahora todas las notificaciones nacian de una
+    // accion del usuario y ninguna del paso del tiempo.
+    ScheduleModule.forRoot(),
+    // Límite de intentos por IP de los endpoints de autenticación (ver
+    // LimiteIntentosGuard). No es global: solo aplica donde se usa el guard.
+    // 20 por minuto deja margen para una clase entera logueándose detrás de
+    // la misma IP (el wifi de la facultad) y frena igual a quien prueba
+    // contraseñas en serie.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 20 }]),
+    TypeOrmModule.forRoot({
+      ...buildDatabaseConnection(),
+      entities: [
+        SolicitudPrestador,
+        DocumentoPrestador,
+        ResenaServicio,
+        ReporteServicio,
+        User,
+        Role,
+        Mascota,
+        Veterinario,
+        Notificacion,
+        HistoriaClinica,
+        EventoClinico,
+        ArchivoMedico,
+        PublicacionAdopcion,
+        Servicio,
+        DisponibilidadServicio,
+        DisponibilidadVeterinaria,
+        TurnoVeterinario,
+        AuditoriaUsuario,
+        SolicitudAdopcion,
+        TurnoServicio,
+        Favorito,
+        DescarteAdopcion,
+        ReportePerdida,
+        TagBle,
+        Deteccion,
+        SobreturnoVeterinario,
+        Suscripcion,
+        PagoSuscripcion,
+      ],
+      synchronize: false,
+    }),
+    AuthModule,
+    PrestadoresModule,
+    UsersModule,
+    RolesModule,
+    MascotasModule,
+    VeterinariosModule,
+    NotificacionesModule,
+    MailModule,
+    EventosClinicosModule,
+    AdopcionesModule,
+    ServiciosModule,
+    DisponibilidadesVeterinariasModule,
+    TurnosVeterinariosModule,
+    AdminModule,
+    SolicitudesAdopcionModule,
+    TurnosServiciosModule,
+    FavoritosModule,
+    DescartesModule,
+    ReportesPerdidaModule,
+    TagsBleModule,
+    DeteccionesModule,
+    SobreturnosVeterinariosModule,
+    ReportesVeterinariosModule,
+    SuscripcionesModule,
+  ],
+  controllers: [AppController],
+  providers: [AppService],
+})
+export class AppModule {}

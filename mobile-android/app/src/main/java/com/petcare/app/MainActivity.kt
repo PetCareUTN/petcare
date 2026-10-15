@@ -1,0 +1,3680 @@
+package com.petcare.app
+
+import android.net.Uri
+import android.os.Bundle
+import android.provider.OpenableColumns
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
+import com.petcare.app.features.adopciones.data.local.MatchesCelebradosPreferences
+import com.petcare.app.features.adopciones.data.remote.FavoritoResponse
+import com.petcare.app.features.adopciones.data.remote.FiltrosAdopcion
+import com.petcare.app.features.adopciones.data.remote.PublicacionAdopcionResponse
+import com.petcare.app.features.adopciones.data.remote.PublicarAdopcionRequest
+import com.petcare.app.features.adopciones.data.remote.SolicitarAdopcionRequest
+import com.petcare.app.features.adopciones.data.remote.SolicitudAdopcionResponse
+import com.petcare.app.features.adopciones.domain.AdopcionesController
+import com.petcare.app.features.adopciones.domain.DescartesController
+import com.petcare.app.features.adopciones.domain.FavoritosController
+import com.petcare.app.features.adopciones.domain.SolicitudesAdopcionController
+import com.petcare.app.features.adopciones.ui.AdopcionDetalleScreen
+import com.petcare.app.features.adopciones.ui.AdopcionesListScreen
+import com.petcare.app.features.adopciones.ui.FiltrosAdopcionScreen
+import com.petcare.app.features.adopciones.ui.MatchCelebrationScreen
+import com.petcare.app.features.adopciones.ui.MisFavoritosScreen
+import com.petcare.app.features.adopciones.ui.MisPublicacionesAdopcionScreen
+import com.petcare.app.features.adopciones.ui.MisSolicitudesAdopcionScreen
+import com.petcare.app.features.adopciones.ui.PublicarAdopcionScreen
+import com.petcare.app.features.adopciones.ui.SolicitarAdopcionFormScreen
+import com.petcare.app.features.adopciones.ui.SolicitudesRecibidasScreen
+import com.petcare.app.features.auth.data.local.SessionManager
+import com.petcare.app.features.auth.data.remote.ForgotPasswordRequest
+import com.petcare.app.features.auth.data.remote.ResetPasswordRequest
+import com.petcare.app.features.auth.data.google.GoogleSignInClient
+import com.petcare.app.features.auth.data.google.GoogleSignInResult
+import com.petcare.app.features.auth.data.remote.RetrofitClient
+import com.petcare.app.features.auth.domain.AuthSessionController
+import com.petcare.app.features.auth.domain.GoogleAuthResult
+import com.petcare.app.features.auth.ui.CompletarRegistroGoogleScreen
+import com.petcare.app.features.auth.ui.ForgotPasswordScreen
+import com.petcare.app.features.auth.ui.LoginScreen
+import com.petcare.app.features.auth.ui.ResetPasswordScreen
+import com.petcare.app.features.auth.ui.AuthenticatedHomeScreen
+import com.petcare.app.features.auth.ui.MenuLateral
+import com.petcare.app.features.auth.ui.PetCareBottomBar
+import com.petcare.app.features.auth.ui.RegisterScreen
+import com.petcare.app.features.historiaclinica.data.remote.EventoClinicoResponse
+import com.petcare.app.features.historiaclinica.domain.HistoriaClinicaController
+import com.petcare.app.features.historiaclinica.export.ExportStorage
+import com.petcare.app.features.historiaclinica.export.HistoriaClinicaPdfGenerator
+import com.petcare.app.features.historiaclinica.export.MedicalFilesDownloader
+import com.petcare.app.features.historiaclinica.ui.HistoriaClinicaScreen
+import com.petcare.app.features.notificaciones.data.remote.NotificacionResponse
+import com.petcare.app.features.notificaciones.domain.NotificacionesController
+import com.petcare.app.features.notificaciones.ui.NotificacionesDropdown
+import com.petcare.app.features.ble.data.remote.TagBleResponse
+import com.petcare.app.features.ble.domain.TagsBleController
+import com.petcare.app.features.ble.ui.TagBleUiState
+import com.petcare.app.features.ble.ui.VincularTagScreen
+import com.petcare.app.features.perdidas.data.remote.CreateReportePerdidaRequest
+import com.petcare.app.features.perdidas.data.remote.ReportePerdidaResponse
+import com.petcare.app.features.perdidas.domain.ReportesPerdidaController
+import com.petcare.app.features.perdidas.data.remote.UltimaDeteccionResponse
+import com.petcare.app.features.perdidas.ui.ReportarMascotaPerdidaScreen
+import com.petcare.app.features.perdidas.ui.UltimaUbicacionScreen
+import com.petcare.app.features.pets.data.remote.CreatePetRequest
+import com.petcare.app.features.pets.data.remote.PetResponse
+import com.petcare.app.features.pets.data.remote.UpdatePetRequest
+import com.petcare.app.features.pets.domain.PetsController
+import com.petcare.app.features.pets.ui.EditPetScreen
+import com.petcare.app.features.pets.ui.PetProfileScreen
+import com.petcare.app.features.pets.ui.RegisterPetScreen
+import com.petcare.app.features.profile.data.remote.UpdateProfileRequest
+import com.petcare.app.features.profile.data.remote.UserProfileResponse
+import com.petcare.app.features.profile.domain.ProfileController
+import com.petcare.app.features.profile.ui.ChangeEmailScreen
+import com.petcare.app.features.profile.ui.EditProfileScreen
+import com.petcare.app.features.profile.ui.ProfileScreen
+import com.petcare.app.features.settings.data.local.ThemePreferences
+import com.petcare.app.features.settings.ui.ConfiguracionScreen
+import com.petcare.app.features.servicios.data.remote.CreateServicioRequest
+import com.petcare.app.features.servicios.data.remote.DisponibilidadRequest
+import com.petcare.app.features.servicios.data.remote.ServicioResponse
+import com.petcare.app.features.servicios.data.remote.UpdateServicioRequest
+import com.petcare.app.features.servicios.domain.ServiciosController
+import com.petcare.app.features.servicios.ui.ServicioFormScreen
+import com.petcare.app.features.servicios.ui.ServiciosListScreen
+import com.petcare.app.features.servicios.ui.PrestadoresScreen
+import com.petcare.app.features.servicios.ui.SolicitudesServiciosRecibidasScreen
+import com.petcare.app.features.turnos.data.remote.CreateTurnoRequest
+import com.petcare.app.features.turnos.data.remote.CreateTurnoServicioRequest
+import com.petcare.app.features.turnos.data.remote.MiReservaServicioResponse
+import com.petcare.app.features.turnos.data.remote.MiTurnoResponse
+import com.petcare.app.features.turnos.data.remote.ReservaServicioRecibidaResponse
+import com.petcare.app.features.turnos.data.remote.VeterinariaResponse
+import com.petcare.app.features.turnos.domain.TipoTurnoItem
+import com.petcare.app.features.turnos.domain.TurnoUnificado
+import com.petcare.app.features.turnos.domain.TurnosController
+import com.petcare.app.features.turnos.domain.TurnosServiciosController
+import com.petcare.app.features.turnos.ui.MisTurnosScreen
+import com.petcare.app.features.turnos.ui.SolicitarTurnoScreen
+import com.petcare.app.ui.SplashScreen
+import com.petcare.app.ui.theme.PetCareTealDark
+import com.petcare.app.ui.theme.PetCareTheme
+import java.io.IOException
+import java.net.URLConnection
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONObject
+import retrofit2.HttpException
+
+private enum class AuthScreen {
+    LOGIN,
+    FORGOT_PASSWORD,
+    RESET_PASSWORD
+}
+
+// El backend manda el motivo real en el body (mensaje/message): turnos (fecha
+// pasada, horario ocupado, fuera de disponibilidad), reportes de mascota
+// perdida (ya está reportada), etc. Sin esto, el usuario ve un texto genérico
+// que no dice qué pasó en verdad.
+private fun mensajeErrorBackend(exception: HttpException, fallback: String): String =
+    runCatching {
+        val json = JSONObject(exception.response()?.errorBody()?.string() ?: "{}")
+        json.optString("mensaje").ifBlank { json.optString("message") }.ifBlank { fallback }
+    }.getOrDefault(fallback)
+
+class MainActivity : ComponentActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+
+        setContent {
+            val themePreferences = remember {
+                ThemePreferences(applicationContext)
+            }
+            val systemInDarkTheme = isSystemInDarkTheme()
+            // null = seguir el tema del sistema hasta que el usuario elija.
+            var darkModePreference by remember {
+                mutableStateOf(themePreferences.getDarkMode())
+            }
+            val isDarkMode = darkModePreference ?: systemInDarkTheme
+
+            PetCareTheme(darkTheme = isDarkMode) {
+                val sessionStore = remember {
+                    SessionManager(applicationContext)
+                }
+                val sessionController = remember {
+                    AuthSessionController(
+                        authApi = RetrofitClient.authApi(sessionStore),
+                        sessionStore = sessionStore
+                    )
+                }
+                val petsController = remember {
+                    PetsController(
+                        petsApi = RetrofitClient.petsApi(sessionStore)
+                    )
+                }
+                val historiaClinicaController = remember {
+                    HistoriaClinicaController(
+                        historiaClinicaApi = RetrofitClient.historiaClinicaApi(sessionStore)
+                    )
+                }
+                val profileController = remember {
+                    ProfileController(
+                        profileApi = RetrofitClient.profileApi(sessionStore)
+                    )
+                }
+                val adopcionesController = remember {
+                    AdopcionesController(
+                        adopcionesApi = RetrofitClient.adopcionesApi(sessionStore)
+                    )
+                }
+                val matchesCelebradosPreferences = remember {
+                    MatchesCelebradosPreferences(applicationContext)
+                }
+                val solicitudesAdopcionController = remember {
+                    SolicitudesAdopcionController(
+                        solicitudesAdopcionApi = RetrofitClient.solicitudesAdopcionApi(sessionStore)
+                    )
+                }
+                val favoritosController = remember {
+                    FavoritosController(
+                        favoritosApi = RetrofitClient.favoritosApi(sessionStore)
+                    )
+                }
+                val descartesController = remember {
+                    DescartesController(
+                        descartesApi = RetrofitClient.descartesApi(sessionStore)
+                    )
+                }
+                val serviciosController = remember {
+                    ServiciosController(
+                        serviciosApi = RetrofitClient.serviciosApi(sessionStore)
+                    )
+                }
+                val turnosController = remember {
+                    TurnosController(
+                        turnosApi = RetrofitClient.turnosApi(sessionStore)
+                    )
+                }
+                val turnosServiciosController = remember {
+                    TurnosServiciosController(
+                        turnosServiciosApi = RetrofitClient.turnosServiciosApi(sessionStore)
+                    )
+                }
+                // Necesita el contexto de la Activity para mostrar el selector de cuentas.
+                val googleSignInClient = remember {
+                    GoogleSignInClient(this@MainActivity)
+                }
+                val notificacionesController = remember {
+                    NotificacionesController(
+                        notificacionesApi = RetrofitClient.notificacionesApi(sessionStore)
+                    )
+                }
+                val reportesPerdidaController = remember {
+                    ReportesPerdidaController(
+                        reportesPerdidaApi = RetrofitClient.reportesPerdidaApi(sessionStore)
+                    )
+                }
+                val tagsBleController = remember {
+                    TagsBleController(
+                        tagsBleApi = RetrofitClient.tagsBleApi(sessionStore)
+                    )
+                }
+                var isLoading by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isLoadingPets by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isSavingPet by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isRestoringSession by rememberSaveable {
+                    mutableStateOf(true)
+                }
+                // rememberSaveable para no repetir la bienvenida al rotar la pantalla.
+                var isSplashTerminada by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var serverError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var petsError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var savePetError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var loggedUserName by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var currentScreen by rememberSaveable {
+                    mutableStateOf(AuthScreen.LOGIN)
+                }
+                var resetEmail by rememberSaveable {
+                    mutableStateOf("")
+                }
+                var forgotPasswordSuccess by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var resetPasswordSuccess by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var isRegisteringPet by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isUpdatingPet by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var updatePetError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var editingPet by remember {
+                    mutableStateOf<PetResponse?>(null)
+                }
+                var pets by remember {
+                    mutableStateOf<List<PetResponse>>(emptyList())
+                }
+                var isRegisteringUser by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isGoogleLoading by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                /*
+                 * Datos que devolvió Google cuando la cuenta todavía no existe:
+                 * mientras esto no sea null se muestra la pantalla que pide el DNI.
+                 */
+                var registroGooglePendiente by remember {
+                    mutableStateOf<GoogleAuthResult.FaltaCompletarRegistro?>(null)
+                }
+                var googleError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var isRegisterLoading by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var registerError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var registerSuccessMessage by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var selectedPetId by rememberSaveable {
+                    mutableStateOf<Int?>(null)
+                }
+                var selectedPet by remember {
+                    mutableStateOf<PetResponse?>(null)
+                }
+                var isLoadingPetProfile by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var petProfileError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                // Reporte de mascota perdida abierto de la mascota seleccionada (US-36).
+                var reportePerdidaActivo by remember {
+                    mutableStateOf<ReportePerdidaResponse?>(null)
+                }
+                var isReportandoPerdida by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isCerrandoReportePerdida by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var reportePerdidaError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                // true mientras se muestra el formulario para reportar la perdida.
+                var isReportandoPerdidaScreen by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                // Tag BLE de la mascota seleccionada (US-32).
+                var tagBleDeLaMascota by remember {
+                    mutableStateOf<TagBleResponse?>(null)
+                }
+                var isLoadingTagBle by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isVinculandoTag by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isDesvinculandoTag by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var tagBleError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                // true mientras se muestra la pantalla de vincular/desvincular el tag.
+                var isVinculandoTagScreen by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                // Reporte cuya última ubicación se está mirando, o null si no se
+                // está mirando ninguna (US-37).
+                //
+                // Guarda el id y no un booleano porque a esta pantalla se llega
+                // desde dos lados: el perfil de la mascota y el aviso de detección
+                // (US-41), y desde el aviso no hay ninguna mascota seleccionada.
+                var ultimaUbicacionIdReporte by rememberSaveable {
+                    mutableStateOf<Int?>(null)
+                }
+                var isLoadingUltimaUbicacion by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var ultimaUbicacionError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var ultimaUbicacion by remember {
+                    mutableStateOf<UltimaDeteccionResponse?>(null)
+                }
+                var isViewingHistoria by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isLoadingHistoria by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var historiaError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var historiaEventos by remember {
+                    mutableStateOf<List<EventoClinicoResponse>>(emptyList())
+                }
+                var isExportingHistoria by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var exportHistoriaMessage by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var isViewingProfile by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isEditingProfile by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isLoadingProfile by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isSavingProfile by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var profileError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var isUploadingProfilePhoto by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var profilePhotoError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var saveProfileError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var profile by remember {
+                    mutableStateOf<UserProfileResponse?>(null)
+                }
+                var isChangingEmail by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isEmailCodeSent by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isProcessingEmailChange by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var emailChangeError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var isPublishingAdopcion by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isSavingAdopcion by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var adopcionError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var adopcionSuccess by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var isViewingAdopciones by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isLoadingAdopciones by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var adopcionesListError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var adopciones by remember {
+                    mutableStateOf<List<PublicacionAdopcionResponse>>(emptyList())
+                }
+                var isViewingAdopcionDetalle by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var selectedAdopcionId by rememberSaveable {
+                    mutableStateOf<Int?>(null)
+                }
+                var selectedAdopcion by remember {
+                    mutableStateOf<PublicacionAdopcionResponse?>(null)
+                }
+                var isLoadingAdopcionDetalle by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var adopcionDetalleError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var isViewingSolicitudesRecibidas by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isLoadingSolicitudesRecibidas by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var solicitudesRecibidasError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var solicitudesRecibidas by remember {
+                    mutableStateOf<List<SolicitudAdopcionResponse>>(emptyList())
+                }
+                var procesandoSolicitudId by rememberSaveable {
+                    mutableStateOf<Int?>(null)
+                }
+                var isViewingMisPublicaciones by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isLoadingMisPublicaciones by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var misPublicacionesError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var misPublicaciones by remember {
+                    mutableStateOf<List<PublicacionAdopcionResponse>>(emptyList())
+                }
+                var procesandoPublicacionId by rememberSaveable {
+                    mutableStateOf<Int?>(null)
+                }
+                var favoritos by remember {
+                    mutableStateOf<List<FavoritoResponse>>(emptyList())
+                }
+                var isLoadingFavoritos by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var favoritosError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var isViewingMisFavoritos by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var filtrosAdopcion by remember {
+                    mutableStateOf(FiltrosAdopcion())
+                }
+                var isViewingFiltrosAdopcion by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var misSolicitudes by remember {
+                    mutableStateOf<List<SolicitudAdopcionResponse>>(emptyList())
+                }
+                var isLoadingMisSolicitudes by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var misSolicitudesError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var isViewingMisSolicitudes by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isViewingFormularioSolicitud by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isSendingSolicitud by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var formularioSolicitudError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var avisoTelefonoVisible by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var matchCelebrationPetName by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var matchCelebrationPetFoto by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var isViewingSettings by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isViewingServicios by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var vistaPrestadores by rememberSaveable { mutableStateOf<String?>(null) }
+                var categoriasAprobadas by remember { mutableStateOf(emptyList<String>()) }
+                var isLoadingServicios by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var serviciosError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var servicios by remember {
+                    mutableStateOf<List<ServicioResponse>>(emptyList())
+                }
+                var isCreatingServicio by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var editingServicio by remember {
+                    mutableStateOf<ServicioResponse?>(null)
+                }
+                var isSavingServicio by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var saveServicioError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var deletingServicioId by rememberSaveable {
+                    mutableStateOf<Int?>(null)
+                }
+                var isRequestingTurno by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isLoadingVeterinariasTurno by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var veterinariasTurno by remember {
+                    mutableStateOf<List<VeterinariaResponse>>(emptyList())
+                }
+                var isLoadingHorariosTurno by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var horariosDisponiblesTurno by remember {
+                    mutableStateOf<List<String>>(emptyList())
+                }
+                var isSavingTurno by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var turnoError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var turnoSuccess by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var isViewingMisTurnos by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isViewingNotificaciones by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isLoadingNotificaciones by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var notificacionesError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var notificaciones by remember {
+                    mutableStateOf<List<NotificacionResponse>>(emptyList())
+                }
+                var marcandoLeidaId by rememberSaveable {
+                    mutableStateOf<Int?>(null)
+                }
+                var isMarcandoTodasLeidas by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isLoadingMisTurnos by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var misTurnosError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var misTurnos by remember {
+                    mutableStateOf<List<MiTurnoResponse>>(emptyList())
+                }
+                var serviciosTurno by remember {
+                    mutableStateOf<List<ServicioResponse>>(emptyList())
+                }
+                var isLoadingServiciosTurno by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var misReservasServicios by remember {
+                    mutableStateOf<List<MiReservaServicioResponse>>(emptyList())
+                }
+                var cancelandoTurnoServicioId by rememberSaveable {
+                    mutableStateOf<Int?>(null)
+                }
+                var isViewingSolicitudesServicios by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var isLoadingSolicitudesServicios by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var solicitudesServiciosError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var solicitudesServicios by remember {
+                    mutableStateOf<List<ReservaServicioRecibidaResponse>>(emptyList())
+                }
+                var procesandoSolicitudServicioId by rememberSaveable {
+                    mutableStateOf<Int?>(null)
+                }
+
+                fun logout() {
+                    sessionController.logout()
+                    loggedUserName = null
+                    pets = emptyList()
+                    serverError = null
+                    petsError = null
+                    savePetError = null
+                    isRegisteringPet = false
+                    updatePetError = null
+                    editingPet = null
+                    selectedPetId = null
+                    selectedPet = null
+                    ultimaUbicacionIdReporte = null
+                    ultimaUbicacion = null
+                    ultimaUbicacionError = null
+                    petProfileError = null
+                    isViewingHistoria = false
+                    historiaError = null
+                    historiaEventos = emptyList()
+                    isViewingProfile = false
+                    isEditingProfile = false
+                    profileError = null
+                    saveProfileError = null
+                    profile = null
+                    isChangingEmail = false
+                    isEmailCodeSent = false
+                    isProcessingEmailChange = false
+                    emailChangeError = null
+                    isPublishingAdopcion = false
+                    isSavingAdopcion = false
+                    adopcionError = null
+                    adopcionSuccess = null
+                    isViewingAdopciones = false
+                    isLoadingAdopciones = false
+                    adopcionesListError = null
+                    adopciones = emptyList()
+                    isViewingAdopcionDetalle = false
+                    selectedAdopcionId = null
+                    selectedAdopcion = null
+                    isLoadingAdopcionDetalle = false
+                    adopcionDetalleError = null
+                    isViewingSolicitudesRecibidas = false
+                    isLoadingSolicitudesRecibidas = false
+                    solicitudesRecibidasError = null
+                    solicitudesRecibidas = emptyList()
+                    procesandoSolicitudId = null
+                    isViewingMisPublicaciones = false
+                    isLoadingMisPublicaciones = false
+                    misPublicacionesError = null
+                    misPublicaciones = emptyList()
+                    procesandoPublicacionId = null
+                    isViewingMisFavoritos = false
+                    isLoadingFavoritos = false
+                    favoritosError = null
+                    favoritos = emptyList()
+                    isViewingFiltrosAdopcion = false
+                    filtrosAdopcion = FiltrosAdopcion()
+                    isViewingMisSolicitudes = false
+                    isLoadingMisSolicitudes = false
+                    misSolicitudesError = null
+                    misSolicitudes = emptyList()
+                    isViewingFormularioSolicitud = false
+                    isSendingSolicitud = false
+                    formularioSolicitudError = null
+                    matchCelebrationPetName = null
+                    matchCelebrationPetFoto = null
+                    isViewingSettings = false
+                    isViewingServicios = false
+                    serviciosError = null
+                    servicios = emptyList()
+                    vistaPrestadores = null
+                    categoriasAprobadas = emptyList()
+                    isCreatingServicio = false
+                    editingServicio = null
+                    saveServicioError = null
+                    deletingServicioId = null
+                    isRequestingTurno = false
+                    veterinariasTurno = emptyList()
+                    horariosDisponiblesTurno = emptyList()
+                    turnoError = null
+                    turnoSuccess = null
+                    isViewingMisTurnos = false
+                    isLoadingMisTurnos = false
+                    misTurnosError = null
+                    misTurnos = emptyList()
+                    serviciosTurno = emptyList()
+                    isLoadingServiciosTurno = false
+                    misReservasServicios = emptyList()
+                    cancelandoTurnoServicioId = null
+                    isViewingSolicitudesServicios = false
+                    isLoadingSolicitudesServicios = false
+                    solicitudesServiciosError = null
+                    solicitudesServicios = emptyList()
+                    procesandoSolicitudServicioId = null
+                    isViewingNotificaciones = false
+                    isLoadingNotificaciones = false
+                    notificacionesError = null
+                    notificaciones = emptyList()
+                    marcandoLeidaId = null
+                    isMarcandoTodasLeidas = false
+                }
+
+                fun volverAInicio() {
+                    vistaPrestadores = null
+                    isRegisteringPet = false
+                    editingPet = null
+                    selectedPetId = null
+                    selectedPet = null
+                    ultimaUbicacionIdReporte = null
+                    ultimaUbicacion = null
+                    ultimaUbicacionError = null
+                    isViewingHistoria = false
+                    isViewingProfile = false
+                    isEditingProfile = false
+                    isChangingEmail = false
+                    isPublishingAdopcion = false
+                    isViewingAdopciones = false
+                    isViewingAdopcionDetalle = false
+                    selectedAdopcionId = null
+                    selectedAdopcion = null
+                    isViewingSolicitudesRecibidas = false
+                    isViewingMisPublicaciones = false
+                    isViewingMisFavoritos = false
+                    isViewingFiltrosAdopcion = false
+                    isViewingMisSolicitudes = false
+                    isViewingFormularioSolicitud = false
+                    isSendingSolicitud = false
+                    formularioSolicitudError = null
+                    matchCelebrationPetName = null
+                    matchCelebrationPetFoto = null
+                    procesandoPublicacionId = null
+                    isViewingSettings = false
+                    isViewingServicios = false
+                    isCreatingServicio = false
+                    editingServicio = null
+                    isRequestingTurno = false
+                    isViewingMisTurnos = false
+                    isViewingSolicitudesServicios = false
+                    isViewingNotificaciones = false
+                }
+
+                fun navigateBackInApp() {
+                    when {
+                        vistaPrestadores != null -> vistaPrestadores = null
+                        registroGooglePendiente != null -> {
+                            registroGooglePendiente = null
+                            googleError = null
+                        }
+                        isViewingNotificaciones -> isViewingNotificaciones = false
+                        isRegisteringPet -> {
+                            savePetError = null
+                            isRegisteringPet = false
+                        }
+                        editingPet != null -> {
+                            updatePetError = null
+                            editingPet = null
+                        }
+                        isCreatingServicio || editingServicio != null -> {
+                            saveServicioError = null
+                            isCreatingServicio = false
+                            editingServicio = null
+                        }
+                        matchCelebrationPetName != null -> {
+                            matchCelebrationPetName = null
+                            matchCelebrationPetFoto = null
+                        }
+                        isViewingFormularioSolicitud -> {
+                            isViewingFormularioSolicitud = false
+                            formularioSolicitudError = null
+                        }
+                        isViewingFiltrosAdopcion -> isViewingFiltrosAdopcion = false
+                        isViewingAdopcionDetalle -> {
+                            isViewingAdopcionDetalle = false
+                            selectedAdopcionId = null
+                            selectedAdopcion = null
+                            adopcionDetalleError = null
+                        }
+                        isPublishingAdopcion -> {
+                            isPublishingAdopcion = false
+                            adopcionError = null
+                            adopcionSuccess = null
+                        }
+                        isViewingMisFavoritos -> {
+                            isViewingMisFavoritos = false
+                            favoritosError = null
+                        }
+                        isViewingMisSolicitudes -> {
+                            isViewingMisSolicitudes = false
+                            misSolicitudesError = null
+                        }
+                        isViewingMisPublicaciones -> {
+                            isViewingMisPublicaciones = false
+                            misPublicacionesError = null
+                        }
+                        isViewingSolicitudesRecibidas -> {
+                            isViewingSolicitudesRecibidas = false
+                            solicitudesRecibidasError = null
+                        }
+                        isViewingAdopciones -> isViewingAdopciones = false
+                        isViewingSolicitudesServicios -> {
+                            isViewingSolicitudesServicios = false
+                            solicitudesServiciosError = null
+                            isViewingServicios = true
+                        }
+                        isViewingServicios -> isViewingServicios = false
+                        isChangingEmail -> {
+                            isChangingEmail = false
+                            isEmailCodeSent = false
+                            emailChangeError = null
+                            isEditingProfile = true
+                        }
+                        isEditingProfile -> {
+                            saveProfileError = null
+                            isEditingProfile = false
+                        }
+                        isViewingSettings -> isViewingSettings = false
+                        isViewingProfile -> {
+                            isViewingProfile = false
+                            profileError = null
+                        }
+                        isViewingHistoria -> {
+                            isViewingHistoria = false
+                            historiaError = null
+                            historiaEventos = emptyList()
+                            exportHistoriaMessage = null
+                        }
+                        isReportandoPerdidaScreen -> {
+                            isReportandoPerdidaScreen = false
+                            reportePerdidaError = null
+                        }
+                        isVinculandoTagScreen -> {
+                            isVinculandoTagScreen = false
+                            tagBleError = null
+                        }
+                        ultimaUbicacionIdReporte != null -> {
+                            ultimaUbicacionIdReporte = null
+                            ultimaUbicacion = null
+                            ultimaUbicacionError = null
+                        }
+                        selectedPetId != null -> {
+                            selectedPetId = null
+                            selectedPet = null
+                            petProfileError = null
+                            reportePerdidaActivo = null
+                            reportePerdidaError = null
+                            tagBleDeLaMascota = null
+                            tagBleError = null
+                            ultimaUbicacion = null
+                            ultimaUbicacionError = null
+                        }
+                        isViewingMisTurnos -> isViewingMisTurnos = false
+                        isRequestingTurno -> {
+                            isRequestingTurno = false
+                            turnoError = null
+                            turnoSuccess = null
+                        }
+                        isRegisteringUser -> {
+                            isRegisteringUser = false
+                            registerError = null
+                            registerSuccessMessage = null
+                        }
+                        currentScreen == AuthScreen.RESET_PASSWORD -> {
+                            currentScreen = AuthScreen.FORGOT_PASSWORD
+                            serverError = null
+                            resetPasswordSuccess = null
+                        }
+                        currentScreen == AuthScreen.FORGOT_PASSWORD -> {
+                            currentScreen = AuthScreen.LOGIN
+                            serverError = null
+                            forgotPasswordSuccess = null
+                        }
+                    }
+                }
+
+                fun loadPets() {
+                    isLoadingPets = true
+                    petsError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            pets = petsController.getMyPets()
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                petsError = "No se pudieron cargar tus mascotas"
+                            }
+                        } catch (exception: IOException) {
+                            petsError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            petsError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingPets = false
+                        }
+                    }
+                }
+
+                /**
+                 * Estado "perdida" de la mascota: se deriva de tener un reporte
+                 * abierto, así que se lee del listado de reportes activos del
+                 * dueño en vez de guardarse como un campo de la mascota.
+                 */
+                fun loadReportePerdida(idMascota: Int) {
+                    reportePerdidaError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            reportePerdidaActivo = reportesPerdidaController
+                                .getMisReportesActivos()
+                                .firstOrNull { it.idMascota == idMascota }
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                reportePerdidaError = "No se pudo cargar el estado del reporte"
+                            }
+                        } catch (exception: IOException) {
+                            reportePerdidaError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            reportePerdidaError = "Ocurrio un error inesperado"
+                        }
+                    }
+                }
+
+                /**
+                 * Última detección registrada del reporte (US-37). Se pide al abrir
+                 * la pantalla y no junto con el perfil: la mayoría de las veces el
+                 * dueño entra a ver los datos de la mascota, no a buscarla.
+                 */
+                fun loadUltimaUbicacion(idReporte: Int) {
+                    isLoadingUltimaUbicacion = true
+                    ultimaUbicacionError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            ultimaUbicacion = reportesPerdidaController
+                                .getUltimaDeteccion(idReporte)
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                ultimaUbicacionError = mensajeErrorBackend(
+                                    exception,
+                                    "No se pudo cargar la ultima ubicacion"
+                                )
+                            }
+                        } catch (exception: IOException) {
+                            ultimaUbicacionError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            ultimaUbicacionError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingUltimaUbicacion = false
+                        }
+                    }
+                }
+
+                fun loadTagBle(idMascota: Int) {
+                    isLoadingTagBle = true
+                    tagBleError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            tagBleDeLaMascota = tagsBleController.obtener(idMascota)
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                tagBleError = "No se pudo cargar el tag BLE"
+                            }
+                        } catch (exception: IOException) {
+                            tagBleError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            tagBleError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingTagBle = false
+                        }
+                    }
+                }
+
+                fun loadPetProfile(id: Int) {
+                    isLoadingPetProfile = true
+                    petProfileError = null
+                    loadReportePerdida(id)
+                    loadTagBle(id)
+
+                    lifecycleScope.launch {
+                        try {
+                            selectedPet = petsController.getPetById(id)
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                petProfileError = "No se pudo cargar el perfil de la mascota"
+                            }
+                        } catch (exception: IOException) {
+                            petProfileError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            petProfileError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingPetProfile = false
+                        }
+                    }
+                }
+
+                fun loadHistoriaClinica(idMascota: Int) {
+                    isLoadingHistoria = true
+                    historiaError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            val historia = historiaClinicaController.getHistoriaClinica(idMascota)
+                            historiaEventos = historia.eventos
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                historiaError = "No se pudo cargar la historia clinica"
+                            }
+                        } catch (exception: IOException) {
+                            historiaError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            historiaError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingHistoria = false
+                        }
+                    }
+                }
+
+                fun loadProfile() {
+                    isLoadingProfile = true
+                    profileError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            profile = profileController.getMyProfile()
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                profileError = "No se pudo cargar tu perfil"
+                            }
+                        } catch (exception: IOException) {
+                            profileError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            profileError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingProfile = false
+                        }
+                    }
+                }
+
+                fun loadServicios() {
+                    isLoadingServicios = true
+                    serviciosError = null
+                    categoriasAprobadas = emptyList()
+
+                    lifecycleScope.launch {
+                        try {
+                            servicios = serviciosController.getMyServicios()
+                            categoriasAprobadas = RetrofitClient.serviciosApi(sessionStore)
+                                .solicitudesPrestador().filter { it.estado == "aprobado" }.map { it.categoria }
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                serviciosError = "No se pudieron cargar tus servicios"
+                            }
+                        } catch (exception: IOException) {
+                            serviciosError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            serviciosError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingServicios = false
+                        }
+                    }
+                }
+
+                fun loadAdopciones() {
+                    isLoadingAdopciones = true
+                    adopcionesListError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            adopciones = adopcionesController.listar(filtrosAdopcion)
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                adopcionesListError = "No se pudieron cargar las mascotas en adopcion"
+                            }
+                        } catch (exception: IOException) {
+                            adopcionesListError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            adopcionesListError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingAdopciones = false
+                        }
+                    }
+                }
+
+                fun loadAdopcionDetalle(idPublicacion: Int) {
+                    isLoadingAdopcionDetalle = true
+                    adopcionDetalleError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            selectedAdopcion = adopcionesController.obtenerDetalle(idPublicacion)
+                        } catch (exception: HttpException) {
+                            adopcionDetalleError = when (exception.code()) {
+                                401 -> {
+                                    logout()
+                                    serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                    null
+                                }
+                                404 -> "La publicacion ya no esta disponible"
+                                else -> "No se pudo cargar el detalle de la publicacion"
+                            }
+                        } catch (exception: IOException) {
+                            adopcionDetalleError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            adopcionDetalleError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingAdopcionDetalle = false
+                        }
+                    }
+                }
+
+                fun loadMisPublicaciones() {
+                    isLoadingMisPublicaciones = true
+                    misPublicacionesError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            misPublicaciones = adopcionesController.listarMias()
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                misPublicacionesError = "No se pudieron cargar tus publicaciones"
+                            }
+                        } catch (exception: IOException) {
+                            misPublicacionesError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            misPublicacionesError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingMisPublicaciones = false
+                        }
+                    }
+                }
+
+                fun loadSolicitudesRecibidas() {
+                    isLoadingSolicitudesRecibidas = true
+                    solicitudesRecibidasError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            solicitudesRecibidas = solicitudesAdopcionController.listarRecibidas()
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                solicitudesRecibidasError = "No se pudieron cargar las solicitudes recibidas"
+                            }
+                        } catch (exception: IOException) {
+                            solicitudesRecibidasError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            solicitudesRecibidasError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingSolicitudesRecibidas = false
+                        }
+                    }
+                }
+
+                fun loadFavoritos() {
+                    isLoadingFavoritos = true
+                    favoritosError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            favoritos = favoritosController.listar()
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                favoritosError = "No se pudieron cargar tus favoritos"
+                            }
+                        } catch (exception: IOException) {
+                            favoritosError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            favoritosError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingFavoritos = false
+                        }
+                    }
+                }
+
+                fun loadMisSolicitudes() {
+                    isLoadingMisSolicitudes = true
+                    misSolicitudesError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            misSolicitudes = solicitudesAdopcionController.listarMisSolicitudes()
+
+                            // El festejo del match es para el adoptante: se muestra la
+                            // primera vez que ve una solicitud suya aceptada.
+                            val nuevosMatches = misSolicitudes.filter {
+                                it.estado == "ACEPTADA" &&
+                                    !matchesCelebradosPreferences.fueCelebrado(it.idSolicitud)
+                            }
+                            nuevosMatches.maxByOrNull { it.createdAt }?.let { match ->
+                                matchCelebrationPetName = match.nombreMascota
+                                matchCelebrationPetFoto = match.fotoMascota
+                            }
+                            matchesCelebradosPreferences.marcarCelebrados(
+                                nuevosMatches.map { it.idSolicitud }
+                            )
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                misSolicitudesError = "No se pudieron cargar tus solicitudes"
+                            }
+                        } catch (exception: IOException) {
+                            misSolicitudesError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            misSolicitudesError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingMisSolicitudes = false
+                        }
+                    }
+                }
+
+                fun tieneTelefonoConCodigoPais(): Boolean {
+                    val telefono = profile?.telefono?.trim().orEmpty()
+                    return telefono.startsWith("+") && telefono.count { it.isDigit() } >= 8
+                }
+
+                fun loadNotificaciones() {
+                    isLoadingNotificaciones = true
+                    notificacionesError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            notificaciones = notificacionesController.getMisNotificaciones()
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                notificacionesError = "No se pudieron cargar tus notificaciones"
+                            }
+                        } catch (exception: IOException) {
+                            notificacionesError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            notificacionesError = "Ocurrio un error inesperado"
+                        }
+
+                        isLoadingNotificaciones = false
+                    }
+                }
+
+                fun marcarNotificacionLeida(notificacion: NotificacionResponse) {
+                    marcandoLeidaId = notificacion.idNotificacion
+
+                    lifecycleScope.launch {
+                        try {
+                            notificacionesController.marcarLeida(notificacion.idNotificacion)
+                            notificaciones = notificaciones.map {
+                                if (it.idNotificacion == notificacion.idNotificacion) {
+                                    it.copy(leida = true)
+                                } else {
+                                    it
+                                }
+                            }
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                notificacionesError = "No se pudo marcar la notificacion como leida"
+                            }
+                        } catch (exception: IOException) {
+                            notificacionesError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            notificacionesError = "Ocurrio un error inesperado"
+                        }
+
+                        marcandoLeidaId = null
+                    }
+                }
+
+                fun marcarTodasLeidas() {
+                    isMarcandoTodasLeidas = true
+
+                    lifecycleScope.launch {
+                        try {
+                            notificacionesController.marcarTodasLeidas()
+                            notificaciones = notificaciones.map { it.copy(leida = true) }
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                notificacionesError = "No se pudieron marcar las notificaciones"
+                            }
+                        } catch (exception: IOException) {
+                            notificacionesError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            notificacionesError = "Ocurrio un error inesperado"
+                        }
+
+                        isMarcandoTodasLeidas = false
+                    }
+                }
+
+                /*
+                 * Ingreso con Google. Primero se le pide el token a Google y
+                 * después el backend decide: si la cuenta existe entra derecho,
+                 * y si es nueva pide completar el registro con el DNI.
+                 */
+                fun ingresarConGoogle() {
+                    isGoogleLoading = true
+                    googleError = null
+                    serverError = null
+                    registerError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            when (val resultado = googleSignInClient.obtenerIdToken()) {
+                                is GoogleSignInResult.Cancelado -> {
+                                    // La persona cerró el selector: no es un error.
+                                }
+
+                                is GoogleSignInResult.Error -> {
+                                    googleError = resultado.mensaje
+                                }
+
+                                is GoogleSignInResult.Exitoso -> {
+                                    when (
+                                        val ingreso =
+                                            sessionController.ingresarConGoogle(resultado.idToken)
+                                    ) {
+                                        is GoogleAuthResult.Ingreso -> {
+                                            loggedUserName = ingreso.session.userName
+                                            isRegisteringUser = false
+                                            loadPets()
+                                            loadNotificaciones()
+                                        }
+
+                                        is GoogleAuthResult.FaltaCompletarRegistro -> {
+                                            registroGooglePendiente = ingreso
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (exception: HttpException) {
+                            googleError = when (exception.code()) {
+                                401 -> "Google rechazo el ingreso. Proba de nuevo"
+                                500 -> "Ocurrio un error en el servidor"
+                                else -> "No se pudo ingresar con Google"
+                            }
+                        } catch (exception: IOException) {
+                            googleError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            googleError = "Ocurrio un error inesperado"
+                        } finally {
+                            isGoogleLoading = false
+                        }
+                    }
+                }
+
+                fun completarRegistroConGoogle(numeroDocumento: String) {
+                    val pendiente = registroGooglePendiente ?: return
+
+                    isGoogleLoading = true
+                    googleError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            val resultado = sessionController.registrarConGoogle(
+                                idToken = pendiente.idToken,
+                                numeroDocumento = numeroDocumento
+                            )
+
+                            if (resultado is GoogleAuthResult.Ingreso) {
+                                registroGooglePendiente = null
+                                isRegisteringUser = false
+                                loggedUserName = resultado.session.userName
+                                loadPets()
+                                loadNotificaciones()
+                            }
+                        } catch (exception: HttpException) {
+                            googleError = when (exception.code()) {
+                                409 -> "Ese DNI ya está registrado"
+                                400 -> "Revisa el DNI ingresado"
+                                401 -> "La sesion de Google vencio. Proba de nuevo"
+                                500 -> "Ocurrio un error en el servidor"
+                                else -> "No se pudo completar el registro"
+                            }
+                        } catch (exception: IOException) {
+                            googleError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            googleError = "Ocurrio un error inesperado"
+                        } finally {
+                            isGoogleLoading = false
+                        }
+                    }
+                }
+
+                fun loadMisTurnos() {
+                    isLoadingMisTurnos = true
+                    misTurnosError = null
+
+                    lifecycleScope.launch {
+                        var sesionExpirada = false
+
+                        try {
+                            misTurnos = turnosController.getMisTurnos()
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                sesionExpirada = true
+                            } else {
+                                misTurnosError = "No se pudieron cargar tus turnos"
+                            }
+                        } catch (exception: IOException) {
+                            misTurnosError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            misTurnosError = "Ocurrio un error inesperado"
+                        }
+
+                        if (!sesionExpirada) {
+                            try {
+                                misReservasServicios = turnosServiciosController.getMisReservas()
+                            } catch (exception: HttpException) {
+                                if (exception.code() == 401) {
+                                    sesionExpirada = true
+                                } else if (misTurnosError == null) {
+                                    misTurnosError = "No se pudieron cargar tus turnos"
+                                }
+                            } catch (exception: IOException) {
+                                if (misTurnosError == null) {
+                                    misTurnosError = "No se pudo conectar con el servidor"
+                                }
+                            } catch (exception: Exception) {
+                                if (misTurnosError == null) {
+                                    misTurnosError = "Ocurrio un error inesperado"
+                                }
+                            }
+                        }
+
+                        if (sesionExpirada) {
+                            logout()
+                            serverError = "La sesion expiro. Inicia sesion nuevamente"
+                        }
+
+                        isLoadingMisTurnos = false
+                    }
+                }
+
+                fun loadServiciosTurno(categoria: String) {
+                    isLoadingServiciosTurno = true
+
+                    lifecycleScope.launch {
+                        try {
+                            serviciosTurno = serviciosController.getServicios(categoria)
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                turnoError = "No se pudieron cargar los prestadores"
+                            }
+                        } catch (exception: IOException) {
+                            turnoError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            turnoError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingServiciosTurno = false
+                        }
+                    }
+                }
+
+                fun loadSolicitudesServicios() {
+                    isLoadingSolicitudesServicios = true
+                    solicitudesServiciosError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            solicitudesServicios = turnosServiciosController.getRecibidas()
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                solicitudesServiciosError = "No se pudieron cargar las solicitudes recibidas"
+                            }
+                        } catch (exception: IOException) {
+                            solicitudesServiciosError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            solicitudesServiciosError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingSolicitudesServicios = false
+                        }
+                    }
+                }
+
+                fun loadVeterinariasTurno() {
+                    isLoadingVeterinariasTurno = true
+
+                    lifecycleScope.launch {
+                        try {
+                            veterinariasTurno = turnosController.getVeterinariasAprobadas()
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                turnoError = "No se pudieron cargar las veterinarias"
+                            }
+                        } catch (exception: IOException) {
+                            turnoError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            turnoError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingVeterinariasTurno = false
+                        }
+                    }
+                }
+
+                fun loadHorariosDisponibles(idProveedor: Int, fecha: String, esServicio: Boolean) {
+                    isLoadingHorariosTurno = true
+
+                    lifecycleScope.launch {
+                        try {
+                            horariosDisponiblesTurno = if (esServicio) {
+                                turnosServiciosController.getHorariosDisponibles(idProveedor, fecha)
+                            } else {
+                                turnosController.getHorariosDisponibles(idProveedor, fecha)
+                            }
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                turnoError = "No se pudieron cargar los horarios disponibles"
+                            }
+                        } catch (exception: IOException) {
+                            turnoError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            turnoError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingHorariosTurno = false
+                        }
+                    }
+                }
+
+                val canNavigateBackInApp =
+                    registroGooglePendiente != null ||
+                        isViewingNotificaciones ||
+                        isRegisteringPet ||
+                        editingPet != null ||
+                        isCreatingServicio ||
+                        editingServicio != null ||
+                        isViewingAdopcionDetalle ||
+                        isPublishingAdopcion ||
+                        isViewingMisPublicaciones ||
+                        isViewingSolicitudesRecibidas ||
+                        isViewingAdopciones ||
+                        isViewingSolicitudesServicios ||
+                        isViewingServicios ||
+                        isChangingEmail ||
+                        isEditingProfile ||
+                        isViewingProfile ||
+                        isViewingHistoria ||
+                        selectedPetId != null ||
+                        isViewingSettings ||
+                        isViewingMisTurnos ||
+                        isRequestingTurno ||
+                        isRegisteringUser ||
+                        currentScreen != AuthScreen.LOGIN
+
+                BackHandler(enabled = canNavigateBackInApp) {
+                    navigateBackInApp()
+                }
+
+                LaunchedEffect(Unit) {
+                    val restoredSession = sessionController.restoreSession()
+                    loggedUserName = restoredSession?.userName
+                    isRestoringSession = false
+
+                    if (restoredSession != null) {
+                        loadPets()
+                        // Para que el menú lateral ya muestre el contador de no leídas.
+                        loadNotificaciones()
+                    }
+                }
+
+                @Composable
+                fun AdopcionSeccion() {
+                    if (matchCelebrationPetName != null) {
+                        MatchCelebrationScreen(
+                            nombreMascota = matchCelebrationPetName.orEmpty(),
+                            fotoMascota = matchCelebrationPetFoto,
+                            onContinuar = {
+                                matchCelebrationPetName = null
+                                matchCelebrationPetFoto = null
+                            }
+                        )
+                    } else if (isViewingFormularioSolicitud) {
+                        SolicitarAdopcionFormScreen(
+                            nombreMascota = selectedAdopcion?.mascota?.nombre.orEmpty(),
+                            isSending = isSendingSolicitud,
+                            errorMessage = formularioSolicitudError,
+                            onEnviar = { tipoVivienda, tienePatio, tieneOtrasMascotas, tieneNinos, tuvoMascotasAntes, motivo, informacionAdicional ->
+                                val idPublicacion = selectedAdopcionId
+                                if (idPublicacion != null) {
+                                    isSendingSolicitud = true
+                                    formularioSolicitudError = null
+
+                                    lifecycleScope.launch {
+                                        try {
+                                            solicitudesAdopcionController.solicitar(
+                                                SolicitarAdopcionRequest(
+                                                    idPublicacion = idPublicacion,
+                                                    tipoVivienda = tipoVivienda,
+                                                    tienePatio = tienePatio,
+                                                    tieneOtrasMascotas = tieneOtrasMascotas,
+                                                    tieneNinos = tieneNinos,
+                                                    tuvoMascotasAntes = tuvoMascotasAntes,
+                                                    motivo = motivo,
+                                                    informacionAdicional = informacionAdicional
+                                                )
+                                            )
+                                            isViewingFormularioSolicitud = false
+                                            isViewingAdopcionDetalle = false
+                                            selectedAdopcionId = null
+                                            selectedAdopcion = null
+                                            if (isViewingAdopciones) {
+                                                loadAdopciones()
+                                            }
+                                        } catch (exception: HttpException) {
+                                            formularioSolicitudError = when (exception.code()) {
+                                                401 -> {
+                                                    logout()
+                                                    serverError =
+                                                        "La sesion expiro. Inicia sesion nuevamente"
+                                                    null
+                                                }
+                                                403 -> "No podés solicitar la adopción de tu propia publicación"
+                                                404 -> "La publicación ya no está disponible"
+                                                409 -> "Ya tenés una solicitud pendiente para esta publicación"
+                                                else -> "No se pudo enviar la solicitud"
+                                            }
+                                        } catch (exception: IOException) {
+                                            formularioSolicitudError = "No se pudo conectar con el servidor"
+                                        } catch (exception: Exception) {
+                                            formularioSolicitudError = "Ocurrio un error inesperado"
+                                        } finally {
+                                            isSendingSolicitud = false
+                                        }
+                                    }
+                                }
+                            },
+                            onBack = {
+                                isViewingFormularioSolicitud = false
+                                formularioSolicitudError = null
+                            }
+                        )
+                    } else if (isViewingFiltrosAdopcion) {
+                        FiltrosAdopcionScreen(
+                            filtrosActuales = filtrosAdopcion,
+                            onAplicar = { nuevosFiltros ->
+                                filtrosAdopcion = nuevosFiltros
+                                isViewingFiltrosAdopcion = false
+                                loadAdopciones()
+                            },
+                            onBack = { isViewingFiltrosAdopcion = false }
+                        )
+                    } else if (isViewingAdopcionDetalle) {
+                        AdopcionDetalleScreen(
+                            isLoading = isLoadingAdopcionDetalle,
+                            errorMessage = adopcionDetalleError,
+                            publicacion = selectedAdopcion,
+                            onBack = {
+                                isViewingAdopcionDetalle = false
+                                selectedAdopcionId = null
+                                selectedAdopcion = null
+                                adopcionDetalleError = null
+                            },
+                            onRetry = {
+                                selectedAdopcionId?.let { loadAdopcionDetalle(it) }
+                            },
+                            onMeInteresaClick = {
+                                if (!tieneTelefonoConCodigoPais()) {
+                                    avisoTelefonoVisible = true
+                                } else {
+                                    formularioSolicitudError = null
+                                    isViewingFormularioSolicitud = true
+                                }
+                            }
+                        )
+                    } else if (isPublishingAdopcion) {
+                        PublicarAdopcionScreen(
+                            pets = pets,
+                            isPublishing = isSavingAdopcion,
+                            errorMessage = adopcionError,
+                            successMessage = adopcionSuccess,
+                            onPublish = { petId, descripcion, tamano, vacunado, compatiblePerros, compatibleGatos, compatibleNinos, necesitaPatio, provincia, ubicacion, fotoUri ->
+                                isSavingAdopcion = true
+                                adopcionError = null
+
+                                lifecycleScope.launch {
+                                    try {
+                                        // La mascota necesita foto para publicarse: si el
+                                        // formulario trajo una, se guarda en su perfil primero.
+                                        if (fotoUri != null) {
+                                            val mascota = pets.first { it.id == petId }
+                                            petsController.updatePetWithPhoto(
+                                                id = petId,
+                                                request = UpdatePetRequest(
+                                                    nombre = mascota.nombre,
+                                                    especie = mascota.especie,
+                                                    raza = mascota.raza,
+                                                    sexo = mascota.sexo,
+                                                    birthDate = mascota.birthDate,
+                                                    peso = mascota.peso,
+                                                    esterilizado = mascota.esterilizado,
+                                                    observaciones = mascota.observaciones,
+                                                    alergias = mascota.alergias
+                                                ),
+                                                photo = buildPhotoPart(fotoUri)
+                                            )
+                                            loadPets()
+                                        }
+
+                                        adopcionesController.publicar(
+                                            PublicarAdopcionRequest(
+                                                idMascota = petId,
+                                                descripcion = descripcion,
+                                                tamano = tamano,
+                                                vacunado = vacunado,
+                                                compatiblePerros = compatiblePerros,
+                                                compatibleGatos = compatibleGatos,
+                                                compatibleNinos = compatibleNinos,
+                                                necesitaPatio = necesitaPatio,
+                                                provincia = provincia,
+                                                ubicacion = ubicacion
+                                            )
+                                        )
+                                        adopcionSuccess =
+                                            "Tu mascota ya está publicada en adopción"
+                                    } catch (exception: HttpException) {
+                                        adopcionError = when (exception.code()) {
+                                            401 -> {
+                                                logout()
+                                                serverError =
+                                                    "La sesion expiro. Inicia sesion nuevamente"
+                                                null
+                                            }
+                                            403 -> "No podés publicar una mascota que no es tuya"
+                                            409 -> "Esa mascota ya tiene una publicación activa o le falta la foto"
+                                            404 -> "No se encontró la mascota"
+                                            else -> "No se pudo publicar la mascota"
+                                        }
+                                    } catch (exception: IOException) {
+                                        adopcionError = "No se pudo conectar con el servidor"
+                                    } catch (exception: Exception) {
+                                        adopcionError = "Ocurrio un error inesperado"
+                                    } finally {
+                                        isSavingAdopcion = false
+                                    }
+                                }
+                            },
+                            onRegisterNewPet = {
+                                savePetError = null
+                                isRegisteringPet = true
+                            },
+                            onBack = {
+                                isPublishingAdopcion = false
+                                adopcionError = null
+                                adopcionSuccess = null
+                                if (isViewingAdopciones) {
+                                    loadAdopciones()
+                                }
+                            }
+                        )
+                    } else if (isViewingMisFavoritos) {
+                        MisFavoritosScreen(
+                            isLoading = isLoadingFavoritos,
+                            errorMessage = favoritosError,
+                            favoritos = favoritos,
+                            onBack = {
+                                isViewingMisFavoritos = false
+                                favoritosError = null
+                            },
+                            onRetry = { loadFavoritos() },
+                            onFavoritoClick = { favorito ->
+                                selectedAdopcionId = favorito.publicacion.idPublicacion
+                                selectedAdopcion = favorito.publicacion
+                                adopcionDetalleError = null
+                                isViewingMisFavoritos = false
+                                isViewingAdopcionDetalle = true
+                            },
+                            onQuitar = { favorito ->
+                                lifecycleScope.launch {
+                                    try {
+                                        favoritosController.quitar(favorito.publicacion.idPublicacion)
+                                        favoritos = favoritos.filter { it.idFavorito != favorito.idFavorito }
+                                    } catch (exception: HttpException) {
+                                        if (exception.code() == 401) {
+                                            logout()
+                                            serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                        } else {
+                                            favoritosError = "No se pudo quitar el favorito"
+                                        }
+                                    } catch (exception: IOException) {
+                                        favoritosError = "No se pudo conectar con el servidor"
+                                    } catch (exception: Exception) {
+                                        favoritosError = "Ocurrio un error inesperado"
+                                    }
+                                }
+                            }
+                        )
+                    } else if (isViewingMisSolicitudes) {
+                        MisSolicitudesAdopcionScreen(
+                            isLoading = isLoadingMisSolicitudes,
+                            errorMessage = misSolicitudesError,
+                            solicitudes = misSolicitudes,
+                            onBack = {
+                                isViewingMisSolicitudes = false
+                                misSolicitudesError = null
+                            },
+                            onRetry = { loadMisSolicitudes() }
+                        )
+                    } else if (isViewingMisPublicaciones) {
+                        MisPublicacionesAdopcionScreen(
+                            isLoading = isLoadingMisPublicaciones,
+                            errorMessage = misPublicacionesError,
+                            publicaciones = misPublicaciones,
+                            solicitudesPorPublicacion = solicitudesRecibidas
+                                .groupingBy { it.idPublicacion }
+                                .eachCount(),
+                            pendientesPorPublicacion = solicitudesRecibidas
+                                .filter { it.estado == "PENDIENTE" }
+                                .groupingBy { it.idPublicacion }
+                                .eachCount(),
+                            procesandoId = procesandoPublicacionId,
+                            onBack = {
+                                isViewingMisPublicaciones = false
+                                misPublicacionesError = null
+                            },
+                            onRetry = { loadMisPublicaciones() },
+                            onVerSolicitudes = {
+                                isViewingMisPublicaciones = false
+                                solicitudesRecibidasError = null
+                                isViewingSolicitudesRecibidas = true
+                                loadSolicitudesRecibidas()
+                            },
+                            onPausar = { publicacion ->
+                                procesandoPublicacionId = publicacion.idPublicacion
+                                misPublicacionesError = null
+
+                                lifecycleScope.launch {
+                                    try {
+                                        val actualizada = adopcionesController.pausar(publicacion.idPublicacion)
+                                        misPublicaciones = misPublicaciones.map {
+                                            if (it.idPublicacion == actualizada.idPublicacion) actualizada else it
+                                        }
+                                    } catch (exception: HttpException) {
+                                        if (exception.code() == 401) {
+                                            logout()
+                                            serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                        } else {
+                                            misPublicacionesError = "No se pudo pausar la publicación"
+                                        }
+                                    } catch (exception: IOException) {
+                                        misPublicacionesError = "No se pudo conectar con el servidor"
+                                    } catch (exception: Exception) {
+                                        misPublicacionesError = "Ocurrio un error inesperado"
+                                    } finally {
+                                        procesandoPublicacionId = null
+                                    }
+                                }
+                            },
+                            onReanudar = { publicacion ->
+                                procesandoPublicacionId = publicacion.idPublicacion
+                                misPublicacionesError = null
+
+                                lifecycleScope.launch {
+                                    try {
+                                        val actualizada = adopcionesController.reanudar(publicacion.idPublicacion)
+                                        misPublicaciones = misPublicaciones.map {
+                                            if (it.idPublicacion == actualizada.idPublicacion) actualizada else it
+                                        }
+                                    } catch (exception: HttpException) {
+                                        if (exception.code() == 401) {
+                                            logout()
+                                            serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                        } else {
+                                            misPublicacionesError = "No se pudo reanudar la publicación"
+                                        }
+                                    } catch (exception: IOException) {
+                                        misPublicacionesError = "No se pudo conectar con el servidor"
+                                    } catch (exception: Exception) {
+                                        misPublicacionesError = "Ocurrio un error inesperado"
+                                    } finally {
+                                        procesandoPublicacionId = null
+                                    }
+                                }
+                            },
+                            onCancelar = { publicacion ->
+                                procesandoPublicacionId = publicacion.idPublicacion
+                                misPublicacionesError = null
+
+                                lifecycleScope.launch {
+                                    try {
+                                        val actualizada = adopcionesController.cancelar(publicacion.idPublicacion)
+                                        misPublicaciones = misPublicaciones.map {
+                                            if (it.idPublicacion == actualizada.idPublicacion) actualizada else it
+                                        }
+                                    } catch (exception: HttpException) {
+                                        if (exception.code() == 401) {
+                                            logout()
+                                            serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                        } else {
+                                            misPublicacionesError = "No se pudo cancelar la publicación"
+                                        }
+                                    } catch (exception: IOException) {
+                                        misPublicacionesError = "No se pudo conectar con el servidor"
+                                    } catch (exception: Exception) {
+                                        misPublicacionesError = "Ocurrio un error inesperado"
+                                    } finally {
+                                        procesandoPublicacionId = null
+                                    }
+                                }
+                            }
+                        )
+                    } else if (isViewingSolicitudesRecibidas) {
+                        SolicitudesRecibidasScreen(
+                            isLoading = isLoadingSolicitudesRecibidas,
+                            errorMessage = solicitudesRecibidasError,
+                            solicitudes = solicitudesRecibidas,
+                            processingId = procesandoSolicitudId,
+                            onBack = {
+                                isViewingSolicitudesRecibidas = false
+                                solicitudesRecibidasError = null
+                            },
+                            onRetry = { loadSolicitudesRecibidas() },
+                            onAceptar = { solicitud ->
+                                procesandoSolicitudId = solicitud.idSolicitud
+                                solicitudesRecibidasError = null
+
+                                lifecycleScope.launch {
+                                    try {
+                                        val actualizada =
+                                            solicitudesAdopcionController.aceptar(solicitud.idSolicitud)
+                                        // Quien publica no ve el festejo: la fila pasa a
+                                        // "Aceptada" con el contacto del adoptante.
+                                        solicitudesRecibidas = solicitudesRecibidas.map {
+                                            if (it.idSolicitud == actualizada.idSolicitud) actualizada else it
+                                        }
+                                    } catch (exception: HttpException) {
+                                        if (exception.code() == 401) {
+                                            logout()
+                                            serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                        } else {
+                                            solicitudesRecibidasError = "No se pudo aceptar la solicitud"
+                                        }
+                                    } catch (exception: IOException) {
+                                        solicitudesRecibidasError = "No se pudo conectar con el servidor"
+                                    } catch (exception: Exception) {
+                                        solicitudesRecibidasError = "Ocurrio un error inesperado"
+                                    } finally {
+                                        procesandoSolicitudId = null
+                                    }
+                                }
+                            },
+                            onRechazar = { solicitud, motivo ->
+                                procesandoSolicitudId = solicitud.idSolicitud
+                                solicitudesRecibidasError = null
+
+                                lifecycleScope.launch {
+                                    try {
+                                        val actualizada = solicitudesAdopcionController.rechazar(
+                                            solicitud.idSolicitud,
+                                            motivo,
+                                        )
+                                        solicitudesRecibidas = solicitudesRecibidas.map {
+                                            if (it.idSolicitud == actualizada.idSolicitud) actualizada else it
+                                        }
+                                    } catch (exception: HttpException) {
+                                        if (exception.code() == 401) {
+                                            logout()
+                                            serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                        } else {
+                                            solicitudesRecibidasError = "No se pudo rechazar la solicitud"
+                                        }
+                                    } catch (exception: IOException) {
+                                        solicitudesRecibidasError = "No se pudo conectar con el servidor"
+                                    } catch (exception: Exception) {
+                                        solicitudesRecibidasError = "Ocurrio un error inesperado"
+                                    } finally {
+                                        procesandoSolicitudId = null
+                                    }
+                                }
+                            }
+                        )
+                    } else if (isViewingAdopciones) {
+                        AdopcionesListScreen(
+                            isLoading = isLoadingAdopciones,
+                            errorMessage = adopcionesListError,
+                            publicaciones = adopciones,
+                            favoritoIds = favoritos.map { it.publicacion.idPublicacion }.toSet(),
+                            hayFiltrosActivos = !filtrosAdopcion.estaVacio,
+                            solicitudesPendientes = solicitudesRecibidas.count { it.estado == "PENDIENTE" },
+                            onRetry = { loadAdopciones() },
+                            onQuitarFiltros = {
+                                filtrosAdopcion = FiltrosAdopcion()
+                                loadAdopciones()
+                            },
+                            onVolverAEmpezar = {
+                                lifecycleScope.launch {
+                                    try {
+                                        descartesController.limpiar()
+                                    } catch (exception: HttpException) {
+                                        if (exception.code() == 401) {
+                                            logout()
+                                            serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                        }
+                                    } catch (exception: IOException) {
+                                    } catch (exception: Exception) {
+                                    } finally {
+                                        loadAdopciones()
+                                    }
+                                }
+                            },
+                            onPublicacionClick = { publicacion ->
+                                selectedAdopcionId = publicacion.idPublicacion
+                                selectedAdopcion = null
+                                adopcionDetalleError = null
+                                isViewingAdopcionDetalle = true
+                                loadAdopcionDetalle(publicacion.idPublicacion)
+                            },
+                            onPasar = { publicacion ->
+                                // La tarjeta ya avanzó en pantalla; si la baja falla,
+                                // la mascota reaparece en la próxima recarga.
+                                lifecycleScope.launch {
+                                    try {
+                                        descartesController.descartar(publicacion.idPublicacion)
+                                    } catch (exception: HttpException) {
+                                        if (exception.code() == 401) {
+                                            logout()
+                                            serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                        }
+                                    } catch (exception: IOException) {
+                                    } catch (exception: Exception) {
+                                    }
+                                }
+                            },
+                            onMeInteresa = { publicacion ->
+                                if (!tieneTelefonoConCodigoPais()) {
+                                    avisoTelefonoVisible = true
+                                } else {
+                                    selectedAdopcionId = publicacion.idPublicacion
+                                    selectedAdopcion = publicacion
+                                    formularioSolicitudError = null
+                                    isViewingFormularioSolicitud = true
+                                }
+                            },
+                            onToggleFavorito = { publicacion ->
+                                lifecycleScope.launch {
+                                    try {
+                                        if (favoritos.any { it.publicacion.idPublicacion == publicacion.idPublicacion }) {
+                                            favoritosController.quitar(publicacion.idPublicacion)
+                                            favoritos = favoritos.filter {
+                                                it.publicacion.idPublicacion != publicacion.idPublicacion
+                                            }
+                                        } else {
+                                            val nuevo = favoritosController.agregar(publicacion.idPublicacion)
+                                            favoritos = favoritos + nuevo
+                                        }
+                                    } catch (exception: HttpException) {
+                                        if (exception.code() == 401) {
+                                            logout()
+                                            serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                        }
+                                    } catch (exception: IOException) {
+                                    } catch (exception: Exception) {
+                                    }
+                                }
+                            },
+                            onFiltrosClick = { isViewingFiltrosAdopcion = true },
+                            onMisFavoritosClick = {
+                                favoritosError = null
+                                isViewingMisFavoritos = true
+                                loadFavoritos()
+                            },
+                            onPublicarClick = {
+                                if (!tieneTelefonoConCodigoPais()) {
+                                    avisoTelefonoVisible = true
+                                } else {
+                                    adopcionError = null
+                                    adopcionSuccess = null
+                                    isPublishingAdopcion = true
+                                }
+                            },
+                            onMisPublicacionesClick = {
+                                misPublicacionesError = null
+                                isViewingMisPublicaciones = true
+                                loadMisPublicaciones()
+                                loadSolicitudesRecibidas()
+                            },
+                            onMisSolicitudesClick = {
+                                misSolicitudesError = null
+                                isViewingMisSolicitudes = true
+                                loadMisSolicitudes()
+                            }
+                        )
+                    }
+                }
+
+                if (!isSplashTerminada) {
+                    SplashScreen(onFinished = { isSplashTerminada = true })
+                } else if (isRestoringSession) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                } else if (loggedUserName != null) {
+                    val drawerState = rememberDrawerState(DrawerValue.Closed)
+                    val scope = rememberCoroutineScope()
+                    val seccionActual = when {
+                        isViewingServicios || isCreatingServicio || editingServicio != null || isViewingSolicitudesServicios -> "Servicios"
+                        isViewingMisTurnos || isRequestingTurno -> "Turnos"
+                        isViewingAdopciones || isPublishingAdopcion || isViewingAdopcionDetalle || isViewingMisPublicaciones ||
+                            isViewingSolicitudesRecibidas || isViewingMisFavoritos || isViewingFiltrosAdopcion ||
+                            isViewingMisSolicitudes || isViewingFormularioSolicitud -> "Adopción"
+                        isViewingProfile || isEditingProfile || isChangingEmail || isViewingSettings -> "Perfil"
+                        else -> "Inicio"
+                    }
+
+                    ModalNavigationDrawer(
+                        drawerState = drawerState,
+                        drawerContent = {
+                            MenuLateral(
+                                userName = loggedUserName.orEmpty(),
+                                onCerrar = { scope.launch { drawerState.close() } },
+                                onRegisterPet = {
+                                    scope.launch { drawerState.close() }
+                                    volverAInicio()
+                                    savePetError = null
+                                    isRegisteringPet = true
+                                },
+                                onPublishAdoption = {
+                                    scope.launch { drawerState.close() }
+                                    volverAInicio()
+                                    adopcionError = null
+                                    adopcionSuccess = null
+                                    isPublishingAdopcion = true
+                                },
+                                onRequestTurno = {
+                                    scope.launch { drawerState.close() }
+                                    volverAInicio()
+                                    turnoError = null
+                                    turnoSuccess = null
+                                    isRequestingTurno = true
+                                    loadVeterinariasTurno()
+                                },
+                                onViewMisTurnos = {
+                                    scope.launch { drawerState.close() }
+                                    volverAInicio()
+                                    misTurnosError = null
+                                    isViewingMisTurnos = true
+                                    loadMisTurnos()
+                                },
+                                onServiciosClick = {
+                                    scope.launch { drawerState.close() }
+                                    volverAInicio()
+                                    saveServicioError = null
+                                    serviciosError = null
+                                    isViewingServicios = true
+                                    loadServicios()
+                                },
+                                // El drawer vive dentro de la rama logueada: al salir se descarta solo.
+                                onLogout = { logout() }
+                            )
+                        }
+                    ) {
+                        Scaffold(
+                            containerColor = MaterialTheme.colorScheme.background,
+                            topBar = {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(MaterialTheme.colorScheme.background)
+                                        .padding(start = 8.dp, end = 8.dp, top = 18.dp, bottom = 2.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_menu),
+                                            contentDescription = "Abrir menú",
+                                            tint = PetCareTealDark
+                                        )
+                                    }
+
+                                    // Campana fija: visible en toda la app, no solo en el menú.
+                                    val noLeidas = notificaciones.count { !it.leida }
+                                    /*
+                                     * Al tocar la campana con el panel abierto, el popup se cierra
+                                     * por el toque de afuera y ese mismo toque vuelve a llegar al
+                                     * botón, que lo reabriría. Ignoramos el clic inmediatamente
+                                     * posterior al cierre para que la campana funcione como toggle.
+                                     */
+                                    var cerradoEnMs by remember { mutableStateOf(0L) }
+                                    Box {
+                                        IconButton(
+                                            onClick = {
+                                                val ahora = System.currentTimeMillis()
+                                                if (isViewingNotificaciones) {
+                                                    isViewingNotificaciones = false
+                                                    cerradoEnMs = ahora
+                                                } else if (ahora - cerradoEnMs > 300) {
+                                                    notificacionesError = null
+                                                    isViewingNotificaciones = true
+                                                    loadNotificaciones()
+                                                }
+                                            }
+                                        ) {
+                                            BadgedBox(
+                                                badge = {
+                                                    if (noLeidas > 0) {
+                                                        Badge {
+                                                            Text(
+                                                                text = if (noLeidas > 99) "99+"
+                                                                else noLeidas.toString()
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            ) {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.ic_bell),
+                                                    contentDescription = if (noLeidas > 0) {
+                                                        "Notificaciones, $noLeidas sin leer"
+                                                    } else {
+                                                        "Notificaciones"
+                                                    },
+                                                    tint = PetCareTealDark
+                                                )
+                                            }
+                                        }
+
+                                        NotificacionesDropdown(
+                                            expanded = isViewingNotificaciones,
+                                            isLoading = isLoadingNotificaciones,
+                                            errorMessage = notificacionesError,
+                                            notificaciones = notificaciones,
+                                            marcandoLeidaId = marcandoLeidaId,
+                                            isMarcandoTodas = isMarcandoTodasLeidas,
+                                            onDismiss = {
+                                                isViewingNotificaciones = false
+                                                cerradoEnMs = System.currentTimeMillis()
+                                            },
+                                            onRetry = { loadNotificaciones() },
+                                            onMarcarLeida = { marcarNotificacionLeida(it) },
+                                            onMarcarTodasLeidas = { marcarTodasLeidas() },
+                                            // El aviso de detección abre la última
+                                            // ubicación de ese reporte (US-41).
+                                            onAbrirUltimaUbicacion = { idReporte ->
+                                                isViewingNotificaciones = false
+                                                cerradoEnMs = System.currentTimeMillis()
+                                                ultimaUbicacion = null
+                                                ultimaUbicacionError = null
+                                                ultimaUbicacionIdReporte = idReporte
+                                            },
+                                            // El aviso de separación abre directo el
+                                            // reporte de pérdida de esa mascota (US-34):
+                                            // es lo que el dueño va a querer hacer si no
+                                            // la encuentra.
+                                            onReportarPerdida = { idMascota ->
+                                                isViewingNotificaciones = false
+                                                cerradoEnMs = System.currentTimeMillis()
+                                                selectedPetId = idMascota
+                                                loadPetProfile(idMascota)
+                                                isReportandoPerdidaScreen = true
+                                            }
+                                        )
+                                    }
+                                }
+                            },
+                            bottomBar = {
+                                PetCareBottomBar(
+                                    selectedItem = seccionActual,
+                                    onInicioClick = { volverAInicio() },
+                                    onTurnosClick = {
+                                        volverAInicio()
+                                        misTurnosError = null
+                                        isViewingMisTurnos = true
+                                        loadMisTurnos()
+                                    },
+                                    onAdopcionClick = {
+                                        volverAInicio()
+                                        adopcionesListError = null
+                                        isViewingAdopciones = true
+                                        loadAdopciones()
+                                        loadFavoritos()
+                                        // Alimenta el contador de solicitudes pendientes
+                                        // que resalta los accesos de la pantalla.
+                                        loadSolicitudesRecibidas()
+                                        loadProfile()
+                                    },
+                                    onPerfilClick = {
+                                        volverAInicio()
+                                        profileError = null
+                                        isViewingProfile = true
+                                        loadProfile()
+                                    }
+                                )
+                            }
+                        ) { innerPadding ->
+                        Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+                        if (isRegisteringPet) {
+                    RegisterPetScreen(
+                        isSaving = isSavingPet,
+                        saveError = savePetError,
+                        onSave = { request, photoUri ->
+                            isSavingPet = true
+                            savePetError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    createPet(
+                                        petsController = petsController,
+                                        request = request,
+                                        photoUri = photoUri
+                                    )
+                                    isRegisteringPet = false
+                                    loadPets()
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError =
+                                            "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        savePetError = "No se pudo registrar la mascota"
+                                    }
+                                } catch (exception: IOException) {
+                                    savePetError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    savePetError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isSavingPet = false
+                                }
+                            }
+                        },
+                        onCancel = {
+                            savePetError = null
+                            isRegisteringPet = false
+                        }
+                    )
+                } else if (loggedUserName != null && editingPet != null) {
+                    EditPetScreen(
+                        pet = editingPet!!,
+                        isSaving = isUpdatingPet,
+                        saveError = updatePetError,
+                        onSave = { request, photoUri ->
+                            isUpdatingPet = true
+                            updatePetError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    updatePet(
+                                        petsController = petsController,
+                                        id = editingPet!!.id,
+                                        request = request,
+                                        photoUri = photoUri
+                                    )
+                                    editingPet = null
+                                    loadPets()
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError =
+                                            "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        updatePetError = "No se pudo actualizar la mascota"
+                                    }
+                                } catch (exception: IOException) {
+                                    updatePetError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    updatePetError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isUpdatingPet = false
+                                }
+                            }
+                        },
+                        onCancel = {
+                            updatePetError = null
+                            editingPet = null
+                        }
+                    )
+                } else if (loggedUserName != null && (isCreatingServicio || editingServicio != null)) {
+                    ServicioFormScreen(
+                        categoriasAprobadas = categoriasAprobadas,
+                        servicio = editingServicio,
+                        isSaving = isSavingServicio,
+                        saveError = saveServicioError,
+                        onSave = { categoria, descripcion, disponibilidades ->
+                            isSavingServicio = true
+                            saveServicioError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    val servicioSiendoEditado = editingServicio
+                                    if (servicioSiendoEditado == null) {
+                                        serviciosController.createServicio(
+                                            CreateServicioRequest(
+                                                categoria = categoria,
+                                                descripcion = descripcion,
+                                                disponibilidades = disponibilidades
+                                            )
+                                        )
+                                    } else {
+                                        serviciosController.updateServicio(
+                                            servicioSiendoEditado.id,
+                                            UpdateServicioRequest(
+                                                categoria = categoria,
+                                                descripcion = descripcion,
+                                                disponibilidades = disponibilidades
+                                            )
+                                        )
+                                    }
+                                    isCreatingServicio = false
+                                    editingServicio = null
+                                    loadServicios()
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError =
+                                            "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        saveServicioError = "No se pudo guardar el servicio"
+                                    }
+                                } catch (exception: IOException) {
+                                    saveServicioError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    saveServicioError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isSavingServicio = false
+                                }
+                            }
+                        },
+                        onCancel = {
+                            saveServicioError = null
+                            isCreatingServicio = false
+                            editingServicio = null
+                        }
+                    )
+                } else if (loggedUserName != null && (
+                        matchCelebrationPetName != null ||
+                            isViewingFormularioSolicitud ||
+                            isViewingFiltrosAdopcion ||
+                            isViewingAdopcionDetalle ||
+                            isPublishingAdopcion ||
+                            isViewingMisFavoritos ||
+                            isViewingMisSolicitudes ||
+                            isViewingMisPublicaciones ||
+                            isViewingSolicitudesRecibidas ||
+                            isViewingAdopciones
+                        )
+                ) {
+                    AdopcionSeccion()
+                } else if (loggedUserName != null && vistaPrestadores != null) {
+                    PrestadoresScreen(
+                        api = remember { RetrofitClient.serviciosApi(sessionStore) },
+                        inicial = vistaPrestadores!!,
+                        onBack = { vistaPrestadores = null; if (isViewingMisTurnos) loadMisTurnos() else loadServicios() }
+                    )
+                } else if (loggedUserName != null && isViewingServicios) {
+                    ServiciosListScreen(
+                        onValidacionClick = { vistaPrestadores = "solicitudes" },
+                        isLoading = isLoadingServicios,
+                        errorMessage = serviciosError,
+                        servicios = servicios,
+                        deletingId = deletingServicioId,
+                        onRetry = { loadServicios() },
+                        onCreateServicio = {
+                            saveServicioError = null
+                            if (categoriasAprobadas.isEmpty()) vistaPrestadores = "solicitudes" else isCreatingServicio = true
+                        },
+                        onEditServicio = { servicio ->
+                            saveServicioError = null
+                            editingServicio = servicio
+                        },
+                        onDeleteServicio = { servicio ->
+                            deletingServicioId = servicio.id
+                            serviciosError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    serviciosController.deleteServicio(servicio.id)
+                                    servicios = servicios.filter { it.id != servicio.id }
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError =
+                                            "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        serviciosError = "No se pudo eliminar el servicio"
+                                    }
+                                } catch (exception: IOException) {
+                                    serviciosError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    serviciosError = "Ocurrio un error inesperado"
+                                } finally {
+                                    deletingServicioId = null
+                                }
+                            }
+                        },
+                        onSolicitudesRecibidasClick = {
+                            isViewingServicios = false
+                            solicitudesServiciosError = null
+                            isViewingSolicitudesServicios = true
+                            loadSolicitudesServicios()
+                        }
+                    )
+                } else if (loggedUserName != null && isViewingSolicitudesServicios) {
+                    SolicitudesServiciosRecibidasScreen(
+                        isLoading = isLoadingSolicitudesServicios,
+                        errorMessage = solicitudesServiciosError,
+                        turnos = solicitudesServicios,
+                        procesandoId = procesandoSolicitudServicioId,
+                        onBack = {
+                            isViewingSolicitudesServicios = false
+                            solicitudesServiciosError = null
+                            isViewingServicios = true
+                        },
+                        onRetry = { loadSolicitudesServicios() },
+                        onCancelar = { turno, motivo ->
+                            procesandoSolicitudServicioId = turno.idTurno
+                            solicitudesServiciosError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    turnosServiciosController.cancelar(turno.idTurno, motivo)
+                                    solicitudesServicios = turnosServiciosController.getRecibidas()
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        solicitudesServiciosError = "No se pudo cancelar el turno"
+                                    }
+                                } catch (exception: IOException) {
+                                    solicitudesServiciosError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    solicitudesServiciosError = "Ocurrio un error inesperado"
+                                } finally {
+                                    procesandoSolicitudServicioId = null
+                                }
+                            }
+                        }
+                    )
+                } else if (loggedUserName != null && isChangingEmail) {
+                    profile?.let { currentProfile ->
+                        ChangeEmailScreen(
+                            currentEmail = currentProfile.email,
+                            isCodeSent = isEmailCodeSent,
+                            isLoading = isProcessingEmailChange,
+                            serverError = emailChangeError,
+                            onRequestCode = { nuevoEmail ->
+                                isProcessingEmailChange = true
+                                emailChangeError = null
+
+                                lifecycleScope.launch {
+                                    try {
+                                        profileController.requestEmailChange(nuevoEmail)
+                                        isEmailCodeSent = true
+                                    } catch (exception: HttpException) {
+                                        emailChangeError = when (exception.code()) {
+                                            401 -> {
+                                                logout()
+                                                serverError =
+                                                    "La sesion expiro. Inicia sesion nuevamente"
+                                                null
+                                            }
+                                            409 -> "Ese correo ya esta en uso"
+                                            400 -> "Revisa los datos ingresados"
+                                            else -> "No se pudo enviar el codigo"
+                                        }
+                                    } catch (exception: IOException) {
+                                        emailChangeError = "No se pudo conectar con el servidor"
+                                    } catch (exception: Exception) {
+                                        emailChangeError = "Ocurrio un error inesperado"
+                                    } finally {
+                                        isProcessingEmailChange = false
+                                    }
+                                }
+                            },
+                            onConfirmCode = { codigo ->
+                                isProcessingEmailChange = true
+                                emailChangeError = null
+
+                                lifecycleScope.launch {
+                                    try {
+                                        profileController.confirmEmailChange(codigo)
+                                        isChangingEmail = false
+                                        isEmailCodeSent = false
+                                        isViewingProfile = true
+                                        loadProfile()
+                                    } catch (exception: HttpException) {
+                                        emailChangeError = when (exception.code()) {
+                                            401 -> {
+                                                logout()
+                                                serverError =
+                                                    "La sesion expiro. Inicia sesion nuevamente"
+                                                null
+                                            }
+                                            409 -> "Ese correo ya esta en uso"
+                                            400 -> "Codigo invalido o expirado"
+                                            else -> "No se pudo confirmar el cambio de email"
+                                        }
+                                    } catch (exception: IOException) {
+                                        emailChangeError = "No se pudo conectar con el servidor"
+                                    } catch (exception: Exception) {
+                                        emailChangeError = "Ocurrio un error inesperado"
+                                    } finally {
+                                        isProcessingEmailChange = false
+                                    }
+                                }
+                            },
+                            onCancel = {
+                                isChangingEmail = false
+                                isEmailCodeSent = false
+                                emailChangeError = null
+                                isEditingProfile = true
+                            }
+                        )
+                    }
+                } else if (loggedUserName != null && isEditingProfile) {
+                    profile?.let { currentProfile ->
+                        EditProfileScreen(
+                            profile = currentProfile,
+                            isSaving = isSavingProfile,
+                            saveError = saveProfileError,
+                            onSave = { request: UpdateProfileRequest ->
+                                isSavingProfile = true
+                                saveProfileError = null
+
+                                lifecycleScope.launch {
+                                    try {
+                                        profile = profileController.updateMyProfile(request)
+                                        isEditingProfile = false
+                                    } catch (exception: HttpException) {
+                                        saveProfileError = when (exception.code()) {
+                                            401 -> {
+                                                logout()
+                                                serverError =
+                                                    "La sesion expiro. Inicia sesion nuevamente"
+                                                null
+                                            }
+                                            409 -> "Ese correo ya esta en uso"
+                                            400 -> "Revisa los datos ingresados"
+                                            else -> "No se pudo actualizar el perfil"
+                                        }
+                                    } catch (exception: IOException) {
+                                        saveProfileError = "No se pudo conectar con el servidor"
+                                    } catch (exception: Exception) {
+                                        saveProfileError = "Ocurrio un error inesperado"
+                                    } finally {
+                                        isSavingProfile = false
+                                    }
+                                }
+                            },
+                            onCancel = {
+                                saveProfileError = null
+                                isEditingProfile = false
+                            },
+                            onChangeEmail = {
+                                saveProfileError = null
+                                isEditingProfile = false
+                                isChangingEmail = true
+                                isEmailCodeSent = false
+                                emailChangeError = null
+                            }
+                        )
+                    }
+                } else if (loggedUserName != null && isViewingSettings) {
+                    ConfiguracionScreen(
+                        isDarkMode = isDarkMode,
+                        onDarkModeChange = { enabled ->
+                            darkModePreference = enabled
+                            themePreferences.setDarkMode(enabled)
+                        },
+                        profileController = profileController,
+                        onBack = { isViewingSettings = false }
+                    )
+                } else if (loggedUserName != null && isViewingProfile) {
+                    ProfileScreen(
+                        isLoading = isLoadingProfile,
+                        errorMessage = profileError,
+                        profile = profile,
+                        onRetry = { loadProfile() },
+                        onEdit = {
+                            saveProfileError = null
+                            isEditingProfile = true
+                        },
+                        onConfiguracion = { isViewingSettings = true },
+                        onLogout = { logout() },
+                        isUploadingPhoto = isUploadingProfilePhoto,
+                        photoError = profilePhotoError,
+                        onPhotoSelected = { photoUri ->
+                            isUploadingProfilePhoto = true
+                            profilePhotoError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    profile = profileController.updateMyPhoto(
+                                        buildPhotoPart(photoUri)
+                                    )
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        profilePhotoError = "No se pudo actualizar la foto"
+                                    }
+                                } catch (exception: IOException) {
+                                    profilePhotoError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    profilePhotoError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isUploadingProfilePhoto = false
+                                }
+                            }
+                        }
+                    )
+                } else if (loggedUserName != null && selectedPetId != null && isViewingHistoria) {
+                    HistoriaClinicaScreen(
+                        isLoading = isLoadingHistoria,
+                        errorMessage = historiaError,
+                        eventos = historiaEventos,
+                        isExporting = isExportingHistoria,
+                        exportMessage = exportHistoriaMessage,
+                        canExport = selectedPet != null,
+                        onExportPdf = {
+                            val pet = selectedPet ?: return@HistoriaClinicaScreen
+                            val eventos = historiaEventos
+                            isExportingHistoria = true
+                            exportHistoriaMessage = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    val file = withContext(Dispatchers.IO) {
+                                        HistoriaClinicaPdfGenerator.generate(
+                                            context = applicationContext,
+                                            pet = pet,
+                                            eventos = eventos
+                                        )
+                                    }
+                                    val saved = withContext(Dispatchers.IO) {
+                                        ExportStorage.saveToDownloads(
+                                            context = applicationContext,
+                                            source = file,
+                                            mimeType = "application/pdf"
+                                        )
+                                    }
+                                    exportHistoriaMessage = if (saved) {
+                                        "PDF guardado en Descargas"
+                                    } else {
+                                        "No se pudo guardar en Descargas, pero podes compartirlo"
+                                    }
+                                    startActivity(
+                                        ExportStorage.buildShareIntent(
+                                            this@MainActivity, file, "application/pdf"
+                                        )
+                                    )
+                                } catch (exception: Exception) {
+                                    exportHistoriaMessage = "No se pudo exportar el PDF"
+                                } finally {
+                                    isExportingHistoria = false
+                                }
+                            }
+                        },
+                        onExportArchivos = {
+                            val eventos = historiaEventos
+                            isExportingHistoria = true
+                            exportHistoriaMessage = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    val files = MedicalFilesDownloader.downloadAll(
+                                        context = applicationContext,
+                                        eventos = eventos
+                                    )
+                                    if (files.isEmpty()) {
+                                        exportHistoriaMessage =
+                                            "No se pudieron descargar los archivos medicos"
+                                    } else {
+                                        withContext(Dispatchers.IO) {
+                                            files.forEach { archivo ->
+                                                val mime = URLConnection
+                                                    .guessContentTypeFromName(archivo.name)
+                                                    ?: "application/octet-stream"
+                                                ExportStorage.saveToDownloads(
+                                                    applicationContext, archivo, mime
+                                                )
+                                            }
+                                        }
+                                        exportHistoriaMessage =
+                                            "Se exportaron ${files.size} archivo(s) a Descargas"
+                                        startActivity(
+                                            ExportStorage.buildShareMultipleIntent(
+                                                this@MainActivity, files, "*/*"
+                                            )
+                                        )
+                                    }
+                                } catch (exception: Exception) {
+                                    exportHistoriaMessage =
+                                        "No se pudieron exportar los archivos medicos"
+                                } finally {
+                                    isExportingHistoria = false
+                                }
+                            }
+                        },
+                        onRetry = { selectedPetId?.let { loadHistoriaClinica(it) } },
+                        onBack = {
+                            isViewingHistoria = false
+                            historiaError = null
+                            historiaEventos = emptyList()
+                            exportHistoriaMessage = null
+                        }
+                    )
+                } else if (
+                    loggedUserName != null &&
+                    isReportandoPerdidaScreen &&
+                    selectedPet != null
+                ) {
+                    val mascota = selectedPet!!
+                    ReportarMascotaPerdidaScreen(
+                        petName = mascota.nombre,
+                        isSaving = isReportandoPerdida,
+                        errorMessage = reportePerdidaError,
+                        contactoInicial = profile?.telefono.orEmpty(),
+                        // Si todavía carga o falló la carga, no sabemos si tiene tag.
+                        tieneTagBle = if (isLoadingTagBle || tagBleError != null) {
+                            null
+                        } else {
+                            tagBleDeLaMascota != null
+                        },
+                        onBack = {
+                            isReportandoPerdidaScreen = false
+                            reportePerdidaError = null
+                        },
+                        onReportar = { fechaPerdida, latitud, longitud, descripcion, contacto ->
+                            isReportandoPerdida = true
+                            reportePerdidaError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    reportePerdidaActivo = reportesPerdidaController.reportar(
+                                        CreateReportePerdidaRequest(
+                                            idMascota = mascota.id,
+                                            fechaPerdida = fechaPerdida,
+                                            latitud = latitud,
+                                            longitud = longitud,
+                                            descripcion = descripcion,
+                                            contacto = contacto
+                                        )
+                                    )
+                                    isReportandoPerdidaScreen = false
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        reportePerdidaError = mensajeErrorBackend(
+                                            exception,
+                                            "No se pudo reportar la mascota como perdida"
+                                        )
+                                    }
+                                } catch (exception: IOException) {
+                                    reportePerdidaError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    reportePerdidaError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isReportandoPerdida = false
+                                }
+                            }
+                        }
+                    )
+                } else if (
+                    loggedUserName != null &&
+                    ultimaUbicacionIdReporte != null
+                ) {
+                    val idReporte = ultimaUbicacionIdReporte!!
+                    // La carga la dispara la pantalla y no quien navega hasta ella:
+                    // si se recrea la Activity, el id sobrevive pero los datos no,
+                    // y sin esto se vería el estado vacío en vez de recargar.
+                    LaunchedEffect(idReporte) { loadUltimaUbicacion(idReporte) }
+                    UltimaUbicacionScreen(
+                        // Todavía sin respuesta ni error es que sigue cargando: un
+                        // reporte sin detecciones igual devuelve un objeto.
+                        isLoading = isLoadingUltimaUbicacion ||
+                            (ultimaUbicacion == null && ultimaUbicacionError == null),
+                        errorMessage = ultimaUbicacionError,
+                        ubicacion = ultimaUbicacion,
+                        onRetry = { loadUltimaUbicacion(idReporte) },
+                        onBack = {
+                            ultimaUbicacionIdReporte = null
+                            ultimaUbicacion = null
+                            ultimaUbicacionError = null
+                        }
+                    )
+                } else if (
+                    loggedUserName != null &&
+                    isVinculandoTagScreen &&
+                    selectedPet != null
+                ) {
+                    val mascota = selectedPet!!
+                    VincularTagScreen(
+                        petName = mascota.nombre,
+                        tagVinculado = when {
+                            isLoadingTagBle -> TagBleUiState.Cargando
+                            tagBleDeLaMascota != null ->
+                                TagBleUiState.Vinculado(tagBleDeLaMascota!!.tagId)
+                            else -> TagBleUiState.SinVincular
+                        },
+                        isVinculando = isVinculandoTag,
+                        isDesvinculando = isDesvinculandoTag,
+                        errorMessage = tagBleError,
+                        onBack = {
+                            isVinculandoTagScreen = false
+                            tagBleError = null
+                        },
+                        onVincular = { tagId ->
+                            isVinculandoTag = true
+                            tagBleError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    tagBleDeLaMascota = tagsBleController.vincular(mascota.id, tagId)
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        tagBleError = mensajeErrorBackend(
+                                            exception,
+                                            "No se pudo vincular el tag"
+                                        )
+                                    }
+                                } catch (exception: IOException) {
+                                    tagBleError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    tagBleError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isVinculandoTag = false
+                                }
+                            }
+                        },
+                        onDesvincular = {
+                            isDesvinculandoTag = true
+                            tagBleError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    tagsBleController.desvincular(mascota.id)
+                                    tagBleDeLaMascota = null
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        tagBleError = mensajeErrorBackend(
+                                            exception,
+                                            "No se pudo desvincular el tag"
+                                        )
+                                    }
+                                } catch (exception: IOException) {
+                                    tagBleError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    tagBleError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isDesvinculandoTag = false
+                                }
+                            }
+                        }
+                    )
+                } else if (loggedUserName != null && selectedPetId != null) {
+                    PetProfileScreen(
+                        isLoading = isLoadingPetProfile,
+                        errorMessage = petProfileError,
+                        pet = selectedPet,
+                        onRetry = { selectedPetId?.let { loadPetProfile(it) } },
+                        onBack = {
+                            selectedPetId = null
+                            selectedPet = null
+                            petProfileError = null
+                            reportePerdidaActivo = null
+                            reportePerdidaError = null
+                            tagBleDeLaMascota = null
+                            tagBleError = null
+                        },
+                        onViewHistoria = {
+                            historiaError = null
+                            historiaEventos = emptyList()
+                            isViewingHistoria = true
+                            selectedPetId?.let { loadHistoriaClinica(it) }
+                        },
+                        reporteActivo = reportePerdidaActivo,
+                        isCerrandoReporte = isCerrandoReportePerdida,
+                        reporteError = reportePerdidaError,
+                        onReportarPerdida = {
+                            reportePerdidaError = null
+                            // Para prellenar el contacto con el teléfono del
+                            // dueño si todavía no se cargó su perfil.
+                            if (profile == null) loadProfile()
+                            isReportandoPerdidaScreen = true
+                        },
+                        onMarcarEncontrada = {
+                            val reporte = reportePerdidaActivo ?: return@PetProfileScreen
+                            isCerrandoReportePerdida = true
+                            reportePerdidaError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    reportesPerdidaController.cerrar(reporte.idReporte)
+                                    reportePerdidaActivo = null
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        reportePerdidaError = mensajeErrorBackend(
+                                            exception,
+                                            "No se pudo cerrar el reporte"
+                                        )
+                                    }
+                                } catch (exception: IOException) {
+                                    reportePerdidaError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    reportePerdidaError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isCerrandoReportePerdida = false
+                                }
+                            }
+                        },
+                        onVerUltimaUbicacion = {
+                            val reporte = reportePerdidaActivo ?: return@PetProfileScreen
+                            ultimaUbicacion = null
+                            ultimaUbicacionError = null
+                            ultimaUbicacionIdReporte = reporte.idReporte
+                        },
+                        tagBle = tagBleDeLaMascota,
+                        isLoadingTagBle = isLoadingTagBle,
+                        tagBleError = tagBleError,
+                        onVerTagBle = { isVinculandoTagScreen = true }
+                    )
+                } else if (loggedUserName != null && isViewingMisTurnos) {
+                    MisTurnosScreen(
+                        onResenasClick = { vistaPrestadores = "reservas" },
+                        isLoading = isLoadingMisTurnos,
+                        errorMessage = misTurnosError,
+                        turnos = misTurnos.map { TurnoUnificado.fromVeterinario(it) } +
+                            misReservasServicios.map { TurnoUnificado.fromServicio(it) },
+                        cancelandoId = cancelandoTurnoServicioId,
+                        onRetry = { loadMisTurnos() },
+                        onNuevoTurno = {
+                            isViewingMisTurnos = false
+                            turnoError = null
+                            turnoSuccess = null
+                            isRequestingTurno = true
+                            loadVeterinariasTurno()
+                        },
+                        onCancelar = { turno, motivo ->
+                            cancelandoTurnoServicioId = turno.idTurno
+                            misTurnosError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    if (turno.tipo == TipoTurnoItem.VETERINARIA) {
+                                        turnosController.cancelar(turno.idTurno, motivo)
+                                        misTurnos = turnosController.getMisTurnos()
+                                    } else {
+                                        turnosServiciosController.cancelar(turno.idTurno, motivo)
+                                        misReservasServicios = turnosServiciosController.getMisReservas()
+                                    }
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        misTurnosError = "No se pudo cancelar el turno"
+                                    }
+                                } catch (exception: IOException) {
+                                    misTurnosError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    misTurnosError = "Ocurrio un error inesperado"
+                                } finally {
+                                    cancelandoTurnoServicioId = null
+                                }
+                            }
+                        }
+                    )
+                } else if (loggedUserName != null && isRequestingTurno) {
+                    SolicitarTurnoScreen(
+                        pets = pets,
+                        veterinarias = veterinariasTurno,
+                        isLoadingVeterinarias = isLoadingVeterinariasTurno,
+                        serviciosPorCategoria = serviciosTurno,
+                        isLoadingServiciosPorCategoria = isLoadingServiciosTurno,
+                        horariosDisponibles = horariosDisponiblesTurno,
+                        isLoadingHorariosDisponibles = isLoadingHorariosTurno,
+                        isSaving = isSavingTurno,
+                        errorMessage = turnoError,
+                        successMessage = turnoSuccess,
+                        onSelectCategoria = { categoria ->
+                            turnoError = null
+                            loadServiciosTurno(categoria)
+                        },
+                        onCargarHorarios = { idProveedor, fecha, esServicio ->
+                            turnoError = null
+                            horariosDisponiblesTurno = emptyList()
+                            loadHorariosDisponibles(idProveedor, fecha, esServicio)
+                        },
+                        onSolicitarVeterinario = { idMascota, idVeterinario, fecha, hora, motivoConsulta ->
+                            isSavingTurno = true
+                            turnoError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    turnosController.solicitarTurno(
+                                        CreateTurnoRequest(
+                                            idMascota = idMascota,
+                                            idVeterinario = idVeterinario,
+                                            fecha = fecha,
+                                            hora = hora,
+                                            motivoConsulta = motivoConsulta
+                                        )
+                                    )
+                                    turnoSuccess = "Tu turno quedó confirmado"
+                                } catch (exception: HttpException) {
+                                    turnoError = when (exception.code()) {
+                                        401 -> {
+                                            logout()
+                                            serverError =
+                                                "La sesion expiro. Inicia sesion nuevamente"
+                                            null
+                                        }
+                                        403 -> "No podés solicitar un turno para una mascota que no es tuya"
+                                        404 -> "No se encontró la mascota o la veterinaria"
+                                        else -> mensajeErrorBackend(exception, "El horario solicitado no está disponible")
+                                    }
+                                } catch (exception: IOException) {
+                                    turnoError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    turnoError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isSavingTurno = false
+                                }
+                            }
+                        },
+                        onSolicitarServicio = { idMascota, idServicio, fecha, horaInicio, notas ->
+                            isSavingTurno = true
+                            turnoError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    turnosServiciosController.solicitar(
+                                        CreateTurnoServicioRequest(
+                                            idMascota = idMascota,
+                                            idServicio = idServicio,
+                                            fecha = fecha,
+                                            horaInicio = horaInicio,
+                                            notas = notas
+                                        )
+                                    )
+                                    turnoSuccess = "Tu turno quedó confirmado"
+                                } catch (exception: HttpException) {
+                                    turnoError = when (exception.code()) {
+                                        401 -> {
+                                            logout()
+                                            serverError =
+                                                "La sesion expiro. Inicia sesion nuevamente"
+                                            null
+                                        }
+                                        403 -> "No podés solicitar un turno para una mascota que no es tuya"
+                                        404 -> "No se encontró la mascota o el servicio"
+                                        else -> mensajeErrorBackend(exception, "El horario solicitado no está disponible")
+                                    }
+                                } catch (exception: IOException) {
+                                    turnoError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    turnoError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isSavingTurno = false
+                                }
+                            }
+                        },
+                        onBack = {
+                            isRequestingTurno = false
+                            turnoError = null
+                            turnoSuccess = null
+                        }
+                    )
+                        } else {
+                    // El encabezado muestra la foto de perfil: sin esto el perfil
+                    // recien se cargaba al entrar a "Mi perfil".
+                    LaunchedEffect(loggedUserName) {
+                        if (profile == null && !isLoadingProfile) loadProfile()
+                    }
+                    AuthenticatedHomeScreen(
+                        userName = loggedUserName.orEmpty(),
+                        userPhoto = profile?.foto,
+                        pets = pets,
+                        isLoadingPets = isLoadingPets,
+                        petsError = petsError,
+                        onRetryPets = { loadPets() },
+                        onRegisterPet = {
+                            savePetError = null
+                            isRegisteringPet = true
+                        },
+                        onEditPet = { pet ->
+                            updatePetError = null
+                            editingPet = pet
+                        },
+                        onPetClick = { pet ->
+                            selectedPetId = pet.id
+                            selectedPet = null
+                            petProfileError = null
+                            loadPetProfile(pet.id)
+                        },
+                        onProfileClick = {
+                            profileError = null
+                            isViewingProfile = true
+                            loadProfile()
+                        },
+                        turnos = misTurnos.map { TurnoUnificado.fromVeterinario(it) } +
+                            misReservasServicios.map { TurnoUnificado.fromServicio(it) },
+                        isLoadingTurnos = isLoadingMisTurnos,
+                        onLoadTurnos = {
+                            misTurnosError = null
+                            loadMisTurnos()
+                        },
+                        onVerTurnos = {
+                            misTurnosError = null
+                            isViewingMisTurnos = true
+                            loadMisTurnos()
+                        }
+                    )
+                        }
+
+                        if (avisoTelefonoVisible) {
+                            AlertDialog(
+                                onDismissRequest = { avisoTelefonoVisible = false },
+                                title = { Text("Necesitás un teléfono de contacto") },
+                                text = {
+                                    Text(
+                                        "Cargá tu teléfono con código de país para publicar o " +
+                                            "solicitar una adopción: es la forma de coordinar " +
+                                            "cuando haya match."
+                                    )
+                                },
+                                confirmButton = {
+                                    TextButton(
+                                        onClick = {
+                                            avisoTelefonoVisible = false
+                                            volverAInicio()
+                                            profileError = null
+                                            saveProfileError = null
+                                            isViewingProfile = true
+                                            isEditingProfile = true
+                                            loadProfile()
+                                        }
+                                    ) {
+                                        Text("Completar mi perfil")
+                                    }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { avisoTelefonoVisible = false }) {
+                                        Text("Ahora no")
+                                    }
+                                }
+                            )
+                        }
+                        }
+                    }
+                    }
+                } else if (registroGooglePendiente != null) {
+                    val pendiente = registroGooglePendiente!!
+
+                    CompletarRegistroGoogleScreen(
+                        nombre = pendiente.nombre,
+                        email = pendiente.email,
+                        isLoading = isGoogleLoading,
+                        serverError = googleError,
+                        onConfirmar = { documento ->
+                            completarRegistroConGoogle(documento)
+                        },
+                        onCancelar = {
+                            registroGooglePendiente = null
+                            googleError = null
+                        }
+                    )
+                } else if (isRegisteringUser) {
+                    RegisterScreen(
+                        isLoading = isRegisterLoading,
+                        isGoogleLoading = isGoogleLoading,
+                        serverError = registerError ?: googleError,
+                        successMessage = registerSuccessMessage,
+                        onGoogleSignIn = { ingresarConGoogle() },
+                        onRegister = { nombre, apellido, dni, email, password ->
+                            isRegisterLoading = true
+                            registerError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    sessionController.register(
+                                        nombre = nombre,
+                                        apellido = apellido,
+                                        numeroDocumento = dni,
+                                        email = email,
+                                        password = password
+                                    )
+
+                                    registerSuccessMessage =
+                                        "Cuenta creada correctamente. Ya podes iniciar sesion."
+                                } catch (exception: HttpException) {
+                                    registerError = when (exception.code()) {
+                                        409 -> "Ese correo o DNI ya está registrado"
+                                        400 -> "Revisa los datos ingresados"
+                                        500 -> "Ocurrio un error en el servidor"
+                                        else -> "No se pudo completar el registro"
+                                    }
+                                } catch (exception: IOException) {
+                                    registerError =
+                                        "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    registerError =
+                                        "Ocurrio un error inesperado"
+                                } finally {
+                                    isRegisterLoading = false
+                                }
+                            }
+                        },
+                        onNavigateToLogin = {
+                            isRegisteringUser = false
+                            registerError = null
+                            registerSuccessMessage = null
+                        }
+                    )
+                } else {
+                    when (currentScreen) {
+                        AuthScreen.LOGIN -> {
+                            LoginScreen(
+                                isLoading = isLoading,
+                                isGoogleLoading = isGoogleLoading,
+                                serverError = serverError ?: googleError,
+                                onGoogleSignIn = { ingresarConGoogle() },
+                                onLogin = { email, password ->
+                                    isLoading = true
+                                    serverError = null
+
+                                    lifecycleScope.launch {
+                                        try {
+                                            val session = sessionController.login(
+                                                email = email,
+                                                password = password
+                                            )
+
+                                            loggedUserName = session.userName
+                                            loadPets()
+                                            loadNotificaciones()
+                                        } catch (exception: HttpException) {
+                                            serverError = when (exception.code()) {
+                                                400, 401 -> "Correo o contraseña incorrectos"
+                                                404 -> "No se encontró el servicio de autenticación"
+                                                500 -> "Ocurrió un error en el servidor"
+                                                else -> "No se pudo iniciar sesión"
+                                            }
+                                        } catch (exception: IOException) {
+                                            serverError =
+                                                "No se pudo conectar con el servidor"
+                                        } catch (exception: Exception) {
+                                            serverError =
+                                                "Ocurrió un error inesperado"
+                                        } finally {
+                                            isLoading = false
+                                        }
+                                    }
+                                },
+                                onForgotPassword = {
+                                    currentScreen = AuthScreen.FORGOT_PASSWORD
+                                    serverError = null
+                                    forgotPasswordSuccess = null
+                                },
+                                onNavigateToRegister = {
+                                    isRegisteringUser = true
+                                    registerError = null
+                                    registerSuccessMessage = null
+                                }
+                            )
+                        }
+
+                        AuthScreen.FORGOT_PASSWORD -> {
+                            ForgotPasswordScreen(
+                                isLoading = isLoading,
+                                serverError = serverError,
+                                successMessage = forgotPasswordSuccess,
+                                onSendCode = { email ->
+                                    isLoading = true
+                                    serverError = null
+                                    forgotPasswordSuccess = null
+
+                                    lifecycleScope.launch {
+                                        try {
+                                            val response = RetrofitClient.authApi(sessionStore).forgotPassword(
+                                                ForgotPasswordRequest(email = email)
+                                            )
+                                            forgotPasswordSuccess = response.mensaje
+                                        } catch (exception: HttpException) {
+                                            serverError = when (exception.code()) {
+                                                400 -> "Error al enviar el código"
+                                                500 -> "Ocurrió un error en el servidor"
+                                                else -> "No se pudo enviar el código"
+                                            }
+                                        } catch (exception: IOException) {
+                                            serverError =
+                                                "No se pudo conectar con el servidor"
+                                        } catch (exception: Exception) {
+                                            serverError =
+                                                "Ocurrió un error inesperado"
+                                        } finally {
+                                            isLoading = false
+                                        }
+                                    }
+                                },
+                                onNavigateToReset = { email ->
+                                    resetEmail = email
+                                    currentScreen = AuthScreen.RESET_PASSWORD
+                                    serverError = null
+                                    resetPasswordSuccess = null
+                                },
+                                onNavigateToLogin = {
+                                    currentScreen = AuthScreen.LOGIN
+                                    serverError = null
+                                    forgotPasswordSuccess = null
+                                }
+                            )
+                        }
+
+                        AuthScreen.RESET_PASSWORD -> {
+                            ResetPasswordScreen(
+                                email = resetEmail,
+                                isLoading = isLoading,
+                                serverError = serverError,
+                                successMessage = resetPasswordSuccess,
+                                onResetPassword = { codigo, nuevaContrasena ->
+                                    isLoading = true
+                                    serverError = null
+                                    resetPasswordSuccess = null
+
+                                    lifecycleScope.launch {
+                                        try {
+                                            val response = RetrofitClient.authApi(sessionStore).resetPassword(
+                                                ResetPasswordRequest(
+                                                    email = resetEmail,
+                                                    codigo = codigo,
+                                                    nuevaContrasena = nuevaContrasena
+                                                )
+                                            )
+                                            resetPasswordSuccess = response.mensaje
+                                        } catch (exception: HttpException) {
+                                            serverError = when (exception.code()) {
+                                                400 -> "Código o contraseña inválidos"
+                                                500 -> "Ocurrió un error en el servidor"
+                                                else -> "No se pudo restablecer la contraseña"
+                                            }
+                                        } catch (exception: IOException) {
+                                            serverError =
+                                                "No se pudo conectar con el servidor"
+                                        } catch (exception: Exception) {
+                                            serverError =
+                                                "Ocurrió un error inesperado"
+                                        } finally {
+                                            isLoading = false
+                                        }
+                                    }
+                                },
+                                onNavigateToLogin = {
+                                    currentScreen = AuthScreen.LOGIN
+                                    serverError = null
+                                    resetPasswordSuccess = null
+                                    resetEmail = ""
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private suspend fun createPet(
+        petsController: PetsController,
+        request: CreatePetRequest,
+        photoUri: Uri?
+    ): PetResponse =
+        if (photoUri == null) {
+            petsController.createPet(request)
+        } else {
+            petsController.createPetWithPhoto(
+                request = request,
+                photo = buildPhotoPart(photoUri)
+            )
+        }
+
+    private suspend fun updatePet(
+        petsController: PetsController,
+        id: Int,
+        request: UpdatePetRequest,
+        photoUri: Uri?
+    ): PetResponse =
+        if (photoUri == null) {
+            petsController.updatePet(id, request)
+        } else {
+            petsController.updatePetWithPhoto(
+                id = id,
+                request = request,
+                photo = buildPhotoPart(photoUri)
+            )
+        }
+
+    private fun buildPhotoPart(photoUri: Uri): MultipartBody.Part {
+        val contentResolver = applicationContext.contentResolver
+        val mimeType = contentResolver.getType(photoUri) ?: "image/jpeg"
+        val fileName = getDisplayName(photoUri) ?: "mascota.jpg"
+        val bytes = contentResolver.openInputStream(photoUri)?.use { input ->
+            input.readBytes()
+        } ?: throw IOException("No se pudo leer la foto seleccionada")
+
+        return MultipartBody.Part.createFormData(
+            name = "foto",
+            filename = fileName,
+            body = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
+        )
+    }
+
+    private fun getDisplayName(photoUri: Uri): String? {
+        val contentResolver = applicationContext.contentResolver
+        return contentResolver.query(photoUri, null, null, null, null)?.use { cursor ->
+            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (nameIndex >= 0 && cursor.moveToFirst()) {
+                cursor.getString(nameIndex)
+            } else {
+                null
+            }
+        }
+    }
+}

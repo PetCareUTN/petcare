@@ -1,0 +1,67 @@
+<main class="profile-page">
+  @if (isLoading()) {
+    <p class="loading">Cargando tu perfil...</p>
+  } @else {
+    <form class="profile-form" [formGroup]="form" (ngSubmit)="submit()">
+      <header class="profile-header">
+        <div>
+          <h1>Mi perfil</h1>
+          <p>Actualizá tus datos personales.</p>
+        </div>
+        <a routerLink="/">Volver</a>
+      </header>
+
+      @if (successMessage()) {
+        <p class="banner banner-success">{{ successMessage() }}</p>
+      }
+
+      @if (errorMessage()) {
+        <p class="banner banner-error">{{ errorMessage() }}</p>
+      }
+
+      <section class="form-grid">
+        <div class="field">
+          <label for="nombre">Nombre</label>
+          <input id="nombre" type="text" formControlName="nombre" />
+          @if (form.controls.nombre.touched && form.controls.nombre.hasError('required')) {
+            <p class="field-error">El nombre es obligatorio.</p>
+          }
+          @if (form.controls.nombre.touched && form.controls.nombre.hasError('pattern')) {
+            <p class="field-error">El nombre solo puede contener letras.</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="apellido">Apellido</label>
+          <input id="apellido" type="text" formControlName="apellido" />
+          @if (form.controls.apellido.touched && form.controls.apellido.hasError('required')) {
+            <p class="field-error">El apellido es obligatorio.</p>
+          }
+          @if (form.controls.apellido.touched && form.controls.apellido.hasError('pattern')) {
+            <p class="field-error">El apellido solo puede contener letras.</p>
+          }
+        </div>
+
+        <div class="field field-wide">
+          <label for="email">Email</label>
+          <input id="email" type="email" formControlName="email" />
+          @if (form.controls.email.invalid && form.controls.email.touched) {
+            <p class="field-error">Ingresá un email válido.</p>
+          }
+        </div>
+
+        <div class="field field-wide">
+          <label for="telefono">Teléfono</label>
+          <input id="telefono" type="tel" formControlName="telefono" />
+          @if (form.controls.telefono.touched && form.controls.telefono.hasError('pattern')) {
+            <p class="field-error">El teléfono solo puede contener números.</p>
+          }
+        </div>
+      </section>
+
+      <button type="submit" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Guardando...' : 'Guardar cambios' }}
+      </button>
+    </form>
+  }
+</main>

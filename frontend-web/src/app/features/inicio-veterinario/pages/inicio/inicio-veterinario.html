@@ -1,0 +1,92 @@
+<main class="inicio-page">
+  <header class="inicio-header">
+    <div>
+      <h1>Inicio</h1>
+      <p>Un vistazo rápido a tu día.</p>
+    </div>
+    <a routerLink="/eventos-clinicos" class="btn-primary">Registrar atención</a>
+  </header>
+
+  @if (isLoading()) {
+    <p class="status-text">Cargando...</p>
+  }
+
+  @if (errorMessage()) {
+    <p class="banner banner-error">{{ errorMessage() }}</p>
+  }
+
+  @if (!isLoading() && !errorMessage()) {
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <span class="kpi-label">Turnos de hoy</span>
+        <span class="kpi-value">{{ turnosHoy().length }}</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Próximos 7 días</span>
+        <span class="kpi-value">{{ cantidadProximos7Dias() }}</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Cancelaciones del mes</span>
+        <span class="kpi-value">{{ tasaCancelacionMes() }}%</span>
+      </div>
+    </section>
+
+    <section class="agenda-card">
+      <div class="agenda-header">
+        <h2>Agenda de hoy</h2>
+        <a routerLink="/eventos-clinicos/turnos">Ver todos los turnos</a>
+      </div>
+
+      @if (cancelarError()) {
+        <p class="banner banner-error">{{ cancelarError() }}</p>
+      }
+
+      @if (turnosHoy().length === 0) {
+        <p class="status-text">No tenés turnos confirmados para hoy.</p>
+      }
+
+      @if (turnosHoy().length > 0) {
+        <ul class="agenda-list">
+          @for (turno of turnosHoy(); track turno.idTurno) {
+            <li class="agenda-row">
+              <span class="agenda-hora">{{ formatHora(turno.hora) }}</span>
+
+              <div class="agenda-info">
+                <span class="agenda-mascota">{{ turno.nombreMascota }}</span>
+                <span class="agenda-duenio">{{ turno.nombreDuenio }}</span>
+                @if (turno.motivoConsulta) {
+                  <span class="agenda-motivo">{{ turno.motivoConsulta }}</span>
+                }
+              </div>
+
+              @if (confirmandoCancelarId() === turno.idTurno) {
+                <div class="confirm-actions">
+                  <span>¿Cancelar?</span>
+                  <button
+                    type="button"
+                    class="btn-danger"
+                    [disabled]="procesandoId() === turno.idTurno"
+                    (click)="confirmarCancelacion(turno)"
+                  >
+                    {{ procesandoId() === turno.idTurno ? 'Cancelando...' : 'Sí' }}
+                  </button>
+                  <button type="button" class="btn-secondary" (click)="cancelarConfirmacion()">
+                    No
+                  </button>
+                </div>
+              } @else {
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  (click)="pedirConfirmacion(turno.idTurno)"
+                >
+                  Cancelar
+                </button>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  }
+</main>

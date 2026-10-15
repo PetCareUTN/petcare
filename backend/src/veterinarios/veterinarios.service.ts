@@ -1,0 +1,400 @@
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import * as bcrypt from 'bcrypt';
+import { join } from 'path';
+import { Repository } from 'typeorm';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { RoleName } from '../common/enums/role-name.enum';
+import { ValidationStatus } from '../common/enums/validation-status.enum';
+import { NotificationType } from '../common/enums/notification-type.enum';
+import { estadoRealDeVeterinario } from '../common/utils/estado-real.util';
+import { GeocodingService } from '../geocoding/geocoding.service';
+import { NotificacionesService } from '../notificaciones/notificaciones.service';
+import { Role } from '../roles/entities/role.entity';
+import { Suscripcion } from '../suscripciones/entities/suscripcion.entity';
+import { UsersService } from '../users/users.service';
+import { RegisterVeterinarioDto } from './dto/register-veterinario.dto';
+import {
+  TipoDocumentoVeterinario,
+  urlDocumentoVeterinario,
+  VeterinarioResponseDto,
+} from './dto/veterinario-response.dto';
+import { Veterinario } from './entities/veterinario.entity';
+import type { UploadedDocumentFile } from './types/uploaded-document-file.type';
+
+const SALT_ROUNDS = 10;
+
+@Injectable()
+export class VeterinariosService {
+  constructor(
+    @InjectRepository(Veterinario)
+    private readonly veterinariosRepository: Repository<Veterinario>,
+    @InjectRepository(Role)
+    private readonly rolesRepository: Repository<Role>,
+    @InjectRepository(Suscripcion)
+    private readonly suscripcionesRepository: Repository<Suscripcion>,
+    private readonly usersService: UsersService,
+    private readonly notificacionesService: NotificacionesService,
+    private readonly geocoding: GeocodingService,
+  ) {}
+
+  /**
+   * Dónde está un documento del veterinario (matrícula o habilitación), si
+   * quien lo pide puede verlo: un administrador o el propio veterinario.
+   *
+   * Antes se servían sin sesión desde /uploads, y son documentos con datos
+   * personales: cualquiera con la URL podía abrirlos.
+   */
+  async obtenerDocumento(
+    idVeterinario: number,
+    tipo: TipoDocumentoVeterinario,
+    requester: JwtPayload,
+  ): Promise<string> {
+    const veterinario = await this.veterinariosRepository.findOne({
+      where: { idVeterinario },
+      relations: ['usuario'],
+    });
+
+    const esAdmin = requester.rol === RoleName.ADMINISTRADOR;
+    const esElMismo = veterinario?.usuario.idUsuario === requester.sub;
+    if (veterinario && !esAdmin && !esElMismo) {
+      throw new ForbiddenException({
+        codigoEstado: 403,
+        mensaje: 'No tiene permisos para acceder a este recurso',
+      });
+    }
+
+    const rutaRelativa =
+      tipo === 'matricula'
+        ? veterinario?.matriculaUrl
+        : veterinario?.habilitacionUrl;
+    if (!rutaRelativa) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Documento no encontrado',
+      });
+    }
+
+    return join(process.cwd(), rutaRelativa);
+  }
+
+  private getRelativeMatriculaUrl(file: UploadedDocumentFile): string {
+    return `uploads/matriculas/${file.filename}`;
+  }
+
+  private getRelativeHabilitacionUrl(file: UploadedDocumentFile): string {
+    return `uploads/habilitaciones/${file.filename}`;
+  }
+
+  /**
+   * Registro combinado para la web: crea la cuenta directamente con rol
+   * veterinario y la solicitud de validación en un solo paso (en vez de
+   * depender de que un dueño ya logueado pida ascender a veterinario, flujo
+   * que además tenía un candado circular: para pedir la validación hacía
+   * falta ya ser veterinario). El login queda bloqueado hasta que un admin
+   * apruebe la solicitud (ver AuthService.login).
+   */
+  async registrarVeterinario(
+    dto: RegisterVeterinarioDto,
+    matriculaFile: UploadedDocumentFile | undefined,
+    habilitacionFile: UploadedDocumentFile | undefined,
+  ): Promise<{ mensaje: string; advertenciaUbicacion?: string }> {
+    if (!matriculaFile) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje: 'La matrícula habilitante es obligatoria (imagen o PDF)',
+      });
+    }
+
+    if (!habilitacionFile) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje: 'El certificado de habilitación es obligatorio (imagen o PDF)',
+      });
+    }
+
+    const existente = await this.usersService.findByEmail(dto.email);
+    if (existente) {
+      throw new ConflictException({
+        codigoEstado: 409,
+        mensaje: 'El email ya se encuentra registrado',
+      });
+    }
+
+    const rolVeterinario = await this.rolesRepository.findOne({
+      where: { nombre: RoleName.VETERINARIO },
+    });
+    if (!rolVeterinario) {
+      throw new Error(
+        'No se encontró el rol "veterinario". Verifique el seed de roles.',
+      );
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, SALT_ROUNDS);
+
+    // Best-effort: si Google no encuentra la dirección o la API key no está
+    // configurada, el registro se completa igual, sin coordenadas.
+    const geocodificado = await this.geocoding.geocodificar(
+      this.direccionCompleta(dto.direccion, dto.provincia),
+    );
+
+    const usuario = await this.usersService.create({
+      nombre: dto.nombre,
+      apellido: null,
+      email: dto.email,
+      password: passwordHash,
+      idRol: rolVeterinario.idRol,
+      telefono: dto.telefono,
+      direccion: dto.direccion,
+      provincia: dto.provincia,
+      latitud: geocodificado?.latitud ?? null,
+      longitud: geocodificado?.longitud ?? null,
+    });
+
+    const veterinario = this.veterinariosRepository.create({
+      usuario,
+      numeroDocumento: dto.numeroDocumento,
+      numeroMatricula: dto.numeroMatricula,
+      provinciaMatricula: dto.provinciaMatricula,
+      matriculaUrl: this.getRelativeMatriculaUrl(matriculaFile),
+      habilitacionUrl: this.getRelativeHabilitacionUrl(habilitacionFile),
+      estadoValidacion: ValidationStatus.PENDIENTE,
+    });
+    await this.veterinariosRepository.save(veterinario);
+
+    await this.notificacionesService.crear(
+      usuario.idUsuario,
+      NotificationType.SOLICITUD_RECIBIDA,
+      'Solicitud recibida',
+      'Tu cuenta fue creada y tu matrícula quedó pendiente de revisión. Vas a poder iniciar sesión cuando un administrador la apruebe.',
+    );
+
+    return {
+      mensaje:
+        'Cuenta creada correctamente. Un administrador revisará tu matrícula antes de que puedas iniciar sesión.',
+      advertenciaUbicacion: geocodificado?.precisionBaja
+        ? 'No pudimos ubicar tu dirección con precisión. Revisá que incluya calle, número y localidad; igualmente guardamos una ubicación aproximada.'
+        : undefined,
+    };
+  }
+
+  /**
+   * Cambia la provincia de la veterinaria autenticada y vuelve a ubicarla en
+   * el mapa, porque las coordenadas dependen de la provincia (hay localidades
+   * con el mismo nombre en varias).
+   */
+  async actualizarProvincia(
+    idUsuario: number,
+    provincia: string,
+  ): Promise<{ provincia: string }> {
+    const veterinario = await this.veterinariosRepository.findOne({
+      where: { usuario: { idUsuario } },
+      relations: ['usuario'],
+    });
+    if (!veterinario) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'No se encontró la veterinaria',
+      });
+    }
+
+    const direccion = veterinario.usuario.direccion;
+    const geocodificado = direccion
+      ? await this.geocoding.geocodificar(
+          this.direccionCompleta(direccion, provincia),
+        )
+      : null;
+
+    await this.usersService.updateProvincia(
+      idUsuario,
+      provincia,
+      geocodificado,
+    );
+
+    return { provincia };
+  }
+
+  /** La provincia se guarda aparte, pero se suma al geocodificar para ubicar mejor. */
+  private direccionCompleta(direccion: string, provincia: string): string {
+    return `${direccion}, ${provincia}, Argentina`;
+  }
+
+  async listarAprobados(): Promise<
+    {
+      idVeterinario: number;
+      nombre: string;
+      direccion: string | null;
+      provincia: string | null;
+      latitud: number | null;
+      longitud: number | null;
+      telefono: string | null;
+    }[]
+  > {
+    const veterinarios = await this.veterinariosRepository.find({
+      where: { estadoValidacion: ValidationStatus.APROBADO },
+      relations: ['usuario'],
+    });
+
+    return veterinarios
+      .map((veterinario) => ({
+        idVeterinario: veterinario.idVeterinario,
+        nombre: veterinario.usuario.nombre,
+        direccion: veterinario.usuario.direccion,
+        provincia: veterinario.usuario.provincia,
+        latitud: veterinario.usuario.latitud,
+        longitud: veterinario.usuario.longitud,
+        telefono: veterinario.usuario.telefono,
+      }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+  }
+
+  async obtenerEstado(idUsuario: number): Promise<VeterinarioResponseDto> {
+    const veterinario = await this.veterinariosRepository.findOne({
+      where: { usuario: { idUsuario } },
+    });
+
+    if (!veterinario) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'No se encontró solicitud de validación para este usuario',
+      });
+    }
+
+    return VeterinarioResponseDto.fromEntity(veterinario);
+  }
+
+  async listarPendientes() {
+    const solicitudes = await this.veterinariosRepository.find({
+      where: { estadoValidacion: ValidationStatus.PENDIENTE },
+      relations: ['usuario'],
+      order: { createdAt: 'ASC' },
+    });
+
+    return solicitudes.map((s) => ({
+      idVeterinario: s.idVeterinario,
+      nombre: s.usuario.nombre,
+      apellido: s.usuario.apellido,
+      email: s.usuario.email,
+      fechaSolicitud: s.createdAt,
+    }));
+  }
+
+  async obtenerDetalle(idVeterinario: number) {
+    const veterinario = await this.veterinariosRepository.findOne({
+      where: { idVeterinario },
+      relations: ['usuario'],
+    });
+
+    if (!veterinario) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'No se encontró la solicitud de validación',
+      });
+    }
+
+    const suscripcion = await this.suscripcionesRepository.findOne({
+      where: { usuario: { idUsuario: veterinario.usuario.idUsuario } },
+    });
+
+    return {
+      idVeterinario: veterinario.idVeterinario,
+      numeroDocumento: veterinario.numeroDocumento,
+      numeroMatricula: veterinario.numeroMatricula,
+      provinciaMatricula: veterinario.provinciaMatricula,
+      matriculaUrl: urlDocumentoVeterinario(
+        veterinario.idVeterinario,
+        'matricula',
+      ),
+      habilitacionUrl: veterinario.habilitacionUrl
+        ? urlDocumentoVeterinario(veterinario.idVeterinario, 'habilitacion')
+        : null,
+      // Minúsculas para unificar el criterio de presentación.
+      estadoValidacion: veterinario.estadoValidacion.toLowerCase() as
+        'pendiente' | 'aprobado' | 'rechazado',
+      // Estado real combinado (validación + suscripción), para que el
+      // admin vea el ciclo completo y no solo "pendiente".
+      estadoReal: estadoRealDeVeterinario(veterinario, suscripcion),
+      motivoRechazo: veterinario.motivoRechazo,
+      fechaSolicitud: veterinario.createdAt,
+      usuario: {
+        idUsuario: veterinario.usuario.idUsuario,
+        nombre: veterinario.usuario.nombre,
+        apellido: veterinario.usuario.apellido,
+        email: veterinario.usuario.email,
+      },
+    };
+  }
+
+  async aprobar(idVeterinario: number) {
+    const veterinario = await this.veterinariosRepository.findOne({
+      where: { idVeterinario },
+      relations: ['usuario'],
+    });
+
+    if (!veterinario) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'No se encontró la solicitud de validación',
+      });
+    }
+
+    if (veterinario.estadoValidacion !== ValidationStatus.PENDIENTE) {
+      throw new ConflictException({
+        codigoEstado: 409,
+        mensaje: 'La solicitud ya fue procesada',
+      });
+    }
+
+    veterinario.estadoValidacion = ValidationStatus.APROBADO;
+    await this.veterinariosRepository.save(veterinario);
+
+    await this.notificacionesService.crear(
+      veterinario.usuario.idUsuario,
+      NotificationType.APROBACION,
+      'Cuenta aprobada',
+      'Tu cuenta de veterinario ha sido validada. Para usar la plataforma, suscribite desde "Mis suscripción".',
+    );
+
+    return { mensaje: 'Solicitud aprobada correctamente' };
+  }
+
+  async rechazar(idVeterinario: number, motivoRechazo: string) {
+    const veterinario = await this.veterinariosRepository.findOne({
+      where: { idVeterinario },
+      relations: ['usuario'],
+    });
+
+    if (!veterinario) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'No se encontró la solicitud de validación',
+      });
+    }
+
+    if (veterinario.estadoValidacion !== ValidationStatus.PENDIENTE) {
+      throw new ConflictException({
+        codigoEstado: 409,
+        mensaje: 'La solicitud ya fue procesada',
+      });
+    }
+
+    veterinario.estadoValidacion = ValidationStatus.RECHAZADO;
+    veterinario.motivoRechazo = motivoRechazo;
+    await this.veterinariosRepository.save(veterinario);
+
+    await this.notificacionesService.crear(
+      veterinario.usuario.idUsuario,
+      NotificationType.RECHAZO,
+      'Solicitud rechazada',
+      `Tu solicitud de validación fue rechazada. Motivo: ${motivoRechazo}`,
+    );
+
+    return { mensaje: 'Solicitud rechazada correctamente' };
+  }
+}

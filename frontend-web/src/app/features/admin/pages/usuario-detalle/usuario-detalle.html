@@ -1,0 +1,100 @@
+<main class="pet-page">
+  <div class="pet-form">
+    <header class="pet-header">
+      <div>
+        <h1>Detalle de usuario</h1>
+        <p>Visualizá y modificá la información del usuario.</p>
+      </div>
+      <a routerLink="/admin/usuarios">Volver</a>
+    </header>
+
+    @if (isLoading()) {
+      <p class="estado-loading">Cargando detalle...</p>
+    }
+
+    @if (errorMessage()) {
+      <p class="banner banner-error">{{ errorMessage() }}</p>
+    }
+
+    @if (successMessage()) {
+      <p class="banner banner-success">{{ successMessage() }}</p>
+    }
+
+    @if (usuario(); as user) {
+      <div class="detalle-card">
+        <div class="detalle-row">
+          <span class="detalle-label">Nombre:</span>
+          <span>{{ user.nombre }} {{ user.apellido }}</span>
+        </div>
+
+        <div class="detalle-row">
+          <span class="detalle-label">Email:</span>
+          <span>{{ user.email }}</span>
+        </div>
+
+        @if (user.numero_documento) {
+          <div class="detalle-row">
+            <span class="detalle-label">Documento:</span>
+            <span>{{ user.numero_documento }}</span>
+          </div>
+        }
+
+        @if (user.telefono) {
+          <div class="detalle-row">
+            <span class="detalle-label">Teléfono:</span>
+            <span>{{ user.telefono }}</span>
+          </div>
+        }
+
+        <div class="detalle-row">
+          <span class="detalle-label">Estado:</span>
+          <span class="estado-badge" [class]="'estado-' + user.estado">{{ user.estado }}</span>
+        </div>
+
+        <div class="detalle-row">
+          <span class="detalle-label">Fecha de registro:</span>
+          <span>{{ user.fecha_registro | date:'dd/MM/yyyy HH:mm' }}</span>
+        </div>
+      </div>
+
+        <div class="rol-section">
+        <h2>Cambiar rol</h2>
+        <div class="rol-form">
+          <select [(ngModel)]="rolSeleccionado">
+            @for (rol of roles(); track rol.idRol) {
+              <option [ngValue]="rol.idRol">{{ rol.nombre }}</option>
+            }
+          </select>
+          <button
+            class="btn-guardar"
+            (click)="guardarRol()"
+            [disabled]="isProcessing() || rolSeleccionado() === usuario()?.id_rol"
+          >
+            {{ isProcessing() ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </div>
+
+      @if (historial().length > 0) {
+        <div class="historial-section">
+          <h2>Historial de cambios</h2>
+          <ul class="historial-list">
+            @for (registro of historial(); track registro.id_auditoria) {
+              <li class="historial-item">
+                <span class="historial-accion">{{ registro.tipo_accion }}</span>
+                <span class="historial-detalle">
+                  @if (registro.detalle; as det) {
+                    @if (det['id_rol_anterior'] !== undefined) {
+                      Rol: {{ nombreRol(det['id_rol_anterior']) }} → {{ nombreRol(det['id_rol_nuevo']) }}
+                    }
+                  }
+                </span>
+                <span class="historial-fecha">{{ registro.fecha_accion | date:'dd/MM/yyyy HH:mm' }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    }
+  </div>
+</main>

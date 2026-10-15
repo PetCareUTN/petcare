@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+      Client ID de tipo "Web application" del proyecto de Google Cloud.
+      OJO: va el de tipo Web, NO el de tipo Android, aunque esto sea la app.
+      El de Android igual hay que crearlo en Google Cloud (con el package
+      com.petcare.app y el SHA-1 de la keystore) para que Google acepte la firma.
+      Tiene que ser el mismo valor que GOOGLE_CLIENT_ID en el .env del backend.
+    -->
+    <string name="google_web_client_id" translatable="false">669262981079-6su9g7iqegsi3cn8efn4dmr9bsjoch4u.apps.googleusercontent.com</string>
+
+</resources>
