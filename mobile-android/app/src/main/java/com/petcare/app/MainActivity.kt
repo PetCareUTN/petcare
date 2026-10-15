@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import com.petcare.app.features.adopciones.data.local.MatchesCelebradosPreferences
 import com.petcare.app.features.adopciones.data.remote.FavoritoResponse
 import com.petcare.app.features.adopciones.data.remote.FiltrosAdopcion
 import com.petcare.app.features.adopciones.data.remote.PublicacionAdopcionResponse
@@ -209,6 +210,9 @@ class MainActivity : ComponentActivity() {
                     AdopcionesController(
                         adopcionesApi = RetrofitClient.adopcionesApi(sessionStore)
                     )
+                }
+                val matchesCelebradosPreferences = remember {
+                    MatchesCelebradosPreferences(applicationContext)
                 }
                 val solicitudesAdopcionController = remember {
                     SolicitudesAdopcionController(
@@ -1303,6 +1307,20 @@ class MainActivity : ComponentActivity() {
                     lifecycleScope.launch {
                         try {
                             misSolicitudes = solicitudesAdopcionController.listarMisSolicitudes()
+
+                            // El festejo del match es para el adoptante: se muestra la
+                            // primera vez que ve una solicitud suya aceptada.
+                            val nuevosMatches = misSolicitudes.filter {
+                                it.estado == "ACEPTADA" &&
+                                    !matchesCelebradosPreferences.fueCelebrado(it.idSolicitud)
+                            }
+                            nuevosMatches.maxByOrNull { it.createdAt }?.let { match ->
+                                matchCelebrationPetName = match.nombreMascota
+                                matchCelebrationPetFoto = match.fotoMascota
+                            }
+                            matchesCelebradosPreferences.marcarCelebrados(
+                                nuevosMatches.map { it.idSolicitud }
+                            )
                         } catch (exception: HttpException) {
                             if (exception.code() == 401) {
                                 logout()
@@ -2044,11 +2062,11 @@ class MainActivity : ComponentActivity() {
                                     try {
                                         val actualizada =
                                             solicitudesAdopcionController.aceptar(solicitud.idSolicitud)
+                                        // Quien publica no ve el festejo: la fila pasa a
+                                        // "Aceptada" con el contacto del adoptante.
                                         solicitudesRecibidas = solicitudesRecibidas.map {
                                             if (it.idSolicitud == actualizada.idSolicitud) actualizada else it
                                         }
-                                        matchCelebrationPetName = actualizada.nombreMascota
-                                        matchCelebrationPetFoto = actualizada.fotoMascota
                                     } catch (exception: HttpException) {
                                         if (exception.code() == 401) {
                                             logout()

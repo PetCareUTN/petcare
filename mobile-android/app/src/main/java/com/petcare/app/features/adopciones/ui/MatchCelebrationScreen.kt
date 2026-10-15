@@ -123,7 +123,7 @@ fun MatchCelebrationScreen(
                 textAlign = TextAlign.Center
             )
             Text(
-                text = "Aceptaste la solicitud de adopción; ahora pueden coordinar los próximos pasos.",
+                text = "Aceptaron tu solicitud de adopción; ahora pueden coordinar los próximos pasos.",
                 modifier = Modifier.alpha(alphaTexto.value),
                 color = PetCareMuted,
                 style = MaterialTheme.typography.bodyMedium,
