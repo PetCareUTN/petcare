@@ -2,6 +2,7 @@ package com.petcare.app.features.pets.ui
 
 import com.petcare.app.ui.components.elevacionTarjeta
 import com.petcare.app.ui.components.elevacionBoton
+import com.petcare.app.ui.components.elevacionBotonContorno
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -163,7 +164,7 @@ fun SolicitudesCompartirRecibidasScreen(
                         style = MaterialTheme.typography.bodySmall
                     )
                     OutlinedButton(
-                        elevation = elevacionBoton(),
+                        elevation = elevacionBotonContorno(),
                         colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                         onClick = { scope.launch { cargar() } },
                         modifier = Modifier.fillMaxWidth(),
@@ -245,7 +246,7 @@ fun SolicitudesCompartirRecibidasScreen(
                             ) { Text(if (procesando) "..." else "Aceptar") }
 
                             OutlinedButton(
-                                elevation = elevacionBoton(),
+                                elevation = elevacionBotonContorno(),
                                 colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                                 onClick = {
                                     procesandoId = solicitud.idSolicitud

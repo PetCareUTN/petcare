@@ -2,6 +2,7 @@ package com.petcare.app.features.turnos.ui
 
 import com.petcare.app.ui.components.elevacionTarjeta
 import com.petcare.app.ui.components.elevacionBoton
+import com.petcare.app.ui.components.elevacionBotonContorno
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -325,7 +326,7 @@ fun SolicitarTurnoScreen(
                     }
                     else -> {
                         OutlinedButton(
-                            elevation = elevacionBoton(),
+                            elevation = elevacionBotonContorno(),
                             colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                             onClick = {
                                 vistaMapa = VistaMapaTurno(
@@ -407,7 +408,7 @@ fun SolicitarTurnoScreen(
                     }
                     else -> {
                         OutlinedButton(
-                            elevation = elevacionBoton(),
+                            elevation = elevacionBotonContorno(),
                             colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                             onClick = {
                                 vistaMapa = VistaMapaTurno(
@@ -1160,7 +1161,7 @@ private fun TurnoDatePickerField(
 
     // El título "Fecha" ya lo pone la sección que contiene el carrusel y este campo.
     OutlinedButton(
-        elevation = elevacionBoton(),
+        elevation = elevacionBotonContorno(),
         colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
         onClick = { showPicker = true },
         modifier = Modifier.fillMaxWidth(),

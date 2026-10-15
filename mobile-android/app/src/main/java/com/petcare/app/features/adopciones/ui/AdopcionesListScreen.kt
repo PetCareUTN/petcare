@@ -2,6 +2,7 @@ package com.petcare.app.features.adopciones.ui
 
 import com.petcare.app.ui.components.elevacionTarjeta
 import com.petcare.app.ui.components.elevacionBoton
+import com.petcare.app.ui.components.elevacionBotonContorno
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -211,7 +212,7 @@ fun AdopcionesListScreen(
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             OutlinedButton(
-                                elevation = elevacionBoton(),
+                                elevation = elevacionBotonContorno(),
                                 colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                                 onClick = onRetry,
                                 modifier = Modifier.fillMaxWidth(),

@@ -2,6 +2,7 @@ package com.petcare.app.features.historiaclinica.ui
 
 import com.petcare.app.ui.components.elevacionTarjeta
 import com.petcare.app.ui.components.elevacionBoton
+import com.petcare.app.ui.components.elevacionBotonContorno
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -105,7 +106,7 @@ fun HistoriaClinicaScreen(
                     Text("Exportar historial (PDF)")
                 }
                 OutlinedButton(
-                    elevation = elevacionBoton(),
+                    elevation = elevacionBotonContorno(),
                     colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                     onClick = onExportArchivos,
                     enabled = hasArchivos && !isExporting,
@@ -176,7 +177,7 @@ fun HistoriaClinicaScreen(
                             style = MaterialTheme.typography.bodyMedium
                         )
                         OutlinedButton(
-                            elevation = elevacionBoton(),
+                            elevation = elevacionBotonContorno(),
                             colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                             onClick = onRetry,
                             modifier = Modifier.fillMaxWidth(),

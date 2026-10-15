@@ -2,6 +2,7 @@ package com.petcare.app.features.turnos.ui
 
 import com.petcare.app.ui.components.elevacionTarjeta
 import com.petcare.app.ui.components.elevacionBoton
+import com.petcare.app.ui.components.elevacionBotonContorno
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -178,7 +179,7 @@ fun MisTurnosScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             OutlinedButton(
-                                elevation = elevacionBoton(),
+                                elevation = elevacionBotonContorno(),
                                 onClick = { showDatePicker = true },
                                 modifier = Modifier.weight(1f),
                                 shape = MaterialTheme.shapes.large,
@@ -637,7 +638,7 @@ private fun TurnoCard(
                 if (turno.puedeCancelar && !esPasado) {
                     Spacer(modifier = Modifier.height(10.dp))
                     OutlinedButton(
-                        elevation = elevacionBoton(),
+                        elevation = elevacionBotonContorno(),
                         colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                         onClick = onCancelarClick,
                         enabled = !isCancelando,

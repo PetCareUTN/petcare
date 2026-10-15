@@ -2,6 +2,7 @@ package com.petcare.app.features.servicios.ui
 
 import com.petcare.app.ui.components.elevacionTarjeta
 import com.petcare.app.ui.components.elevacionBoton
+import com.petcare.app.ui.components.elevacionBotonContorno
 import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -186,7 +187,7 @@ fun PrestadoresScreen(api: ServiciosApi, onBack: () -> Unit, inicial: String = "
                                 }
                                 if (s.estado in listOf("correccion", "rechazado")) {
                                     OutlinedButton(
-                                        elevation = elevacionBoton(),
+                                        elevation = elevacionBotonContorno(),
                                         colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                                         onClick = {
                                             categoria = s.categoria; datos = s.datos; capacidad = s.datos.capacidad?.toString() ?: ""; identidad = null; evidencia = emptyList(); consentimiento = false
@@ -333,7 +334,7 @@ fun PrestadoresScreen(api: ServiciosApi, onBack: () -> Unit, inicial: String = "
                             Text(categoriaLabel(sv.categoria), Modifier.padding(horizontal = 10.dp, vertical = 4.dp), color = PetCareTealDark, style = MaterialTheme.typography.labelLarge)
                         }
                         sv.descripcion?.let { Text(it, color = PetCareMuted, style = MaterialTheme.typography.bodyMedium) }
-                        OutlinedButton(elevation = elevacionBoton(), colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface), enabled = !ocupado, shape = MaterialTheme.shapes.large, onClick = { ejecutar { perfiles = perfiles + (sv.id to api.perfilPrestador(sv.idUsuario, sv.categoria)) } }) { Text("Ver comprobaciones y reseñas") }
+                        OutlinedButton(elevation = elevacionBotonContorno(), colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface), enabled = !ocupado, shape = MaterialTheme.shapes.large, onClick = { ejecutar { perfiles = perfiles + (sv.id to api.perfilPrestador(sv.idUsuario, sv.categoria)) } }) { Text("Ver comprobaciones y reseñas") }
                         perfiles[sv.id]?.let { p ->
                             if (p.identidadRevisada) Text("✓ Identidad revisada", color = PetCareTealDark)
                             if (p.referenciasComprobadas) Text("✓ Referencias comprobadas", color = PetCareTealDark)

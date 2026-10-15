@@ -2,6 +2,7 @@ package com.petcare.app.features.adopciones.ui
 
 import com.petcare.app.ui.components.elevacionTarjeta
 import com.petcare.app.ui.components.elevacionBoton
+import com.petcare.app.ui.components.elevacionBotonContorno
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -128,7 +129,7 @@ fun MisPublicacionesAdopcionScreen(
                             style = MaterialTheme.typography.bodyMedium
                         )
                         OutlinedButton(
-                            elevation = elevacionBoton(),
+                            elevation = elevacionBotonContorno(),
                             colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                             onClick = onRetry,
                             modifier = Modifier.fillMaxWidth(),
@@ -277,7 +278,7 @@ private fun MiPublicacionRow(
                 }
             } else if (cantidadSolicitudes > 0) {
                 OutlinedButton(
-                    elevation = elevacionBoton(),
+                    elevation = elevacionBotonContorno(),
                     colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                     onClick = onVerSolicitudes,
                     modifier = Modifier.fillMaxWidth(),
@@ -291,7 +292,7 @@ private fun MiPublicacionRow(
                 "ACTIVA" -> {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedButton(
-                            elevation = elevacionBoton(),
+                            elevation = elevacionBotonContorno(),
                             colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                             onClick = onPausar,
                             enabled = !isProcessing,
@@ -301,7 +302,7 @@ private fun MiPublicacionRow(
                             Text("Pausar")
                         }
                         OutlinedButton(
-                            elevation = elevacionBoton(),
+                            elevation = elevacionBotonContorno(),
                             colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                             onClick = onCancelar,
                             enabled = !isProcessing,
@@ -315,7 +316,7 @@ private fun MiPublicacionRow(
                 }
                 "PAUSADA" -> {
                     OutlinedButton(
-                        elevation = elevacionBoton(),
+                        elevation = elevacionBotonContorno(),
                         colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                         onClick = onReanudar,
                         enabled = !isProcessing,

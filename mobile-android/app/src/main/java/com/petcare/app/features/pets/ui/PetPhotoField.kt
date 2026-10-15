@@ -1,6 +1,7 @@
 package com.petcare.app.features.pets.ui
 
 import com.petcare.app.ui.components.elevacionBoton
+import com.petcare.app.ui.components.elevacionBotonContorno
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -214,7 +215,7 @@ internal fun PetPhotoField(
             ) {
                 if (photoUri != null) {
                     OutlinedButton(
-                        elevation = elevacionBoton(),
+                        elevation = elevacionBotonContorno(),
                         colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                         onClick = { uriBeingEdited = photoUri },
                         modifier = Modifier.weight(1f),

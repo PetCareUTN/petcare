@@ -2,6 +2,7 @@ package com.petcare.app.features.servicios.ui
 
 import com.petcare.app.ui.components.elevacionTarjeta
 import com.petcare.app.ui.components.elevacionBoton
+import com.petcare.app.ui.components.elevacionBotonContorno
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -181,7 +182,7 @@ fun ServiciosListScreen(
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             OutlinedButton(
-                                elevation = elevacionBoton(),
+                                elevation = elevacionBotonContorno(),
                                 colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                                 onClick = onRetry,
                                 modifier = Modifier.fillMaxWidth(),
@@ -354,7 +355,7 @@ private fun EstadoVacioServicios(onPublicar: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(16.dp))
             OutlinedButton(
-                elevation = elevacionBoton(),
+                elevation = elevacionBotonContorno(),
                 colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                 onClick = onPublicar,
                 shape = MaterialTheme.shapes.large

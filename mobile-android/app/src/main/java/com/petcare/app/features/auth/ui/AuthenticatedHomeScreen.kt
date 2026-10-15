@@ -2,6 +2,7 @@ package com.petcare.app.features.auth.ui
 
 import com.petcare.app.ui.components.elevacionTarjeta
 import com.petcare.app.ui.components.elevacionBoton
+import com.petcare.app.ui.components.elevacionBotonContorno
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -234,7 +235,7 @@ private fun SectionHeader(
         Text(text = title, style = MaterialTheme.typography.titleMedium)
         if (action == null) return@Row
         OutlinedButton(
-            elevation = elevacionBoton(),
+            elevation = elevacionBotonContorno(),
             colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
             onClick = onAction,
             shape = MaterialTheme.shapes.large
@@ -284,7 +285,7 @@ private fun PetsCarousel(
                         style = MaterialTheme.typography.bodyMedium
                     )
                     OutlinedButton(
-                        elevation = elevacionBoton(),
+                        elevation = elevacionBotonContorno(),
                         colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                         onClick = onRetryPets,
                         modifier = Modifier.fillMaxWidth(),

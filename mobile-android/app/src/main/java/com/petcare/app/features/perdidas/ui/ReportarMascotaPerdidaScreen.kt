@@ -2,6 +2,7 @@ package com.petcare.app.features.perdidas.ui
 
 import com.petcare.app.ui.components.elevacionTarjeta
 import com.petcare.app.ui.components.elevacionBoton
+import com.petcare.app.ui.components.elevacionBotonContorno
 import android.Manifest
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -410,7 +411,7 @@ private fun FechaHoraPerdidaField(
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         OutlinedButton(
-            elevation = elevacionBoton(),
+            elevation = elevacionBotonContorno(),
             colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
             onClick = { showDatePicker = true },
             enabled = enabled,
@@ -424,7 +425,7 @@ private fun FechaHoraPerdidaField(
             )
         }
         OutlinedButton(
-            elevation = elevacionBoton(),
+            elevation = elevacionBotonContorno(),
             colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
             onClick = { showTimePicker = true },
             enabled = enabled,

@@ -1,7 +1,7 @@
 package com.petcare.app.features.adopciones.ui
 
 import com.petcare.app.ui.components.elevacionTarjeta
-import com.petcare.app.ui.components.elevacionBoton
+import com.petcare.app.ui.components.elevacionBotonContorno
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -124,7 +124,7 @@ fun SolicitudesRecibidasScreen(
                             style = MaterialTheme.typography.bodyMedium
                         )
                         OutlinedButton(
-                            elevation = elevacionBoton(),
+                            elevation = elevacionBotonContorno(),
                             colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                             onClick = onRetry,
                             modifier = Modifier.fillMaxWidth(),
@@ -254,7 +254,7 @@ private fun SolicitudRow(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     OutlinedButton(
-                        elevation = elevacionBoton(),
+                        elevation = elevacionBotonContorno(),
                         colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                         onClick = onAceptar,
                         modifier = Modifier.weight(1f),
@@ -264,7 +264,7 @@ private fun SolicitudRow(
                         Text("Aceptar")
                     }
                     OutlinedButton(
-                        elevation = elevacionBoton(),
+                        elevation = elevacionBotonContorno(),
                         colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                         onClick = onRechazar,
                         modifier = Modifier.weight(1f),

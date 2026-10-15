@@ -17,11 +17,20 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun elevacionTarjeta(): CardElevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
 
-/** Sombra de los botones; se hunde un poco al apretarlos. */
+/** Sombra de los botones llenos; se hunde un poco al apretarlos. */
 @Composable
 fun elevacionBoton(): ButtonElevation = ButtonDefaults.buttonElevation(
-    defaultElevation = 3.dp,
-    pressedElevation = 1.dp,
-    focusedElevation = 3.dp,
-    hoveredElevation = 4.dp
+    defaultElevation = 2.dp,
+    pressedElevation = 0.5.dp,
+    focusedElevation = 2.dp,
+    hoveredElevation = 3.dp
+)
+
+/** Sombra de los botones de contorno: más sutil, porque ya tienen borde. */
+@Composable
+fun elevacionBotonContorno(): ButtonElevation = ButtonDefaults.buttonElevation(
+    defaultElevation = 1.dp,
+    pressedElevation = 0.dp,
+    focusedElevation = 1.dp,
+    hoveredElevation = 2.dp
 )
