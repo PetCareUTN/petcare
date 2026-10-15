@@ -1,0 +1,41 @@
+import { User } from '../entities/user.entity';
+
+/**
+ * Representación pública de un usuario (sin `password`).
+ * Se usa en las respuestas de login y de rutas protegidas.
+ */
+export class UserPublicDto {
+  id_usuario: number;
+  nombre: string;
+  apellido: string | null;
+  email: string;
+  numero_documento: string | null;
+  telefono: string | null;
+  direccion: string | null;
+  provincia: string | null;
+  /** Ruta de la foto de perfil, relativa al servidor. */
+  foto: string | null;
+  id_rol: number;
+  estado: string;
+  fecha_registro: Date;
+  /** US-40: la app necesita saber en qué estado mostrar el toggle. */
+  recordatorios_vacunas: boolean;
+
+  static fromEntity(user: User): UserPublicDto {
+    const dto = new UserPublicDto();
+    dto.id_usuario = user.idUsuario;
+    dto.nombre = user.nombre;
+    dto.apellido = user.apellido;
+    dto.email = user.email;
+    dto.numero_documento = user.numeroDocumento ?? null;
+    dto.telefono = user.telefono ?? null;
+    dto.direccion = user.direccion ?? null;
+    dto.provincia = user.provincia ?? null;
+    dto.foto = user.foto ?? null;
+    dto.id_rol = user.rol.idRol;
+    dto.estado = user.estado;
+    dto.fecha_registro = user.fechaRegistro;
+    dto.recordatorios_vacunas = user.recordatoriosVacunas;
+    return dto;
+  }
+}

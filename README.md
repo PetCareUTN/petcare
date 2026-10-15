@@ -148,8 +148,7 @@ petcare/
 Antes de ejecutar el proyecto, se deberá contar con:
 
 - Git
-- Node.js
-- npm
+- Node.js 22 y npm 10 (ver más abajo)
 - Docker
 - Docker Compose
 - PostgreSQL, si no se utiliza Docker
@@ -158,6 +157,29 @@ Antes de ejecutar el proyecto, se deberá contar con:
 - Un editor como Visual Studio Code o IntelliJ IDEA
 
 Las versiones exactas deberán mantenerse documentadas en esta sección o en los README de cada componente.
+
+### Versión de Node
+
+El proyecto usa **Node 22**, que trae npm 10. La versión está en el archivo
+`.nvmrc` de la raíz, y es la misma que usa la integración continua: el workflow
+la lee de ahí, así no hay dos lugares que se puedan desincronizar.
+
+Con [nvm](https://github.com/nvm-sh/nvm) (o nvm-windows), basta con pararse en
+la raíz del repositorio:
+
+```bash
+nvm use
+```
+
+**Por qué importa:** instalar dependencias con otra versión de npm reescribe
+`package-lock.json`. Las versiones nuevas de npm podan del lockfile las
+dependencias opcionales que no corresponden a tu sistema operativo, y entonces
+la integración continua, que corre sobre Linux, falla con
+`npm ci can only install packages when your package.json and package-lock.json
+are in sync`.
+
+Los `package.json` declaran la versión esperada en `engines`, así que npm avisa
+si estás usando otra.
 
 ---
 
@@ -381,6 +403,7 @@ Una historia se considera terminada cuando:
 - No existen errores críticos conocidos.
 - La funcionalidad fue integrada correctamente.
 - La documentación fue actualizada.
+- Todo endpoint nuevo o modificado quedó documentado en OpenAPI (ver Documentación de la API).
 - La historia puede demostrarse en una Sprint Review.
 
 ---
@@ -465,6 +488,48 @@ Los documentos deben actualizarse cuando una decisión técnica o funcional camb
 
 ---
 
+## Documentación de la API
+
+El backend publica la documentación de sus endpoints en `/docs`, con el estándar
+OpenAPI:
+
+- En local: `http://localhost:3000/docs`
+- En el ambiente desplegado: `<URL del backend>/docs`
+
+La especificación en crudo, por si alguna herramienta la necesita (Postman,
+generadores de cliente), está en `/docs-json`.
+
+### Cómo probar un endpoint protegido
+
+1. Abrir `POST /auth/login`, tocar **Try it out** y enviar un usuario válido.
+2. Copiar el `accessToken` de la respuesta.
+3. Tocar **Authorize**, arriba a la derecha, y pegarlo.
+
+El token queda guardado entre recargas, así que se carga una sola vez por
+sesión de pruebas.
+
+### Cómo documentar un endpoint nuevo
+
+Los esquemas de los DTO **no se escriben a mano**: los genera el plugin de
+`@nestjs/swagger` configurado en `nest-cli.json`, leyendo los tipos de
+TypeScript, los decoradores de `class-validator` y los comentarios. Por eso la
+documentación no se desactualiza cuando alguien cambia un DTO.
+
+En el controlador sólo hay que agregar lo que el plugin no puede deducir:
+
+| Decorador | Para qué |
+|---|---|
+| `@ApiTags(EtiquetasApi.LO_QUE_SEA)` | A qué módulo pertenece. Las etiquetas están en `src/common/constants/documentacion-api.ts`. |
+| `@ApiOperation({ summary, description })` | Qué hace el endpoint. |
+| `@ApiProtegido(rol?)` | Pide sesión. Declara de una vez el candado y los errores 401 y 403. |
+| `@ApiResponse({ status, description, type })` | Qué devuelve en cada caso. |
+| `@ApiNoEncontrado` / `@ApiDatosInvalidos` / `@ApiConflicto` | Atajos para los errores 404, 400 y 409. |
+
+Los tres últimos y `ApiProtegido` están en
+`src/common/decorators/api-protegido.decorator.ts`.
+
+---
+
 ## Decisiones de arquitectura
 
 Las decisiones importantes deben registrarse mediante ADRs.
@@ -488,16 +553,21 @@ docs/arquitectura/adrs/
 
 ## Integración continua
 
-El proyecto debe incorporar un pipeline de CI que permita:
+El repositorio cuenta con un pipeline de CI en GitHub Actions que se ejecuta en
+cada Pull Request hacia `develop` y `main`.
 
-- Instalar dependencias.
-- Compilar el proyecto.
-- Ejecutar pruebas.
-- Ejecutar análisis estático.
-- Validar Pull Requests.
-- Generar reportes de cobertura.
+| Workflow | Alcance |
+| --- | --- |
+| `.github/workflows/ci.yml` | Backend (build, 262 pruebas unitarias con cobertura y pruebas e2e contra una PostgreSQL real), frontend web (build de producción y pruebas con Vitest) y Android (pruebas unitarias y APK de debug). |
+| `.github/workflows/calidad.yml` | Análisis estático: ESLint en el backend y Prettier en el frontend web. |
 
-El pipeline debe impedir integrar cambios que no compilen o que fallen en pruebas críticas.
+El pipeline instala dependencias, compila, ejecuta las pruebas, genera el reporte
+de cobertura como artifact descargable y publica el APK de debug de cada Pull
+Request.
+
+El detalle de cada job, cómo reproducirlo en local, la deuda técnica pendiente y
+la configuración de branch protection que falta aplicar en GitHub están en
+[docs/ci.md](docs/ci.md).
 
 ---
 
@@ -506,10 +576,14 @@ El pipeline debe impedir integrar cambios que no compilen o que fallen en prueba
 Se contemplan los siguientes ambientes:
 
 - Desarrollo: trabajo local del equipo.
-- Staging: validación integrada y pruebas.
-- Demo o producción académica: versión estable para presentaciones.
+- Staging: validación integrada y pruebas. Se despliega desde `develop`.
+- Demo o producción académica: versión estable para presentaciones. Se despliega desde `main`.
 
 Cada ambiente debe contar con variables de configuración independientes.
+
+El backend y la base se despliegan en Railway y el frontend web en Vercel, según
+el ADR-007. El paso a paso, las variables de entorno de cada ambiente y cómo
+generar el APK de release están en [docs/deploy.md](docs/deploy.md).
 
 ---
 

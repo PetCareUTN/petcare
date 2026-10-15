@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Manifest EXCLUSIVO de las builds debug (spike US-30).
+
+  Todo lo que se declara acá se mergea únicamente en el APK debug: la app release
+  y el código de `src/main` quedan intactos. Cuando el spike termine y el escaneo
+  real viva en `features/ble/`, este sourceSet completo (`app/src/debug/`) se borra.
+
+  Ver docs/spike-escaneo-ble-segundo-plano.md
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Camino legacy: en API <= 30 el escaneo BLE se habilita con estos dos
+         permisos normales, y ADEMAS exige ACCESS_FINE_LOCATION en runtime
+         (ya declarado en el manifest de main). -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+
+    <!-- Camino moderno: API 31+. A proposito SIN usesPermissionFlags="neverForLocation",
+         porque el objetivo de la historia es justamente derivar ubicacion a partir de
+         la deteccion. Declararlo filtraria resultados y seria incorrecto. -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+
+    <!-- El escaneo BLE requiere que el hardware exista, pero no queremos que el
+         Play Store excluya dispositivos por la app entera: required=false. -->
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="false" />
+
+    <application>
+        <!-- Icono de lanzador aparte, para poder abrir el scanner sin pasar por el
+             login de la app. Vive solo en debug. -->
+        <activity
+            android:name="com.petcare.app.debug.ble.BleScanDebugActivity"
+            android:exported="true"
+            android:label="PetCare BLE Debug"
+            android:theme="@style/Theme.PetCare"
+            tools:ignore="LockedOrientationActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

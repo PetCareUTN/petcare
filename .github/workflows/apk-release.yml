@@ -1,0 +1,114 @@
+name: APK de release
+
+# Compila el APK firmado y lo deja como artefacto descargable, para que
+# cualquiera del equipo pueda bajarlo sin tener la keystore ni Android Studio.
+#
+# Se dispara a mano desde la pestania Actions del repositorio.
+#
+# Requiere estos secrets del repositorio (Settings -> Secrets and variables ->
+# Actions). Ver docs/deploy.md:
+#
+#   ANDROID_KEYSTORE_BASE64    la keystore .jks codificada en base64
+#   ANDROID_KEYSTORE_PASSWORD  contrasenia del almacen
+#   ANDROID_KEY_ALIAS          alias de la clave (petcare)
+#   ANDROID_KEY_PASSWORD       contrasenia de la clave
+#   MAPS_API_KEY               key de Maps SDK for Android
+#
+# Si falta alguno, el APK sale sin firmar o con el mapa en gris, asi que el
+# workflow lo verifica antes de compilar y falla con un mensaje claro.
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'Version visible, por ejemplo 1.2'
+        required: true
+        default: '1.0'
+      api_url:
+        description: 'URL del backend (con barra final). Vacio = la de produccion'
+        required: false
+        default: ''
+
+jobs:
+  apk:
+    name: Compilar APK firmado
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verificar que estan los secrets
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          MAPS_KEY: ${{ secrets.MAPS_API_KEY }}
+        run: |
+          faltan=""
+          [ -z "$KEYSTORE" ] && faltan="$faltan ANDROID_KEYSTORE_BASE64"
+          [ -z "$KEYSTORE_PASSWORD" ] && faltan="$faltan ANDROID_KEYSTORE_PASSWORD"
+          [ -z "$KEY_ALIAS" ] && faltan="$faltan ANDROID_KEY_ALIAS"
+          [ -z "$KEY_PASSWORD" ] && faltan="$faltan ANDROID_KEY_PASSWORD"
+          [ -z "$MAPS_KEY" ] && faltan="$faltan MAPS_API_KEY"
+          if [ -n "$faltan" ]; then
+            echo "Faltan secrets:$faltan"
+            echo "Cargalos en Settings -> Secrets and variables -> Actions. Ver docs/deploy.md."
+            exit 1
+          fi
+
+      # JDK 21: es el que trae el JBR de Android Studio con el que compila el equipo.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Aceptar licencias del SDK de Android
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
+
+      # El runner se destruye al terminar, pero igual se escribe fuera del
+      # workspace para que no pueda colarse en un artefacto por error.
+      - name: Reconstruir la keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/petcare-release.jks"
+
+      - name: Compilar APK firmado
+        working-directory: mobile-android
+        env:
+          PETCARE_KEYSTORE_FILE: ${{ runner.temp }}/petcare-release.jks
+          PETCARE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          PETCARE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          PETCARE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
+          PETCARE_VERSION_NAME: ${{ inputs.version_name }}
+          # El numero de corrida sirve de versionCode: siempre sube y no hay que
+          # acordarse de incrementarlo a mano.
+          PETCARE_VERSION_CODE: ${{ github.run_number }}
+        run: |
+          if [ -n "${{ inputs.api_url }}" ]; then
+            ./gradlew assembleRelease --console=plain -PPETCARE_API_URL="${{ inputs.api_url }}"
+          else
+            ./gradlew assembleRelease --console=plain
+          fi
+
+      # Verifica contra el APK ya construido, no contra la configuracion: es la
+      # unica forma de saber con que llave quedo firmado lo que se va a repartir.
+      - name: Verificar la firma del APK
+        working-directory: mobile-android
+        run: |
+          APK=$(find . -path '*/outputs/apk/release/*.apk' | head -1)
+          if [ -z "$APK" ]; then
+            echo "No se encontro el APK de release."
+            exit 1
+          fi
+          echo "APK: $APK"
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort | tail -1)
+          "$APKSIGNER" verify --print-certs "$APK"
+          echo "APK_PATH=mobile-android/${APK#./}" >> "$GITHUB_ENV"
+
+      - name: Publicar APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: petcare-release-${{ inputs.version_name }}-build${{ github.run_number }}
+          path: ${{ env.APK_PATH }}
+          retention-days: 90

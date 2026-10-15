@@ -1,0 +1,214 @@
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgb(0 0 0 / 45%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+  z-index: 100;
+}
+
+.modal-card {
+  width: min(100%, 640px);
+  max-height: min(90vh, 720px);
+  overflow-y: auto;
+  padding: var(--spacing-xl);
+  border-radius: var(--radius-lg);
+  background-color: var(--surface);
+  box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.modal-header p {
+  margin: var(--spacing-xs) 0 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.close-button {
+  border: none;
+  background: transparent;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.1rem 0.4rem;
+}
+
+.close-button:hover {
+  color: var(--text-primary);
+}
+
+.sobreturno-form {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) minmax(110px, 0.8fr) minmax(90px, 0.6fr) auto;
+  gap: var(--spacing-md);
+  align-items: end;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.field label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.field input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background-color: var(--background);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.field input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+.field input.field-invalid {
+  border-color: var(--danger);
+}
+
+.btn-primary,
+.btn-remove {
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-primary {
+  padding: 0.7rem 1.2rem;
+  border: none;
+  background-color: var(--primary);
+  color: #ffffff;
+  height: fit-content;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #446f64;
+}
+
+.btn-remove {
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  color: var(--danger);
+}
+
+.btn-remove:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--danger) 12%, white);
+}
+
+.btn-primary:disabled,
+.btn-remove:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.banner,
+.status-text {
+  margin: 0 0 var(--spacing-md);
+  font-size: 0.9rem;
+}
+
+.status-text {
+  color: var(--text-secondary);
+}
+
+.banner {
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius-sm);
+}
+
+.banner-success {
+  background-color: color-mix(in srgb, var(--primary) 14%, white);
+  color: var(--primary);
+}
+
+.banner-error {
+  background-color: color-mix(in srgb, var(--danger) 14%, white);
+  color: var(--danger);
+}
+
+.sobreturnos-list-section {
+  margin-top: var(--spacing-lg);
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--border);
+}
+
+.sobreturnos-list-section h3 {
+  margin: 0 0 var(--spacing-md);
+  font-size: 1.05rem;
+}
+
+.sobreturnos-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.sobreturno-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--background);
+}
+
+.sobreturno-info {
+  display: flex;
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.sobreturno-fecha {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.sobreturno-hora,
+.sobreturno-cupos {
+  color: var(--text-secondary);
+}
+
+@media (max-width: 640px) {
+  .sobreturno-form {
+    grid-template-columns: 1fr;
+  }
+
+  .sobreturno-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

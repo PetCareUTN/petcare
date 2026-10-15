@@ -1,0 +1,391 @@
+import { DatePipe } from '@angular/common';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { forkJoin } from 'rxjs';
+import { ApiError } from '../../../auth/models/user';
+import { AuthService } from '../../../auth/services/auth-service';
+import { RichTextEditorComponent } from '../../../../shared/components/rich-text-editor/rich-text-editor';
+import { DictadoPorVozService } from '../../../../shared/services/dictado-por-voz-service';
+import { MascotaResponse } from '../../../mascotas/models/mascota';
+import { MascotasService } from '../../../mascotas/services/mascotas-service';
+import {
+  ClinicalEventType,
+  CreateEventoClinicoRequest,
+  EventoClinicoResponse,
+  SugerenciaEventoClinico,
+  TipoVacuna,
+} from '../../models/evento-clinico';
+import { VACUNA_OPCIONES } from '../../models/vacuna-opciones';
+import { EventosClinicosService } from '../../services/eventos-clinicos-service';
+import { AsistenteVozComponent } from '../../components/asistente-voz/asistente-voz';
+import { BotonDictadoComponent } from '../../components/boton-dictado/boton-dictado';
+import { agregarTextoDictado } from '../../utils/agregar-texto-dictado';
+
+type EventTypeOption = {
+  value: ClinicalEventType;
+  label: string;
+};
+
+/** Campos de texto libre donde se puede dictar (P1-182). */
+type CampoDictable = 'descripcion' | 'diagnostico' | 'tratamiento' | 'observaciones';
+
+/**
+ * Tope de caracteres visibles que puede agregar el dictado. Son los mismos
+ * del formulario de registrar evento clínico, que entran holgados en los
+ * límites del backend aun con el markup HTML del editor.
+ */
+const DICTADO_MAX_CARACTERES: Record<CampoDictable, number> = {
+  descripcion: 1000,
+  diagnostico: 500,
+  tratamiento: 500,
+  observaciones: 500,
+};
+
+const EVENT_TYPE_LABELS: Record<ClinicalEventType, string> = {
+  consulta: 'Consulta',
+  vacuna: 'Vacuna',
+  diagnostico: 'Diagnóstico',
+  tratamiento: 'Tratamiento',
+  cirugia: 'Cirugía',
+  control: 'Control',
+  observacion: 'Observación',
+  otro: 'Otro',
+};
+
+@Component({
+  selector: 'app-historia-clinica',
+  imports: [
+    RouterLink,
+    DatePipe,
+    ReactiveFormsModule,
+    RichTextEditorComponent,
+    AsistenteVozComponent,
+    BotonDictadoComponent,
+  ],
+  templateUrl: './historia-clinica.html',
+  styleUrl: './historia-clinica.css',
+  providers: [DictadoPorVozService],
+})
+export class HistoriaClinicaPage implements OnInit {
+  private readonly route = inject(ActivatedRoute);
+  private readonly formBuilder = inject(FormBuilder);
+  private readonly eventosClinicosService = inject(EventosClinicosService);
+  protected readonly mascotasService = inject(MascotasService);
+  protected readonly authService = inject(AuthService);
+  private readonly dictado = inject(DictadoPorVozService);
+
+  protected readonly eventTypes: EventTypeOption[] = [
+    { value: 'consulta', label: 'Consulta' },
+    { value: 'vacuna', label: 'Vacuna' },
+    { value: 'diagnostico', label: 'Diagnostico' },
+    { value: 'tratamiento', label: 'Tratamiento' },
+    { value: 'cirugia', label: 'Cirugia' },
+    { value: 'control', label: 'Control' },
+    { value: 'observacion', label: 'Observacion' },
+    { value: 'otro', label: 'Otro' },
+  ];
+
+  protected readonly vacunas = VACUNA_OPCIONES;
+
+  protected readonly idMascota = signal<number | null>(null);
+  protected readonly isLoading = signal(true);
+  protected readonly errorMessage = signal<string | null>(null);
+  protected readonly eventos = signal<EventoClinicoResponse[]>([]);
+  protected readonly mascota = signal<MascotaResponse | null>(null);
+  protected readonly backQueryParams = signal<Record<string, string | number>>({});
+
+  protected readonly isFormOpen = signal(false);
+  protected readonly isSubmitting = signal(false);
+  protected readonly submitError = signal<string | null>(null);
+
+  protected readonly uploadingEventoId = signal<number | null>(null);
+  protected readonly uploadErrors = signal<Record<number, string>>({});
+
+  protected readonly form = this.formBuilder.group({
+    tipo: ['consulta' as ClinicalEventType, [Validators.required]],
+    fecha: [this.today(), [Validators.required]],
+    descripcion: ['', [Validators.required, Validators.maxLength(2000)]],
+    diagnostico: ['', [Validators.maxLength(2000)]],
+    tratamiento: ['', [Validators.maxLength(2000)]],
+    observaciones: ['', [Validators.maxLength(2000)]],
+    vacuna: [null as TipoVacuna | null],
+    proximaAplicacion: [''],
+    ultimaDosis: [false],
+  });
+
+  ngOnInit(): void {
+    const idMascota = Number(this.route.snapshot.paramMap.get('idMascota'));
+    this.idMascota.set(idMascota);
+    this.backQueryParams.set(this.buildBackQueryParams(idMascota));
+    this.cargarHistoria(idMascota);
+
+    // Igual que en Registrar evento clínico: los campos de vacunación solo se
+    // muestran, y solo son obligatorios, cuando el evento es una vacuna.
+    this.form.controls.tipo.valueChanges.subscribe(() => this.actualizarValidacionDeVacuna());
+    this.form.controls.ultimaDosis.valueChanges.subscribe(() =>
+      this.actualizarValidacionDeVacuna(),
+    );
+    this.actualizarValidacionDeVacuna();
+  }
+
+  protected esVacuna(): boolean {
+    return this.form.controls.tipo.value === 'vacuna';
+  }
+
+  /**
+   * La vacuna es obligatoria en todo evento de tipo vacuna. La próxima
+   * aplicación también, salvo que sea la última dosis: ahí no hay refuerzo
+   * ni recordatorio.
+   */
+  private actualizarValidacionDeVacuna(): void {
+    const { tipo, vacuna, proximaAplicacion, ultimaDosis } = this.form.controls;
+    const esVacuna = tipo.value === 'vacuna';
+    const pideProximaDosis = esVacuna && !ultimaDosis.value;
+
+    vacuna.setValidators(esVacuna ? Validators.required : null);
+    proximaAplicacion.setValidators(pideProximaDosis ? Validators.required : null);
+    if (!esVacuna) {
+      vacuna.setValue(null);
+      ultimaDosis.setValue(false, { emitEvent: false });
+    }
+    if (!pideProximaDosis) {
+      proximaAplicacion.setValue('');
+    }
+    vacuna.updateValueAndValidity();
+    proximaAplicacion.updateValueAndValidity();
+  }
+
+  protected reintentar(): void {
+    const idMascota = this.idMascota();
+    if (idMascota !== null) {
+      this.cargarHistoria(idMascota);
+    }
+  }
+
+  protected etiquetaTipo(tipo: ClinicalEventType): string {
+    return EVENT_TYPE_LABELS[tipo] ?? tipo;
+  }
+
+  /** Nombre legible de la vacuna, para no mostrar el valor interno (US-40). */
+  protected etiquetaVacuna(vacuna: string): string {
+    const etiquetas: Record<string, string> = {
+      antirrabica: 'Antirrábica',
+      quintuple: 'Quíntuple',
+      sextuple: 'Séxtuple',
+      traqueobronquitis: 'Traqueobronquitis',
+      triple_felina: 'Triple felina',
+      leucemia_felina: 'Leucemia felina',
+    };
+    return etiquetas[vacuna] ?? vacuna;
+  }
+
+  protected abrirFormulario(): void {
+    this.submitError.set(null);
+    this.isFormOpen.set(true);
+  }
+
+  protected cerrarFormulario(): void {
+    this.dictado.detener();
+    this.isFormOpen.set(false);
+    this.submitError.set(null);
+    this.form.reset({
+      tipo: 'consulta',
+      fecha: this.today(),
+      descripcion: '',
+      diagnostico: '',
+      tratamiento: '',
+      observaciones: '',
+      vacuna: null,
+      proximaAplicacion: '',
+      ultimaDosis: false,
+    });
+  }
+
+  protected registrarConsulta(): void {
+    const idMascota = this.idMascota();
+    if (idMascota === null) {
+      return;
+    }
+
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    // Guardar es siempre una acción explícita: si quedó un dictado abierto se
+    // corta acá, para que no siga escribiendo en el formulario ya enviado.
+    this.dictado.detener();
+    this.submitError.set(null);
+    this.isSubmitting.set(true);
+
+    const value = this.form.getRawValue();
+    const payload: CreateEventoClinicoRequest = {
+      idMascota,
+      tipo: value.tipo!,
+      fecha: value.fecha!,
+      descripcion: value.descripcion!.trim(),
+      diagnostico: this.optionalText(value.diagnostico),
+      tratamiento: this.optionalText(value.tratamiento),
+      observaciones: this.optionalText(value.observaciones),
+    };
+
+    if (value.tipo === 'vacuna') {
+      payload.vacuna = value.vacuna!;
+      if (value.ultimaDosis) {
+        payload.ultimaDosis = true;
+      } else {
+        payload.proximaAplicacion = value.proximaAplicacion!;
+      }
+    }
+
+    this.eventosClinicosService.create(payload).subscribe({
+      next: (evento) => {
+        this.isSubmitting.set(false);
+        this.eventos.update((eventos) => [...eventos, evento]);
+        this.cerrarFormulario();
+      },
+      error: (error: ApiError) => {
+        this.isSubmitting.set(false);
+        this.submitError.set(error.mensaje ?? 'Ocurrio un error al registrar el evento.');
+      },
+    });
+  }
+
+  /**
+   * Vuelca la sugerencia del asistente de voz (P1-182) sin guardar. Lo que ya
+   * estaba escrito en un campo no se pisa: lo sugerido se agrega debajo.
+   */
+  protected aplicarSugerencia(sugerencia: SugerenciaEventoClinico): void {
+    if (sugerencia.tipo) {
+      this.form.controls.tipo.setValue(sugerencia.tipo);
+    }
+    if (sugerencia.tipo === 'vacuna' && sugerencia.vacuna) {
+      this.form.controls.vacuna.setValue(sugerencia.vacuna);
+    }
+
+    const campos: CampoDictable[] = ['descripcion', 'diagnostico', 'tratamiento', 'observaciones'];
+    for (const campo of campos) {
+      const texto = sugerencia[campo];
+      if (texto) {
+        this.agregarTexto(campo, texto, true);
+      }
+    }
+  }
+
+  /** Agrega texto dictado al final de un campo, sin perder lo que ya tenía. */
+  protected agregarTexto(campo: CampoDictable, texto: string, nuevoParrafo = false): void {
+    const control = this.form.controls[campo];
+    const html = agregarTextoDictado(
+      control.value ?? '',
+      texto,
+      DICTADO_MAX_CARACTERES[campo],
+      nuevoParrafo,
+    );
+    if (html !== null) {
+      control.setValue(html);
+      control.markAsDirty();
+    }
+  }
+
+  protected abrirArchivo(evento: Event, url: string): void {
+    evento.preventDefault();
+    this.eventosClinicosService.abrirArchivo(url, this.attentionContext()).subscribe({
+      error: () => this.errorMessage.set('No se pudo abrir el archivo.'),
+    });
+  }
+
+  protected subirArchivos(idEvento: number, input: HTMLInputElement): void {
+    const archivos = input.files ? Array.from(input.files) : [];
+    if (archivos.length === 0) {
+      return;
+    }
+
+    this.uploadingEventoId.set(idEvento);
+    this.uploadErrors.update((errors) => {
+      const { [idEvento]: _omit, ...rest } = errors;
+      return rest;
+    });
+
+    this.eventosClinicosService.agregarArchivos(idEvento, archivos).subscribe({
+      next: (nuevosArchivos) => {
+        this.uploadingEventoId.set(null);
+        input.value = '';
+        this.eventos.update((eventos) =>
+          eventos.map((evento) =>
+            evento.idEvento === idEvento
+              ? { ...evento, archivos: [...evento.archivos, ...nuevosArchivos] }
+              : evento,
+          ),
+        );
+      },
+      error: (error: ApiError) => {
+        this.uploadingEventoId.set(null);
+        input.value = '';
+        this.uploadErrors.update((errors) => ({
+          ...errors,
+          [idEvento]: error.mensaje ?? 'No se pudo adjuntar el archivo.',
+        }));
+      },
+    });
+  }
+
+  private cargarHistoria(idMascota: number): void {
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+    const attentionContext = this.attentionContext();
+
+    forkJoin({
+      historia: this.eventosClinicosService.getByMascota(idMascota, attentionContext),
+      mascota: this.mascotasService.getById(idMascota, attentionContext),
+    }).subscribe({
+      next: ({ historia, mascota }) => {
+        this.isLoading.set(false);
+        this.eventos.set(historia.eventos);
+        this.mascota.set(mascota);
+      },
+      error: (error: ApiError) => {
+        this.isLoading.set(false);
+        this.errorMessage.set(
+          error.mensaje ?? 'No se pudo cargar la historia clínica.',
+        );
+      },
+    });
+  }
+
+  private optionalText(value: string | null | undefined): string | undefined {
+    const trimmed = value?.trim();
+    return trimmed ? trimmed : undefined;
+  }
+
+  private attentionContext(): { ownerDocument?: string; ownerEmail?: string } {
+    const ownerDocument = this.route.snapshot.queryParamMap.get('ownerDocument') ?? undefined;
+    const ownerEmail = this.route.snapshot.queryParamMap.get('ownerEmail') ?? undefined;
+
+    return {
+      ...(ownerDocument ? { ownerDocument } : {}),
+      ...(ownerEmail ? { ownerEmail } : {}),
+    };
+  }
+
+  private buildBackQueryParams(idMascota: number): Record<string, string | number> {
+    const params: Record<string, string | number> = {};
+    const ownerDocument = this.route.snapshot.queryParamMap.get('ownerDocument');
+    const ownerEmail = this.route.snapshot.queryParamMap.get('ownerEmail');
+    const selectedPetId = this.route.snapshot.queryParamMap.get('selectedPetId');
+
+    if (ownerDocument) {
+      params['ownerDocument'] = ownerDocument;
+    } else if (ownerEmail) {
+      params['ownerEmail'] = ownerEmail;
+    }
+
+    params['selectedPetId'] = selectedPetId ?? idMascota;
+
+    return params;
+  }
+
+  private today(): string {
+    return new Date().toISOString().slice(0, 10);
+  }
+}

@@ -1,0 +1,99 @@
+<main class="reportes-page">
+  <header class="reportes-header">
+    <div>
+      <h1>Reportes</h1>
+      <p>Un vistazo a cómo viene tu agenda y tus pacientes.</p>
+    </div>
+
+    <nav class="rango-switch" aria-label="Período del reporte">
+      @for (opcion of opcionesRango; track opcion.value) {
+        <button
+          type="button"
+          [class.active]="rangoMeses() === opcion.value"
+          [attr.aria-pressed]="rangoMeses() === opcion.value"
+          (click)="setRango(opcion.value)"
+        >
+          {{ opcion.label }}
+        </button>
+      }
+    </nav>
+  </header>
+
+  @if (isLoading()) {
+    <p class="status-text">Cargando reportes...</p>
+  }
+
+  @if (errorMessage()) {
+    <p class="banner banner-error">{{ errorMessage() }}</p>
+  }
+
+  @if (!isLoading() && data(); as reporte) {
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <span class="kpi-label">Turnos en el período</span>
+        <span class="kpi-value">{{ reporte.resumen.totalTurnos }}</span>
+      </div>
+
+      <div class="kpi-card">
+        <span class="kpi-label">Confirmados</span>
+        <span class="kpi-value kpi-good">{{ reporte.resumen.confirmados }}</span>
+      </div>
+
+      <div class="kpi-card">
+        <span class="kpi-label">Tasa de cancelación</span>
+        <span class="kpi-value" [class]="estadoTasaCancelacion()">
+          {{ reporte.resumen.tasaCancelacion }}%
+        </span>
+      </div>
+
+      <div class="kpi-card">
+        <span class="kpi-label">Pacientes atendidos</span>
+        <span class="kpi-value">{{ reporte.resumen.pacientesAtendidos }}</span>
+      </div>
+    </section>
+
+    <section class="charts-grid">
+      <div class="chart-card">
+        <h2>Turnos por mes</h2>
+        <p class="chart-subtitle">Confirmados vs. cancelados</p>
+        <app-bar-chart
+          [categorias]="categoriasTurnos()"
+          [series]="serieTurnos()"
+          modo="agrupado"
+        />
+      </div>
+
+      <div class="chart-card">
+        <h2>Ocupación por día</h2>
+        <p class="chart-subtitle">% de cupos usados según tu disponibilidad configurada</p>
+        <app-percent-bar-list [items]="itemsOcupacion()" color="var(--chart-confirmados)" />
+        @if (itemsOcupacion().length === 0) {
+          <p class="status-text">Configurá tu disponibilidad para ver este reporte.</p>
+        }
+      </div>
+
+      <div class="chart-card">
+        <h2>Horarios más solicitados</h2>
+        <p class="chart-subtitle">Cantidad de turnos pedidos por hora del día</p>
+        <app-bar-chart
+          [categorias]="categoriasHorarios()"
+          [series]="serieHorarios()"
+          modo="agrupado"
+        />
+        @if (categoriasHorarios().length === 0) {
+          <p class="status-text">Todavía no hay turnos en este período.</p>
+        }
+      </div>
+
+      <div class="chart-card">
+        <h2>Pacientes atendidos por mes</h2>
+        <p class="chart-subtitle">Nuevos vs. recurrentes</p>
+        <app-bar-chart
+          [categorias]="categoriasPacientes()"
+          [series]="seriePacientes()"
+          modo="apilado"
+        />
+      </div>
+    </section>
+  }
+</main>

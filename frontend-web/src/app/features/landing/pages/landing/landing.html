@@ -1,0 +1,203 @@
+<header class="topbar">
+  <div class="container topbar-inner">
+    <a routerLink="/" class="brand" aria-label="PetCare, inicio">
+      <img src="/logo.png" alt="" class="brand-logo" />
+      <span>PetCare</span>
+    </a>
+
+    <nav class="topbar-nav" aria-label="Secciones">
+      <a href="#duenos">Para dueños</a>
+      <a href="#veterinarios">Para veterinarios</a>
+      <a href="#app">Descargar la app</a>
+    </nav>
+
+    <div class="topbar-actions">
+      <a routerLink="/login" class="btn btn-ghost">Ingresar</a>
+      <a href="#app" class="btn btn-primary">Descargar la app</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ---------- Hero ---------- -->
+  <section class="hero">
+    <div class="paw-field" aria-hidden="true"></div>
+
+    <div class="container hero-inner">
+      <div class="hero-copy">
+        <span class="eyebrow">Plataforma para dueños y veterinarios</span>
+        <h1>El cuidado de tu mascota, en un solo lugar.</h1>
+        <p>
+          Historia clínica, turnos, adopciones y localización de tus mascotas en la app Android. Y
+          para las veterinarias, una plataforma web para gestionar su consultorio.
+        </p>
+        <div class="hero-actions">
+          <a href="#app" class="btn btn-light btn-lg">Descargar la app</a>
+          <a href="#veterinarios" class="btn btn-outline-light btn-lg">Soy veterinario</a>
+        </div>
+      </div>
+
+      <!-- Tarjeta ilustrativa: muestra cómo se ve una mascota dentro de PetCare. -->
+      <div class="hero-visual" aria-hidden="true">
+        <div class="pet-card">
+          <div class="pet-card-head">
+            <div class="pet-avatar">🐶</div>
+            <div>
+              <strong>Luna</strong>
+              <span>Mestiza · 4 años · 18 kg</span>
+            </div>
+            <span class="chip chip-ok">Protegida</span>
+          </div>
+
+          <ul class="timeline">
+            <li>
+              <span class="dot"></span>
+              <div>
+                <strong>Vacuna antirrábica</strong>
+                <span>Clínica San Martín · hace 3 días</span>
+              </div>
+            </li>
+            <li>
+              <span class="dot"></span>
+              <div>
+                <strong>Control general</strong>
+                <span>Dra. Fernández · hace 2 meses</span>
+              </div>
+            </li>
+          </ul>
+
+          <div class="next-turn">
+            <span>Próximo turno</span>
+            <strong>Jueves 10:30 · Desparasitación</strong>
+          </div>
+        </div>
+
+        <div class="float-badge">
+          <span class="pulse"></span>
+          Collar conectado por Bluetooth
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------- Dueños ---------- -->
+  <section id="duenos" class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow eyebrow-dark">Para dueños</span>
+        <h2>Todo lo que tu mascota necesita, sin papeles perdidos</h2>
+        <p>
+          Desde la libreta sanitaria hasta saber dónde está, la app de PetCare te acompaña en el día
+          a día.
+        </p>
+      </div>
+
+      <div class="grid grid-3">
+        @for (item of paraDuenos; track item.titulo) {
+          <article class="feature">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="item.icono" /></svg>
+            </div>
+            <h3>{{ item.titulo }}</h3>
+            <p>{{ item.descripcion }}</p>
+          </article>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------- Veterinarios ---------- -->
+  <section id="veterinarios" class="section section-tinted">
+    <div class="container split">
+      <div class="split-copy">
+        <span class="eyebrow eyebrow-dark">Para veterinarios</span>
+        <h2>Tu consultorio, más ordenado</h2>
+        <p>
+          Gestioná pacientes, turnos y servicios desde un mismo lugar. Cada consulta que registrás
+          queda en la historia clínica unificada de la mascota, disponible para su dueño.
+        </p>
+        <ul class="checklist">
+          <li>Cuenta validada con tu matrícula profesional.</li>
+          <li>Suscripción mensual con pago por Mercado Pago.</li>
+          <li>Acceso desde cualquier navegador, sin instalar nada.</li>
+        </ul>
+        <div class="split-actions">
+          <a routerLink="/register" class="btn btn-primary btn-lg">Registrar mi veterinaria</a>
+          <a routerLink="/login" class="btn btn-ghost btn-lg">Ya tengo cuenta</a>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        @for (item of paraVeterinarios; track item.titulo) {
+          <article class="feature feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="item.icono" /></svg>
+            </div>
+            <h3>{{ item.titulo }}</h3>
+            <p>{{ item.descripcion }}</p>
+          </article>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------- App para dueños ---------- -->
+  <section id="app" class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow eyebrow-dark">App para dueños</span>
+        <h2>Empezar lleva menos de cinco minutos</h2>
+        <p>Todo lo que es para tus mascotas está en la app de PetCare para Android.</p>
+      </div>
+
+      <ol class="steps">
+        @for (paso of pasos; track paso.titulo; let i = $index) {
+          <li class="step">
+            <span class="step-number">{{ i + 1 }}</span>
+            <h3>{{ paso.titulo }}</h3>
+            <p>{{ paso.descripcion }}</p>
+          </li>
+        }
+      </ol>
+
+      <div class="app-download">
+        @if (urlDescargaApk) {
+          <a [href]="urlDescargaApk" class="btn btn-primary btn-lg" target="_blank" rel="noopener">
+            Descargar para Android
+          </a>
+        } @else {
+          <span class="btn btn-primary btn-lg is-disabled" aria-disabled="true">
+            Descarga disponible pronto
+          </span>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------- CTA final ---------- -->
+  <section class="section section-cta">
+    <div class="container">
+      <div class="cta">
+        <div class="paw-field" aria-hidden="true"></div>
+        <div class="cta-copy">
+          <h2>Sumate a PetCare</h2>
+          <p>Si tenés mascotas, bajate la app. Si sos veterinario, registrá tu veterinaria.</p>
+        </div>
+        <div class="cta-actions">
+          <a href="#app" class="btn btn-light btn-lg">Descargar la app</a>
+          <a routerLink="/register" class="btn btn-outline-light btn-lg">Registrar veterinaria</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container footer-inner">
+    <div class="brand brand-small">
+      <img src="/logo.png" alt="" class="brand-logo" />
+      <span>PetCare</span>
+    </div>
+    <p>© {{ anio }} PetCare · Proyecto final de Ingeniería en Sistemas de Información, UTN.</p>
+  </div>
+</footer>

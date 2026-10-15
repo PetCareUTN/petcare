@@ -1,0 +1,370 @@
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { CategoriaServicio } from '../common/enums/categoria-servicio.enum';
+import { DiaSemana } from '../common/enums/dia-semana.enum';
+import { TurnoServicioEstado } from '../common/enums/turno-servicio-estado.enum';
+import { Mascota } from '../mascotas/entities/mascota.entity';
+import {
+  DatosTurno,
+  NotificacionesTurnosService,
+} from '../notificaciones/notificaciones-turnos.service';
+import { Servicio } from '../servicios/entities/servicio.entity';
+import { User } from '../users/entities/user.entity';
+import { CancelarTurnoServicioDto } from './dto/cancelar-turno-servicio.dto';
+import { CreateTurnoServicioDto } from './dto/create-turno-servicio.dto';
+import { TurnoServicioDuenioResponseDto } from './dto/turno-servicio-duenio-response.dto';
+import { TurnoServicioPrestadorResponseDto } from './dto/turno-servicio-prestador-response.dto';
+import { TurnoServicio } from './entities/turno-servicio.entity';
+import { PrestadoresService } from '../prestadores/prestadores.service';
+
+const DURACION_MINUTOS_POR_CATEGORIA: Record<CategoriaServicio, number> = {
+  [CategoriaServicio.PASEADOR]: 30,
+  [CategoriaServicio.PELUQUERIA]: 30,
+  [CategoriaServicio.GUARDERIA]: 60,
+};
+
+/** Texto legible de cada categoría para los mensajes de notificación. */
+const NOMBRE_POR_CATEGORIA: Record<CategoriaServicio, string> = {
+  [CategoriaServicio.PASEADOR]: 'paseo',
+  [CategoriaServicio.PELUQUERIA]: 'peluquería',
+  [CategoriaServicio.GUARDERIA]: 'guardería',
+};
+
+const DIAS_POR_INDICE: DiaSemana[] = [
+  DiaSemana.DOMINGO,
+  DiaSemana.LUNES,
+  DiaSemana.MARTES,
+  DiaSemana.MIERCOLES,
+  DiaSemana.JUEVES,
+  DiaSemana.VIERNES,
+  DiaSemana.SABADO,
+];
+
+@Injectable()
+export class TurnosServiciosService {
+  constructor(
+    @InjectRepository(TurnoServicio)
+    private readonly turnosRepository: Repository<TurnoServicio>,
+    @InjectRepository(Servicio)
+    private readonly serviciosRepository: Repository<Servicio>,
+    @InjectRepository(Mascota)
+    private readonly mascotasRepository: Repository<Mascota>,
+    private readonly notificacionesTurnosService: NotificacionesTurnosService,
+    private readonly prestadores: PrestadoresService,
+  ) {}
+
+  async solicitar(
+    idDueno: number,
+    dto: CreateTurnoServicioDto,
+  ): Promise<TurnoServicioPrestadorResponseDto> {
+    const mascota = await this.mascotasRepository.findOne({
+      where: { idMascota: dto.idMascota },
+      relations: ['usuarios'],
+    });
+
+    if (!mascota) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'No se encontró la mascota',
+      });
+    }
+
+    if (!mascota.usuarios.some((usuario) => usuario.idUsuario === idDueno)) {
+      throw new ForbiddenException({
+        codigoEstado: 403,
+        mensaje: 'La mascota no pertenece al dueño autenticado',
+      });
+    }
+
+    const servicio = await this.serviciosRepository.findOne({
+      where: { idServicio: dto.idServicio },
+      relations: ['usuario', 'disponibilidades'],
+    });
+
+    if (!servicio) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'No se encontró el servicio',
+      });
+    }
+
+    await this.prestadores.exigirAprobado(servicio.usuario.idUsuario, servicio.categoria);
+    if (servicio.usuario.idUsuario === idDueno) throw new BadRequestException('No podés reservar tu propio servicio.');
+    const inicio = new Date(`${dto.fecha}T${dto.horaInicio}:00-03:00`).getTime();
+    if (!Number.isFinite(inicio) || inicio <= Date.now()) throw new BadRequestException('La reserva debe comenzar en el futuro.');
+    const duracionMinutos = DURACION_MINUTOS_POR_CATEGORIA[servicio.categoria];
+    const horaFin = this.sumarMinutos(dto.horaInicio, duracionMinutos);
+
+    this.verificarDisponibilidad(servicio, dto.fecha, dto.horaInicio, horaFin);
+    await this.verificarSinSolapamiento(
+      servicio.usuario.idUsuario,
+      dto.fecha,
+      dto.horaInicio,
+      horaFin,
+    );
+
+    const turno = this.turnosRepository.create({
+      servicio,
+      mascota,
+      duenio: { idUsuario: idDueno } as User,
+      fecha: dto.fecha,
+      horaInicio: dto.horaInicio,
+      horaFin,
+      notas: dto.notas ?? null,
+      estado: TurnoServicioEstado.CONFIRMADO,
+    });
+
+    const guardado = await this.turnosRepository.save(turno);
+    const turnoCompleto = await this.turnosRepository.findOne({
+      where: { idTurno: guardado.idTurno },
+      relations: ['servicio', 'servicio.usuario', 'mascota', 'duenio'],
+    });
+
+    await this.notificacionesTurnosService.notificarTurnoConfirmado(
+      this.aDatosTurno(turnoCompleto!),
+    );
+
+    return TurnoServicioPrestadorResponseDto.fromEntity(turnoCompleto!);
+  }
+
+  private verificarDisponibilidad(
+    servicio: Servicio,
+    fecha: string,
+    horaInicio: string,
+    horaFin: string,
+  ): void {
+    const diaSemana = this.obtenerDiaSemana(fecha);
+    const disponible = (servicio.disponibilidades ?? []).some(
+      (disponibilidad) =>
+        disponibilidad.diaSemana === diaSemana &&
+        horaInicio >= disponibilidad.horaInicio &&
+        horaFin <= disponibilidad.horaFin,
+    );
+
+    if (!disponible) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje: 'El horario solicitado no está disponible para ese servicio',
+      });
+    }
+  }
+
+  private async verificarSinSolapamiento(
+    idPrestador: number,
+    fecha: string,
+    horaInicio: string,
+    horaFin: string,
+  ): Promise<void> {
+    const turnosDelDia = await this.turnosRepository.find({
+      where: {
+        servicio: { usuario: { idUsuario: idPrestador } },
+        fecha,
+        estado: TurnoServicioEstado.CONFIRMADO,
+      },
+    });
+
+    const ocupado = turnosDelDia.some(
+      (turno) => horaInicio < turno.horaFin && horaFin > turno.horaInicio,
+    );
+
+    if (ocupado) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje: 'Ese horario ya está ocupado',
+      });
+    }
+  }
+
+  /**
+   * Horarios de inicio (HH:MM) todavía libres para ese servicio en esa
+   * fecha: los que caen dentro de alguna franja configurada y no se solapan
+   * con un turno ya confirmado. Una vez asignado un turno, ese horario deja
+   * de aparecer para el resto de los dueños.
+   */
+  async horariosDisponibles(idServicio: number, fecha: string): Promise<string[]> {
+    const servicio = await this.serviciosRepository.findOne({
+      where: { idServicio },
+      relations: ['usuario', 'disponibilidades'],
+    });
+
+    if (!servicio) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'No se encontró el servicio',
+      });
+    }
+
+    await this.prestadores.exigirAprobado(servicio.usuario.idUsuario, servicio.categoria);
+    const duracionMinutos = DURACION_MINUTOS_POR_CATEGORIA[servicio.categoria];
+    const diaSemana = this.obtenerDiaSemana(fecha);
+
+    const turnosDelDia = await this.turnosRepository.find({
+      where: {
+        servicio: { usuario: { idUsuario: servicio.usuario.idUsuario } },
+        fecha,
+        estado: TurnoServicioEstado.CONFIRMADO,
+      },
+    });
+    const ocupados = turnosDelDia.map((turno) =>
+      this.deMinutos(this.aMinutos(turno.horaInicio)),
+    );
+
+    const slots = new Set<string>();
+    for (const disponibilidad of servicio.disponibilidades ?? []) {
+      if (disponibilidad.diaSemana !== diaSemana) {
+        continue;
+      }
+      const inicio = this.aMinutos(disponibilidad.horaInicio);
+      const fin = this.aMinutos(disponibilidad.horaFin);
+      for (
+        let minuto = inicio;
+        minuto + duracionMinutos <= fin;
+        minuto += duracionMinutos
+      ) {
+        const hora = this.deMinutos(minuto);
+        if (!ocupados.includes(hora)) {
+          slots.add(hora);
+        }
+      }
+    }
+
+    return [...slots].sort();
+  }
+
+  private aMinutos(hora: string): number {
+    const [horas, mins] = hora.split(':').map(Number);
+    return horas * 60 + mins;
+  }
+
+  private deMinutos(minutos: number): string {
+    return `${String(Math.floor(minutos / 60)).padStart(2, '0')}:${String(minutos % 60).padStart(2, '0')}`;
+  }
+
+  private obtenerDiaSemana(fecha: string): DiaSemana {
+    const [anio, mes, dia] = fecha.split('-').map(Number);
+    return DIAS_POR_INDICE[new Date(Date.UTC(anio, mes - 1, dia)).getUTCDay()];
+  }
+
+  private sumarMinutos(hora: string, minutos: number): string {
+    const [horas, mins] = hora.split(':').map(Number);
+    const totalMinutos = horas * 60 + mins + minutos;
+    const horaResultado = Math.floor(totalMinutos / 60) % 24;
+    const minResultado = totalMinutos % 60;
+    return `${String(horaResultado).padStart(2, '0')}:${String(minResultado).padStart(2, '0')}`;
+  }
+
+  async findMisReservas(
+    idUsuario: number,
+    estado?: TurnoServicioEstado,
+  ): Promise<TurnoServicioDuenioResponseDto[]> {
+    const turnos = await this.turnosRepository.find({
+      where: {
+        duenio: { idUsuario },
+        ...(estado ? { estado } : {}),
+      },
+      relations: ['servicio', 'servicio.usuario', 'mascota', 'duenio'],
+      order: { fecha: 'ASC', horaInicio: 'ASC', idTurno: 'ASC' },
+    });
+
+    return turnos.map((turno) => TurnoServicioDuenioResponseDto.fromEntity(turno));
+  }
+
+  async findRecibidas(
+    idUsuario: number,
+    estado?: TurnoServicioEstado,
+  ): Promise<TurnoServicioPrestadorResponseDto[]> {
+    const turnos = await this.turnosRepository.find({
+      where: {
+        servicio: { usuario: { idUsuario } },
+        ...(estado ? { estado } : {}),
+      },
+      relations: ['servicio', 'servicio.usuario', 'mascota', 'duenio'],
+      order: { fecha: 'ASC', horaInicio: 'ASC', idTurno: 'ASC' },
+    });
+
+    return turnos.map((turno) => TurnoServicioPrestadorResponseDto.fromEntity(turno));
+  }
+
+  async cancelar(
+    idUsuario: number,
+    idTurno: number,
+    dto: CancelarTurnoServicioDto,
+  ): Promise<TurnoServicioPrestadorResponseDto | TurnoServicioDuenioResponseDto> {
+    const turno = await this.turnosRepository.findOne({
+      where: { idTurno },
+      relations: ['servicio', 'servicio.usuario', 'mascota', 'duenio'],
+    });
+
+    if (!turno) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Turno de servicio no encontrado',
+      });
+    }
+
+    const esDuenio = turno.duenio.idUsuario === idUsuario;
+    const esPrestador = turno.servicio.usuario.idUsuario === idUsuario;
+
+    if (!esDuenio && !esPrestador) {
+      throw new ForbiddenException({
+        codigoEstado: 403,
+        mensaje: 'No tiene permisos para cancelar este turno',
+      });
+    }
+
+    if (turno.estado !== TurnoServicioEstado.CONFIRMADO) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje: 'Solo se pueden cancelar turnos confirmados',
+      });
+    }
+
+    turno.estado = TurnoServicioEstado.CANCELADO;
+    turno.motivoCancelacion = dto.motivoCancelacion?.trim() || null;
+    turno.canceladoPor = esDuenio ? 'dueño' : 'prestador';
+
+    // La confirmación de realización usa el mismo registro con bloqueo. Esta
+    // actualización condicional evita cancelar una reserva recién completada.
+    const cambio = await this.turnosRepository.update(
+      { idTurno, estado: TurnoServicioEstado.CONFIRMADO },
+      { estado: turno.estado, motivoCancelacion: turno.motivoCancelacion, canceladoPor: turno.canceladoPor },
+    );
+    if (cambio.affected !== 1) throw new ConflictException('La reserva cambió. Actualizá la lista antes de continuar.');
+    const guardado = turno;
+
+    await this.notificacionesTurnosService.notificarTurnoCancelado(
+      this.aDatosTurno(guardado),
+      esDuenio ? 'duenio' : 'prestador',
+      guardado.motivoCancelacion,
+    );
+
+    return esDuenio
+      ? TurnoServicioDuenioResponseDto.fromEntity(guardado)
+      : TurnoServicioPrestadorResponseDto.fromEntity(guardado);
+  }
+
+  /** Datos del turno que necesitan las notificaciones de la US-22. */
+  private aDatosTurno(turno: TurnoServicio): DatosTurno {
+    return {
+      idDuenio: turno.duenio.idUsuario,
+      idPrestador: turno.servicio.usuario.idUsuario,
+      nombreDuenio: this.nombreCompleto(turno.duenio),
+      nombrePrestador: this.nombreCompleto(turno.servicio.usuario),
+      nombreMascota: turno.mascota.nombre,
+      fecha: turno.fecha,
+      hora: turno.horaInicio,
+      servicio: NOMBRE_POR_CATEGORIA[turno.servicio.categoria],
+    };
+  }
+
+  private nombreCompleto(usuario: User): string {
+    return `${usuario.nombre} ${usuario.apellido ?? ''}`.trim();
+  }
+}

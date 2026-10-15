@@ -1,0 +1,167 @@
+.pet-page {
+  min-height: 100dvh;
+  padding: 1.5rem;
+  box-sizing: border-box;
+  background: #f5f5f7;
+}
+
+.pet-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: min(100%, 720px);
+  margin: 0 auto;
+  padding: 1.5rem;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.pet-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.pet-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.pet-header h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.pet-header p {
+  margin: 0.35rem 0 0;
+  color: #555866;
+}
+
+.pet-header a {
+  color: #6750a4;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.estado-loading {
+  text-align: center;
+  color: #555866;
+}
+
+.detalle-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.detalle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.detalle-label {
+  font-weight: 600;
+}
+
+.detalle-estado {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  background: #fff3cd;
+  color: #856404;
+}
+
+.detalle-archivo {
+  padding-top: 0.5rem;
+}
+
+.detalle-archivo a {
+  color: #6750a4;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.acciones {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 0.5rem;
+}
+
+.btn-aprobar {
+  align-self: flex-start;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background: #155724;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-aprobar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.rechazo-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.rechazo-form label {
+  font-weight: 600;
+}
+
+.rechazo-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #d0d0d5;
+  border-radius: 6px;
+  font: inherit;
+  resize: vertical;
+}
+
+.btn-rechazar {
+  align-self: flex-start;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background: #721c24;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-rechazar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.banner {
+  margin: 0;
+  padding: 0.7rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.banner-success {
+  background: #e6f4ea;
+  color: #1e7e34;
+}
+
+.banner-error {
+  background: #fdecea;
+  color: #b3261e;
+}

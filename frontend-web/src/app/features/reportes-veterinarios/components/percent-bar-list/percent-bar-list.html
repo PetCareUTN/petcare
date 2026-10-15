@@ -1,0 +1,20 @@
+<div class="percent-bar-list">
+  @for (item of items(); track item.etiqueta) {
+    <div class="percent-row">
+      <span class="percent-label">{{ item.etiqueta }}</span>
+      <div class="percent-track">
+        <div
+          class="percent-fill"
+          [style.width.%]="item.porcentaje"
+          [style.background-color]="color()"
+        ></div>
+      </div>
+      <span class="percent-value">
+        {{ item.porcentaje }}%
+        @if (item.detalle) {
+          <span class="percent-detail">{{ item.detalle }}</span>
+        }
+      </span>
+    </div>
+  }
+</div>

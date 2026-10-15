@@ -1,0 +1,358 @@
+# Deploy a staging y producción
+
+Guía para publicar PetCare fuera de la máquina de cada uno. Sigue la decisión
+tomada en el **ADR-007 (Despliegue cloud centralizado)** del documento de
+Instancia 2: **Railway** para el backend y PostgreSQL, **Vercel** para el
+frontend web, y la app Android distribuida como APK firmado.
+
+Ambientes, según el Working Agreement:
+
+| Ambiente | Rama | Backend + base | Frontend |
+| --- | --- | --- | --- |
+| desarrollo | ramas `feature/*`, `fix/*` | local (`docker compose up -d`) | `npm start` |
+| staging | `develop` | Railway, environment `staging` | Vercel (preview) |
+| producción | `main` | Railway, environment `production` | Vercel (production) |
+
+---
+
+## 1. Railway: backend y base de datos
+
+Una sola persona del equipo crea el proyecto y después invita al resto, porque
+Railway cobra por asiento. Ver los costos estimados en Instancia 1, sección
+"Costo operativo mensual futuro en producción".
+
+1. Crear un proyecto nuevo conectado al repo `PetCareUTN/petcare`.
+
+   Si el repo no aparece en la lista, es porque la GitHub App de Railway se
+   instala por cuenta y `petcare` es de la organizacion, no de la cuenta
+   personal. Se arregla instalandola en la organizacion desde
+   <https://github.com/apps/railway-app/installations/new> (ojo: el slug es
+   `railway-app`, no `railway`), eligiendo PetCareUTN y solo el repo `petcare`.
+
+   Conviene crear el proyecto en el workspace personal: un workspace de
+   organizacion cobra asiento a cada miembro.
+2. Crear dos **environments**: `staging` y `production`.
+3. En cada uno, agregar dos servicios:
+   - **PostgreSQL**, desde el catálogo de Railway.
+   - **PostgreSQL**: dejarle el nombre `Postgres`, porque las variables del
+     backend lo referencian por ese nombre.
+   - **Backend**, desde el repo, con estos ajustes:
+     - Root Directory: `backend`
+     - Build Command: `npm ci && npm run build`
+     - Pre-deploy Command: `npm run migration:run:prod`
+     - Start Command: `npm run start:prod`. Hay que ponerlo a mano: el
+       `npm start` que detecta Railway levanta el modo desarrollo, que necesita
+       el CLI de Nest y no está en produccion.
+     - Watch Paths: `/backend/**`, para que un cambio en la app Android o en el
+       frontend no redespliegue la API.
+     - Branch: `develop` en staging, `main` en producción.
+
+       Atención: hoy `main` está muy atrás de `develop` y su carpeta `backend/`
+       tiene solo el `.gitkeep` del scaffold inicial, así que un deploy desde
+       `main` falla con "Railpack failed to prepare the build". Hasta que se
+       haga el merge de release, producción también apunta a `develop`.
+4. Agregar un **volumen** al servicio de backend, montado en `/app/uploads`.
+   Sin esto, las fotos de mascotas y los archivos clínicos se borran en cada
+   deploy, porque se guardan en el disco del contenedor (`process.cwd()/uploads`).
+
+   El volumen **no se monta durante el pre-deploy**, solo cuando arranca el
+   servicio. No nos afecta porque las migraciones no tocan archivos, pero hay
+   que tenerlo en cuenta si alguna vez se agrega un script que sí lo haga.
+5. Cargar las variables de entorno (sección 3).
+6. Sembrar los roles **una vez por base nueva**, porque sin ellos no se puede
+   registrar ni un usuario. La via mas simple es pegar el contenido de
+   `database/seeders/01-roles.sql` en el editor de consultas del servicio
+   Postgres, en la pestaña **Data**. Desde la maquina de uno, con la URL
+   publica de la base, es equivalente:
+
+   ```bash
+   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f database/seeders/01-roles.sql
+   ```
+
+7. Crear el **primer administrador**, que tampoco viene sembrado. Sin el no hay
+   forma de aprobar veterinarios ni prestadores, y esas cuentas no pueden
+   siquiera iniciar sesion hasta que alguien las valide.
+
+   Registrar un usuario comun (desde la web, la app o `POST /auth/register`) y
+   despues promoverlo, una sola vez, en el editor de consultas:
+
+   ```sql
+   UPDATE usuarios
+   SET id_rol = (SELECT id_rol FROM roles WHERE nombre = 'administrador')
+   WHERE email = 'el-mail-del-admin@ejemplo.com';
+   ```
+
+   El cambio de rol recien se refleja cuando esa persona vuelve a iniciar
+   sesion, porque el rol viaja dentro del JWT.
+
+8. Cargar los **datos de demostración**, opcional pero necesario para mostrar
+   el sistema: una base recién creada no tiene veterinarias a las que pedirles
+   turno ni mascotas con historia clínica.
+
+   ```bash
+   cd backend
+   DATABASE_URL="<la de Railway>" DEMO_PASSWORD="<una que elijan>" npm run seed:demo
+   ```
+
+   Carga dos dueños con tres mascotas, una veterinaria **ya aprobada y con
+   suscripción activa**, un evento clínico y una publicación de adopción. Es
+   idempotente: correrlo dos veces no duplica nada.
+
+   La veterinaria se crea aprobada porque, pendiente, no podría ni iniciar
+   sesión hasta que un administrador la valide. Y se le deja una suscripción
+   `ACTIVA` sin pasar por Mercado Pago, porque sin eso el interceptor de acceso
+   la bloquea en casi toda la plataforma: eso permite probar los flujos de
+   veterinaria aunque todavía no estén cargadas las credenciales de MP.
+
+   Las cuentas usan el dominio `demo.petcare.test`, que no existe, así que
+   ningún mail del sistema puede llegarle a una persona real. La contraseña no
+   está versionada: se pasa al ejecutar.
+
+A partir de ahí, cada merge a `develop` despliega staging y cada merge a `main`
+despliega producción, que es exactamente el flujo del Working Agreement.
+
+## 2. Vercel: frontend web
+
+1. Importar el repo y poner **Root Directory** en `frontend-web`.
+2. No hace falta configurar nada más: `frontend-web/vercel.json` ya define el
+   comando de build, la carpeta de salida y el rewrite de rutas que necesita
+   Angular para que al recargar una URL interna no dé 404.
+3. En Settings → Git, dejar `main` como Production Branch.
+
+El script `scripts/build-vercel.mjs` elige la configuración de Angular según
+`VERCEL_ENV`: los deploys de `main` compilan con `production` (pegan al backend
+de producción) y los de `develop` y los Pull Requests compilan con `staging`.
+
+Las URLs del backend viven en `src/environments/environment.prod.ts` y
+`environment.staging.ts`. **Hay que reemplazarlas por los dominios reales de
+Railway apenas existan.**
+
+## 3. Variables de entorno del backend
+
+Se cargan en Railway, por environment. El archivo `backend/.env.example` tiene
+la lista completa con sus explicaciones.
+
+| Variable | Producción | Notas |
+| --- | --- | --- |
+| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` | variable de referencia al otro servicio; reemplaza a las cinco `DATABASE_*` |
+| `DATABASE_SSL` | `true` | si el deploy falla con "the server does not support SSL connections", poner `false`: la conexión entre servicios ya va por la red privada |
+| `TZ` | `America/Argentina/Cordoba` | si no, el recordatorio de vacunas sale a las 5 AM |
+| `JWT_SECRET` | uno largo y aleatorio, distinto por ambiente | |
+| `JWT_EXPIRES_IN` | `1d` | |
+| `CORS_ORIGIN` | dominio del frontend, sin barra final | acepta varios separados por coma |
+| `API_URL` | el dominio del backend en Railway | con esto se arman los links de matrículas y habilitaciones; si falta, apuntan a `localhost:3000` y no abren |
+| `MP_ACCESS_TOKEN` | el del **Seller Test User** de Mercado Pago | ver la advertencia de abajo |
+| `MP_PUBLIC_KEY` | la de pruebas | no es secreta |
+| `MP_WEBHOOK_SECRET` | el de "Tus integraciones" → Webhooks | sin esto el webhook se procesa sin validar firma |
+| `MP_PAYER_EMAIL` | el del **Buyer Test User** | mientras se use el entorno de prueba, sí va: ver abajo |
+| `FRONTEND_PUBLIC_URL` | el dominio de Vercel | a dónde vuelve el navegador después del checkout |
+| `BREVO_API_KEY` | la del panel de Brevo | |
+| `MAIL_FROM` | remitente verificado en Brevo | si no, los mails caen en spam |
+| `GOOGLE_CLIENT_ID` | el client "Web application" | no es secreto |
+| `GOOGLE_GEOCODING_API_KEY` | la de Google Cloud | conviene ponerle límite de cuota |
+| `ANTHROPIC_API_KEY` | la de platform.claude.com → Claves de API | asistente de voz de la historia clínica (P1-182); sin ella el asistente responde "no disponible" y la carga sigue manual |
+| `ANTHROPIC_MODEL` | `claude-opus-5-5` | opcional; es el valor por defecto |
+
+`PORT` lo inyecta Railway solo: no hay que definirlo.
+
+**Mercado Pago: usar siempre las credenciales de prueba.** El backend en
+Railway tiene una URL pública real, así que con un access token productivo los
+cobros de la suscripción de veterinarios serían cobros de verdad, con plata de
+verdad. Para la tesis y para el piloto van las de test.
+
+`API_PUBLIC_URL` no hace falta en Railway: existe para exponer el backend local
+mediante un túnel durante el desarrollo (ver `docs/suscripciones-mp-local.md`).
+En producción el backend ya es público y alcanza con `API_URL`. Dicho de otra
+forma: **en el ambiente desplegado no hace falta ngrok**, que es la única razón
+por la que esa guía existe.
+
+`MP_PAYER_EMAIL` pisa el mail del pagador en todas las suscripciones. En el
+entorno de prueba de Mercado Pago hay que configurarla con el Buyer Test User,
+porque MP no acepta como pagador el mail real de un veterinario. La consecuencia
+es que todos los veterinarios que se suscriban desde el ambiente desplegado
+pagan como ese mismo usuario de prueba: alcanza para la demo, pero hay que
+saberlo. El dia que exista una operacion real con credenciales productivas, esta
+variable se saca.
+
+Como el ambiente desplegado tiene un solo juego de credenciales, el Buyer Test
+User que se use para pagar tiene que ser el que corresponde al Seller Test User
+cargado en `MP_ACCESS_TOKEN`. Quien haga la demo necesita tambien la contraseña
+de ese usuario comprador para completar el checkout.
+
+Dos advertencias al cargarlas:
+
+- Si Railway ofrece **importar las variables sugeridas del `.env.example`**, no
+  aceptar: carga los `change_me` como si fueran valores reales.
+- Cada cambio queda **staged**. Hay que apretar **Deploy** para que se aplique.
+
+## 4. App Android
+
+La URL del backend ya no está fija en el código: sale de `BuildConfig.API_BASE_URL`,
+que se define por variante en `app/build.gradle.kts`.
+
+- **debug**: `http://10.0.2.2:3000/`, o sea el backend local desde el emulador.
+- **release**: la constante `API_URL_PRODUCCION` de `build.gradle.kts`.
+
+Para compilar contra otro backend sin tocar el repo, por ejemplo para probar
+staging:
+
+```bash
+./gradlew assembleRelease -PPETCARE_API_URL=https://petcare-backend-staging.up.railway.app/
+```
+
+La URL tiene que terminar en barra, porque lo exige Retrofit.
+
+`usesCleartextTraffic` quedó en `true` solo para debug. La variante de release
+no permite HTTP plano, así que el backend tiene que estar sí o sí en HTTPS
+(Railway ya lo da).
+
+### Un APK para probar, sin firmar nada
+
+Para que el equipo pruebe contra el backend desplegado alcanza con la variante
+de debug, pisando la URL:
+
+```bash
+./gradlew assembleDebug -PPETCARE_API_URL=https://backend-production-4169.up.railway.app/
+```
+
+Queda en `app/build/outputs/apk/debug/app-debug.apk`. Como va firmado con la
+keystore de debug de quien compila, y esos SHA-1 ya están registrados, el
+ingreso con Google funciona sin ningún paso extra.
+
+### Firmar el APK de release
+
+Para la entrega alcanza con distribuirlo por Drive; no hace falta Play Store.
+
+1. **Generar la keystore**, una sola vez para todo el proyecto, y guardarla
+   fuera del repo:
+
+   ```bash
+   keytool -genkeypair -v -keystore petcare-release.jks \
+     -alias petcare -keyalg RSA -keysize 2048 -validity 10000
+   ```
+
+   Si se pierde, no se puede volver a firmar la misma app: Android trata una app
+   firmada con otra clave como una app distinta. Conviene que la tengan al menos
+   dos personas, y compartirla por un canal privado, nunca por el repo.
+
+2. **Configurar la firma**: copiar `mobile-android/keystore.properties.example`
+   a `keystore.properties` y completar las cuatro líneas. Ese archivo está
+   gitignoreado, igual que `*.jks`. Desde CI se pueden usar en su lugar las
+   variables `PETCARE_KEYSTORE_FILE`, `PETCARE_KEYSTORE_PASSWORD`,
+   `PETCARE_KEY_ALIAS` y `PETCARE_KEY_PASSWORD`.
+
+   Sin ninguna de las dos cosas el build no falla, pero genera un APK **sin
+   firmar**, que Android no instala.
+
+3. **Compilar**:
+
+   ```bash
+   ./gradlew assembleRelease
+   ```
+
+4. **Registrar el SHA-1** de esa keystore en el client de Android del proyecto
+   de Google Cloud. Sin este paso **el ingreso con Google falla solo en
+   release**, mientras que en debug sigue andando, y el error es confuso de
+   diagnosticar. Ver `docs/ingreso-con-google.md`.
+
+   El SHA-1 lo imprime Gradle, sin necesidad de andar con `keytool`:
+
+   ```bash
+   ./gradlew :app:signingReport
+   ```
+
+   Hay que copiar el de la línea `Variant: release`.
+
+**Dónde queda el APK**: no necesariamente en `app/build/outputs/`. El proyecto
+permite redirigir la carpeta de build con la propiedad `petcare.android.buildDir`
+de `local.properties`, algo que conviene cuando el repo vive dentro de una
+carpeta sincronizada (OneDrive, Drive), porque el sincronizador compite con
+Gradle por esos archivos. Si esa propiedad está configurada, el APK sale en
+
+```
+<petcare.android.buildDir>/app/outputs/apk/release/app-release.apk
+```
+
+Antes de repartir un APK conviene verificar con qué llave quedó firmado, sobre
+todo si alguien probó la configuración con una keystore de prueba:
+
+```bash
+apksigner verify --print-certs app-release.apk
+```
+
+El SHA-1 que imprime tiene que coincidir con el de `:app:signingReport`, y ser
+el mismo que está registrado en Google Cloud.
+
+**La key de Maps también hace falta.** Si `local.properties` no tiene
+`MAPS_API_KEY`, el build no falla, pero la app sale con un placeholder inválido
+y el mapa de veterinarias cercanas queda en gris.
+
+### Generar el APK desde GitHub Actions
+
+Compilar a mano tiene dos problemas: depende de la única máquina que tiene la
+keystore, y hay que acordarse de subir la versión en cada entrega. El workflow
+**APK de release** (`.github/workflows/apk-release.yml`) resuelve los dos.
+
+Se dispara a mano desde la pestaña **Actions** del repositorio, pidiendo la
+versión visible (por ejemplo `1.2`) y, opcionalmente, una URL de backend
+distinta para compilar contra otro ambiente. El APK queda como artefacto
+descargable de esa corrida, así que **cualquiera del equipo lo baja sin tener
+la keystore ni Android Studio**.
+
+El `versionCode` sale del número de corrida de GitHub, que siempre sube: no hay
+que acordarse de incrementarlo, y dos APK nunca comparten versión.
+
+Antes de publicar el artefacto, el workflow verifica con `apksigner` con qué
+llave quedó firmado y lo imprime en el log. Esa verificación corre contra el
+APK construido, no contra la configuración, que es la única forma de detectar
+que alguien dejó una keystore de prueba configurada.
+
+Hay que cargar cinco secrets en **Settings → Secrets and variables → Actions**:
+
+| Secret | Valor |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | la keystore `.jks` en base64 (ver abajo) |
+| `ANDROID_KEYSTORE_PASSWORD` | contraseña del almacén |
+| `ANDROID_KEY_ALIAS` | alias de la clave (`petcare`) |
+| `ANDROID_KEY_PASSWORD` | contraseña de la clave |
+| `MAPS_API_KEY` | key de Maps SDK for Android |
+
+La keystore es un archivo binario y un secret solo guarda texto, por eso va en
+base64:
+
+```bash
+# PowerShell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("petcare-release.jks")) | Set-Clipboard
+```
+
+Eso deja el valor en el portapapeles, listo para pegar en el secret. El
+workflow lo reconstruye en el runner, fuera del workspace, y el runner se
+destruye al terminar.
+
+Si falta algún secret, el workflow **falla antes de compilar** y dice cuál,
+en vez de entregar un APK sin firmar o con el mapa en gris.
+
+## 5. Checklist de la primera vez
+
+- [ ] Proyecto de Railway creado, con environments `staging` y `production`
+- [ ] Volumen montado en `/app/uploads` en los dos environments
+- [ ] Variables de entorno cargadas en los dos environments
+- [ ] Migraciones aplicadas y seeder de roles corrido en cada base
+- [ ] Proyecto de Vercel importado con Root Directory `frontend-web`
+- [ ] URLs reales puestas en `environment.prod.ts` y `environment.staging.ts`
+- [ ] `CORS_ORIGIN` apuntando al dominio de Vercel de cada ambiente
+- [ ] `API_URL_PRODUCCION` real en `app/build.gradle.kts`
+- [ ] SHA-1 de la keystore de release registrado en Google Cloud
+- [ ] Ingreso con Google probado en el APK de release
+- [ ] Subida de una foto de mascota probada **después** de un redeploy, para
+      confirmar que el volumen persiste
+- [ ] ADR-007 pasado de "Propuesto" a "Aceptado" en el documento de Instancia 2
+
+## 6. Backups
+
+Railway hace backups automáticos según el plan, pero conviene tener uno propio
+antes de la demo:
+
+```bash
+pg_dump "$DATABASE_URL" -Fc -f petcare-$(date +%F).dump
+```
