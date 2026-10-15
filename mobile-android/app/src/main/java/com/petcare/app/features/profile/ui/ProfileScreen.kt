@@ -1,9 +1,11 @@
 package com.petcare.app.features.profile.ui
 
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -24,20 +25,21 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.petcare.app.features.pets.ui.PetAvatar
+import com.petcare.app.features.pets.ui.rememberAdjustedPhotoPicker
 import com.petcare.app.features.profile.data.remote.UserProfileResponse
 import com.petcare.app.R
 import com.petcare.app.ui.theme.PetCareError
 import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMuted
 import com.petcare.app.ui.theme.PetCareTealDark
-import com.petcare.app.ui.theme.PetCareTealSoft
 
 @Composable
 fun ProfileScreen(
@@ -48,6 +50,9 @@ fun ProfileScreen(
     onEdit: () -> Unit,
     onConfiguracion: () -> Unit,
     onLogout: () -> Unit,
+    isUploadingPhoto: Boolean = false,
+    photoError: String? = null,
+    onPhotoSelected: (Uri) -> Unit = {},
     // Null cuando la pantalla se abre como pestaña: ahí no hay a dónde volver.
     onBack: (() -> Unit)? = null
 ) {
@@ -123,7 +128,13 @@ fun ProfileScreen(
             }
 
             profile != null -> {
-                ProfileContent(profile = profile, onEdit = onEdit)
+                ProfileContent(
+                    profile = profile,
+                    isUploadingPhoto = isUploadingPhoto,
+                    photoError = photoError,
+                    onPhotoSelected = onPhotoSelected,
+                    onEdit = onEdit
+                )
             }
         }
 
@@ -186,30 +197,47 @@ private fun AccesoPerfil(texto: String, iconRes: Int, onClick: () -> Unit) {
 }
 
 @Composable
-private fun ProfileContent(profile: UserProfileResponse, onEdit: () -> Unit) {
+private fun ProfileContent(
+    profile: UserProfileResponse,
+    isUploadingPhoto: Boolean,
+    photoError: String?,
+    onPhotoSelected: (Uri) -> Unit,
+    onEdit: () -> Unit
+) {
+    val elegirFoto = rememberAdjustedPhotoPicker(onPhotoAdjusted = onPhotoSelected)
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Surface(
-            modifier = Modifier.size(84.dp),
-            shape = CircleShape,
-            color = PetCareTealSoft
-        ) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = profile.nombre.firstOrNull()?.uppercase() ?: "U",
-                    color = PetCareTealDark,
-                    style = MaterialTheme.typography.headlineMedium
-                )
+        Box(contentAlignment = Alignment.Center) {
+            // PetAvatar sirve igual para personas: inicial de fondo y la foto encima.
+            PetAvatar(
+                petName = profile.nombre.ifBlank { "U" },
+                photoPath = profile.foto,
+                modifier = Modifier
+                    .size(96.dp)
+                    .clickable(enabled = !isUploadingPhoto, onClick = elegirFoto),
+                textStyle = MaterialTheme.typography.headlineMedium
+            )
+            if (isUploadingPhoto) {
+                CircularProgressIndicator(modifier = Modifier.size(96.dp))
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        TextButton(onClick = elegirFoto, enabled = !isUploadingPhoto) {
+            Text(if (profile.foto.isNullOrBlank()) "Agregar foto" else "Cambiar foto")
+        }
+
+        photoError?.let { mensaje ->
+            Text(
+                text = mensaje,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
 
         Text(
             text = "${profile.nombre} ${profile.apellido}",

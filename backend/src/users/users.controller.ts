@@ -1,5 +1,20 @@
-import { Body, Controller, Patch, Post, UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Patch,
+  Post,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  ApiConsumes,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Throttle } from '@nestjs/throttler';
 import { EtiquetasApi } from '../common/constants/documentacion-api';
@@ -10,6 +25,11 @@ import {
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { LimiteIntentosGuard } from '../auth/guards/limite-intentos.guard';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import {
+  imageFileFilter,
+  MAX_IMAGE_SIZE_IN_BYTES,
+} from '../common/utils/image-file-filter.util';
+import type { UploadedImageFile } from '../mascotas/types/uploaded-image-file.type';
 import { ConfirmarCambioEmailDto } from './dto/confirmar-cambio-email.dto';
 import { SolicitarCambioEmailDto } from './dto/solicitar-cambio-email.dto';
 import { UpdatePreferenciasDto } from './dto/update-preferencias.dto';
@@ -57,6 +77,40 @@ export class UsersController {
       user.sub,
       dto,
     );
+    return UserPublicDto.fromEntity(updatedUser);
+  }
+
+  @Patch('me/foto')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    FileInterceptor('foto', {
+      fileFilter: imageFileFilter,
+      limits: { fileSize: MAX_IMAGE_SIZE_IN_BYTES },
+    }),
+  )
+  @ApiOperation({
+    summary: 'Cambiar mi foto de perfil',
+    description:
+      'Reemplaza la foto anterior. Debe ser JPG, PNG o WEBP y pesar hasta 2 MB.',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({
+    status: 200,
+    description: 'Foto actualizada.',
+    type: UserPublicDto,
+  })
+  @ApiDatosInvalidos('Falta la foto o no es una imagen permitida.')
+  async updateFoto(
+    @CurrentUser() user: JwtPayload,
+    @UploadedFile() foto?: UploadedImageFile,
+  ): Promise<UserPublicDto> {
+    if (!foto) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje: 'Falta la foto',
+      });
+    }
+    const updatedUser = await this.usersService.updateFoto(user.sub, foto);
     return UserPublicDto.fromEntity(updatedUser);
   }
 

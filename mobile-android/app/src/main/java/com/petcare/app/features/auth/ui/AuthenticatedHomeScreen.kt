@@ -50,6 +50,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
@@ -58,9 +59,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import com.petcare.app.R
 import com.petcare.app.features.pets.data.remote.PetResponse
 import com.petcare.app.features.pets.ui.PetAvatar
+import com.petcare.app.features.pets.ui.resolvePetPhotoUrl
 import com.petcare.app.features.turnos.domain.TipoTurnoItem
 import com.petcare.app.features.turnos.domain.TurnoUnificado
 import com.petcare.app.ui.theme.PetCareLine
@@ -78,6 +81,7 @@ import java.util.Locale
 @Composable
 fun AuthenticatedHomeScreen(
     userName: String,
+    userPhoto: String? = null,
     pets: List<PetResponse>,
     isLoadingPets: Boolean,
     petsError: String?,
@@ -106,6 +110,7 @@ fun AuthenticatedHomeScreen(
     ) {
         HomeHeader(
             userName = userName,
+            userPhoto = userPhoto,
             onProfileClick = onProfileClick
         )
 
@@ -148,9 +153,11 @@ fun AuthenticatedHomeScreen(
 @Composable
 private fun HomeHeader(
     userName: String,
+    userPhoto: String?,
     onProfileClick: () -> Unit
 ) {
     val displayName = userName.ifBlank { "Tutor" }
+    val photoUrl = remember(userPhoto) { resolvePetPhotoUrl(userPhoto) }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -195,6 +202,15 @@ private fun HomeHeader(
                     text = displayName.trim().take(1).uppercase(),
                     color = Color.White,
                     style = MaterialTheme.typography.titleMedium
+                )
+            }
+            // Encima de la inicial, así mientras carga (o si falla) se sigue viendo algo.
+            if (photoUrl != null) {
+                AsyncImage(
+                    model = photoUrl,
+                    contentDescription = "Mi perfil",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
                 )
             }
         }

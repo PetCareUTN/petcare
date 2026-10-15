@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import com.petcare.app.features.adopciones.data.local.MatchesCelebradosPreferences
 import com.petcare.app.features.adopciones.data.remote.FavoritoResponse
 import com.petcare.app.features.adopciones.data.remote.FiltrosAdopcion
 import com.petcare.app.features.adopciones.data.remote.PublicacionAdopcionResponse
@@ -209,6 +210,9 @@ class MainActivity : ComponentActivity() {
                     AdopcionesController(
                         adopcionesApi = RetrofitClient.adopcionesApi(sessionStore)
                     )
+                }
+                val matchesCelebradosPreferences = remember {
+                    MatchesCelebradosPreferences(applicationContext)
                 }
                 val solicitudesAdopcionController = remember {
                     SolicitudesAdopcionController(
@@ -437,6 +441,12 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf(false)
                 }
                 var profileError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var isUploadingProfilePhoto by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var profilePhotoError by rememberSaveable {
                     mutableStateOf<String?>(null)
                 }
                 var saveProfileError by rememberSaveable {
@@ -1303,6 +1313,20 @@ class MainActivity : ComponentActivity() {
                     lifecycleScope.launch {
                         try {
                             misSolicitudes = solicitudesAdopcionController.listarMisSolicitudes()
+
+                            // El festejo del match es para el adoptante: se muestra la
+                            // primera vez que ve una solicitud suya aceptada.
+                            val nuevosMatches = misSolicitudes.filter {
+                                it.estado == "ACEPTADA" &&
+                                    !matchesCelebradosPreferences.fueCelebrado(it.idSolicitud)
+                            }
+                            nuevosMatches.maxByOrNull { it.createdAt }?.let { match ->
+                                matchCelebrationPetName = match.nombreMascota
+                                matchCelebrationPetFoto = match.fotoMascota
+                            }
+                            matchesCelebradosPreferences.marcarCelebrados(
+                                nuevosMatches.map { it.idSolicitud }
+                            )
                         } catch (exception: HttpException) {
                             if (exception.code() == 401) {
                                 logout()
@@ -2044,11 +2068,11 @@ class MainActivity : ComponentActivity() {
                                     try {
                                         val actualizada =
                                             solicitudesAdopcionController.aceptar(solicitud.idSolicitud)
+                                        // Quien publica no ve el festejo: la fila pasa a
+                                        // "Aceptada" con el contacto del adoptante.
                                         solicitudesRecibidas = solicitudesRecibidas.map {
                                             if (it.idSolicitud == actualizada.idSolicitud) actualizada else it
                                         }
-                                        matchCelebrationPetName = actualizada.nombreMascota
-                                        matchCelebrationPetFoto = actualizada.fotoMascota
                                     } catch (exception: HttpException) {
                                         if (exception.code() == 401) {
                                             logout()
@@ -2273,7 +2297,9 @@ class MainActivity : ComponentActivity() {
                                     serviciosError = null
                                     isViewingServicios = true
                                     loadServicios()
-                                }
+                                },
+                                // El drawer vive dentro de la rama logueada: al salir se descarta solo.
+                                onLogout = { logout() }
                             )
                         }
                     ) {
@@ -2799,7 +2825,34 @@ class MainActivity : ComponentActivity() {
                             isEditingProfile = true
                         },
                         onConfiguracion = { isViewingSettings = true },
-                        onLogout = { logout() }
+                        onLogout = { logout() },
+                        isUploadingPhoto = isUploadingProfilePhoto,
+                        photoError = profilePhotoError,
+                        onPhotoSelected = { photoUri ->
+                            isUploadingProfilePhoto = true
+                            profilePhotoError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    profile = profileController.updateMyPhoto(
+                                        buildPhotoPart(photoUri)
+                                    )
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        profilePhotoError = "No se pudo actualizar la foto"
+                                    }
+                                } catch (exception: IOException) {
+                                    profilePhotoError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    profilePhotoError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isUploadingProfilePhoto = false
+                                }
+                            }
+                        }
                     )
                 } else if (loggedUserName != null && selectedPetId != null && isViewingHistoria) {
                     HistoriaClinicaScreen(
@@ -3271,8 +3324,14 @@ class MainActivity : ComponentActivity() {
                         }
                     )
                         } else {
+                    // El encabezado muestra la foto de perfil: sin esto el perfil
+                    // recien se cargaba al entrar a "Mi perfil".
+                    LaunchedEffect(loggedUserName) {
+                        if (profile == null && !isLoadingProfile) loadProfile()
+                    }
                     AuthenticatedHomeScreen(
                         userName = loggedUserName.orEmpty(),
+                        userPhoto = profile?.foto,
                         pets = pets,
                         isLoadingPets = isLoadingPets,
                         petsError = petsError,

@@ -1,10 +1,13 @@
 package com.petcare.app.features.profile.data.remote
 
 import com.google.gson.annotations.SerializedName
+import okhttp3.MultipartBody
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.Multipart
 import retrofit2.http.PATCH
 import retrofit2.http.POST
+import retrofit2.http.Part
 
 data class UserProfileResponse(
     @SerializedName("id_usuario")
@@ -14,6 +17,9 @@ data class UserProfileResponse(
     val apellido: String,
     val email: String,
     val telefono: String?,
+
+    /** Ruta de la foto de perfil en el servidor; null si no subio ninguna. */
+    val foto: String? = null,
 
     @SerializedName("id_rol")
     val roleId: Int,
@@ -60,6 +66,12 @@ interface ProfileApi {
     @PATCH("users/me")
     suspend fun updateMyProfile(
         @Body request: UpdateProfileRequest
+    ): UserProfileResponse
+
+    @Multipart
+    @PATCH("users/me/foto")
+    suspend fun updateMyPhoto(
+        @Part foto: MultipartBody.Part
     ): UserProfileResponse
 
     @POST("users/me/cambiar-email")
