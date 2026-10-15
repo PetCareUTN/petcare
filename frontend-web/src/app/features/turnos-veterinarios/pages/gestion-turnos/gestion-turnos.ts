@@ -116,6 +116,8 @@ export class GestionTurnosVeterinariosPage implements OnInit {
 
   protected readonly estados: EstadoOption[] = [
     { value: 'confirmado', label: 'Confirmados' },
+    { value: 'asistio', label: 'Asistieron' },
+    { value: 'ausente', label: 'Ausentes' },
     { value: 'cancelado', label: 'Cancelados' },
   ];
 
@@ -149,6 +151,14 @@ export class GestionTurnosVeterinariosPage implements OnInit {
   protected readonly processingClave = signal<string | null>(null);
   protected readonly processingSobreturnoId = signal<number | null>(null);
   protected readonly isCancelling = signal(false);
+  /**
+   * Asistencia que el veterinario eligio y todavia no confirmo (P1-193).
+   *
+   * `null` = no hay confirmacion abierta. Los dos botones quedan pegados en el
+   * panel, asi que un click equivocado tiene que poder frenarse antes de
+   * registrar algo sobre el cliente.
+   */
+  protected readonly asistenciaPendiente = signal<boolean | null>(null);
   protected readonly motivoCancelacion = signal('');
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly successMessage = signal<string | null>(null);
@@ -404,6 +414,7 @@ export class GestionTurnosVeterinariosPage implements OnInit {
     this.turnoSeleccionadoClave.set(turno.clave);
     this.sobreturnoSeleccionadoId.set(null);
     this.cancelCancelacion();
+    this.cancelarConfirmacionAsistencia();
     this.errorMessage.set(null);
     this.successMessage.set(null);
   }
@@ -503,6 +514,86 @@ export class GestionTurnosVeterinariosPage implements OnInit {
   /** Nombre corto del día ("Lun", "Mar"...) para una fecha YYYY-MM-DD. */
   protected nombreCortoDia(fecha: string): string {
     return DIAS_SEMANA[this.indiceDesdeLunes(this.parseClave(fecha))];
+  }
+
+  /**
+   * `true` si el turno ya empezo y sigue sin cerrarse.
+   *
+   * Es lo que habilita las acciones de asistencia: antes de la hora el cliente
+   * todavia esta a tiempo de llegar, y el backend rechaza marcarlo (P1-193).
+   */
+  protected puedeRegistrarAsistencia(turno: EventoTurno): boolean {
+    return (
+      turno.tipo === 'veterinaria' &&
+      turno.estado === 'confirmado' &&
+      new Date(`${turno.fecha}T${turno.hora}`).getTime() <= Date.now()
+    );
+  }
+
+  /** `true` si el turno ya tiene asistencia registrada. */
+  protected tieneAsistencia(turno: EventoTurno): boolean {
+    return turno.estado === 'asistio' || turno.estado === 'ausente';
+  }
+
+  /** Solo el mismo dia, que es lo unico que acepta el backend. */
+  protected puedeCorregirAsistencia(turno: EventoTurno): boolean {
+    return this.tieneAsistencia(turno) && turno.fecha === this.claveDeHoy();
+  }
+
+  /** Turno pasado que el veterinario todavia no cerro. */
+  protected esperaRegistro(turno: EventoTurno): boolean {
+    return this.puedeRegistrarAsistencia(turno);
+  }
+
+  /** Abre el paso de confirmacion para la opcion elegida. */
+  protected pedirConfirmacionAsistencia(asistio: boolean): void {
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    this.asistenciaPendiente.set(asistio);
+  }
+
+  protected cancelarConfirmacionAsistencia(): void {
+    this.asistenciaPendiente.set(null);
+  }
+
+  protected registrarAsistencia(turno: EventoTurno, asistio: boolean): void {
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    this.processingClave.set(turno.clave);
+
+    this.turnosService.registrarAsistencia(turno.idTurno, { asistio }).subscribe({
+      next: () => {
+        this.processingClave.set(null);
+        this.cancelarConfirmacionAsistencia();
+        this.successMessage.set(
+          asistio ? 'Turno marcado como asistido.' : 'Turno marcado como ausente.',
+        );
+        this.loadTurnos();
+      },
+      error: (error: ApiError) => {
+        this.processingClave.set(null);
+        this.cancelarConfirmacionAsistencia();
+        this.errorMessage.set(error.mensaje ?? 'No se pudo registrar la asistencia.');
+      },
+    });
+  }
+
+  protected revertirAsistencia(turno: EventoTurno): void {
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    this.processingClave.set(turno.clave);
+
+    this.turnosService.revertirAsistencia(turno.idTurno).subscribe({
+      next: () => {
+        this.processingClave.set(null);
+        this.successMessage.set('Se deshizo el registro de asistencia.');
+        this.loadTurnos();
+      },
+      error: (error: ApiError) => {
+        this.processingClave.set(null);
+        this.errorMessage.set(error.mensaje ?? 'No se pudo corregir la asistencia.');
+      },
+    });
   }
 
   protected estadoLabel(estado: EstadoTurno): string {

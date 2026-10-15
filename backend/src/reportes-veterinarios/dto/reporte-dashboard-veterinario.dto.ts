@@ -30,9 +30,18 @@ export interface PacientesPorMesDto {
 
 export interface ResumenReporteDto {
   totalTurnos: number;
+  /** Turnos que ocuparon la agenda: confirmados, asistidos y ausentes. */
   confirmados: number;
+  /** Turnos cerrados con el cliente presente (P1-193). */
+  asistidos: number;
+  /** Turnos cerrados sin que el cliente se presentara (P1-193). */
+  ausentes: number;
+  /** Turnos ya pasados que el veterinario todavia no cerro. */
+  sinRegistrar: number;
   cancelados: number;
   tasaCancelacion: number;
+  /** Ausentes sobre los turnos ya cerrados. */
+  tasaAusentismo: number;
   pacientesAtendidos: number;
 }
 

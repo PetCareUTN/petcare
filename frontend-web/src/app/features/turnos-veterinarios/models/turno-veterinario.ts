@@ -1,4 +1,11 @@
-export type AppointmentStatus = 'confirmado' | 'cancelado';
+export type AppointmentStatus =
+  | 'confirmado'
+  | 'cancelado'
+  | 'asistio'
+  | 'ausente';
+
+/** Estados que cierran el turno una vez que paso (P1-193). */
+export const ESTADOS_DE_ASISTENCIA: AppointmentStatus[] = ['asistio', 'ausente'];
 export type CanceladoPorVeterinaria = 'dueño' | 'veterinario';
 
 export interface TurnoVeterinarioResponse {
@@ -17,6 +24,11 @@ export interface TurnoVeterinarioResponse {
   motivoRechazo: string | null;
   canceladoPor: CanceladoPorVeterinaria | null;
   motivoCancelacion: string | null;
+}
+
+export interface RegistrarAsistenciaRequest {
+  /** `true` si el cliente se presento, `false` si no vino. */
+  asistio: boolean;
 }
 
 export interface CancelarTurnoVeterinarioRequest {

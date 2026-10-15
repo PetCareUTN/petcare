@@ -118,6 +118,22 @@ export class DashboardReportesPage implements OnInit {
     return 'kpi-bad';
   });
 
+  /**
+   * Umbrales propios: un 15% de ausentismo ya es alto para una agenda con
+   * cupos limitados, bastante antes de lo que preocuparia una cancelacion,
+   * porque el ausente no libera el turno para otro paciente (P1-193).
+   */
+  protected readonly estadoTasaAusentismo = computed<EstadoKpi>(() => {
+    const tasa = this.data()?.resumen.tasaAusentismo ?? 0;
+    if (tasa <= 5) {
+      return 'kpi-good';
+    }
+    if (tasa <= 15) {
+      return 'kpi-warn';
+    }
+    return 'kpi-bad';
+  });
+
   ngOnInit(): void {
     this.cargar();
   }

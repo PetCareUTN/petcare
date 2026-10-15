@@ -749,4 +749,149 @@ describe('TurnosVeterinariosService', () => {
       );
     });
   });
+  describe('registrarAsistencia', () => {
+    const veterinarioConUsuario = {
+      idVeterinario: 7,
+      estadoValidacion: ValidationStatus.APROBADO,
+      usuario: { idUsuario: 3 },
+    } as Veterinario;
+
+    /** Fecha local en YYYY-MM-DD, igual que la que guarda la entidad. */
+    const comoFecha = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+        d.getDate(),
+      ).padStart(2, '0')}`;
+
+    const hoy = comoFecha(new Date());
+    const ayer = comoFecha(new Date(Date.now() - 24 * 60 * 60 * 1000));
+    const manana = comoFecha(new Date(Date.now() + 24 * 60 * 60 * 1000));
+
+    const turnoDe = (
+      fecha: string,
+      estado = AppointmentStatus.CONFIRMADO,
+    ): TurnoVeterinario => ({
+      ...turnoConfirmado,
+      veterinario: veterinarioConUsuario,
+      fecha,
+      hora: '00:01',
+      estado,
+    });
+
+    beforeEach(() => {
+      turnosRepository.save.mockImplementation((turno: TurnoVeterinario) =>
+        Promise.resolve(turno),
+      );
+    });
+
+    it('marca ausente un turno que ya empezo', async () => {
+      turnosRepository.findOne.mockResolvedValue(turnoDe(ayer));
+
+      const result = await service.registrarAsistencia(3, 30, {
+        asistio: false,
+      });
+
+      expect(result.estado).toBe(AppointmentStatus.AUSENTE);
+    });
+
+    it('marca asistio cuando el cliente se presento', async () => {
+      turnosRepository.findOne.mockResolvedValue(turnoDe(ayer));
+
+      const result = await service.registrarAsistencia(3, 30, {
+        asistio: true,
+      });
+
+      expect(result.estado).toBe(AppointmentStatus.ASISTIO);
+    });
+
+    // El cliente todavia esta a tiempo de llegar: marcarlo no significa nada.
+    it('rechaza marcar un turno que todavia no empezo', async () => {
+      turnosRepository.findOne.mockResolvedValue(turnoDe(manana));
+
+      await expect(
+        service.registrarAsistencia(3, 30, { asistio: false }),
+      ).rejects.toThrow(BadRequestException);
+      expect(turnosRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('rechaza marcar un turno cancelado', async () => {
+      turnosRepository.findOne.mockResolvedValue(
+        turnoDe(ayer, AppointmentStatus.CANCELADO),
+      );
+
+      await expect(
+        service.registrarAsistencia(3, 30, { asistio: true }),
+      ).rejects.toThrow(BadRequestException);
+      expect(turnosRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('rechaza volver a marcar un turno ya cerrado', async () => {
+      turnosRepository.findOne.mockResolvedValue(
+        turnoDe(ayer, AppointmentStatus.AUSENTE),
+      );
+
+      await expect(
+        service.registrarAsistencia(3, 30, { asistio: true }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    // La asistencia la constata quien atiende, no quien reservo.
+    it('rechaza a un veterinario que no es el del turno', async () => {
+      turnosRepository.findOne.mockResolvedValue(turnoDe(ayer));
+
+      await expect(
+        service.registrarAsistencia(999, 30, { asistio: true }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(turnosRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('rechaza un turno inexistente', async () => {
+      turnosRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.registrarAsistencia(3, 30, { asistio: true }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    describe('revertirAsistencia', () => {
+      it('vuelve a confirmado un turno marcado hoy', async () => {
+        turnosRepository.findOne.mockResolvedValue(
+          turnoDe(hoy, AppointmentStatus.AUSENTE),
+        );
+
+        const result = await service.revertirAsistencia(3, 30);
+
+        expect(result.estado).toBe(AppointmentStatus.CONFIRMADO);
+      });
+
+      // Reabrir turnos viejos distorsionaria las metricas de ausentismo.
+      it('rechaza corregir un turno de otro dia', async () => {
+        turnosRepository.findOne.mockResolvedValue(
+          turnoDe(ayer, AppointmentStatus.AUSENTE),
+        );
+
+        await expect(service.revertirAsistencia(3, 30)).rejects.toThrow(
+          BadRequestException,
+        );
+        expect(turnosRepository.save).not.toHaveBeenCalled();
+      });
+
+      it('rechaza corregir un turno sin asistencia registrada', async () => {
+        turnosRepository.findOne.mockResolvedValue(turnoDe(hoy));
+
+        await expect(service.revertirAsistencia(3, 30)).rejects.toThrow(
+          BadRequestException,
+        );
+      });
+
+      it('rechaza a un veterinario ajeno al turno', async () => {
+        turnosRepository.findOne.mockResolvedValue(
+          turnoDe(hoy, AppointmentStatus.ASISTIO),
+        );
+
+        await expect(service.revertirAsistencia(999, 30)).rejects.toThrow(
+          ForbiddenException,
+        );
+      });
+    });
+  });
 });
