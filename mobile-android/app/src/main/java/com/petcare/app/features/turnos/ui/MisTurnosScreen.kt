@@ -4,16 +4,20 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -99,175 +103,207 @@ fun MisTurnosScreen(
         coincideFecha && coincideRango
     }
 
+    // Los próximos primero, del más cercano al más lejano; los anteriores
+    // después, del más reciente al más viejo.
+    val proximos = turnosFiltrados.filter { it.fecha >= hoy }
+    val anteriores = turnosFiltrados.filter { it.fecha < hoy }.asReversed()
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(innerPadding)
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.Start
-    ) {
-        Text(
-            text = "Mis turnos",
-            style = MaterialTheme.typography.headlineMedium
-        )
-        Text(
-            text = "Turnos de veterinaria y de servicios que solicitaste para tus mascotas.",
-            color = PetCareMuted,
-            style = MaterialTheme.typography.bodyMedium
-        )
-
-        Spacer(modifier = Modifier.height(14.dp))
-        OutlinedButton(onClick = onResenasClick, modifier = Modifier.fillMaxWidth()) {
-            Text("Servicios realizados, reseñas y reportes")
-        }
-
-        Button(
-            onClick = onNuevoTurno,
+        LazyColumn(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-            shape = MaterialTheme.shapes.large
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(innerPadding),
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_add),
-                contentDescription = null,
-                modifier = Modifier.height(18.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Nuevo turno")
-        }
-
-        if (!isLoading && errorMessage == null && turnos.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(14.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                RangoFecha.entries.forEach { opcion ->
-                    RangoChip(
-                        texto = opcion.etiqueta,
-                        seleccionado = rango == opcion,
-                        onClick = { rango = opcion },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = { showDatePicker = true },
-                    modifier = Modifier.weight(1f),
-                    shape = MaterialTheme.shapes.large,
-                    border = BorderStroke(1.dp, PetCareTeal),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = PetCareTealDark
-                    )
-                ) {
+            item(key = "encabezado") {
+                Column {
                     Text(
-                        text = filtroFecha?.let { etiquetaFiltro(it) }
-                            ?: "Filtrar por fecha o mes",
-                        maxLines = 1,
-                        softWrap = false,
-                        style = MaterialTheme.typography.labelMedium
+                        text = "Mis turnos",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
                     )
-                }
-                if (filtroFecha != null) {
-                    TextButton(
-                        onClick = { filtroFecha = null },
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = PetCareTealDark
-                        )
-                    ) {
-                        Text("Quitar", style = MaterialTheme.typography.labelMedium)
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        when {
-            isLoading -> {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-
-            errorMessage != null -> {
-                InfoCard(titulo = null) {
                     Text(
-                        text = errorMessage,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Button(onClick = onRetry) {
-                        Text("Reintentar")
-                    }
-                }
-            }
-
-            turnos.isEmpty() -> {
-                InfoCard(titulo = "Todavía no tenés turnos") {
-                    Text(
-                        text = "Cuando solicites un turno para alguna de tus mascotas, " +
-                            "va a aparecer acá.",
+                        text = "Tus citas con veterinarias y prestadores de servicios.",
                         color = PetCareMuted,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
             }
 
-            turnosFiltrados.isEmpty() -> {
-                InfoCard(titulo = "Sin turnos para ese filtro") {
-                    Text(
-                        text = "Probá con otra fecha o mostrá todos los turnos.",
-                        color = PetCareMuted,
-                        style = MaterialTheme.typography.bodyMedium
+            item(key = "nuevo") {
+                Button(
+                    onClick = onNuevoTurno,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = MaterialTheme.shapes.large
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_add),
+                        contentDescription = null,
+                        modifier = Modifier.height(18.dp)
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Button(
-                        onClick = {
-                            rango = RangoFecha.TODOS
-                            filtroFecha = null
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Nuevo turno")
+                }
+            }
+
+            if (!isLoading && errorMessage == null && turnos.isNotEmpty()) {
+                item(key = "filtros") {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            RangoFecha.entries.forEach { opcion ->
+                                RangoChip(
+                                    texto = opcion.etiqueta,
+                                    seleccionado = rango == opcion,
+                                    onClick = { rango = opcion },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
-                    ) {
-                        Text("Ver todos")
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { showDatePicker = true },
+                                modifier = Modifier.weight(1f),
+                                shape = MaterialTheme.shapes.large,
+                                border = BorderStroke(1.dp, PetCareLine),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = PetCareTealDark
+                                )
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_calendar),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = filtroFecha?.let { etiquetaFiltro(it) }
+                                        ?: "Filtrar por fecha o mes",
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
+                            if (filtroFecha != null) {
+                                TextButton(
+                                    onClick = { filtroFecha = null },
+                                    colors = ButtonDefaults.textButtonColors(
+                                        contentColor = PetCareTealDark
+                                    )
+                                ) {
+                                    Text("Quitar", style = MaterialTheme.typography.labelMedium)
+                                }
+                            }
+                        }
                     }
                 }
             }
 
-            else -> {
-                LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(turnosFiltrados, key = { "${it.tipo}-${it.idTurno}" }) { turno ->
-                        TurnoCard(
-                            turno = turno,
-                            isCancelando = cancelandoId == turno.idTurno,
-                            onCancelarClick = { turnoACancelar = turno }
+            when {
+                isLoading -> item(key = "cargando") {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+
+                errorMessage != null -> item(key = "error") {
+                    InfoCard(titulo = null) {
+                        Text(
+                            text = errorMessage,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(onClick = onRetry) {
+                            Text("Reintentar")
+                        }
+                    }
+                }
+
+                turnos.isEmpty() -> item(key = "vacio") {
+                    InfoCard(titulo = "Todavía no tenés turnos") {
+                        Text(
+                            text = "Cuando solicites un turno para alguna de tus mascotas, " +
+                                "va a aparecer acá.",
+                            color = PetCareMuted,
+                            style = MaterialTheme.typography.bodyMedium
                         )
                     }
                 }
+
+                turnosFiltrados.isEmpty() -> item(key = "sin-resultados") {
+                    InfoCard(titulo = "Sin turnos para ese filtro") {
+                        Text(
+                            text = "Probá con otra fecha o mostrá todos los turnos.",
+                            color = PetCareMuted,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = {
+                                rango = RangoFecha.TODOS
+                                filtroFecha = null
+                            }
+                        ) {
+                            Text("Ver todos")
+                        }
+                    }
+                }
+
+                else -> {
+                    if (proximos.isNotEmpty()) {
+                        item(key = "titulo-proximos") {
+                            TituloSeccion(texto = "Próximos", cantidad = proximos.size)
+                        }
+                        items(proximos, key = { "${it.tipo}-${it.idTurno}" }) { turno ->
+                            TurnoCard(
+                                turno = turno,
+                                isCancelando = cancelandoId == turno.idTurno,
+                                onCancelarClick = { turnoACancelar = turno }
+                            )
+                        }
+                    }
+                    if (anteriores.isNotEmpty()) {
+                        item(key = "titulo-anteriores") {
+                            TituloSeccion(texto = "Anteriores", cantidad = anteriores.size)
+                        }
+                        items(anteriores, key = { "${it.tipo}-${it.idTurno}" }) { turno ->
+                            TurnoCard(
+                                turno = turno,
+                                isCancelando = cancelandoId == turno.idTurno,
+                                onCancelarClick = { turnoACancelar = turno },
+                                esPasado = true
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Al final de la pantalla: es algo que se hace después de usar un
+            // servicio, no lo primero que se busca al entrar a Mis turnos.
+            item(key = "resenas") {
+                Spacer(modifier = Modifier.height(8.dp))
+                DejaTuResenaCard(onClick = onResenasClick)
             }
         }
-    }
     }
 
     if (showDatePicker) {
@@ -431,100 +467,242 @@ private fun tipoLabel(tipo: TipoTurnoItem): String = when (tipo) {
 }
 
 @Composable
+private fun TituloSeccion(texto: String, cantidad: Int) {
+    Row(
+        modifier = Modifier.padding(top = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(
+            text = texto,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Surface(color = PetCareTealSoft, shape = MaterialTheme.shapes.small) {
+            Text(
+                text = cantidad.toString(),
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                color = PetCareTealDark,
+                style = MaterialTheme.typography.labelMedium
+            )
+        }
+    }
+}
+
+private fun iconoDeTipo(tipo: TipoTurnoItem): Int = when (tipo) {
+    TipoTurnoItem.VETERINARIA -> R.drawable.ic_turno_veterinaria
+    TipoTurnoItem.PASEADOR -> R.drawable.ic_turno_paseador
+    TipoTurnoItem.GUARDERIA -> R.drawable.ic_turno_guarderia
+    TipoTurnoItem.PELUQUERIA -> R.drawable.ic_turno_peluqueria
+}
+
+private val MESES_CORTOS = listOf(
+    "ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"
+)
+
+@Composable
 private fun TurnoCard(
     turno: TurnoUnificado,
     isCancelando: Boolean,
-    onCancelarClick: () -> Unit
+    onCancelarClick: () -> Unit,
+    /** Un turno que ya pasó no se puede cancelar. */
+    esPasado: Boolean = false
 ) {
+    val partesFecha = turno.fecha.split("-")
+    val dia = partesFecha.getOrNull(2)?.toIntOrNull()?.toString() ?: "--"
+    val mes = partesFecha.getOrNull(1)?.toIntOrNull()
+        ?.let { MESES_CORTOS.getOrNull(it - 1) } ?: ""
+    val inactivo = turno.estado.lowercase() in listOf("cancelado", "rechazado")
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
         border = BorderStroke(1.dp, PetCareLine),
-        shape = MaterialTheme.shapes.large
+        shape = MaterialTheme.shapes.extraLarge
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Fecha a la vista: es lo primero que se busca en un turno.
+            Surface(
+                modifier = Modifier.width(58.dp),
+                color = if (inactivo) PetCareSurfaceSoft else PetCareTealSoft,
+                shape = MaterialTheme.shapes.large
             ) {
-                Column {
+                Column(
+                    modifier = Modifier.padding(vertical = 10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = dia,
+                        color = if (inactivo) PetCareMuted else PetCareTealDark,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = mes,
+                        color = if (inactivo) PetCareMuted else PetCareTealDark,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         text = turno.nombreMascota,
+                        modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    EstadoBadge(estado = turno.estado)
+                }
+
+                val horario = if (turno.horaFin != null) {
+                    "${formatHora(turno.horaInicio)} a ${formatHora(turno.horaFin)}"
+                } else {
+                    formatHora(turno.horaInicio)
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        painter = painterResource(iconoDeTipo(turno.tipo)),
+                        contentDescription = null,
+                        tint = PetCareTealDark,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = tipoLabel(turno.tipo),
+                        text = "${tipoLabel(turno.tipo)} · $horario",
                         color = PetCareTealDark,
-                        style = MaterialTheme.typography.labelMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
                     )
                 }
-                EstadoBadge(estado = turno.estado)
-            }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            val horario = if (turno.horaFin != null) {
-                "${formatHora(turno.horaInicio)} a ${formatHora(turno.horaFin)}"
-            } else {
-                formatHora(turno.horaInicio)
-            }
-            Text(
-                text = "${formatFecha(turno.fecha)} · $horario",
-                color = PetCareTealDark,
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Text(
-                text = turno.contraparteNombre,
-                color = PetCareMuted,
-                style = MaterialTheme.typography.bodyMedium
-            )
-            turno.contraparteDetalle?.takeIf { it.isNotBlank() }?.let { detalle ->
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = detalle,
-                    color = PetCareMuted,
+                    text = turno.contraparteNombre,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                turno.contraparteDetalle?.takeIf { it.isNotBlank() }?.let { detalle ->
+                    Text(
+                        text = detalle,
+                        color = PetCareMuted,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                turno.nota?.takeIf { it.isNotBlank() }?.let { nota ->
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = nota,
+                        color = PetCareMuted,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                turno.motivoNegativo?.takeIf { it.isNotBlank() }?.let { motivo ->
+                    Spacer(modifier = Modifier.height(6.dp))
+                    val prefijo = if (turno.canceladoPor != null) {
+                        "Cancelado por ${turno.canceladoPor}: "
+                    } else {
+                        "Motivo del rechazo: "
+                    }
+                    Text(
+                        text = "$prefijo$motivo",
+                        color = PetCareError,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                if (turno.puedeCancelar && !esPasado) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedButton(
+                        onClick = onCancelarClick,
+                        enabled = !isCancelando,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp),
+                        shape = MaterialTheme.shapes.large,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                    ) {
+                        Text(
+                            text = if (isCancelando) "Cancelando..." else "Cancelar turno",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Acceso a las reseñas, al final de la pantalla. Lleva a los servicios ya
+ * realizados, donde se deja la reseña o se hace un reporte.
+ */
+@Composable
+private fun DejaTuResenaCard(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = PetCareTealSoft),
+        border = BorderStroke(1.dp, PetCareTeal.copy(alpha = 0.35f)),
+        shape = MaterialTheme.shapes.extraLarge
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Surface(
+                modifier = Modifier.size(44.dp),
+                shape = CircleShape,
+                color = PetCareTeal
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_star),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Dejá tu reseña",
+                    color = PetCareTealDark,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Contanos cómo te fue con los servicios que usaste.",
+                    color = PetCareTealDark,
                     style = MaterialTheme.typography.bodySmall
                 )
             }
-            turno.nota?.takeIf { it.isNotBlank() }?.let { nota ->
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = nota,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-            turno.motivoNegativo?.takeIf { it.isNotBlank() }?.let { motivo ->
-                Spacer(modifier = Modifier.height(6.dp))
-                val prefijo = if (turno.canceladoPor != null) {
-                    "Cancelado por ${turno.canceladoPor}: "
-                } else {
-                    "Motivo del rechazo: "
-                }
-                Text(
-                    text = "$prefijo$motivo",
-                    color = PetCareError,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-
-            if (turno.puedeCancelar) {
-                Spacer(modifier = Modifier.height(10.dp))
-                OutlinedButton(
-                    onClick = onCancelarClick,
-                    enabled = !isCancelando,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.large,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
-                ) {
-                    Text(
-                        text = if (isCancelando) "Cancelando..." else "Cancelar turno",
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
+            Icon(
+                painter = painterResource(R.drawable.ic_chevron_right),
+                contentDescription = null,
+                tint = PetCareTealDark,
+                modifier = Modifier.size(22.dp)
+            )
         }
     }
 }

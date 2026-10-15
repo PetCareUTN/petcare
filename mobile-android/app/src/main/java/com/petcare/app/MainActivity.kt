@@ -100,9 +100,13 @@ import com.petcare.app.features.perdidas.ui.UltimaUbicacionScreen
 import com.petcare.app.features.pets.data.remote.CreatePetRequest
 import com.petcare.app.features.pets.data.remote.PetResponse
 import com.petcare.app.features.pets.data.remote.UpdatePetRequest
+import com.petcare.app.features.auth.domain.currentUserId
+import com.petcare.app.features.pets.domain.MascotasCompartidasController
 import com.petcare.app.features.pets.domain.PetsController
 import com.petcare.app.features.pets.ui.EditPetScreen
+import com.petcare.app.features.pets.ui.CompartirMascotaScreen
 import com.petcare.app.features.pets.ui.PetProfileScreen
+import com.petcare.app.features.pets.ui.SolicitudesCompartirRecibidasScreen
 import com.petcare.app.features.pets.ui.RegisterPetScreen
 import com.petcare.app.features.profile.data.remote.UpdateProfileRequest
 import com.petcare.app.features.profile.data.remote.UserProfileResponse
@@ -195,6 +199,11 @@ class MainActivity : ComponentActivity() {
                         petsApi = RetrofitClient.petsApi(sessionStore)
                     )
                 }
+                val mascotasCompartidasController = remember {
+                    MascotasCompartidasController(
+                        api = RetrofitClient.mascotasCompartidasApi(sessionStore)
+                    )
+                }
                 val historiaClinicaController = remember {
                     HistoriaClinicaController(
                         historiaClinicaApi = RetrofitClient.historiaClinicaApi(sessionStore)
@@ -266,6 +275,14 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf(false)
                 }
                 var isSavingPet by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                // Dueños de la mascota abierta y cómo compartirla.
+                var isCompartiendoMascota by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                // Solicitudes que me hicieron para compartir una mascota.
+                var isViewingSolicitudesCompartir by rememberSaveable {
                     mutableStateOf(false)
                 }
                 var isRestoringSession by rememberSaveable {
@@ -733,6 +750,8 @@ class MainActivity : ComponentActivity() {
                     isLoadingSolicitudesRecibidas = false
                     solicitudesRecibidasError = null
                     solicitudesRecibidas = emptyList()
+                    isCompartiendoMascota = false
+                    isViewingSolicitudesCompartir = false
                     procesandoSolicitudId = null
                     isViewingMisPublicaciones = false
                     isLoadingMisPublicaciones = false
@@ -827,6 +846,8 @@ class MainActivity : ComponentActivity() {
                     isViewingMisTurnos = false
                     isViewingSolicitudesServicios = false
                     isViewingNotificaciones = false
+                    isCompartiendoMascota = false
+                    isViewingSolicitudesCompartir = false
                 }
 
                 fun navigateBackInApp() {
@@ -837,6 +858,8 @@ class MainActivity : ComponentActivity() {
                             googleError = null
                         }
                         isViewingNotificaciones -> isViewingNotificaciones = false
+                        isCompartiendoMascota -> isCompartiendoMascota = false
+                        isViewingSolicitudesCompartir -> isViewingSolicitudesCompartir = false
                         isRegisteringPet -> {
                             savePetError = null
                             isRegisteringPet = false
@@ -1647,6 +1670,8 @@ class MainActivity : ComponentActivity() {
                 val canNavigateBackInApp =
                     registroGooglePendiente != null ||
                         isViewingNotificaciones ||
+                        isCompartiendoMascota ||
+                        isViewingSolicitudesCompartir ||
                         isRegisteringPet ||
                         editingPet != null ||
                         isCreatingServicio ||
@@ -2273,6 +2298,11 @@ class MainActivity : ComponentActivity() {
                                     serviciosError = null
                                     isViewingServicios = true
                                     loadServicios()
+                                },
+                                onMascotasCompartidasClick = {
+                                    scope.launch { drawerState.close() }
+                                    volverAInicio()
+                                    isViewingSolicitudesCompartir = true
                                 }
                             )
                         }
@@ -2376,6 +2406,13 @@ class MainActivity : ComponentActivity() {
                                                 selectedPetId = idMascota
                                                 loadPetProfile(idMascota)
                                                 isReportandoPerdidaScreen = true
+                                            },
+                                            // La solicitud para compartir una mascota
+                                            // abre las solicitudes pendientes.
+                                            onAbrirSolicitudCompartir = {
+                                                isViewingNotificaciones = false
+                                                cerradoEnMs = System.currentTimeMillis()
+                                                isViewingSolicitudesCompartir = true
                                             }
                                         )
                                     }
@@ -2801,6 +2838,37 @@ class MainActivity : ComponentActivity() {
                         onConfiguracion = { isViewingSettings = true },
                         onLogout = { logout() }
                     )
+                } else if (loggedUserName != null && isCompartiendoMascota && selectedPet != null) {
+                    CompartirMascotaScreen(
+                        controller = mascotasCompartidasController,
+                        pet = selectedPet!!,
+                        miIdUsuario = currentUserId(sessionStore),
+                        onBack = { isCompartiendoMascota = false },
+                        onSesionExpirada = {
+                            logout()
+                            serverError = "La sesion expiro. Inicia sesion nuevamente"
+                        },
+                        onCambio = { loadPets() },
+                        onSalio = {
+                            // Ya no ve la mascota: no hay perfil al que volver.
+                            isCompartiendoMascota = false
+                            selectedPetId = null
+                            selectedPet = null
+                            petProfileError = null
+                            reportePerdidaActivo = null
+                            tagBleDeLaMascota = null
+                        }
+                    )
+                } else if (loggedUserName != null && isViewingSolicitudesCompartir) {
+                    SolicitudesCompartirRecibidasScreen(
+                        controller = mascotasCompartidasController,
+                        onBack = { isViewingSolicitudesCompartir = false },
+                        onSesionExpirada = {
+                            logout()
+                            serverError = "La sesion expiro. Inicia sesion nuevamente"
+                        },
+                        onAceptada = { loadPets() }
+                    )
                 } else if (loggedUserName != null && selectedPetId != null && isViewingHistoria) {
                     HistoriaClinicaScreen(
                         isLoading = isLoadingHistoria,
@@ -3121,7 +3189,16 @@ class MainActivity : ComponentActivity() {
                         tagBle = tagBleDeLaMascota,
                         isLoadingTagBle = isLoadingTagBle,
                         tagBleError = tagBleError,
-                        onVerTagBle = { isVinculandoTagScreen = true }
+                        onVerTagBle = { isVinculandoTagScreen = true },
+                        onCompartir = { isCompartiendoMascota = true },
+                        // La pantalla de edición va antes en la cadena: al volver
+                        // de ella se regresa a este perfil.
+                        onEdit = {
+                            selectedPet?.let {
+                                updatePetError = null
+                                editingPet = it
+                            }
+                        }
                     )
                 } else if (loggedUserName != null && isViewingMisTurnos) {
                     MisTurnosScreen(

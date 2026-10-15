@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,12 +12,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -29,6 +31,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.petcare.app.features.profile.data.remote.UserProfileResponse
@@ -36,6 +41,7 @@ import com.petcare.app.R
 import com.petcare.app.ui.theme.PetCareError
 import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMuted
+import com.petcare.app.ui.theme.PetCareTeal
 import com.petcare.app.ui.theme.PetCareTealDark
 import com.petcare.app.ui.theme.PetCareTealSoft
 
@@ -61,11 +67,11 @@ fun ProfileScreen(
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.Start
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (onBack != null) {
+        if (onBack != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 IconButton(onClick = onBack) {
                     Icon(
                         painter = painterResource(R.drawable.ic_arrow_back),
@@ -73,15 +79,18 @@ fun ProfileScreen(
                         tint = PetCareTealDark
                     )
                 }
+                Text(
+                    text = "Mi perfil",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.headlineSmall
+                )
             }
-            Text(
-                text = "Mi perfil",
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.headlineSmall
-            )
-        }
 
-        Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(18.dp))
+        } else {
+            // Como pestaña la cabecera de color ya hace de título.
+            Spacer(modifier = Modifier.height(12.dp))
+        }
 
         when {
             isLoading -> {
@@ -127,7 +136,15 @@ fun ProfileScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(
+            text = "Cuenta",
+            modifier = Modifier.padding(start = 4.dp),
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
 
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -144,7 +161,7 @@ fun ProfileScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         OutlinedButton(
             onClick = onLogout,
@@ -182,42 +199,112 @@ private fun AccesoPerfil(texto: String, iconRes: Int, onClick: () -> Unit) {
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodyLarge
         )
+        Icon(
+            painter = painterResource(R.drawable.ic_chevron_right),
+            contentDescription = null,
+            tint = PetCareMuted,
+            modifier = Modifier.size(22.dp)
+        )
     }
 }
 
 @Composable
 private fun ProfileContent(profile: UserProfileResponse, onEdit: () -> Unit) {
-    Column(
+    val nombreCompleto = listOf(profile.nombre, profile.apellido)
+        .filter { it.isNotBlank() }
+        .joinToString(" ")
+    val iniciales = listOf(profile.nombre, profile.apellido)
+        .mapNotNull { it.firstOrNull()?.uppercase() }
+        .take(2)
+        .joinToString("")
+        .ifBlank { "U" }
+
+    // Cabecera: franja de color, avatar con iniciales apoyado en el borde y
+    // los datos principales de la persona.
+    Card(
         modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, PetCareLine),
+        shape = MaterialTheme.shapes.extraLarge
     ) {
-        Surface(
-            modifier = Modifier.size(84.dp),
-            shape = CircleShape,
-            color = PetCareTealSoft
-        ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(104.dp)
+                    .background(
+                        Brush.linearGradient(listOf(PetCareTealDark, PetCareTeal))
+                    )
+            )
+
             Column(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 56.dp, start = 20.dp, end = 20.dp, bottom = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                Surface(
+                    modifier = Modifier.size(96.dp),
+                    shape = CircleShape,
+                    color = PetCareTealSoft,
+                    border = BorderStroke(4.dp, MaterialTheme.colorScheme.surface),
+                    shadowElevation = 4.dp
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = iniciales,
+                            color = PetCareTealDark,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
                 Text(
-                    text = profile.nombre.firstOrNull()?.uppercase() ?: "U",
-                    color = PetCareTealDark,
-                    style = MaterialTheme.typography.headlineMedium
+                    text = nombreCompleto,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
                 )
+                Text(
+                    text = profile.email,
+                    color = PetCareMuted,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedButton(
+                    onClick = onEdit,
+                    modifier = Modifier.height(44.dp),
+                    shape = MaterialTheme.shapes.large,
+                    border = BorderStroke(1.dp, PetCareTeal)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_edit),
+                        contentDescription = null,
+                        tint = PetCareTealDark,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Editar perfil", color = PetCareTealDark)
+                }
             }
         }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = "${profile.nombre} ${profile.apellido}",
-            style = MaterialTheme.typography.headlineMedium
-        )
     }
 
-    Spacer(modifier = Modifier.height(18.dp))
+    Spacer(modifier = Modifier.height(20.dp))
+
+    Text(
+        text = "Datos personales",
+        modifier = Modifier.padding(start = 4.dp),
+        style = MaterialTheme.typography.titleMedium
+    )
+
+    Spacer(modifier = Modifier.height(10.dp))
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -225,44 +312,75 @@ private fun ProfileContent(profile: UserProfileResponse, onEdit: () -> Unit) {
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge
     ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            DetailRow(label = "Nombre", value = profile.nombre)
-            DetailRow(label = "Apellido", value = profile.apellido)
-            DetailRow(label = "Correo electrónico", value = profile.email)
+        Column(modifier = Modifier.padding(vertical = 4.dp)) {
             DetailRow(
+                iconRes = R.drawable.ic_person,
+                label = "Nombre completo",
+                value = nombreCompleto
+            )
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 18.dp),
+                color = PetCareLine
+            )
+            DetailRow(
+                iconRes = R.drawable.ic_mail,
+                label = "Correo electrónico",
+                value = profile.email
+            )
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 18.dp),
+                color = PetCareLine
+            )
+            DetailRow(
+                iconRes = R.drawable.ic_phone,
                 label = "Teléfono",
-                value = profile.telefono?.ifBlank { null } ?: "Sin especificar"
+                value = profile.telefono?.ifBlank { null },
+                emptyText = "Sin especificar"
             )
         }
-    }
-
-    Spacer(modifier = Modifier.height(18.dp))
-
-    Button(
-        onClick = onEdit,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(52.dp),
-        shape = MaterialTheme.shapes.large
-    ) {
-        Text("Editar perfil")
     }
 }
 
 @Composable
-private fun DetailRow(label: String, value: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(
-            text = label,
-            color = PetCareMuted,
-            style = MaterialTheme.typography.labelLarge
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyLarge
-        )
+private fun DetailRow(
+    iconRes: Int,
+    label: String,
+    value: String?,
+    emptyText: String = "Sin especificar"
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Surface(
+            modifier = Modifier.size(40.dp),
+            shape = CircleShape,
+            color = PetCareTealSoft
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = null,
+                    tint = PetCareTealDark,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                color = PetCareMuted,
+                style = MaterialTheme.typography.labelMedium
+            )
+            Text(
+                text = value ?: emptyText,
+                color = if (value == null) PetCareMuted else MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
     }
 }

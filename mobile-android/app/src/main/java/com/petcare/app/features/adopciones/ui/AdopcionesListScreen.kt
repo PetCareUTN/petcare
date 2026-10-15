@@ -4,12 +4,14 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,8 +23,11 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -33,6 +38,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
@@ -42,12 +48,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.petcare.app.R
@@ -91,8 +99,11 @@ fun AdopcionesListScreen(
     val pasadas = remember { mutableStateListOf<Int>() }
     val pendientes = publicaciones.filterNot { pasadas.contains(it.idPublicacion) }
 
+    // Sin insets propios: la barra superior e inferior ya los resuelve la
+    // pantalla que contiene a esta, y sumarlos de nuevo le quitaba lugar a la tarjeta.
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -108,50 +119,67 @@ fun AdopcionesListScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(text = "Mascotas en adopción", style = MaterialTheme.typography.headlineSmall)
+                    Text(
+                        text = "Mascotas en adopción",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
                     Text(
                         text = "Encontrá a tu próximo compañero",
                         color = PetCareMuted,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
-                IconButton(onClick = onFiltrosClick) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_filter),
-                        contentDescription = "Filtros",
-                        tint = if (hayFiltrosActivos) PetCareTeal else PetCareTealDark
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                AccesoAdopcion(
-                    texto = "Publicar",
-                    destacado = true,
-                    iconRes = R.drawable.ic_add,
-                    onClick = onPublicarClick
-                )
-                AccesoAdopcion(
-                    texto = "Favoritos",
-                    iconRes = R.drawable.ic_bookmark,
-                    onClick = onMisFavoritosClick
-                )
-                AccesoAdopcion(
-                    texto = "Mis publicaciones",
-                    contador = solicitudesPendientes,
-                    onClick = onMisPublicacionesClick
-                )
-                AccesoAdopcion(texto = "Mis solicitudes", onClick = onMisSolicitudesClick)
+                BotonFiltros(activo = hayFiltrosActivos, onClick = onFiltrosClick)
             }
 
             Spacer(modifier = Modifier.height(14.dp))
+
+            // Los accesos van en una fila que se desplaza; el degradado del borde
+            // derecho deja claro que hay más opciones y no corta el texto en seco.
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    AccesoAdopcion(
+                        texto = "Publicar",
+                        destacado = true,
+                        iconRes = R.drawable.ic_add,
+                        onClick = onPublicarClick
+                    )
+                    AccesoAdopcion(
+                        texto = "Favoritos",
+                        iconRes = R.drawable.ic_bookmark,
+                        onClick = onMisFavoritosClick
+                    )
+                    AccesoAdopcion(
+                        texto = "Mis publicaciones",
+                        contador = solicitudesPendientes,
+                        onClick = onMisPublicacionesClick
+                    )
+                    AccesoAdopcion(texto = "Mis solicitudes", onClick = onMisSolicitudesClick)
+                    Spacer(modifier = Modifier.width(28.dp))
+                }
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .width(28.dp)
+                        .height(40.dp)
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(
+                                    Color.Transparent,
+                                    MaterialTheme.colorScheme.background
+                                )
+                            )
+                        )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             when {
                 isLoading -> {
@@ -368,9 +396,12 @@ private fun TarjetaMascota(
         modifier = Modifier.fillMaxSize(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, PetCareLine),
-        shape = MaterialTheme.shapes.extraLarge
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+        shape = RoundedCornerShape(28.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
+            // La foto es lo que se mira primero: ocupa todo el espacio que deja
+            // la información, con el nombre apoyado encima.
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -394,9 +425,62 @@ private fun TarjetaMascota(
                         Icon(
                             painter = painterResource(R.drawable.ic_paw),
                             contentDescription = null,
-                            modifier = Modifier.size(64.dp),
+                            modifier = Modifier.size(72.dp),
                             tint = PetCareTeal
                         )
+                    }
+                }
+
+                // Degradado para que el nombre se lea sobre cualquier foto.
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(110.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.Transparent,
+                                    // Sin foto, el degradado es verde para no ensuciar el fondo.
+                                    (if (fotoUrl != null) Color.Black else PetCareTealDark)
+                                        .copy(alpha = 0.7f)
+                                )
+                            )
+                        )
+                )
+
+                val ubicacion = listOfNotNull(
+                    publicacion.ubicacion?.takeIf { it.isNotBlank() },
+                    publicacion.provincia?.takeIf { it.isNotBlank() }
+                ).joinToString(", ")
+                if (ubicacion.isNotEmpty()) {
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(14.dp)
+                            .widthIn(max = 220.dp),
+                        color = Color.White.copy(alpha = 0.9f),
+                        shape = CircleShape
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_location),
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = PetCareTealDark
+                            )
+                            Text(
+                                text = ubicacion,
+                                color = PetCareTealDark,
+                                style = MaterialTheme.typography.labelMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
 
@@ -404,9 +488,9 @@ private fun TarjetaMascota(
                     onClick = onToggleFavorito,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(10.dp)
+                        .padding(6.dp)
                 ) {
-                    Surface(color = Color.White.copy(alpha = 0.85f), shape = CircleShape) {
+                    Surface(color = Color.White.copy(alpha = 0.9f), shape = CircleShape) {
                         Icon(
                             painter = painterResource(
                                 if (esFavorito) R.drawable.ic_bookmark else R.drawable.ic_bookmark_outline
@@ -417,68 +501,78 @@ private fun TarjetaMascota(
                         )
                     }
                 }
+
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = mascota.nombre,
+                            color = Color.White,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        val resumen = listOfNotNull(
+                            mascota.edadAnios?.let {
+                                when (it) {
+                                    0 -> "Menos de 1 año"
+                                    1 -> "1 año"
+                                    else -> "$it años"
+                                }
+                            },
+                            sexoLabel(mascota.sexo)
+                        ).joinToString(" · ")
+                        if (resumen.isNotEmpty()) {
+                            Text(
+                                text = resumen,
+                                color = Color.White.copy(alpha = 0.9f),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                    Surface(color = PetCareTeal, shape = CircleShape) {
+                        Text(
+                            text = mascota.especie,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
             }
 
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                    .padding(horizontal = 18.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = mascota.nombre,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Surface(color = PetCareTealSoft, shape = MaterialTheme.shapes.large) {
-                        Text(
-                            text = mascota.especie,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                            color = PetCareTealDark,
-                            style = MaterialTheme.typography.labelLarge
-                        )
+                val datos = listOfNotNull(
+                    mascota.raza?.takeIf { it.isNotBlank() },
+                    tamanoLabel(publicacion.tamano)
+                )
+                if (datos.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        datos.forEach { dato -> EtiquetaDato(texto = dato) }
                     }
                 }
 
                 Text(
-                    text = listOfNotNull(
-                        mascota.edadAnios?.let { if (it == 1) "1 año" else "$it años" },
-                        sexoLabel(mascota.sexo)
-                    ).joinToString(" · "),
-                    color = PetCareMuted,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    text = listOfNotNull(mascota.raza, tamanoLabel(publicacion.tamano)).joinToString(" · "),
-                    color = PetCareMuted,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                // "Nueva Córdoba, Córdoba": el barrio si lo cargaron, y la
-                // provincia, que es por lo que se filtra. Las publicaciones
-                // anteriores al filtro no tienen provincia y muestran solo el
-                // barrio, o nada.
-                listOfNotNull(
-                    publicacion.ubicacion?.takeIf { it.isNotBlank() },
-                    publicacion.provincia?.takeIf { it.isNotBlank() }
-                ).takeIf { it.isNotEmpty() }?.let { partes ->
-                    Text(
-                        text = "📍 ${partes.joinToString(", ")}",
-                        color = PetCareMuted,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
                     text = publicacion.descripcion,
                     style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 3
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
-
-                Spacer(modifier = Modifier.height(4.dp))
 
                 CaracteristicasFila(publicacion)
             }
@@ -486,6 +580,23 @@ private fun TarjetaMascota(
     }
 }
 
+/** Dato corto de la mascota (raza, tamaño) en una pastilla neutra. */
+@Composable
+private fun EtiquetaDato(texto: String) {
+    Surface(color = PetCareSurfaceSoft, shape = CircleShape) {
+        Text(
+            text = texto,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.labelLarge
+        )
+    }
+}
+
+/**
+ * Características en una sola fila de etiquetas, en vez de una lista vertical:
+ * se leen de un vistazo y dejan más lugar a la foto.
+ */
 @Composable
 private fun CaracteristicasFila(publicacion: PublicacionAdopcionResponse) {
     val caracteristicas = buildList {
@@ -494,23 +605,35 @@ private fun CaracteristicasFila(publicacion: PublicacionAdopcionResponse) {
         if (publicacion.compatiblePerros) add("Convive con perros")
         if (publicacion.compatibleGatos) add("Convive con gatos")
         if (publicacion.compatibleNinos) add("Convive con niños")
-        if (publicacion.necesitaPatio) add("🏠 Necesita patio")
+        if (publicacion.necesitaPatio) add("Necesita patio")
     }
     if (caracteristicas.isEmpty()) return
 
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
         caracteristicas.forEach { texto ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (!texto.startsWith("🏠")) {
+            Surface(color = PetCareTealSoft, shape = CircleShape) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_check),
                         contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = PetCareTeal
+                        modifier = Modifier.size(14.dp),
+                        tint = PetCareTealDark
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = texto,
+                        color = PetCareTealDark,
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        softWrap = false
+                    )
                 }
-                Text(text = texto, style = MaterialTheme.typography.bodySmall, color = PetCareMuted)
             }
         }
     }
@@ -524,33 +647,33 @@ private fun BotonesAccion(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.Bottom
     ) {
         BotonCircular(
             iconRes = R.drawable.ic_close,
-            contentDescription = "Pasar",
+            etiqueta = "Pasar",
             containerColor = MaterialTheme.colorScheme.surface,
             iconTint = PetCareError,
             borderColor = PetCareLine,
             onClick = onPasar
         )
-        Spacer(modifier = Modifier.width(20.dp))
+        BotonCircular(
+            iconRes = R.drawable.ic_heart,
+            etiqueta = "Me interesa",
+            containerColor = PetCareTeal,
+            iconTint = Color.White,
+            borderColor = PetCareTeal,
+            tamano = 68,
+            onClick = onMeInteresa
+        )
         BotonCircular(
             iconRes = R.drawable.ic_bookmark_outline,
-            contentDescription = "Guardar",
+            etiqueta = "Guardar",
             containerColor = MaterialTheme.colorScheme.surface,
             iconTint = PetCareTealDark,
             borderColor = PetCareLine,
             onClick = onGuardar
-        )
-        Spacer(modifier = Modifier.width(20.dp))
-        BotonCircular(
-            iconRes = R.drawable.ic_heart,
-            contentDescription = "Me interesa",
-            containerColor = PetCareTeal,
-            iconTint = Color.White,
-            borderColor = PetCareTeal,
-            onClick = onMeInteresa
         )
     }
 }
@@ -558,26 +681,69 @@ private fun BotonesAccion(
 @Composable
 private fun BotonCircular(
     iconRes: Int,
-    contentDescription: String,
+    etiqueta: String,
     containerColor: Color,
     iconTint: Color,
     borderColor: Color,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    tamano: Int = 56
 ) {
-    Surface(
-        modifier = Modifier
-            .size(60.dp)
-            .clickable(onClick = onClick),
-        shape = CircleShape,
-        color = containerColor,
-        border = BorderStroke(1.dp, borderColor)
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                painter = painterResource(iconRes),
-                contentDescription = contentDescription,
-                tint = iconTint,
-                modifier = Modifier.size(26.dp)
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Surface(
+            modifier = Modifier
+                .size(tamano.dp)
+                .clickable(onClick = onClick),
+            shape = CircleShape,
+            color = containerColor,
+            border = BorderStroke(1.dp, borderColor),
+            shadowElevation = 3.dp
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = etiqueta,
+                    tint = iconTint,
+                    modifier = Modifier.size((tamano * 0.43f).dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = etiqueta,
+            color = PetCareMuted,
+            style = MaterialTheme.typography.labelMedium
+        )
+    }
+}
+
+/** Botón de filtros: se tiñe y muestra un punto cuando hay filtros activos. */
+@Composable
+private fun BotonFiltros(activo: Boolean, onClick: () -> Unit) {
+    Box {
+        Surface(
+            modifier = Modifier
+                .size(46.dp)
+                .clickable(onClick = onClick),
+            shape = CircleShape,
+            color = if (activo) PetCareTealSoft else MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, if (activo) PetCareTeal else PetCareLine)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_filter),
+                    contentDescription = "Filtros",
+                    tint = PetCareTealDark,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        }
+        if (activo) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(12.dp)
+                    .background(PetCareTeal, CircleShape)
+                    .border(2.dp, MaterialTheme.colorScheme.background, CircleShape)
             )
         }
     }
@@ -647,39 +813,57 @@ private fun EstadoVacioDescubrimiento(
     onVolverAEmpezar: () -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 12.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = "🐾", style = MaterialTheme.typography.displayMedium)
-        Spacer(modifier = Modifier.height(12.dp))
+        Surface(
+            modifier = Modifier.size(96.dp),
+            shape = CircleShape,
+            color = PetCareTealSoft
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_paw),
+                    contentDescription = null,
+                    modifier = Modifier.size(44.dp),
+                    tint = PetCareTeal
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(18.dp))
         Text(
-            text = "No hay más mascotas por ahora",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
+            text = "Ya viste todas las mascotas",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = "Probá modificando tus filtros.",
+            text = if (hayFiltrosActivos) {
+                "Ninguna coincide con tus filtros. Probá ampliando la búsqueda."
+            } else {
+                "Volvé más tarde: se publican mascotas nuevas todos los días."
+            },
             color = PetCareMuted,
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(20.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlinedButton(onClick = onFiltrosClick, shape = MaterialTheme.shapes.large) {
-                Text("Modificar filtros")
-            }
-            if (hayFiltrosActivos) {
-                OutlinedButton(onClick = onQuitarFiltros, shape = MaterialTheme.shapes.large) {
-                    Text("Ver todas")
-                }
-            } else {
-                OutlinedButton(onClick = onVolverAEmpezar, shape = MaterialTheme.shapes.large) {
-                    Text("Volver a empezar")
-                }
-            }
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(
+            onClick = if (hayFiltrosActivos) onQuitarFiltros else onVolverAEmpezar,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = MaterialTheme.shapes.large
+        ) {
+            Text(if (hayFiltrosActivos) "Ver todas las mascotas" else "Volver a empezar")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        TextButton(onClick = onFiltrosClick) {
+            Text("Modificar filtros", color = PetCareTealDark)
         }
     }
 }

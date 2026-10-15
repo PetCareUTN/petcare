@@ -6,6 +6,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -26,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -37,9 +41,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.petcare.app.features.ble.data.local.MonitoreoSeparacionPreferences
 import com.petcare.app.features.ble.data.remote.TagBleResponse
 import com.petcare.app.features.ble.domain.SensibilidadSeparacion
@@ -50,10 +59,14 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.petcare.app.ui.theme.PetCareError
+import com.petcare.app.ui.components.SeccionFormulario
+import com.petcare.app.ui.components.SeparadorFila
 import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMuted
 import com.petcare.app.R
+import com.petcare.app.ui.theme.PetCareTeal
 import com.petcare.app.ui.theme.PetCareTealDark
+import com.petcare.app.ui.theme.PetCareTealSoft
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -77,40 +90,31 @@ fun PetProfileScreen(
     tagBle: TagBleResponse? = null,
     isLoadingTagBle: Boolean = false,
     tagBleError: String? = null,
-    onVerTagBle: () -> Unit = {}
+    onVerTagBle: () -> Unit = {},
+    // Dueños de la mascota y cómo compartirla con otra persona.
+    onCompartir: () -> Unit = {},
+    // Abre la edición de la mascota. Null si no se puede editar desde acá.
+    onEdit: (() -> Unit)? = null
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .systemBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(20.dp),
+            .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.Start
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_arrow_back),
-                    contentDescription = "Volver",
-                    tint = PetCareTealDark
-                )
-            }
-            Text(
-                text = "Perfil de la mascota",
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.headlineSmall
-            )
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
-
         when {
             isLoading -> {
+                // Mientras carga no hay mascota que mostrar: solo la flecha para salir.
+                IconButton(onClick = onBack) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_arrow_back),
+                        contentDescription = "Volver",
+                        tint = PetCareTealDark
+                    )
+                }
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -122,6 +126,13 @@ fun PetProfileScreen(
             }
 
             errorMessage != null -> {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_arrow_back),
+                        contentDescription = "Volver",
+                        tint = PetCareTealDark
+                    )
+                }
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -151,6 +162,8 @@ fun PetProfileScreen(
             pet != null -> {
                 PetProfileContent(
                     pet = pet,
+                    onBack = onBack,
+                    onEdit = onEdit,
                     onViewHistoria = onViewHistoria,
                     reporteActivo = reporteActivo,
                     isCerrandoReporte = isCerrandoReporte,
@@ -161,7 +174,8 @@ fun PetProfileScreen(
                     tagBle = tagBle,
                     isLoadingTagBle = isLoadingTagBle,
                     tagBleError = tagBleError,
-                    onVerTagBle = onVerTagBle
+                    onVerTagBle = onVerTagBle,
+                    onCompartir = onCompartir
                 )
             }
         }
@@ -171,6 +185,8 @@ fun PetProfileScreen(
 @Composable
 private fun PetProfileContent(
     pet: PetResponse,
+    onBack: () -> Unit,
+    onEdit: (() -> Unit)?,
     onViewHistoria: () -> Unit,
     reporteActivo: ReportePerdidaResponse?,
     isCerrandoReporte: Boolean,
@@ -181,202 +197,369 @@ private fun PetProfileContent(
     tagBle: TagBleResponse?,
     isLoadingTagBle: Boolean,
     tagBleError: String?,
-    onVerTagBle: () -> Unit
+    onVerTagBle: () -> Unit,
+    onCompartir: () -> Unit
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        PetAvatar(
-            petName = pet.nombre,
-            photoPath = pet.foto,
-            modifier = Modifier.size(84.dp),
-            textStyle = MaterialTheme.typography.headlineMedium
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        HeroMascota(pet = pet, onBack = onBack, onEdit = onEdit)
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            text = pet.nombre,
-            style = MaterialTheme.typography.headlineMedium
-        )
-    }
-
-    Spacer(modifier = Modifier.height(18.dp))
-
-    if (reporteActivo != null) {
-        ReportePerdidaBanner(
-            reporte = reporteActivo,
-            onVerUltimaUbicacion = onVerUltimaUbicacion,
-            tieneTagBle = tagBle != null,
-            // Si la carga del tag falló, no sabemos si tiene: igual que cargando.
-            tagBleDesconocido = isLoadingTagBle || tagBleError != null,
-            onVincularTag = onVerTagBle
-        )
-        Spacer(modifier = Modifier.height(18.dp))
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, PetCareLine),
-        shape = MaterialTheme.shapes.extraLarge
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            DetailRow(label = "Especie", value = pet.especie)
-            DetailRow(label = "Raza", value = pet.raza ?: "Sin especificar")
-            DetailRow(
-                label = "Sexo",
-                value = if (pet.sexo.equals("macho", ignoreCase = true)) "Macho" else "Hembra"
+        // Lo que se consulta más seguido, de un vistazo.
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            DatoRapido(
+                etiqueta = "Sexo",
+                valor = if (pet.sexo.equals("macho", ignoreCase = true)) "Macho" else "Hembra",
+                modifier = Modifier.weight(1f)
             )
-            DetailRow(
-                label = "Fecha de nacimiento",
-                value = pet.birthDate ?: "Sin especificar"
+            DatoRapido(
+                etiqueta = "Edad",
+                valor = edadLegible(pet.birthDate) ?: "—",
+                modifier = Modifier.weight(1f)
             )
-            DetailRow(
-                label = "Peso",
-                value = pet.peso?.let { "$it kg" } ?: "Sin especificar"
-            )
-            DetailRow(
-                label = "Esterilizado",
-                value = if (pet.esterilizado) "Si" else "No"
+            DatoRapido(
+                etiqueta = "Peso",
+                valor = pet.peso?.let { "${formatearPeso(it)} kg" } ?: "—",
+                modifier = Modifier.weight(1f)
             )
         }
-    }
 
-    Spacer(modifier = Modifier.height(18.dp))
+        if (reporteActivo != null) {
+            ReportePerdidaBanner(
+                reporte = reporteActivo,
+                onVerUltimaUbicacion = onVerUltimaUbicacion,
+                tieneTagBle = tagBle != null,
+                // Si la carga del tag falló, no sabemos si tiene: igual que cargando.
+                tagBleDesconocido = isLoadingTagBle || tagBleError != null,
+                onVincularTag = onVerTagBle
+            )
+        }
 
-    Text(
-        text = "Informacion medica",
-        style = MaterialTheme.typography.titleLarge
-    )
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Button(
+                onClick = onViewHistoria,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = MaterialTheme.shapes.large
+            ) {
+                Text("Ver historia clinica")
+            }
 
-    Spacer(modifier = Modifier.height(10.dp))
+            Button(
+                onClick = onCompartir,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = MaterialTheme.shapes.large
+            ) {
+                Text("Compartir mascota")
+            }
+        }
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, PetCareLine),
-        shape = MaterialTheme.shapes.extraLarge
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            DetailRow(
+        SeccionFormulario(titulo = "Datos", iconRes = R.drawable.ic_paw) {
+            FilaDato(label = "Especie", value = pet.especie)
+            SeparadorFila()
+            FilaDato(label = "Raza", value = pet.raza ?: "Sin especificar")
+            SeparadorFila()
+            FilaDato(
+                label = "Fecha de nacimiento",
+                value = pet.birthDate?.let { fechaLegible(it) } ?: "Sin especificar"
+            )
+            SeparadorFila()
+            FilaDato(label = "Esterilizado/a", value = if (pet.esterilizado) "Sí" else "No")
+        }
+
+        SeccionFormulario(titulo = "Información médica", iconRes = R.drawable.ic_heart) {
+            FilaDato(
                 label = "Alergias",
                 value = pet.alergias?.ifBlank { null } ?: "Sin alergias registradas"
             )
-            DetailRow(
+            SeparadorFila()
+            FilaDato(
                 label = "Observaciones",
                 value = pet.observaciones?.ifBlank { null } ?: "Sin observaciones registradas"
             )
         }
+
+        SeccionFormulario(
+            titulo = "Tag de localización",
+            iconRes = R.drawable.ic_location,
+            descripcion = "Para encontrarla si se pierde."
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onVerTagBle),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (isLoadingTagBle) {
+                    CircularProgressIndicator(modifier = Modifier.size(22.dp))
+                    Spacer(modifier = Modifier.weight(1f))
+                } else {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Estado",
+                            color = PetCareMuted,
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                        Text(
+                            text = tagBle?.let { "Vinculado (${it.tagId})" } ?: "Sin vincular",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
+                }
+                Text(
+                    text = if (tagBle != null) "Gestionar" else "Vincular",
+                    color = PetCareTealDark,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        if (tagBle != null) {
+            MonitoreoSeparacionCard(tagId = tagBle.tagId, nombreMascota = pet.nombre)
+        }
+
+        if (reporteError != null) {
+            Text(
+                text = reporteError,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+
+        if (reporteActivo != null) {
+            Button(
+                onClick = onMarcarEncontrada,
+                enabled = !isCerrandoReporte,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = MaterialTheme.shapes.large
+            ) {
+                if (isCerrandoReporte) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.height(22.dp),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text("Marcar como encontrada")
+                }
+            }
+        } else {
+            OutlinedButton(
+                onClick = onReportarPerdida,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = MaterialTheme.shapes.large,
+                border = BorderStroke(1.dp, PetCareError)
+            ) {
+                Text(text = "Reportar como perdida", color = PetCareError)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
     }
+}
 
-    Spacer(modifier = Modifier.height(18.dp))
-
-    Text(
-        text = "Tag BLE",
-        style = MaterialTheme.typography.titleLarge
-    )
-
-    Spacer(modifier = Modifier.height(10.dp))
+/**
+ * Cabecera del perfil: la foto de la mascota ocupa el protagonismo, con el
+ * nombre encima y los accesos para volver y editar.
+ */
+@Composable
+private fun HeroMascota(
+    pet: PetResponse,
+    onBack: () -> Unit,
+    onEdit: (() -> Unit)?
+) {
+    val fotoUrl = remember(pet.foto) { resolvePetPhotoUrl(pet.foto) }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onVerTagBle),
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, PetCareLine),
-        shape = MaterialTheme.shapes.extraLarge
+        shape = RoundedCornerShape(28.dp)
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(18.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .height(280.dp)
         ) {
-            if (isLoadingTagBle) {
-                CircularProgressIndicator(modifier = Modifier.size(22.dp))
+            if (fotoUrl != null) {
+                AsyncImage(
+                    model = fotoUrl,
+                    contentDescription = pet.nombre,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
             } else {
-                Column(modifier = Modifier.weight(1f)) {
-                    DetailRow(
-                        label = "Estado",
-                        value = tagBle?.let { "Vinculado (${it.tagId})" } ?: "Sin vincular"
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.linearGradient(listOf(PetCareTealDark, PetCareTeal))
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = pet.nombre.firstOrNull()?.uppercase() ?: "",
+                        color = Color.White.copy(alpha = 0.35f),
+                        style = MaterialTheme.typography.displayLarge,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
-            Text(
-                text = if (tagBle != null) "Gestionar" else "Vincular",
-                color = PetCareTealDark,
-                style = MaterialTheme.typography.labelLarge
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(150.dp)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.65f))
+                        )
+                    )
+            )
+
+            BotonCircularHero(
+                iconRes = R.drawable.ic_arrow_back,
+                descripcion = "Volver",
+                onClick = onBack,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(12.dp)
+            )
+            if (onEdit != null) {
+                BotonCircularHero(
+                    iconRes = R.drawable.ic_edit,
+                    descripcion = "Editar mascota",
+                    onClick = onEdit,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(12.dp)
+                )
+            }
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(horizontal = 20.dp, vertical = 18.dp)
+            ) {
+                Text(
+                    text = pet.nombre,
+                    color = Color.White,
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
+                Text(
+                    text = listOfNotNull(pet.especie, pet.raza?.takeIf { it.isNotBlank() })
+                        .joinToString(" · "),
+                    color = Color.White.copy(alpha = 0.92f),
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BotonCircularHero(
+    iconRes: Int,
+    descripcion: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .size(44.dp)
+            .clickable(onClick = onClick),
+        shape = CircleShape,
+        color = Color.White.copy(alpha = 0.92f),
+        shadowElevation = 2.dp
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                painter = painterResource(iconRes),
+                contentDescription = descripcion,
+                tint = PetCareTealDark,
+                modifier = Modifier.size(22.dp)
             )
         }
     }
+}
 
-    if (tagBle != null) {
-        Spacer(modifier = Modifier.height(10.dp))
-        MonitoreoSeparacionCard(tagId = tagBle.tagId, nombreMascota = pet.nombre)
-    }
-
-    Spacer(modifier = Modifier.height(18.dp))
-
-    Button(
-        onClick = onViewHistoria,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(52.dp),
+@Composable
+private fun DatoRapido(etiqueta: String, valor: String, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier,
+        color = PetCareTealSoft,
         shape = MaterialTheme.shapes.large
     ) {
-        Text("Ver historia clinica")
-    }
-
-    if (reporteError != null) {
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = reporteError,
-            color = MaterialTheme.colorScheme.error,
-            style = MaterialTheme.typography.bodyMedium
-        )
-    }
-
-    Spacer(modifier = Modifier.height(12.dp))
-
-    if (reporteActivo != null) {
-        Button(
-            onClick = onMarcarEncontrada,
-            enabled = !isCerrandoReporte,
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp),
-            shape = MaterialTheme.shapes.large
+                .padding(vertical = 12.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (isCerrandoReporte) {
-                CircularProgressIndicator(
-                    modifier = Modifier.height(22.dp),
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-            } else {
-                Text("Marcar como encontrada")
-            }
-        }
-    } else {
-        OutlinedButton(
-            onClick = onReportarPerdida,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp),
-            shape = MaterialTheme.shapes.large,
-            border = BorderStroke(1.dp, PetCareError)
-        ) {
-            Text(text = "Reportar como perdida", color = PetCareError)
+            Text(
+                text = valor,
+                color = PetCareTealDark,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
+            Text(
+                text = etiqueta,
+                color = PetCareMuted,
+                style = MaterialTheme.typography.labelMedium
+            )
         }
     }
-
-    Spacer(modifier = Modifier.height(24.dp))
 }
+
+@Composable
+private fun FilaDato(label: String, value: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(
+            text = label,
+            color = PetCareMuted,
+            style = MaterialTheme.typography.labelMedium
+        )
+        Text(text = value, style = MaterialTheme.typography.bodyLarge)
+    }
+}
+
+/** "2 años", "5 meses" o "Menos de 1 mes" a partir de la fecha de nacimiento ISO. */
+private fun edadLegible(nacimiento: String?): String? {
+    val fecha = nacimiento?.takeIf { it.isNotBlank() } ?: return null
+    return runCatching {
+        val parsed = SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(fecha) ?: return null
+        val nac = java.util.Calendar.getInstance().apply { time = parsed }
+        val hoy = java.util.Calendar.getInstance()
+        var meses = (hoy.get(java.util.Calendar.YEAR) - nac.get(java.util.Calendar.YEAR)) * 12 +
+            (hoy.get(java.util.Calendar.MONTH) - nac.get(java.util.Calendar.MONTH))
+        if (hoy.get(java.util.Calendar.DAY_OF_MONTH) < nac.get(java.util.Calendar.DAY_OF_MONTH)) meses--
+        when {
+            meses < 0 -> null
+            meses < 1 -> "< 1 mes"
+            meses < 12 -> if (meses == 1) "1 mes" else "$meses meses"
+            else -> (meses / 12).let { if (it == 1) "1 año" else "$it años" }
+        }
+    }.getOrNull()
+}
+
+/** "2026-03-10" -> "10/03/2026" */
+private fun fechaLegible(iso: String): String {
+    val partes = iso.take(10).split("-")
+    return if (partes.size == 3) "${partes[2]}/${partes[1]}/${partes[0]}" else iso
+}
+
+/** 28.0 -> "28", 12.5 -> "12,5" */
+private fun formatearPeso(peso: Double): String =
+    if (peso % 1.0 == 0.0) peso.toInt().toString() else peso.toString().replace('.', ',')
 
 /**
  * Estado "perdida" de la mascota: el reporte abierto y desde cuándo (US-36).

@@ -41,7 +41,8 @@ fun MenuLateral(
     onPublishAdoption: () -> Unit,
     onRequestTurno: () -> Unit,
     onViewMisTurnos: () -> Unit,
-    onServiciosClick: () -> Unit
+    onServiciosClick: () -> Unit,
+    onMascotasCompartidasClick: () -> Unit = {}
 ) {
     ModalDrawerSheet(
         drawerContainerColor = MaterialTheme.colorScheme.surface
@@ -113,6 +114,11 @@ fun MenuLateral(
             texto = "Servicios",
             iconRes = R.drawable.ic_services,
             onClick = onServiciosClick
+        )
+        MenuItem(
+            texto = "Mascotas compartidas",
+            iconRes = R.drawable.ic_person,
+            onClick = onMascotasCompartidasClick
         )
     }
 }
