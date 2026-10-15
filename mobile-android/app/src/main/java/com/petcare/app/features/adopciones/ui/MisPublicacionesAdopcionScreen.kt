@@ -1,5 +1,7 @@
 package com.petcare.app.features.adopciones.ui
 
+import com.petcare.app.ui.components.elevacionTarjeta
+import com.petcare.app.ui.components.elevacionBoton
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -111,6 +113,7 @@ fun MisPublicacionesAdopcionScreen(
             errorMessage != null -> {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
+                    elevation = elevacionTarjeta(),
                     colors = CardDefaults.cardColors(containerColor = PetCareSurfaceSoft),
                     border = BorderStroke(1.dp, PetCareLine),
                     shape = MaterialTheme.shapes.extraLarge
@@ -125,6 +128,8 @@ fun MisPublicacionesAdopcionScreen(
                             style = MaterialTheme.typography.bodyMedium
                         )
                         OutlinedButton(
+                            elevation = elevacionBoton(),
+                            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                             onClick = onRetry,
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.large
@@ -138,6 +143,7 @@ fun MisPublicacionesAdopcionScreen(
             publicaciones.isEmpty() -> {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
+                    elevation = elevacionTarjeta(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, PetCareLine),
                     shape = MaterialTheme.shapes.extraLarge
@@ -193,6 +199,7 @@ private fun MiPublicacionRow(
     val mascota = publicacion.mascota
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge
@@ -261,6 +268,7 @@ private fun MiPublicacionRow(
 
             if (cantidadPendientes > 0) {
                 Button(
+                    elevation = elevacionBoton(),
                     onClick = onVerSolicitudes,
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large
@@ -269,6 +277,8 @@ private fun MiPublicacionRow(
                 }
             } else if (cantidadSolicitudes > 0) {
                 OutlinedButton(
+                    elevation = elevacionBoton(),
+                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                     onClick = onVerSolicitudes,
                     modifier = Modifier.fillMaxWidth(),
                     shape = MaterialTheme.shapes.large
@@ -281,6 +291,8 @@ private fun MiPublicacionRow(
                 "ACTIVA" -> {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         OutlinedButton(
+                            elevation = elevacionBoton(),
+                            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                             onClick = onPausar,
                             enabled = !isProcessing,
                             modifier = Modifier.weight(1f),
@@ -289,6 +301,8 @@ private fun MiPublicacionRow(
                             Text("Pausar")
                         }
                         OutlinedButton(
+                            elevation = elevacionBoton(),
+                            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                             onClick = onCancelar,
                             enabled = !isProcessing,
                             modifier = Modifier.weight(1f),
@@ -301,6 +315,8 @@ private fun MiPublicacionRow(
                 }
                 "PAUSADA" -> {
                     OutlinedButton(
+                        elevation = elevacionBoton(),
+                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                         onClick = onReanudar,
                         enabled = !isProcessing,
                         modifier = Modifier.fillMaxWidth(),

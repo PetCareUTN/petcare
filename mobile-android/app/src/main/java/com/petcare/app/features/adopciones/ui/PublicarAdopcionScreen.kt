@@ -1,5 +1,7 @@
 package com.petcare.app.features.adopciones.ui
 
+import com.petcare.app.ui.components.elevacionTarjeta
+import com.petcare.app.ui.components.elevacionBoton
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -333,6 +335,7 @@ private fun PublicacionExitosa(mensaje: String, onVolver: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(28.dp))
         Button(
+            elevation = elevacionBoton(),
             onClick = onVolver,
             modifier = Modifier
                 .fillMaxWidth()
@@ -407,6 +410,7 @@ private fun SelectablePetCard(
 private fun EmptyPetsCard(onRegisterNewPet: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = PetCareMint),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge
@@ -447,6 +451,7 @@ private fun EmptyPetsCard(onRegisterNewPet: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(18.dp))
             Button(
+                elevation = elevacionBoton(),
                 onClick = onRegisterNewPet,
                 modifier = Modifier
                     .fillMaxWidth()

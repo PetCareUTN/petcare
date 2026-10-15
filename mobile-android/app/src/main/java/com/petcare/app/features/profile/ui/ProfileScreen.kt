@@ -1,5 +1,7 @@
 package com.petcare.app.features.profile.ui
 
+import com.petcare.app.ui.components.elevacionTarjeta
+import com.petcare.app.ui.components.elevacionBoton
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -115,6 +117,7 @@ fun ProfileScreen(
             errorMessage != null -> {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
+                    elevation = elevacionTarjeta(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, PetCareLine),
                     shape = MaterialTheme.shapes.extraLarge
@@ -129,6 +132,8 @@ fun ProfileScreen(
                             style = MaterialTheme.typography.bodyMedium
                         )
                         OutlinedButton(
+                            elevation = elevacionBoton(),
+                            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                             onClick = onRetry,
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.large
@@ -162,6 +167,7 @@ fun ProfileScreen(
 
         Card(
             modifier = Modifier.fillMaxWidth(),
+            elevation = elevacionTarjeta(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             border = BorderStroke(1.dp, PetCareLine),
             shape = MaterialTheme.shapes.extraLarge
@@ -178,6 +184,8 @@ fun ProfileScreen(
         Spacer(modifier = Modifier.height(20.dp))
 
         OutlinedButton(
+            elevation = elevacionBoton(),
+            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
             onClick = onLogout,
             modifier = Modifier
                 .fillMaxWidth()
@@ -239,6 +247,7 @@ private fun ProfileContent(
     // borde y los datos principales de la persona.
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge
@@ -308,6 +317,8 @@ private fun ProfileContent(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 OutlinedButton(
+                    elevation = elevacionBoton(),
+                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                     onClick = onEdit,
                     modifier = Modifier.height(44.dp),
                     shape = MaterialTheme.shapes.large,
@@ -338,6 +349,7 @@ private fun ProfileContent(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge

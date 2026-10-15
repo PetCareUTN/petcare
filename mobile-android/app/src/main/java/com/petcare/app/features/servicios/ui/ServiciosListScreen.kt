@@ -1,5 +1,7 @@
 package com.petcare.app.features.servicios.ui
 
+import com.petcare.app.ui.components.elevacionTarjeta
+import com.petcare.app.ui.components.elevacionBoton
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -102,6 +104,7 @@ fun ServiciosListScreen(
 
             item(key = "publicar") {
                 Button(
+                    elevation = elevacionBoton(),
                     onClick = onCreateServicio,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -163,6 +166,7 @@ fun ServiciosListScreen(
                 errorMessage != null -> item(key = "error") {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
+                        elevation = elevacionTarjeta(),
                         colors = CardDefaults.cardColors(containerColor = PetCareSurfaceSoft),
                         border = BorderStroke(1.dp, PetCareLine),
                         shape = MaterialTheme.shapes.extraLarge
@@ -177,6 +181,8 @@ fun ServiciosListScreen(
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             OutlinedButton(
+                                elevation = elevacionBoton(),
+                                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                                 onClick = onRetry,
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = MaterialTheme.shapes.large
@@ -262,6 +268,7 @@ private fun AccesoServicio(
         modifier = modifier
             .fillMaxHeight()
             .clickable(onClick = onClick),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge
@@ -306,6 +313,7 @@ private fun AccesoServicio(
 private fun EstadoVacioServicios(onPublicar: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge
@@ -346,6 +354,8 @@ private fun EstadoVacioServicios(onPublicar: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(16.dp))
             OutlinedButton(
+                elevation = elevacionBoton(),
+                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                 onClick = onPublicar,
                 shape = MaterialTheme.shapes.large
             ) {
@@ -382,6 +392,7 @@ private fun ServicioCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge

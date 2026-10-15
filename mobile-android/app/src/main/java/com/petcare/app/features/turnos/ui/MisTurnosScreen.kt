@@ -1,5 +1,7 @@
 package com.petcare.app.features.turnos.ui
 
+import com.petcare.app.ui.components.elevacionTarjeta
+import com.petcare.app.ui.components.elevacionBoton
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -136,6 +138,7 @@ fun MisTurnosScreen(
 
             item(key = "nuevo") {
                 Button(
+                    elevation = elevacionBoton(),
                     onClick = onNuevoTurno,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -175,11 +178,12 @@ fun MisTurnosScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             OutlinedButton(
+                                elevation = elevacionBoton(),
                                 onClick = { showDatePicker = true },
                                 modifier = Modifier.weight(1f),
                                 shape = MaterialTheme.shapes.large,
                                 border = BorderStroke(1.dp, PetCareLine),
-                                colors = ButtonDefaults.outlinedButtonColors(
+                                colors = ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface, 
                                     contentColor = PetCareTealDark
                                 )
                             ) {
@@ -232,7 +236,7 @@ fun MisTurnosScreen(
                             style = MaterialTheme.typography.bodyMedium
                         )
                         Spacer(modifier = Modifier.height(12.dp))
-                        Button(onClick = onRetry) {
+                        Button(elevation = elevacionBoton(), onClick = onRetry) {
                             Text("Reintentar")
                         }
                     }
@@ -258,6 +262,7 @@ fun MisTurnosScreen(
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Button(
+                            elevation = elevacionBoton(),
                             onClick = {
                                 rango = RangoFecha.TODOS
                                 filtroFecha = null
@@ -342,6 +347,7 @@ private fun RangoChip(
         modifier = modifier.clickable(onClick = onClick),
         color = if (seleccionado) PetCareTeal else MaterialTheme.colorScheme.surface,
         shape = MaterialTheme.shapes.large,
+        shadowElevation = 2.dp,
         border = BorderStroke(1.dp, if (seleccionado) PetCareTeal else PetCareLine)
     ) {
         Text(
@@ -441,6 +447,7 @@ private fun InfoCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = PetCareSurfaceSoft),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge
@@ -516,6 +523,7 @@ private fun TurnoCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
@@ -629,6 +637,8 @@ private fun TurnoCard(
                 if (turno.puedeCancelar && !esPasado) {
                     Spacer(modifier = Modifier.height(10.dp))
                     OutlinedButton(
+                        elevation = elevacionBoton(),
+                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                         onClick = onCancelarClick,
                         enabled = !isCancelando,
                         modifier = Modifier
@@ -659,6 +669,7 @@ private fun DejaTuResenaCard(onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = PetCareTealSoft),
         border = BorderStroke(1.dp, PetCareTeal.copy(alpha = 0.35f)),
         shape = MaterialTheme.shapes.extraLarge

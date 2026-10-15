@@ -111,6 +111,7 @@ fun SeccionFormulario(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge
@@ -274,6 +275,7 @@ fun GrupoChips(
                     .clickable(enabled = enabled) { onSelect(valor) },
                 color = if (activo) PetCareTeal else MaterialTheme.colorScheme.surface,
                 shape = MaterialTheme.shapes.large,
+                shadowElevation = 2.dp,
                 border = BorderStroke(
                     1.dp,
                     when {
@@ -404,6 +406,7 @@ fun BarraAccionFormulario(
                 AvisoFormulario(texto = aviso)
             }
             Button(
+                elevation = elevacionBoton(),
                 onClick = onClick,
                 enabled = enabled && !isLoading,
                 modifier = Modifier

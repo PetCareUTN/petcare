@@ -1,5 +1,7 @@
 package com.petcare.app.features.perdidas.ui
 
+import com.petcare.app.ui.components.elevacionTarjeta
+import com.petcare.app.ui.components.elevacionBoton
 import android.Manifest
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -342,6 +344,7 @@ fun ReportarMascotaPerdidaScreen(
             Spacer(modifier = Modifier.height(12.dp))
             Card(
                 modifier = Modifier.fillMaxWidth(),
+                elevation = elevacionTarjeta(),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 ),
@@ -360,6 +363,7 @@ fun ReportarMascotaPerdidaScreen(
         Spacer(modifier = Modifier.height(18.dp))
 
         Button(
+            elevation = elevacionBoton(),
             onClick = {
                 val posicion = ubicacion
                 onReportar(
@@ -406,6 +410,8 @@ private fun FechaHoraPerdidaField(
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         OutlinedButton(
+            elevation = elevacionBoton(),
+            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
             onClick = { showDatePicker = true },
             enabled = enabled,
             modifier = Modifier.weight(1f),
@@ -418,6 +424,8 @@ private fun FechaHoraPerdidaField(
             )
         }
         OutlinedButton(
+            elevation = elevacionBoton(),
+            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
             onClick = { showTimePicker = true },
             enabled = enabled,
             modifier = Modifier.weight(1f),

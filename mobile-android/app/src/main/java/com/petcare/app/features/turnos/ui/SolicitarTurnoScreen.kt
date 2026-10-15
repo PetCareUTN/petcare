@@ -1,5 +1,7 @@
 package com.petcare.app.features.turnos.ui
 
+import com.petcare.app.ui.components.elevacionTarjeta
+import com.petcare.app.ui.components.elevacionBoton
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -233,6 +235,7 @@ fun SolicitarTurnoScreen(
             }
             Spacer(modifier = Modifier.height(16.dp))
             Button(
+                elevation = elevacionBoton(),
                 onClick = onBack,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -322,6 +325,8 @@ fun SolicitarTurnoScreen(
                     }
                     else -> {
                         OutlinedButton(
+                            elevation = elevacionBoton(),
+                            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                             onClick = {
                                 vistaMapa = VistaMapaTurno(
                                     titulo = "Veterinarias",
@@ -402,6 +407,8 @@ fun SolicitarTurnoScreen(
                     }
                     else -> {
                         OutlinedButton(
+                            elevation = elevacionBoton(),
+                            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                             onClick = {
                                 vistaMapa = VistaMapaTurno(
                                     titulo = categoriaTexto,
@@ -617,6 +624,7 @@ fun SolicitarTurnoScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             Button(
+                elevation = elevacionBoton(),
                 onClick = {
                     val petId = selectedPetId
                     val hora = selectedHora
@@ -999,6 +1007,7 @@ private fun SelectableOptionCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(
             containerColor = if (selected) PetCareTealSoft else MaterialTheme.colorScheme.surface
         ),
@@ -1068,6 +1077,7 @@ private fun SinHorariosVeterinariaCard(telefono: String?) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = PetCareMint),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.large
@@ -1109,6 +1119,7 @@ private fun SinHorariosVeterinariaCard(telefono: String?) {
 private fun EmptyPetsCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = PetCareMint),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge
@@ -1149,6 +1160,8 @@ private fun TurnoDatePickerField(
 
     // El título "Fecha" ya lo pone la sección que contiene el carrusel y este campo.
     OutlinedButton(
+        elevation = elevacionBoton(),
+        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
         onClick = { showPicker = true },
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,

@@ -1,5 +1,7 @@
 package com.petcare.app.features.pets.ui
 
+import com.petcare.app.ui.components.elevacionTarjeta
+import com.petcare.app.ui.components.elevacionBoton
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -279,6 +281,8 @@ fun CompartirMascotaScreen(
 
                 if (duenios.size > 1) {
                     OutlinedButton(
+                        elevation = elevacionBoton(),
+                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                         onClick = { confirmaSalir = true },
                         enabled = !isSaliendo,
                         modifier = Modifier
@@ -391,6 +395,7 @@ private fun SeccionDuenios(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge
@@ -464,6 +469,7 @@ private fun SeccionCompartir(
     Spacer(modifier = Modifier.height(10.dp))
 
     Button(
+        elevation = elevacionBoton(),
         onClick = onBuscar,
         enabled = dato.isNotBlank() && !isBuscando,
         modifier = Modifier
@@ -520,6 +526,7 @@ private fun ConfirmarUsuarioCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge
@@ -578,6 +585,7 @@ private fun ConfirmarUsuarioCard(
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
+                elevation = elevacionBoton(),
                 onClick = onEnviar,
                 enabled = !isEnviando,
                 modifier = Modifier
@@ -613,6 +621,7 @@ private fun SeccionEnviadas(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 8.dp),
+            elevation = elevacionTarjeta(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             border = BorderStroke(1.dp, PetCareLine),
             shape = MaterialTheme.shapes.extraLarge
@@ -647,6 +656,7 @@ private fun SeccionEnviadas(
 private fun TarjetaError(mensaje: String, onRetry: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = PetCareSurfaceSoft),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge
@@ -661,6 +671,8 @@ private fun TarjetaError(mensaje: String, onRetry: () -> Unit) {
                 style = MaterialTheme.typography.bodyMedium
             )
             OutlinedButton(
+                elevation = elevacionBoton(),
+                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                 onClick = onRetry,
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.large

@@ -1,5 +1,6 @@
 package com.petcare.app.features.pets.ui
 
+import com.petcare.app.ui.components.elevacionBoton
 import android.net.Uri
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -207,6 +208,7 @@ fun EditPetScreen(
         }
 
         Button(
+            elevation = elevacionBoton(),
             onClick = {
                 val nextValidation = PetRegistrationValidator.validate(
                     name = name,
@@ -243,6 +245,8 @@ fun EditPetScreen(
         }
 
         OutlinedButton(
+            elevation = elevacionBoton(),
+            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
             onClick = onCancel,
             enabled = !isSaving,
             modifier = Modifier

@@ -1,5 +1,7 @@
 package com.petcare.app.features.perdidas.ui
 
+import com.petcare.app.ui.components.elevacionTarjeta
+import com.petcare.app.ui.components.elevacionBoton
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -140,6 +142,7 @@ private fun MapaDeteccion(deteccion: DeteccionResponse) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge
@@ -201,6 +204,7 @@ private fun EstadoSinDetecciones() {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge
@@ -247,6 +251,8 @@ private fun TarjetaError(detalle: String, onRetry: () -> Unit) {
                 style = MaterialTheme.typography.bodyMedium
             )
             OutlinedButton(
+                elevation = elevacionBoton(),
+                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                 onClick = onRetry,
                 modifier = Modifier.fillMaxWidth(),
                 shape = MaterialTheme.shapes.large

@@ -1,5 +1,7 @@
 package com.petcare.app.features.adopciones.ui
 
+import com.petcare.app.ui.components.elevacionTarjeta
+import com.petcare.app.ui.components.elevacionBoton
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -194,6 +196,7 @@ fun AdopcionesListScreen(
                 errorMessage != null -> {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
+                        elevation = elevacionTarjeta(),
                         colors = CardDefaults.cardColors(containerColor = PetCareSurfaceSoft),
                         border = BorderStroke(1.dp, PetCareLine),
                         shape = MaterialTheme.shapes.extraLarge
@@ -208,6 +211,8 @@ fun AdopcionesListScreen(
                                 style = MaterialTheme.typography.bodyMedium
                             )
                             OutlinedButton(
+                                elevation = elevacionBoton(),
+                                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                                 onClick = onRetry,
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = MaterialTheme.shapes.large
@@ -764,6 +769,7 @@ private fun AccesoAdopcion(
         modifier = Modifier.clickable(onClick = onClick),
         shape = MaterialTheme.shapes.large,
         color = if (resaltado) PetCareTeal else MaterialTheme.colorScheme.surface,
+        shadowElevation = 2.dp,
         border = BorderStroke(1.dp, if (resaltado) PetCareTeal else PetCareLine)
     ) {
         Row(
@@ -853,6 +859,7 @@ private fun EstadoVacioDescubrimiento(
         )
         Spacer(modifier = Modifier.height(24.dp))
         Button(
+            elevation = elevacionBoton(),
             onClick = if (hayFiltrosActivos) onQuitarFiltros else onVolverAEmpezar,
             modifier = Modifier
                 .fillMaxWidth()

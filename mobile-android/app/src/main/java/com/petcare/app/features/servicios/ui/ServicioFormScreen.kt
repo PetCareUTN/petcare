@@ -1,5 +1,6 @@
 package com.petcare.app.features.servicios.ui
 
+import com.petcare.app.ui.components.elevacionBoton
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -192,6 +193,8 @@ fun ServicioFormScreen(
                 }
 
                 OutlinedButton(
+                    elevation = elevacionBoton(),
+                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                     onClick = {
                         disponibilidades = disponibilidades + DisponibilidadFormItem(key = nextKey++)
                     },

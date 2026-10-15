@@ -1,5 +1,7 @@
 package com.petcare.app.features.pets.ui
 
+import com.petcare.app.ui.components.elevacionTarjeta
+import com.petcare.app.ui.components.elevacionBoton
 import android.Manifest
 import android.os.Build
 import androidx.compose.foundation.BorderStroke
@@ -135,6 +137,7 @@ fun PetProfileScreen(
                 }
                 Card(
                     modifier = Modifier.fillMaxWidth(),
+                    elevation = elevacionTarjeta(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, PetCareLine),
                     shape = MaterialTheme.shapes.extraLarge
@@ -149,6 +152,8 @@ fun PetProfileScreen(
                             style = MaterialTheme.typography.bodyMedium
                         )
                         OutlinedButton(
+                            elevation = elevacionBoton(),
+                            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                             onClick = onRetry,
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.large
@@ -235,6 +240,7 @@ private fun PetProfileContent(
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Button(
+                elevation = elevacionBoton(),
                 onClick = onViewHistoria,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -245,6 +251,7 @@ private fun PetProfileContent(
             }
 
             Button(
+                elevation = elevacionBoton(),
                 onClick = onCompartir,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -330,6 +337,7 @@ private fun PetProfileContent(
 
         if (reporteActivo != null) {
             Button(
+                elevation = elevacionBoton(),
                 onClick = onMarcarEncontrada,
                 enabled = !isCerrandoReporte,
                 modifier = Modifier
@@ -348,6 +356,8 @@ private fun PetProfileContent(
             }
         } else {
             OutlinedButton(
+                elevation = elevacionBoton(),
+                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                 onClick = onReportarPerdida,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -377,6 +387,7 @@ private fun HeroMascota(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, PetCareLine),
         shape = RoundedCornerShape(28.dp)
@@ -578,6 +589,7 @@ private fun ReportePerdidaBanner(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, PetCareError),
         shape = MaterialTheme.shapes.extraLarge
@@ -684,6 +696,7 @@ private fun MonitoreoSeparacionCard(tagId: String, nombreMascota: String) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge

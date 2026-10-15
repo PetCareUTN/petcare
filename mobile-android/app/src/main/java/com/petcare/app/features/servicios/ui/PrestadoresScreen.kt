@@ -1,5 +1,7 @@
 package com.petcare.app.features.servicios.ui
 
+import com.petcare.app.ui.components.elevacionTarjeta
+import com.petcare.app.ui.components.elevacionBoton
 import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -155,6 +157,7 @@ fun PrestadoresScreen(api: ServiciosApi, onBack: () -> Unit, inicial: String = "
                     solicitudes.forEach { s ->
                         Card(
                             modifier = Modifier.fillMaxWidth(),
+                            elevation = elevacionTarjeta(),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                             border = BorderStroke(1.dp, PetCareLine),
                             shape = MaterialTheme.shapes.extraLarge
@@ -183,6 +186,8 @@ fun PrestadoresScreen(api: ServiciosApi, onBack: () -> Unit, inicial: String = "
                                 }
                                 if (s.estado in listOf("correccion", "rechazado")) {
                                     OutlinedButton(
+                                        elevation = elevacionBoton(),
+                                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                                         onClick = {
                                             categoria = s.categoria; datos = s.datos; capacidad = s.datos.capacidad?.toString() ?: ""; identidad = null; evidencia = emptyList(); consentimiento = false
                                         },
@@ -282,6 +287,7 @@ fun PrestadoresScreen(api: ServiciosApi, onBack: () -> Unit, inicial: String = "
                         var puntuacion by remember { mutableStateOf(5) }; var comentario by remember { mutableStateOf("") }; var motivo by remember { mutableStateOf("") }; var reportando by remember { mutableStateOf(false) }
                         Card(
                             modifier = Modifier.fillMaxWidth(),
+                            elevation = elevacionTarjeta(),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                             border = BorderStroke(1.dp, PetCareLine),
                             shape = MaterialTheme.shapes.extraLarge
@@ -289,20 +295,20 @@ fun PrestadoresScreen(api: ServiciosApi, onBack: () -> Unit, inicial: String = "
                             Text("${r.prestador} · ${categoriaLabel(r.categoria)}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             Text("${r.mascota} · ${r.fecha} · ${r.estado}", color = PetCareMuted, style = MaterialTheme.typography.bodyMedium)
                             val termino = runCatching { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.ROOT).apply { timeZone = TimeZone.getTimeZone("America/Argentina/Buenos_Aires") }.parse("${r.fecha} ${r.horaFin.take(5)}")!!.time <= System.currentTimeMillis() }.getOrDefault(false)
-                            if (r.estado == "confirmado" && termino) Button(enabled = !ocupado, shape = MaterialTheme.shapes.large, onClick = { ejecutar("Servicio completado.") { api.completarServicio(r.idTurno) } }) { Text("Confirmar servicio realizado") }
+                            if (r.estado == "confirmado" && termino) Button(elevation = elevacionBoton(), enabled = !ocupado, shape = MaterialTheme.shapes.large, onClick = { ejecutar("Servicio completado.") { api.completarServicio(r.idTurno) } }) { Text("Confirmar servicio realizado") }
                             r.resena?.let { Text("Tu reseña: ${"★".repeat(it.puntuacion)}${"☆".repeat(5 - it.puntuacion)} · ${it.comentario}", style = MaterialTheme.typography.bodyMedium) }
                             if (r.estado == "completado" && r.resena == null) {
                                 Text("Dejá tu reseña", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                                 Text("${"★".repeat(puntuacion)}${"☆".repeat(5 - puntuacion)}  $puntuacion de 5", color = PetCareTealDark, style = MaterialTheme.typography.titleMedium)
                                 Slider(value = puntuacion.toFloat(), onValueChange = { puntuacion = it.toInt() }, valueRange = 1f..5f, steps = 3)
                                 CampoPrestador("Tu experiencia (mín. 10 caracteres)", comentario, 1000, minLineas = 2) { comentario = it }
-                                Button(enabled = !ocupado && comentario.trim().length >= 10, shape = MaterialTheme.shapes.large, onClick = { ejecutar("Reseña publicada.") { api.resenarServicio(r.idTurno, ResenaPrestador(puntuacion, comentario)) } }) { Text("Publicar reseña") }
+                                Button(elevation = elevacionBoton(), enabled = !ocupado && comentario.trim().length >= 10, shape = MaterialTheme.shapes.large, onClick = { ejecutar("Reseña publicada.") { api.resenarServicio(r.idTurno, ResenaPrestador(puntuacion, comentario)) } }) { Text("Publicar reseña") }
                             }
                             if (r.reporte != null) Text("Reporte ${r.reporte}", color = PetCareMuted) else {
                                 TextButton(onClick = { reportando = !reportando }) { Text("Reportar un problema", color = PetCareError) }
                                 if (reportando) {
                                     CampoPrestador("Qué sucedió (mín. 15 caracteres)", motivo, 2000, minLineas = 3) { motivo = it }
-                                    Button(enabled = !ocupado && motivo.trim().length >= 15, shape = MaterialTheme.shapes.large, onClick = { ejecutar("Reporte enviado a administración.") { api.reportarServicio(r.idTurno, mapOf("motivo" to motivo)) } }) { Text("Enviar reporte privado") }
+                                    Button(elevation = elevacionBoton(), enabled = !ocupado && motivo.trim().length >= 15, shape = MaterialTheme.shapes.large, onClick = { ejecutar("Reporte enviado a administración.") { api.reportarServicio(r.idTurno, mapOf("motivo" to motivo)) } }) { Text("Enviar reporte privado") }
                                 }
                             }
                         } }
@@ -317,6 +323,7 @@ fun PrestadoresScreen(api: ServiciosApi, onBack: () -> Unit, inicial: String = "
                     if (!ocupado && catalogo.isEmpty()) EstadoVacioPrestadores("No hay servicios aprobados publicados todavía.")
                     catalogo.forEach { sv -> Card(
                         modifier = Modifier.fillMaxWidth(),
+                        elevation = elevacionTarjeta(),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         border = BorderStroke(1.dp, PetCareLine),
                         shape = MaterialTheme.shapes.extraLarge
@@ -326,7 +333,7 @@ fun PrestadoresScreen(api: ServiciosApi, onBack: () -> Unit, inicial: String = "
                             Text(categoriaLabel(sv.categoria), Modifier.padding(horizontal = 10.dp, vertical = 4.dp), color = PetCareTealDark, style = MaterialTheme.typography.labelLarge)
                         }
                         sv.descripcion?.let { Text(it, color = PetCareMuted, style = MaterialTheme.typography.bodyMedium) }
-                        OutlinedButton(enabled = !ocupado, shape = MaterialTheme.shapes.large, onClick = { ejecutar { perfiles = perfiles + (sv.id to api.perfilPrestador(sv.idUsuario, sv.categoria)) } }) { Text("Ver comprobaciones y reseñas") }
+                        OutlinedButton(elevation = elevacionBoton(), colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface), enabled = !ocupado, shape = MaterialTheme.shapes.large, onClick = { ejecutar { perfiles = perfiles + (sv.id to api.perfilPrestador(sv.idUsuario, sv.categoria)) } }) { Text("Ver comprobaciones y reseñas") }
                         perfiles[sv.id]?.let { p ->
                             if (p.identidadRevisada) Text("✓ Identidad revisada", color = PetCareTealDark)
                             if (p.referenciasComprobadas) Text("✓ Referencias comprobadas", color = PetCareTealDark)
@@ -405,6 +412,7 @@ private fun ArchivoAdjunto(
 private fun EstadoVacioPrestadores(texto: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = PetCareSurfaceSoft),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge

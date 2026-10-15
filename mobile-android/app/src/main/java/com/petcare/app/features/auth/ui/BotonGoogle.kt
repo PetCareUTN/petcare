@@ -1,5 +1,6 @@
 package com.petcare.app.features.auth.ui
 
+import com.petcare.app.ui.components.elevacionBoton
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
@@ -71,6 +72,8 @@ fun BotonGoogle(
     modifier: Modifier = Modifier
 ) {
     OutlinedButton(
+        elevation = elevacionBoton(),
+        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()

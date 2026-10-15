@@ -1,5 +1,7 @@
 package com.petcare.app.features.pets.ui
 
+import com.petcare.app.ui.components.elevacionTarjeta
+import com.petcare.app.ui.components.elevacionBoton
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -142,6 +144,7 @@ fun SolicitudesCompartirRecibidasScreen(
 
             solicitudes.isEmpty() -> Card(
                 modifier = Modifier.fillMaxWidth(),
+                elevation = elevacionTarjeta(),
                 colors = CardDefaults.cardColors(containerColor = PetCareSurfaceSoft),
                 border = BorderStroke(1.dp, PetCareLine),
                 shape = MaterialTheme.shapes.extraLarge
@@ -160,6 +163,8 @@ fun SolicitudesCompartirRecibidasScreen(
                         style = MaterialTheme.typography.bodySmall
                     )
                     OutlinedButton(
+                        elevation = elevacionBoton(),
+                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                         onClick = { scope.launch { cargar() } },
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.large
@@ -173,6 +178,7 @@ fun SolicitudesCompartirRecibidasScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 12.dp),
+                    elevation = elevacionTarjeta(),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface
                     ),
@@ -212,6 +218,7 @@ fun SolicitudesCompartirRecibidasScreen(
 
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(
+                                elevation = elevacionBoton(),
                                 onClick = {
                                     procesandoId = solicitud.idSolicitud
                                     error = null
@@ -238,6 +245,8 @@ fun SolicitudesCompartirRecibidasScreen(
                             ) { Text(if (procesando) "..." else "Aceptar") }
 
                             OutlinedButton(
+                                elevation = elevacionBoton(),
+                                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                                 onClick = {
                                     procesandoId = solicitud.idSolicitud
                                     error = null
