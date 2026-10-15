@@ -7,6 +7,7 @@ import { AuthService } from '../../auth/services/auth-service';
 import {
   AppointmentStatus,
   CancelarTurnoVeterinarioRequest,
+  RegistrarAsistenciaRequest,
   TurnoVeterinarioResponse,
 } from '../models/turno-veterinario';
 
@@ -31,6 +32,27 @@ export class TurnosVeterinariosService {
   ): Observable<TurnoVeterinarioResponse> {
     return this.http
       .patch<TurnoVeterinarioResponse>(`${this.baseUrl}/${idTurno}/cancelar`, data, {
+        headers: this.authHeaders(),
+      })
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
+  /** Cierra el turno indicando si el cliente se presento (P1-193). */
+  registrarAsistencia(
+    idTurno: number,
+    data: RegistrarAsistenciaRequest,
+  ): Observable<TurnoVeterinarioResponse> {
+    return this.http
+      .patch<TurnoVeterinarioResponse>(`${this.baseUrl}/${idTurno}/asistencia`, data, {
+        headers: this.authHeaders(),
+      })
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
+  /** Vuelve el turno a confirmado. El backend solo lo permite el mismo dia. */
+  revertirAsistencia(idTurno: number): Observable<TurnoVeterinarioResponse> {
+    return this.http
+      .delete<TurnoVeterinarioResponse>(`${this.baseUrl}/${idTurno}/asistencia`, {
         headers: this.authHeaders(),
       })
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));

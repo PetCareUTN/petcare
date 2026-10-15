@@ -79,7 +79,8 @@
 .status-filter,
 .btn-primary,
 .btn-secondary,
-.btn-danger {
+.btn-danger,
+.btn-warning {
   border-radius: var(--radius-sm);
   font: inherit;
   font-weight: 700;
@@ -369,6 +370,31 @@
   text-decoration: line-through;
 }
 
+/* Estados de asistencia (P1-193). Asistio usa el verde de marca; ausente un
+   gris apagado, porque es informacion neutra y no un error. */
+.event-chip.asistio,
+.event-block.asistio {
+  border-left-color: var(--primary);
+  background-color: color-mix(in srgb, var(--primary) 14%, white);
+  color: var(--primary);
+}
+
+.event-chip.ausente,
+.event-block.ausente {
+  border-left-color: var(--estado-pendiente);
+  background-color: color-mix(in srgb, var(--estado-pendiente) 14%, white);
+  color: var(--estado-pendiente);
+}
+
+/* Turno que ya paso y el veterinario todavia no cerro: se destaca para que no
+   quede sin registrar. */
+.event-chip.espera-registro,
+.event-block.espera-registro {
+  border-left-style: dashed;
+  border-left-width: 4px;
+  font-weight: 600;
+}
+
 /* Sobreturno: cupo extra cargado por el veterinario, no un turno reservado. */
 .event-chip.sobreturno,
 .event-block.sobreturno {
@@ -614,8 +640,28 @@
 
 .btn-primary,
 .btn-secondary,
-.btn-danger {
+.btn-danger,
+.btn-warning {
   padding: 0.65rem 1rem;
+}
+
+/* "No se presentó": ambar, para que se distinga del verde de "Se presentó" sin
+   usar el rojo, que en este panel significa cancelar el turno (P1-193). */
+.btn-warning {
+  border: none;
+  background-color: var(--estado-pendiente);
+  color: #ffffff;
+}
+
+.btn-warning:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.confirm-question {
+  margin: 0 0 var(--spacing-sm);
+  font-size: 0.95rem;
+  line-height: 1.45;
 }
 
 .btn-primary {
