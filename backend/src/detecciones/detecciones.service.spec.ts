@@ -320,7 +320,9 @@ describe('DeteccionesService', () => {
   describe('aviso al dueño (US-41)', () => {
     it('avisa al dueño cuando entra una detección nueva', async () => {
       tagsBleRepository.findOne.mockResolvedValue(tagVinculado);
-      reportesPerdidaService.buscarReporteActivo.mockResolvedValue(reporteActivo);
+      reportesPerdidaService.buscarReporteActivo.mockResolvedValue(
+        reporteActivo,
+      );
 
       await service.registrar(dto());
 
@@ -328,15 +330,36 @@ describe('DeteccionesService', () => {
         notificacionesDeteccionesService.notificarDeteccion,
       ).toHaveBeenCalledWith({
         idReporte: ID_REPORTE,
-        idDuenio: ID_DUENIO,
+        idsDuenios: [ID_DUENIO],
         nombreMascota: 'Firulais',
         detectadoEn: new Date('2026-09-12T18:30:00.000Z'),
       });
     });
 
+    it('avisa a todos los dueños de la mascota, no solo a quien hizo el reporte', async () => {
+      tagsBleRepository.findOne.mockResolvedValue(tagVinculado);
+      reportesPerdidaService.buscarReporteActivo.mockResolvedValue({
+        ...reporteActivo,
+        mascota: {
+          ...reporteActivo.mascota,
+          usuarios: [{ idUsuario: ID_DUENIO }, { idUsuario: 99 }],
+        },
+      });
+
+      await service.registrar(dto());
+
+      expect(
+        notificacionesDeteccionesService.notificarDeteccion,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ idsDuenios: [ID_DUENIO, 99] }),
+      );
+    });
+
     it('no avisa cuando el celular reenvía una detección que ya estaba', async () => {
       tagsBleRepository.findOne.mockResolvedValue(tagVinculado);
-      reportesPerdidaService.buscarReporteActivo.mockResolvedValue(reporteActivo);
+      reportesPerdidaService.buscarReporteActivo.mockResolvedValue(
+        reporteActivo,
+      );
       insertBuilder.execute.mockResolvedValue({ raw: [] });
 
       await expect(service.registrar(dto())).resolves.toBe('duplicada');

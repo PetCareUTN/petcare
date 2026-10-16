@@ -16,6 +16,7 @@ import { UsersModule } from './users/users.module';
 import { RolesModule } from './roles/roles.module';
 import { User } from './users/entities/user.entity';
 import { Role } from './roles/entities/role.entity';
+import { MascotasCompartidasModule } from './mascotas-compartidas/mascotas-compartidas.module';
 import { MascotasModule } from './mascotas/mascotas.module';
 import { Mascota } from './mascotas/entities/mascota.entity';
 import { Veterinario } from './veterinarios/entities/veterinario.entity';
@@ -39,6 +40,7 @@ import { TurnosVeterinariosModule } from './turnos-veterinarios/turnos-veterinar
 import { AuditoriaUsuario } from './admin/entities/auditoria-usuario.entity';
 import { AdminModule } from './admin/admin.module';
 import { SolicitudAdopcion } from './solicitudes-adopcion/entities/solicitud-adopcion.entity';
+import { SolicitudCompartirMascota } from './mascotas-compartidas/entities/solicitud-compartir-mascota.entity';
 import { SolicitudesAdopcionModule } from './solicitudes-adopcion/solicitudes-adopcion.module';
 import { TurnoServicio } from './turnos-servicios/entities/turno-servicio.entity';
 import { TurnosServiciosModule } from './turnos-servicios/turnos-servicios.module';
@@ -95,6 +97,7 @@ dotenv.config();
         TurnoVeterinario,
         AuditoriaUsuario,
         SolicitudAdopcion,
+        SolicitudCompartirMascota,
         TurnoServicio,
         Favorito,
         DescarteAdopcion,
@@ -112,6 +115,7 @@ dotenv.config();
     UsersModule,
     RolesModule,
     MascotasModule,
+    MascotasCompartidasModule,
     VeterinariosModule,
     NotificacionesModule,
     MailModule,

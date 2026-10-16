@@ -1,5 +1,7 @@
 package com.petcare.app.features.auth.ui
 
+import com.petcare.app.ui.components.elevacionTarjeta
+import com.petcare.app.ui.components.elevacionBoton
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -76,6 +78,7 @@ fun CompletarRegistroGoogleScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 24.dp),
+            elevation = elevacionTarjeta(),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface
             ),
@@ -123,6 +126,7 @@ fun CompletarRegistroGoogleScreen(
                 }
 
                 Button(
+                    elevation = elevacionBoton(),
                     onClick = {
                         val documento = numeroDocumento.trim()
                         documentoError = when {

@@ -164,6 +164,7 @@ export class MascotasService {
       foto: fotoPath,
       observaciones: dto.observaciones ?? null,
       alergias: dto.alergias ?? null,
+      idDuenioPrincipal: duenio.idUsuario,
       usuarios: [duenio],
     });
 

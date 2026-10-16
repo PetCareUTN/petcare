@@ -1,5 +1,8 @@
 package com.petcare.app.features.historiaclinica.ui
 
+import com.petcare.app.ui.components.elevacionTarjeta
+import com.petcare.app.ui.components.elevacionBoton
+import com.petcare.app.ui.components.elevacionBotonContorno
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -94,6 +97,7 @@ fun HistoriaClinicaScreen(
         if (!isLoading && errorMessage == null && eventos.isNotEmpty()) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
+                    elevation = elevacionBoton(),
                     onClick = onExportPdf,
                     enabled = canExport && !isExporting,
                     modifier = Modifier.fillMaxWidth(),
@@ -102,6 +106,8 @@ fun HistoriaClinicaScreen(
                     Text("Exportar historial (PDF)")
                 }
                 OutlinedButton(
+                    elevation = elevacionBotonContorno(),
+                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                     onClick = onExportArchivos,
                     enabled = hasArchivos && !isExporting,
                     modifier = Modifier.fillMaxWidth(),
@@ -156,6 +162,7 @@ fun HistoriaClinicaScreen(
             errorMessage != null -> {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
+                    elevation = elevacionTarjeta(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, PetCareLine),
                     shape = MaterialTheme.shapes.extraLarge
@@ -170,6 +177,8 @@ fun HistoriaClinicaScreen(
                             style = MaterialTheme.typography.bodyMedium
                         )
                         OutlinedButton(
+                            elevation = elevacionBotonContorno(),
+                            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                             onClick = onRetry,
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.large
@@ -183,6 +192,7 @@ fun HistoriaClinicaScreen(
             eventos.isEmpty() -> {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
+                    elevation = elevacionTarjeta(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, PetCareLine),
                     shape = MaterialTheme.shapes.extraLarge
@@ -219,6 +229,7 @@ fun HistoriaClinicaScreen(
 private fun EventoCard(evento: EventoClinicoResponse) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge

@@ -10,6 +10,7 @@ import com.petcare.app.features.ble.data.remote.TagsBleApi
 import com.petcare.app.features.historiaclinica.data.remote.HistoriaClinicaApi
 import com.petcare.app.features.notificaciones.data.remote.NotificacionesApi
 import com.petcare.app.features.perdidas.data.remote.ReportesPerdidaApi
+import com.petcare.app.features.pets.data.remote.MascotasCompartidasApi
 import com.petcare.app.features.pets.data.remote.PetsApi
 import com.petcare.app.features.profile.data.remote.ProfileApi
 import com.petcare.app.features.servicios.data.remote.ServiciosApi
@@ -36,6 +37,10 @@ object RetrofitClient {
     fun petsApi(sessionStore: SessionStore): PetsApi =
         createRetrofit(sessionStore)
             .create(PetsApi::class.java)
+
+    fun mascotasCompartidasApi(sessionStore: SessionStore): MascotasCompartidasApi =
+        createRetrofit(sessionStore)
+            .create(MascotasCompartidasApi::class.java)
 
     fun historiaClinicaApi(sessionStore: SessionStore): HistoriaClinicaApi =
         createRetrofit(sessionStore)

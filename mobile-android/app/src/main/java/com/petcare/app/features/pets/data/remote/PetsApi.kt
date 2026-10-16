@@ -27,7 +27,12 @@ data class PetResponse(
     val esterilizado: Boolean,
     val foto: String?,
     val observaciones: String?,
-    val alergias: String?
+    val alergias: String?,
+
+    // Dueños de la mascota (ya puede tener varios) y el que puede compartirla.
+    // Con valor por defecto para no romper respuestas de un backend anterior.
+    val idUsuarios: List<Int> = emptyList(),
+    val idDuenioPrincipal: Int? = null
 )
 
 data class CreatePetRequest(

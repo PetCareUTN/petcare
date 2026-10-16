@@ -12,4 +12,8 @@ export enum NotificationType {
   SUSCRIPCION_GRACIA_POR_VENCER = 'suscripcion_gracia_por_vencer',
   SUSCRIPCION_RENOVADA = 'suscripcion_renovada',
   SUSCRIPCION_SUSPENDIDA = 'suscripcion_suspendida',
+  SOLICITUD_COMPARTIR_MASCOTA = 'solicitud_compartir_mascota',
+  COMPARTIR_MASCOTA_ACEPTADA = 'compartir_mascota_aceptada',
+  COMPARTIR_MASCOTA_RECHAZADA = 'compartir_mascota_rechazada',
+  COMPARTIR_MASCOTA_BAJA = 'compartir_mascota_baja',
 }

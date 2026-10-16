@@ -117,10 +117,11 @@ export class ReportesPerdidaService {
         mascota: { idMascota },
         estado: ReportePerdidaEstado.ACTIVO,
       },
-      // El aviso de US-41 necesita a quién avisarle y el nombre de la mascota.
+      // El aviso de US-41 necesita a quiénes avisarles (todos los dueños de la
+      // mascota) y el nombre de la mascota.
       // Va acá y no en `findReporteActivo` para que `tieneReporteActivo`, que
       // solo pregunta si existe, siga sin traer los joins.
-      relations: ['usuario', 'mascota'],
+      relations: ['usuario', 'mascota', 'mascota.usuarios'],
     });
   }
 

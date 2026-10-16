@@ -51,6 +51,14 @@ export class Mascota {
   @Column({ type: 'text', nullable: true })
   alergias: string | null;
 
+  /**
+   * Dueño que registró la mascota. Es el único que puede compartirla con otras
+   * personas. Si se va, pasa a serlo el dueño que se sumó primero. Null solo en
+   * datos viejos: ver `MascotasCompartidasService`.
+   */
+  @Column({ name: 'id_duenio_principal', type: 'integer', nullable: true })
+  idDuenioPrincipal: number | null;
+
   @ManyToMany(() => User, (user) => user.mascotas)
   @JoinTable({
     name: 'usuarios_mascotas',

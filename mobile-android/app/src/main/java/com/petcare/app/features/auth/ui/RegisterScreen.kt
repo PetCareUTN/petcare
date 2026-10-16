@@ -1,5 +1,6 @@
 package com.petcare.app.features.auth.ui
 
+import com.petcare.app.ui.components.elevacionBoton
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -177,6 +178,7 @@ fun RegisterScreen(
                     )
 
                     Button(
+                        elevation = elevacionBoton(),
                         onClick = onNavigateToLogin,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -363,6 +365,7 @@ fun RegisterScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             Button(
+                elevation = elevacionBoton(),
                 onClick = {
                     nombreError = RegisterValidator.validateNombre(nombre)
                     apellidoError = RegisterValidator.validateApellido(apellido)

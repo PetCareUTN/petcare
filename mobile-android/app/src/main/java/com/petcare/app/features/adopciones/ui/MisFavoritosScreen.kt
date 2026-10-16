@@ -1,5 +1,7 @@
 package com.petcare.app.features.adopciones.ui
 
+import com.petcare.app.ui.components.elevacionTarjeta
+import com.petcare.app.ui.components.elevacionBotonContorno
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -102,6 +104,7 @@ fun MisFavoritosScreen(
             errorMessage != null -> {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
+                    elevation = elevacionTarjeta(),
                     colors = CardDefaults.cardColors(containerColor = PetCareSurfaceSoft),
                     border = BorderStroke(1.dp, PetCareLine),
                     shape = MaterialTheme.shapes.extraLarge
@@ -116,6 +119,8 @@ fun MisFavoritosScreen(
                             style = MaterialTheme.typography.bodyMedium
                         )
                         OutlinedButton(
+                            elevation = elevacionBotonContorno(),
+                            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                             onClick = onRetry,
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.large
@@ -129,6 +134,7 @@ fun MisFavoritosScreen(
             favoritos.isEmpty() -> {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
+                    elevation = elevacionTarjeta(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, PetCareLine),
                     shape = MaterialTheme.shapes.extraLarge
@@ -176,6 +182,7 @@ private fun FavoritoRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge
