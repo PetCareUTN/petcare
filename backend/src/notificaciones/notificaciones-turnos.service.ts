@@ -5,14 +5,26 @@ import { NotificacionesService } from './notificaciones.service';
 /** Quién de las dos partes de un turno ejecutó la acción. */
 export type ParteTurno = 'duenio' | 'prestador';
 
+/** Un dueño de la mascota del turno. */
+export interface DuenioTurno {
+  idUsuario: number;
+  nombre: string;
+}
+
 /**
  * Datos mínimos de un turno para redactar sus notificaciones, iguales para
  * turnos veterinarios y de servicios.
  */
 export interface DatosTurno {
+  /** Dueño que reservó el turno. */
   idDuenio: number;
   idPrestador: number;
   nombreDuenio: string;
+  /**
+   * Todos los dueños de la mascota (una mascota compartida tiene varios). Si no
+   * viene, se toma solo a quien reservó. Todos reciben los avisos del turno.
+   */
+  duenios?: DuenioTurno[];
   nombrePrestador: string;
   nombreMascota: string;
   /** Formato YYYY-MM-DD */
@@ -40,17 +52,24 @@ export class NotificacionesTurnosService {
 
   /**
    * Turno dado de alta. Con el turnero automático el turno nace confirmado,
-   * así que se notifica a las dos partes en el mismo momento.
+   * así que se notifica a las dos partes en el mismo momento. Si la mascota
+   * tiene varios dueños, el que reservó recibe el aviso con "tu turno" y los
+   * demás con el nombre de quien lo reservó.
    */
   async notificarTurnoConfirmado(turno: DatosTurno): Promise<void> {
     const cuando = `${this.formatearFecha(turno.fecha)} a las ${this.formatearHora(turno.hora)}`;
 
-    await this.registrar(
-      turno.idDuenio,
-      NotificationType.TURNO_CONFIRMADO,
-      'Turno confirmado',
-      `Tu turno de ${turno.servicio} para ${turno.nombreMascota} con ${turno.nombrePrestador} quedó confirmado para el ${cuando}.`,
-    );
+    for (const duenio of this.duenios(turno)) {
+      const loReservo = duenio.idUsuario === turno.idDuenio;
+      await this.registrar(
+        duenio.idUsuario,
+        NotificationType.TURNO_CONFIRMADO,
+        'Turno confirmado',
+        loReservo
+          ? `Tu turno de ${turno.servicio} para ${turno.nombreMascota} con ${turno.nombrePrestador} quedó confirmado para el ${cuando}.`
+          : `${turno.nombreDuenio} reservó un turno de ${turno.servicio} para ${turno.nombreMascota} con ${turno.nombrePrestador} el ${cuando}.`,
+      );
+    }
 
     await this.registrar(
       turno.idPrestador,
@@ -61,25 +80,56 @@ export class NotificacionesTurnosService {
   }
 
   /**
-   * Turno cancelado. Solo se notifica a la contraparte: quien canceló ya
-   * conoce el cambio porque lo ejecutó.
+   * Turno cancelado. Se notifica a todos menos a quien canceló, que ya conoce
+   * el cambio porque lo ejecutó: si canceló un dueño, avisa al prestador y a
+   * los demás dueños; si canceló el prestador, avisa a todos los dueños.
+   *
+   * @param idQuienCancelo Dueño que canceló, cuando fue uno de los dueños.
+   *   Si no viene se toma a quien reservó.
    */
   async notificarTurnoCancelado(
     turno: DatosTurno,
     canceladoPor: ParteTurno,
     motivo: string | null,
+    idQuienCancelo: number = turno.idDuenio,
   ): Promise<void> {
     const cuando = `${this.formatearFecha(turno.fecha)} a las ${this.formatearHora(turno.hora)}`;
     const esDuenio = canceladoPor === 'duenio';
-    const destinatario = esDuenio ? turno.idPrestador : turno.idDuenio;
-    const quienCancelo = esDuenio ? turno.nombreDuenio : turno.nombrePrestador;
     const detalleMotivo = motivo ? ` Motivo: ${motivo}` : '';
+    const duenios = this.duenios(turno);
 
-    await this.registrar(
-      destinatario,
-      NotificationType.TURNO_CANCELADO,
-      'Turno cancelado',
-      `${quienCancelo} canceló el turno de ${turno.servicio} para ${turno.nombreMascota} del ${cuando}.${detalleMotivo}`,
+    const quienCancelo = esDuenio
+      ? (duenios.find((d) => d.idUsuario === idQuienCancelo)?.nombre ??
+        turno.nombreDuenio)
+      : turno.nombrePrestador;
+
+    const destinatarios = esDuenio
+      ? [
+          turno.idPrestador,
+          ...duenios
+            .filter((d) => d.idUsuario !== idQuienCancelo)
+            .map((d) => d.idUsuario),
+        ]
+      : duenios.map((d) => d.idUsuario);
+
+    for (const destinatario of destinatarios) {
+      await this.registrar(
+        destinatario,
+        NotificationType.TURNO_CANCELADO,
+        'Turno cancelado',
+        `${quienCancelo} canceló el turno de ${turno.servicio} para ${turno.nombreMascota} del ${cuando}.${detalleMotivo}`,
+      );
+    }
+  }
+
+  /** Dueños a avisar, sin repetidos; si no se informan, solo quien reservó. */
+  private duenios(turno: DatosTurno): DuenioTurno[] {
+    const lista = turno.duenios?.length
+      ? turno.duenios
+      : [{ idUsuario: turno.idDuenio, nombre: turno.nombreDuenio }];
+
+    return lista.filter(
+      (d, i) => lista.findIndex((o) => o.idUsuario === d.idUsuario) === i,
     );
   }
 

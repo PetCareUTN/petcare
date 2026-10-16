@@ -1,5 +1,8 @@
 package com.petcare.app.features.adopciones.ui
 
+import com.petcare.app.ui.components.elevacionTarjeta
+import com.petcare.app.ui.components.elevacionBoton
+import com.petcare.app.ui.components.elevacionBotonContorno
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
@@ -95,6 +98,7 @@ fun MisSolicitudesAdopcionScreen(
             errorMessage != null -> {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
+                    elevation = elevacionTarjeta(),
                     colors = CardDefaults.cardColors(containerColor = PetCareSurfaceSoft),
                     border = BorderStroke(1.dp, PetCareLine),
                     shape = MaterialTheme.shapes.extraLarge
@@ -109,6 +113,8 @@ fun MisSolicitudesAdopcionScreen(
                             style = MaterialTheme.typography.bodyMedium
                         )
                         OutlinedButton(
+                            elevation = elevacionBotonContorno(),
+                            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                             onClick = onRetry,
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.large
@@ -122,6 +128,7 @@ fun MisSolicitudesAdopcionScreen(
             solicitudes.isEmpty() -> {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
+                    elevation = elevacionTarjeta(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = BorderStroke(1.dp, PetCareLine),
                     shape = MaterialTheme.shapes.extraLarge
@@ -158,6 +165,7 @@ fun MisSolicitudesAdopcionScreen(
 private fun MiSolicitudRow(solicitud: SolicitudAdopcionResponse) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge
@@ -230,6 +238,7 @@ internal fun BloqueMatch(nombreContacto: String, telefonoContacto: String?) {
             )
             if (!telefonoContacto.isNullOrBlank()) {
                 Button(
+                    elevation = elevacionBoton(),
                     onClick = {
                         val numero = telefonoContacto.filter { it.isDigit() }
                         context.startActivity(

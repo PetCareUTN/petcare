@@ -1,5 +1,6 @@
 package com.petcare.app.features.profile.ui
 
+import com.petcare.app.ui.components.elevacionBoton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -101,6 +102,7 @@ fun ChangeEmailScreen(
             )
 
             Button(
+                elevation = elevacionBoton(),
                 onClick = {
                     nuevoEmailError = when {
                         nuevoEmail.isBlank() -> "El nuevo email es obligatorio"
@@ -146,6 +148,7 @@ fun ChangeEmailScreen(
             )
 
             Button(
+                elevation = elevacionBoton(),
                 onClick = {
                     codigoError = if (codigo.isBlank()) "El codigo es obligatorio" else null
 

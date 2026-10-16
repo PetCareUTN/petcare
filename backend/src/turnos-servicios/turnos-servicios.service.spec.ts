@@ -83,7 +83,9 @@ describe('TurnosServiciosService', () => {
   } as TurnoServicio;
 
   beforeEach(async () => {
-    jest.spyOn(Date, 'now').mockReturnValue(new Date('2026-09-05T12:00:00Z').getTime());
+    jest
+      .spyOn(Date, 'now')
+      .mockReturnValue(new Date('2026-09-05T12:00:00Z').getTime());
     notificacionesTurnosService = {
       notificarTurnoConfirmado: jest.fn(),
       notificarTurnoCancelado: jest.fn(),
@@ -92,14 +94,25 @@ describe('TurnosServiciosService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TurnosServiciosService,
-        { provide: PrestadoresService, useValue: { exigirAprobado: jest.fn().mockResolvedValue({ estado: 'aprobado' }) } },
+        {
+          provide: PrestadoresService,
+          useValue: {
+            exigirAprobado: jest.fn().mockResolvedValue({ estado: 'aprobado' }),
+          },
+        },
         {
           provide: NotificacionesTurnosService,
           useValue: notificacionesTurnosService,
         },
         {
           provide: getRepositoryToken(TurnoServicio),
-          useValue: { find: jest.fn(), findOne: jest.fn(), save: jest.fn(), create: jest.fn(), update: jest.fn().mockResolvedValue({ affected: 1 }) },
+          useValue: {
+            find: jest.fn(),
+            findOne: jest.fn(),
+            save: jest.fn(),
+            create: jest.fn(),
+            update: jest.fn().mockResolvedValue({ affected: 1 }),
+          },
         },
         {
           provide: getRepositoryToken(Servicio),
@@ -144,7 +157,10 @@ describe('TurnosServiciosService', () => {
       const turnoCreado = { ...dto, estado: TurnoServicioEstado.CONFIRMADO };
       turnosRepository.create.mockReturnValue(turnoCreado);
       turnosRepository.save.mockResolvedValue({ ...turnoCreado, idTurno: 30 });
-      turnosRepository.findOne.mockResolvedValue({ ...turnoConfirmado, idTurno: 30 });
+      turnosRepository.findOne.mockResolvedValue({
+        ...turnoConfirmado,
+        idTurno: 30,
+      });
 
       const result = await service.solicitar(idDueno, dto);
 
@@ -167,7 +183,10 @@ describe('TurnosServiciosService', () => {
       turnosRepository.find.mockResolvedValue([]);
       turnosRepository.create.mockReturnValue({});
       turnosRepository.save.mockResolvedValue({ idTurno: 30 });
-      turnosRepository.findOne.mockResolvedValue({ ...turnoConfirmado, idTurno: 30 });
+      turnosRepository.findOne.mockResolvedValue({
+        ...turnoConfirmado,
+        idTurno: 30,
+      });
 
       await service.solicitar(idDueno, dto);
 
@@ -194,8 +213,14 @@ describe('TurnosServiciosService', () => {
       });
       turnosRepository.find.mockResolvedValue([]);
       turnosRepository.create.mockImplementation((entity) => entity);
-      turnosRepository.save.mockResolvedValue({ ...turnoConfirmado, idTurno: 31 });
-      turnosRepository.findOne.mockResolvedValue({ ...turnoConfirmado, idTurno: 31 });
+      turnosRepository.save.mockResolvedValue({
+        ...turnoConfirmado,
+        idTurno: 31,
+      });
+      turnosRepository.findOne.mockResolvedValue({
+        ...turnoConfirmado,
+        idTurno: 31,
+      });
 
       await service.solicitar(idDueno, dto);
 
@@ -207,7 +232,9 @@ describe('TurnosServiciosService', () => {
     it('rechaza cuando la mascota no existe', async () => {
       mascotasRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.solicitar(idDueno, dto)).rejects.toThrow(NotFoundException);
+      await expect(service.solicitar(idDueno, dto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('rechaza cuando la mascota no pertenece al dueño autenticado', async () => {
@@ -216,14 +243,18 @@ describe('TurnosServiciosService', () => {
         usuarios: [{ idUsuario: 999 }],
       });
 
-      await expect(service.solicitar(idDueno, dto)).rejects.toThrow(ForbiddenException);
+      await expect(service.solicitar(idDueno, dto)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('rechaza cuando el servicio no existe', async () => {
       mascotasRepository.findOne.mockResolvedValue(mascotaPropia);
       serviciosRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.solicitar(idDueno, dto)).rejects.toThrow(NotFoundException);
+      await expect(service.solicitar(idDueno, dto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('rechaza un horario fuera de la disponibilidad configurada', async () => {
@@ -243,7 +274,9 @@ describe('TurnosServiciosService', () => {
         { horaInicio: '10:15', horaFin: '10:45' },
       ]);
 
-      await expect(service.solicitar(idDueno, dto)).rejects.toThrow(BadRequestException);
+      await expect(service.solicitar(idDueno, dto)).rejects.toThrow(
+        BadRequestException,
+      );
       expect(turnosRepository.save).not.toHaveBeenCalled();
     });
   });
@@ -252,12 +285,18 @@ describe('TurnosServiciosService', () => {
     it('no cancela una reserva que se completó durante la operación', async () => {
       turnosRepository.findOne.mockResolvedValue({ ...turnoConfirmado });
       turnosRepository.update.mockResolvedValue({ affected: 0 });
-      await expect(service.cancelar(duenio.idUsuario, 30, {})).rejects.toThrow(ConflictException);
-      expect(notificacionesTurnosService.notificarTurnoCancelado).not.toHaveBeenCalled();
+      await expect(service.cancelar(duenio.idUsuario, 30, {})).rejects.toThrow(
+        ConflictException,
+      );
+      expect(
+        notificacionesTurnosService.notificarTurnoCancelado,
+      ).not.toHaveBeenCalled();
     });
     it('permite cancelar al dueño', async () => {
       turnosRepository.findOne.mockResolvedValue({ ...turnoConfirmado });
-      turnosRepository.save.mockImplementation((turno) => Promise.resolve(turno));
+      turnosRepository.save.mockImplementation((turno) =>
+        Promise.resolve(turno),
+      );
 
       const result = await service.cancelar(duenio.idUsuario, 30, {});
 
@@ -267,20 +306,26 @@ describe('TurnosServiciosService', () => {
 
     it('permite cancelar al prestador con motivo', async () => {
       turnosRepository.findOne.mockResolvedValue({ ...turnoConfirmado });
-      turnosRepository.save.mockImplementation((turno) => Promise.resolve(turno));
+      turnosRepository.save.mockImplementation((turno) =>
+        Promise.resolve(turno),
+      );
 
       const result = await service.cancelar(prestador.idUsuario, 30, {
         motivoCancelacion: '  No voy a poder atenderlo  ',
       });
 
       expect(result.estado).toBe(TurnoServicioEstado.CANCELADO);
-      expect((result as any).motivoCancelacion).toBe('No voy a poder atenderlo');
+      expect((result as any).motivoCancelacion).toBe(
+        'No voy a poder atenderlo',
+      );
       expect((result as any).canceladoPor).toBe('prestador');
     });
 
     it('notifica la cancelación a la contraparte', async () => {
       turnosRepository.findOne.mockResolvedValue({ ...turnoConfirmado });
-      turnosRepository.save.mockImplementation((turno) => Promise.resolve(turno));
+      turnosRepository.save.mockImplementation((turno) =>
+        Promise.resolve(turno),
+      );
 
       await service.cancelar(prestador.idUsuario, 30, {
         motivoCancelacion: 'No voy a poder atenderlo',
@@ -295,13 +340,16 @@ describe('TurnosServiciosService', () => {
         }),
         'prestador',
         'No voy a poder atenderlo',
+        prestador.idUsuario,
       );
     });
 
     it('rechaza cancelar a un tercero ajeno al turno', async () => {
       turnosRepository.findOne.mockResolvedValue({ ...turnoConfirmado });
 
-      await expect(service.cancelar(999, 30, {})).rejects.toThrow(ForbiddenException);
+      await expect(service.cancelar(999, 30, {})).rejects.toThrow(
+        ForbiddenException,
+      );
       expect(turnosRepository.save).not.toHaveBeenCalled();
     });
 
@@ -333,7 +381,10 @@ describe('TurnosServiciosService', () => {
       const result = await service.findMisReservas(duenio.idUsuario);
 
       expect(turnosRepository.find).toHaveBeenCalledWith({
-        where: { duenio: { idUsuario: duenio.idUsuario } },
+        where: [
+          { duenio: { idUsuario: duenio.idUsuario } },
+          { mascota: { usuarios: { idUsuario: duenio.idUsuario } } },
+        ],
         relations: ['servicio', 'servicio.usuario', 'mascota', 'duenio'],
         order: { fecha: 'ASC', horaInicio: 'ASC', idTurno: 'ASC' },
       });

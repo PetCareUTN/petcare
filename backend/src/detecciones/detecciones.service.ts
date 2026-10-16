@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { NotificacionesDeteccionesService } from '../notificaciones/notificaciones-detecciones.service';
+import { ReportePerdida } from '../reportes-perdida/entities/reporte-perdida.entity';
 import { ReportesPerdidaService } from '../reportes-perdida/reportes-perdida.service';
 import { TagBle } from '../tags-ble/entities/tag-ble.entity';
 import { RegistrarDeteccionDto } from './dto/registrar-deteccion.dto';
@@ -82,12 +83,21 @@ export class DeteccionesService {
     // se descartaron más arriba, así que nunca llegan hasta acá (US-41).
     await this.notificacionesDeteccionesService.notificarDeteccion({
       idReporte: reporte.idReporte,
-      idDuenio: reporte.usuario.idUsuario,
+      idsDuenios: this.idsDeLosDuenios(reporte),
       nombreMascota: reporte.mascota?.nombre ?? null,
       detectadoEn,
     });
 
     return 'registrada';
+  }
+
+  /**
+   * A quién avisar: a todos los dueños de la mascota, no solo a quien hizo el
+   * reporte. Si por algún motivo la mascota no los trae, queda el del reporte.
+   */
+  private idsDeLosDuenios(reporte: ReportePerdida): number[] {
+    const ids = (reporte.mascota?.usuarios ?? []).map((u) => u.idUsuario);
+    return ids.length > 0 ? ids : [reporte.usuario.idUsuario];
   }
 
   /**

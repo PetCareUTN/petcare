@@ -1,5 +1,6 @@
 package com.petcare.app.features.auth.ui
 
+import com.petcare.app.ui.components.elevacionBoton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -149,6 +150,7 @@ fun ResetPasswordScreen(
         )
 
         Button(
+            elevation = elevacionBoton(),
             onClick = {
                 codigoError = if (codigo.isBlank()) "El codigo es obligatorio" else null
                 nuevaContrasenaError = when {

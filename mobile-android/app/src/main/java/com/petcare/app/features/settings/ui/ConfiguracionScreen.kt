@@ -1,5 +1,6 @@
 package com.petcare.app.features.settings.ui
 
+import com.petcare.app.ui.components.elevacionTarjeta
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
@@ -62,6 +63,7 @@ fun ConfiguracionScreen(
 
         Card(
             modifier = Modifier.fillMaxWidth(),
+            elevation = elevacionTarjeta(),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface
             ),

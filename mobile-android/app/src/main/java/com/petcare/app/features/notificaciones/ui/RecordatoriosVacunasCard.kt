@@ -1,5 +1,6 @@
 package com.petcare.app.features.notificaciones.ui
 
+import com.petcare.app.ui.components.elevacionTarjeta
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -73,6 +74,7 @@ fun RecordatoriosVacunasCard(profileController: ProfileController) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
+        elevation = elevacionTarjeta(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
