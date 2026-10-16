@@ -55,7 +55,9 @@ fun EditProfileScreen(
     onChangeEmail: () -> Unit
 ) {
     var nombre by rememberSaveable { mutableStateOf(profile.nombre) }
-    var apellido by rememberSaveable { mutableStateOf(profile.apellido) }
+    // orEmpty() porque las cuentas de Google llegan sin apellido: el campo
+    // arranca vacio y el validador lo pide al guardar, como a cualquier otro.
+    var apellido by rememberSaveable { mutableStateOf(profile.apellido.orEmpty()) }
     val (codigoInicial, numeroInicial) = remember(profile.telefono) {
         separarTelefono(profile.telefono)
     }
