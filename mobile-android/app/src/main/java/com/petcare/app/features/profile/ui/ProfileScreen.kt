@@ -240,7 +240,7 @@ private fun ProfileContent(
         Spacer(modifier = Modifier.height(4.dp))
 
         Text(
-            text = "${profile.nombre} ${profile.apellido}",
+            text = profile.nombreCompleto,
             style = MaterialTheme.typography.headlineMedium
         )
     }
@@ -258,7 +258,10 @@ private fun ProfileContent(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             DetailRow(label = "Nombre", value = profile.nombre)
-            DetailRow(label = "Apellido", value = profile.apellido)
+            DetailRow(
+                label = "Apellido",
+                value = profile.apellido?.ifBlank { null } ?: "Sin especificar"
+            )
             DetailRow(label = "Correo electrónico", value = profile.email)
             DetailRow(
                 label = "Teléfono",
