@@ -1,5 +1,7 @@
 package com.petcare.app.features.profile.ui
 
+import com.petcare.app.ui.components.elevacionBoton
+import com.petcare.app.ui.components.elevacionBotonContorno
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -141,6 +143,7 @@ fun EditProfileScreen(
         }
 
         Button(
+            elevation = elevacionBoton(),
             onClick = {
                 val nextValidation = ProfileValidator.validate(
                     nombre = nombre,
@@ -170,6 +173,8 @@ fun EditProfileScreen(
         }
 
         OutlinedButton(
+            elevation = elevacionBotonContorno(),
+            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
             onClick = onCancel,
             enabled = !isSaving,
             modifier = Modifier

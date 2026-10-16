@@ -48,7 +48,9 @@ fun NotificacionesDropdown(
     /** Abre la última ubicación del reporte que indica la notificación (US-41). */
     onAbrirUltimaUbicacion: (Int) -> Unit = {},
     /** Abre el reporte de pérdida de la mascota que se alejó (US-34). */
-    onReportarPerdida: (Int) -> Unit = {}
+    onReportarPerdida: (Int) -> Unit = {},
+    /** Abre las solicitudes que me hicieron para compartir una mascota. */
+    onAbrirSolicitudCompartir: () -> Unit = {}
 ) {
     val noLeidas = notificaciones.count { !it.leida }
 
@@ -148,6 +150,10 @@ fun NotificacionesDropdown(
                             { onAbrirUltimaUbicacion(idReporte) }
                         } ?: mascotaAReportar(notificacion)?.let { idMascota ->
                             { onReportarPerdida(idMascota) }
+                        } ?: if (esSolicitudCompartir(notificacion)) {
+                            { onAbrirSolicitudCompartir() }
+                        } else {
+                            null
                         }
                     )
                     if (indice < notificaciones.lastIndex) {
@@ -210,10 +216,10 @@ private fun NotificacionItem(
             Text(
                 // El destino depende del tipo: la deteccion lleva al mapa, y la
                 // separacion a crear el reporte de perdida.
-                text = if (notificacion.tipo == "mascota_separada") {
-                    "Reportar como perdida"
-                } else {
-                    "Ver ultima ubicacion"
+                text = when (notificacion.tipo) {
+                    "mascota_separada" -> "Reportar como perdida"
+                    "solicitud_compartir_mascota" -> "Ver solicitud"
+                    else -> "Ver ultima ubicacion"
                 },
                 color = PetCareTealDark,
                 style = MaterialTheme.typography.labelMedium
@@ -253,6 +259,10 @@ private fun destinoDe(notificacion: NotificacionResponse): Int? =
 private fun mascotaAReportar(notificacion: NotificacionResponse): Int? =
     notificacion.idReferencia?.takeIf { notificacion.tipo == "mascota_separada" }
 
+/** La solicitud que me hicieron para compartir una mascota abre sus solicitudes. */
+private fun esSolicitudCompartir(notificacion: NotificacionResponse): Boolean =
+    notificacion.tipo == "solicitud_compartir_mascota"
+
 internal fun tipoLabel(tipo: String): String = when (tipo) {
     "solicitud_recibida" -> "Solicitud"
     "aprobacion" -> "Aprobación"
@@ -262,6 +272,10 @@ internal fun tipoLabel(tipo: String): String = when (tipo) {
     "recordatorio_vacuna" -> "Vacunación"
     "mascota_detectada" -> "Mascota detectada"
     "mascota_separada" -> "Se alejó"
+    "solicitud_compartir_mascota",
+    "compartir_mascota_aceptada",
+    "compartir_mascota_rechazada",
+    "compartir_mascota_baja" -> "Mascota compartida"
     else -> tipo
 }
 

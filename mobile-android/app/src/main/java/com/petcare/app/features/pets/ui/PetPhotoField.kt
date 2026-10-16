@@ -1,5 +1,7 @@
 package com.petcare.app.features.pets.ui
 
+import com.petcare.app.ui.components.elevacionBoton
+import com.petcare.app.ui.components.elevacionBotonContorno
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -213,6 +215,8 @@ internal fun PetPhotoField(
             ) {
                 if (photoUri != null) {
                     OutlinedButton(
+                        elevation = elevacionBotonContorno(),
+                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                         onClick = { uriBeingEdited = photoUri },
                         modifier = Modifier.weight(1f),
                         enabled = enabled
@@ -221,6 +225,7 @@ internal fun PetPhotoField(
                     }
                 }
                 Button(
+                    elevation = elevacionBoton(),
                     onClick = { photoPicker.launch("image/*") },
                     modifier = Modifier.weight(1f),
                     enabled = enabled
@@ -387,6 +392,7 @@ private fun PhotoAdjustmentDialog(
         },
         confirmButton = {
             Button(
+                elevation = elevacionBoton(),
                 onClick = {
                     val sourceBitmap = bitmap ?: return@Button
                     if (viewportSize <= 0) return@Button

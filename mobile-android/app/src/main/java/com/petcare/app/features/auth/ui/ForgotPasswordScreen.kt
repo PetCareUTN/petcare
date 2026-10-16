@@ -1,5 +1,6 @@
 package com.petcare.app.features.auth.ui
 
+import com.petcare.app.ui.components.elevacionBoton
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -101,6 +102,7 @@ fun ForgotPasswordScreen(
             )
 
             Button(
+                elevation = elevacionBoton(),
                 onClick = {
                     emailError = LoginValidator.validateEmail(email)
 
@@ -122,6 +124,7 @@ fun ForgotPasswordScreen(
             }
         } else {
             Button(
+                elevation = elevacionBoton(),
                 onClick = { onNavigateToReset(email.trim()) },
                 modifier = Modifier
                     .fillMaxWidth()

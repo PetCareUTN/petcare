@@ -43,6 +43,7 @@ fun MenuLateral(
     onRequestTurno: () -> Unit,
     onViewMisTurnos: () -> Unit,
     onServiciosClick: () -> Unit,
+    onMascotasCompartidasClick: () -> Unit = {},
     onLogout: () -> Unit
 ) {
     ModalDrawerSheet(
@@ -115,6 +116,11 @@ fun MenuLateral(
             texto = "Servicios",
             iconRes = R.drawable.ic_services,
             onClick = onServiciosClick
+        )
+        MenuItem(
+            texto = "Mascotas compartidas",
+            iconRes = R.drawable.ic_person,
+            onClick = onMascotasCompartidasClick
         )
 
         Spacer(modifier = Modifier.weight(1f))

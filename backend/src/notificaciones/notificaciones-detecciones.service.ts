@@ -23,8 +23,8 @@ const VENTANA_AGRUPACION_MINUTOS = Number(
 /** Datos que necesita el aviso, ya resueltos por quien lo dispara. */
 export interface DatosDeteccion {
   idReporte: number;
-  /** Dueño que hizo el reporte: es el único que recibe el aviso. */
-  idDuenio: number;
+  /** Dueños de la mascota: todos reciben el aviso, cada uno con el suyo. */
+  idsDuenios: number[];
   nombreMascota: string | null;
   detectadoEn: Date;
 }
@@ -52,21 +52,28 @@ export class NotificacionesDeteccionesService {
    */
   async notificarDeteccion(datos: DatosDeteccion): Promise<boolean> {
     try {
-      if (await this.yaSeAviso(datos.idReporte)) {
-        return false;
+      const nombre = datos.nombreMascota ?? 'tu mascota';
+      let seCreoAlguno = false;
+
+      // La agrupación se evalúa por dueño: que uno ya haya visto un aviso
+      // reciente no le quita el suyo al otro (por ejemplo, si se sumó después).
+      for (const idDuenio of datos.idsDuenios) {
+        if (await this.yaSeAviso(datos.idReporte, idDuenio)) {
+          continue;
+        }
+
+        await this.notificacionesService.crear(
+          idDuenio,
+          NotificationType.MASCOTA_DETECTADA,
+          `Detectaron a ${nombre} cerca`,
+          `La red colaborativa la detectó a las ${this.hora(datos.detectadoEn)}. ` +
+            'Abrí el aviso para ver la última ubicación conocida.',
+          datos.idReporte,
+        );
+        seCreoAlguno = true;
       }
 
-      const nombre = datos.nombreMascota ?? 'tu mascota';
-      await this.notificacionesService.crear(
-        datos.idDuenio,
-        NotificationType.MASCOTA_DETECTADA,
-        `Detectaron a ${nombre} cerca`,
-        `La red colaborativa la detectó a las ${this.hora(datos.detectadoEn)}. ` +
-          'Abrí el aviso para ver la última ubicación conocida.',
-        datos.idReporte,
-      );
-
-      return true;
+      return seCreoAlguno;
     } catch (error) {
       this.logger.error(
         `No se pudo notificar la detección del reporte ${datos.idReporte}`,
@@ -84,11 +91,15 @@ export class NotificacionesDeteccionesService {
    * puedan quedar desincronizados: lo que decide es exactamente lo último que
    * vio el dueño.
    */
-  private async yaSeAviso(idReporte: number): Promise<boolean> {
+  private async yaSeAviso(
+    idReporte: number,
+    idDuenio: number,
+  ): Promise<boolean> {
     const desde = new Date(Date.now() - VENTANA_AGRUPACION_MINUTOS * 60 * 1000);
 
     const reciente = await this.notificacionesRepository.findOne({
       where: {
+        usuario: { idUsuario: idDuenio },
         tipo: NotificationType.MASCOTA_DETECTADA,
         idReferencia: idReporte,
         fechaEnvio: MoreThan(desde),

@@ -14,6 +14,7 @@ export class MascotaResponseDto {
   observaciones: string | null;
   alergias: string | null;
   idUsuarios: number[];
+  idDuenioPrincipal: number | null;
 
   static fromEntity(mascota: Mascota): MascotaResponseDto {
     return {
@@ -30,6 +31,7 @@ export class MascotaResponseDto {
       observaciones: mascota.observaciones,
       alergias: mascota.alergias,
       idUsuarios: mascota.usuarios?.map((user) => user.idUsuario) ?? [],
+      idDuenioPrincipal: mascota.idDuenioPrincipal ?? null,
     };
   }
 }

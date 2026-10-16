@@ -71,9 +71,92 @@ describe('NotificacionesTurnosService', () => {
     });
   });
 
+  describe('mascota compartida con varios dueños', () => {
+    const turnoCompartido: DatosTurno = {
+      ...turno,
+      duenios: [
+        { idUsuario: 12, nombre: 'Ana Gomez' },
+        { idUsuario: 13, nombre: 'Marta Paz' },
+      ],
+    };
+
+    it('avisa de la reserva a todos los dueños, cada uno con su texto', async () => {
+      await service.notificarTurnoConfirmado(turnoCompartido);
+
+      expect(notificacionesService.crear).toHaveBeenCalledTimes(3);
+      // Quien reservó: "tu turno".
+      expect(notificacionesService.crear).toHaveBeenCalledWith(
+        12,
+        NotificationType.TURNO_CONFIRMADO,
+        'Turno confirmado',
+        expect.stringContaining('Tu turno'),
+      );
+      // El otro dueño: quién lo reservó.
+      expect(notificacionesService.crear).toHaveBeenCalledWith(
+        13,
+        NotificationType.TURNO_CONFIRMADO,
+        'Turno confirmado',
+        expect.stringContaining('Ana Gomez reservó'),
+      );
+      expect(notificacionesService.crear).toHaveBeenCalledWith(
+        99,
+        NotificationType.TURNO_CONFIRMADO,
+        'Nuevo turno reservado',
+        expect.any(String),
+      );
+    });
+
+    it('si cancela un dueño, avisa al prestador y al otro dueño pero no a quien canceló', async () => {
+      await service.notificarTurnoCancelado(
+        turnoCompartido,
+        'duenio',
+        null,
+        13,
+      );
+
+      const destinatarios = notificacionesService.crear.mock.calls.map(
+        ([id]) => id as number,
+      );
+      expect(destinatarios.sort()).toEqual([12, 99]);
+      const [, , , cuerpo] = notificacionesService.crear.mock.calls.find(
+        ([id]) => id === 12,
+      ) as [number, string, string, string];
+      expect(cuerpo).toContain('Marta Paz canceló');
+    });
+
+    it('si cancela el prestador, avisa a todos los dueños', async () => {
+      await service.notificarTurnoCancelado(turnoCompartido, 'prestador', null);
+
+      const destinatarios = notificacionesService.crear.mock.calls.map(
+        ([id]) => id as number,
+      );
+      expect(destinatarios.sort()).toEqual([12, 13]);
+    });
+
+    it('no repite avisos si un dueño figura dos veces', async () => {
+      await service.notificarTurnoCancelado(
+        {
+          ...turno,
+          duenios: [
+            { idUsuario: 12, nombre: 'Ana Gomez' },
+            { idUsuario: 12, nombre: 'Ana Gomez' },
+          ],
+        },
+        'prestador',
+        null,
+      );
+
+      expect(notificacionesService.crear).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('notificarTurnoCancelado', () => {
     it('avisa al prestador cuando cancela el dueño', async () => {
-      await service.notificarTurnoCancelado(turno, 'duenio', 'Me surgió un viaje');
+      await service.notificarTurnoCancelado(
+        turno,
+        'duenio',
+        'Me surgió un viaje',
+      );
 
       expect(notificacionesService.crear).toHaveBeenCalledTimes(1);
       expect(notificacionesService.crear).toHaveBeenCalledWith(
