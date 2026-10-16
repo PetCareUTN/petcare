@@ -267,6 +267,7 @@ El repositorio utiliza el siguiente esquema:
 - `test/*`: incorporación o modificación de pruebas.
 - `chore/*`: configuración y mantenimiento.
 - `hotfix/*`: correcciones urgentes sobre una versión estable.
+- `release/*`: rama temporal para publicar a `main`. Ver "Liberar a main".
 
 ### Ejemplo
 
@@ -287,6 +288,44 @@ git push -u origin feature/registro-usuario
 El trabajo debe integrarse mediante Pull Request hacia `develop`.
 
 No se debe trabajar directamente sobre `main`.
+
+### Liberar a main
+
+Para publicar lo acumulado en `develop`, **no se abre un Pull Request de
+`develop` hacia `main`**. Se usa una rama de release intermedia:
+
+```bash
+git fetch origin
+git checkout -b release/2026-10-15 origin/main
+git merge origin/develop
+git push -u origin release/2026-10-15
+```
+
+Y el Pull Request va de esa rama hacia `main`.
+
+El rodeo tiene un motivo concreto. `main` exige que la rama esté al día antes
+de mergear, y en un PR que sale de `develop` el botón **Update branch** de
+GitHub intenta mergear `main` dentro de `develop` con un push directo. Como
+`develop` también está protegida y exige Pull Request, la regla lo rechaza y el
+PR queda trabado: no se puede actualizar ni mergear. Una rama de release no
+tiene esa restricción.
+
+Antes de abrir el PR conviene verificar que el merge no haya perdido nada:
+
+```bash
+git diff origin/develop --stat
+```
+
+Si no imprime nada, el resultado es idéntico a `develop`, que es lo que se
+quiere publicar. **Si imprime algo, hay que mirarlo con cuidado**: puede ser
+que el merge esté borrando archivos en silencio. Pasó en el primer release a
+`main`: por un revert viejo que tenía `main`, el merge eliminaba 168 archivos
+sin marcar ningún conflicto, entre ellos `gradlew.bat`, y el Pull Request se
+veía perfectamente sano.
+
+Después de mergear, el workflow **APK de release** genera solo el APK firmado
+de esa versión y lo deja como artefacto en la pestaña Actions. Ver
+[docs/deploy.md](docs/deploy.md).
 
 ---
 
