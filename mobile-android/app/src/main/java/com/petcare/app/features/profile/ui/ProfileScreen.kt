@@ -238,9 +238,9 @@ private fun ProfileContent(
     onPhotoSelected: (Uri) -> Unit,
     onEdit: () -> Unit
 ) {
-    val nombreCompleto = listOf(profile.nombre, profile.apellido)
-        .filter { it.isNotBlank() }
-        .joinToString(" ")
+    // Sale del modelo porque apellido puede venir en null (cuentas de Google):
+    // armarlo aca con isNotBlank() sobre el apellido rompia la pantalla.
+    val nombreCompleto = profile.nombreCompleto
     val elegirFoto = rememberAdjustedPhotoPicker(onPhotoAdjusted = onPhotoSelected)
 
     // Cabecera: franja de color, avatar (con la foto si la cargó) apoyado en el
