@@ -124,7 +124,13 @@ export class TurnosServiciosService {
     const guardado = await this.turnosRepository.save(turno);
     const turnoCompleto = await this.turnosRepository.findOne({
       where: { idTurno: guardado.idTurno },
-      relations: ['servicio', 'servicio.usuario', 'mascota', 'duenio'],
+      relations: [
+        'servicio',
+        'servicio.usuario',
+        'mascota',
+        'mascota.usuarios',
+        'duenio',
+      ],
     });
 
     await this.notificacionesTurnosService.notificarTurnoConfirmado(
@@ -264,11 +270,14 @@ export class TurnosServiciosService {
     idUsuario: number,
     estado?: TurnoServicioEstado,
   ): Promise<TurnoServicioDuenioResponseDto[]> {
+    // Las reservas de una mascota compartida las ven todos sus dueños, no solo
+    // el que las hizo.
+    const filtroEstado = estado ? { estado } : {};
     const turnos = await this.turnosRepository.find({
-      where: {
-        duenio: { idUsuario },
-        ...(estado ? { estado } : {}),
-      },
+      where: [
+        { duenio: { idUsuario }, ...filtroEstado },
+        { mascota: { usuarios: { idUsuario } }, ...filtroEstado },
+      ],
       relations: ['servicio', 'servicio.usuario', 'mascota', 'duenio'],
       order: { fecha: 'ASC', horaInicio: 'ASC', idTurno: 'ASC' },
     });
@@ -299,7 +308,13 @@ export class TurnosServiciosService {
   ): Promise<TurnoServicioPrestadorResponseDto | TurnoServicioDuenioResponseDto> {
     const turno = await this.turnosRepository.findOne({
       where: { idTurno },
-      relations: ['servicio', 'servicio.usuario', 'mascota', 'duenio'],
+      relations: [
+        'servicio',
+        'servicio.usuario',
+        'mascota',
+        'mascota.usuarios',
+        'duenio',
+      ],
     });
 
     if (!turno) {
@@ -309,7 +324,11 @@ export class TurnosServiciosService {
       });
     }
 
-    const esDuenio = turno.duenio.idUsuario === idUsuario;
+    // Cualquiera de los dueños de la mascota puede cancelar la reserva, no solo
+    // el que la hizo.
+    const esDuenio =
+      turno.duenio.idUsuario === idUsuario ||
+      (turno.mascota.usuarios ?? []).some((u) => u.idUsuario === idUsuario);
     const esPrestador = turno.servicio.usuario.idUsuario === idUsuario;
 
     if (!esDuenio && !esPrestador) {
@@ -343,6 +362,7 @@ export class TurnosServiciosService {
       this.aDatosTurno(guardado),
       esDuenio ? 'duenio' : 'prestador',
       guardado.motivoCancelacion,
+      idUsuario,
     );
 
     return esDuenio
@@ -356,6 +376,10 @@ export class TurnosServiciosService {
       idDuenio: turno.duenio.idUsuario,
       idPrestador: turno.servicio.usuario.idUsuario,
       nombreDuenio: this.nombreCompleto(turno.duenio),
+      duenios: (turno.mascota.usuarios ?? []).map((u) => ({
+        idUsuario: u.idUsuario,
+        nombre: this.nombreCompleto(u),
+      })),
       nombrePrestador: this.nombreCompleto(turno.servicio.usuario),
       nombreMascota: turno.mascota.nombre,
       fecha: turno.fecha,

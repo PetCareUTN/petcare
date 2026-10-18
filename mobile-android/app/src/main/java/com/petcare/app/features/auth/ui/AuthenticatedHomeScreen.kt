@@ -1,5 +1,8 @@
 package com.petcare.app.features.auth.ui
 
+import com.petcare.app.ui.components.elevacionTarjeta
+import com.petcare.app.ui.components.elevacionBoton
+import com.petcare.app.ui.components.elevacionBotonContorno
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -48,8 +51,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
@@ -58,9 +63,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import com.petcare.app.R
 import com.petcare.app.features.pets.data.remote.PetResponse
 import com.petcare.app.features.pets.ui.PetAvatar
+import com.petcare.app.features.pets.ui.resolvePetPhotoUrl
 import com.petcare.app.features.turnos.domain.TipoTurnoItem
 import com.petcare.app.features.turnos.domain.TurnoUnificado
 import com.petcare.app.ui.theme.PetCareLine
@@ -78,6 +85,7 @@ import java.util.Locale
 @Composable
 fun AuthenticatedHomeScreen(
     userName: String,
+    userPhoto: String? = null,
     pets: List<PetResponse>,
     isLoadingPets: Boolean,
     petsError: String?,
@@ -106,6 +114,7 @@ fun AuthenticatedHomeScreen(
     ) {
         HomeHeader(
             userName = userName,
+            userPhoto = userPhoto,
             onProfileClick = onProfileClick
         )
 
@@ -148,9 +157,11 @@ fun AuthenticatedHomeScreen(
 @Composable
 private fun HomeHeader(
     userName: String,
+    userPhoto: String?,
     onProfileClick: () -> Unit
 ) {
     val displayName = userName.ifBlank { "Tutor" }
+    val photoUrl = remember(userPhoto) { resolvePetPhotoUrl(userPhoto) }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -197,6 +208,15 @@ private fun HomeHeader(
                     style = MaterialTheme.typography.titleMedium
                 )
             }
+            // Encima de la inicial, así mientras carga (o si falla) se sigue viendo algo.
+            if (photoUrl != null) {
+                AsyncImage(
+                    model = photoUrl,
+                    contentDescription = "Mi perfil",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
         }
     }
 }
@@ -215,6 +235,8 @@ private fun SectionHeader(
         Text(text = title, style = MaterialTheme.typography.titleMedium)
         if (action == null) return@Row
         OutlinedButton(
+            elevation = elevacionBotonContorno(),
+            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
             onClick = onAction,
             shape = MaterialTheme.shapes.large
         ) {
@@ -248,6 +270,7 @@ private fun PetsCarousel(
         petsError != null -> {
             Card(
                 modifier = Modifier.fillMaxWidth(),
+                elevation = elevacionTarjeta(),
                 colors = CardDefaults.cardColors(containerColor = PetCareSurfaceSoft),
                 border = BorderStroke(1.dp, PetCareLine),
                 shape = MaterialTheme.shapes.extraLarge
@@ -262,6 +285,8 @@ private fun PetsCarousel(
                         style = MaterialTheme.typography.bodyMedium
                     )
                     OutlinedButton(
+                        elevation = elevacionBotonContorno(),
+                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                         onClick = onRetryPets,
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.large
@@ -275,6 +300,7 @@ private fun PetsCarousel(
         pets.isEmpty() -> {
             Card(
                 modifier = Modifier.fillMaxWidth(),
+                elevation = elevacionTarjeta(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = BorderStroke(1.dp, PetCareLine),
                 shape = MaterialTheme.shapes.extraLarge
@@ -293,6 +319,7 @@ private fun PetsCarousel(
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Button(
+                        elevation = elevacionBoton(),
                         onClick = onRegisterPet,
                         modifier = Modifier.fillMaxWidth(),
                         shape = MaterialTheme.shapes.large
@@ -388,6 +415,7 @@ private fun PetCarouselCard(pet: PetResponse, onClick: () -> Unit, onEdit: () ->
         modifier = Modifier
             .width(168.dp)
             .heightIn(min = 192.dp)
+            .shadow(4.dp, MaterialTheme.shapes.extraLarge)
             .clip(MaterialTheme.shapes.extraLarge)
             .background(Brush.verticalGradient(listOf(PetCareTeal, PetCareTealDark)))
             .clickable(onClick = onClick)
@@ -484,6 +512,7 @@ private fun ProximosTurnosContent(
         proximos.isEmpty() -> {
             Card(
                 modifier = Modifier.fillMaxWidth(),
+                elevation = elevacionTarjeta(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 border = BorderStroke(1.dp, PetCareLine),
                 shape = MaterialTheme.shapes.extraLarge
@@ -513,6 +542,8 @@ private fun ProximoTurnoCard(turno: TurnoUnificado, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
+        // Más suave que el resto de las tarjetas: son filas de una lista corta.
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, PetCareLine),
         shape = MaterialTheme.shapes.extraLarge

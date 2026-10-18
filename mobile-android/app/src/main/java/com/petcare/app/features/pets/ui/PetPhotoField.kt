@@ -1,5 +1,7 @@
 package com.petcare.app.features.pets.ui
 
+import com.petcare.app.ui.components.elevacionBoton
+import com.petcare.app.ui.components.elevacionBotonContorno
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -213,6 +215,8 @@ internal fun PetPhotoField(
             ) {
                 if (photoUri != null) {
                     OutlinedButton(
+                        elevation = elevacionBotonContorno(),
+                        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
                         onClick = { uriBeingEdited = photoUri },
                         modifier = Modifier.weight(1f),
                         enabled = enabled
@@ -221,6 +225,7 @@ internal fun PetPhotoField(
                     }
                 }
                 Button(
+                    elevation = elevacionBoton(),
                     onClick = { photoPicker.launch("image/*") },
                     modifier = Modifier.weight(1f),
                     enabled = enabled
@@ -241,6 +246,34 @@ internal fun PetPhotoField(
             }
         )
     }
+}
+
+/**
+ * Galeria + dialogo de encuadre sin la tarjeta de [PetPhotoField], para pantallas
+ * que muestran la foto a su manera (por ejemplo el avatar del perfil). Devuelve
+ * la accion que abre el selector.
+ */
+@Composable
+internal fun rememberAdjustedPhotoPicker(onPhotoAdjusted: (Uri) -> Unit): () -> Unit {
+    var uriBeingEdited by remember { mutableStateOf<Uri?>(null) }
+    val photoPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) uriBeingEdited = uri
+    }
+
+    uriBeingEdited?.let { sourceUri ->
+        PhotoAdjustmentDialog(
+            sourceUri = sourceUri,
+            onDismiss = { uriBeingEdited = null },
+            onConfirm = { adjustedUri ->
+                onPhotoAdjusted(adjustedUri)
+                uriBeingEdited = null
+            }
+        )
+    }
+
+    return { photoPicker.launch("image/*") }
 }
 
 @Composable
@@ -359,6 +392,7 @@ private fun PhotoAdjustmentDialog(
         },
         confirmButton = {
             Button(
+                elevation = elevacionBoton(),
                 onClick = {
                     val sourceBitmap = bitmap ?: return@Button
                     if (viewportSize <= 0) return@Button

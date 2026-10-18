@@ -36,6 +36,10 @@ export class User {
   @Column({ type: 'varchar', length: 255, nullable: true })
   direccion: string | null;
 
+  // Ruta pública de la foto de perfil (/uploads/usuarios/...). Null si no subió.
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  foto: string | null;
+
   // Provincia de la veterinaria, separada de `direccion` (calle, número y
   // localidad). Nula en las cuentas que no son veterinarias.
   @Column({ type: 'varchar', length: 50, nullable: true })

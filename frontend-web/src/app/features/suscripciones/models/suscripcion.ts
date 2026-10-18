@@ -1,5 +1,6 @@
 export type SuscripcionEstado =
   | 'pendiente_pago'
+  | 'en_prueba'
   | 'activa'
   | 'vencida'
   | 'suspendida'
@@ -23,6 +24,10 @@ export interface SuscripcionResponse {
   fechaFin: string | null;
   fechaVencimiento: string | null;
   fechaGraciaInicio: string | null;
+  /** Fin del período de prueba gratuito (solo si estuvo en prueba). */
+  fechaPruebaFin: string | null;
+  /** True si la suscripción está en un período de prueba todavía vigente. */
+  esPrueba: boolean;
   accesoPermitido: boolean;
   motivoBloqueo: string | null;
   codigoBloqueo: CodigoBloqueo | null;

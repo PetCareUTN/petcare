@@ -145,7 +145,7 @@ export class TurnosVeterinariosService {
     const guardado = await this.turnosRepository.save(turno);
     const turnoCompleto = await this.turnosRepository.findOne({
       where: { idTurno: guardado.idTurno },
-      relations: ['veterinario', 'mascota', 'duenio'],
+      relations: ['veterinario', 'mascota', 'mascota.usuarios', 'duenio'],
     });
 
     await this.notificacionesTurnosService.notificarTurnoConfirmado(
@@ -321,18 +321,19 @@ export class TurnosVeterinariosService {
   }
 
   /**
-   * Turnos veterinarios del dueño autenticado. Solo devuelve los turnos que
-   * el propio usuario solicitó, opcionalmente filtrados por estado.
+   * Turnos veterinarios del dueño autenticado: los que solicitó y los de las
+   * mascotas que comparte con otros dueños, opcionalmente filtrados por estado.
    */
   async findMisTurnos(
     idUsuario: number,
     estado?: AppointmentStatus,
   ): Promise<TurnoDuenioResponseDto[]> {
+    const filtroEstado = estado ? { estado } : {};
     const turnos = await this.turnosRepository.find({
-      where: {
-        duenio: { idUsuario },
-        ...(estado ? { estado } : {}),
-      },
+      where: [
+        { duenio: { idUsuario }, ...filtroEstado },
+        { mascota: { usuarios: { idUsuario } }, ...filtroEstado },
+      ],
       relations: ['veterinario', 'veterinario.usuario', 'mascota', 'duenio'],
       order: { fecha: 'ASC', hora: 'ASC', idTurno: 'ASC' },
     });
@@ -347,7 +348,13 @@ export class TurnosVeterinariosService {
   ): Promise<TurnoVeterinarioResponseDto> {
     const turno = await this.turnosRepository.findOne({
       where: { idTurno },
-      relations: ['veterinario', 'veterinario.usuario', 'mascota', 'duenio'],
+      relations: [
+        'veterinario',
+        'veterinario.usuario',
+        'mascota',
+        'mascota.usuarios',
+        'duenio',
+      ],
     });
 
     if (!turno) {
@@ -357,7 +364,11 @@ export class TurnosVeterinariosService {
       });
     }
 
-    const esDuenio = turno.duenio.idUsuario === idUsuario;
+    // Cualquiera de los dueños de la mascota puede cancelar el turno, no solo
+    // el que lo reservó.
+    const esDuenio =
+      turno.duenio.idUsuario === idUsuario ||
+      (turno.mascota.usuarios ?? []).some((u) => u.idUsuario === idUsuario);
     const esVeterinario = turno.veterinario.usuario.idUsuario === idUsuario;
 
     if (!esDuenio && !esVeterinario) {
@@ -384,6 +395,7 @@ export class TurnosVeterinariosService {
       this.aDatosTurno(guardado),
       esDuenio ? 'duenio' : 'prestador',
       guardado.motivoCancelacion,
+      idUsuario,
     );
 
     return TurnoVeterinarioResponseDto.fromEntity(guardado);
@@ -516,6 +528,10 @@ export class TurnosVeterinariosService {
       idDuenio: turno.duenio.idUsuario,
       idPrestador: turno.veterinario.usuario.idUsuario,
       nombreDuenio: this.nombreCompleto(turno.duenio),
+      duenios: (turno.mascota.usuarios ?? []).map((u) => ({
+        idUsuario: u.idUsuario,
+        nombre: this.nombreCompleto(u),
+      })),
       nombrePrestador: this.nombreCompleto(turno.veterinario.usuario),
       nombreMascota: turno.mascota.nombre,
       fecha: turno.fecha,

@@ -487,6 +487,7 @@ describe('AuthService', () => {
         telefono: null,
         direccion: null,
         provincia: null,
+        foto: null,
         id_rol: defaultRole.idRol,
         estado: user.estado,
         fecha_registro: user.fechaRegistro,

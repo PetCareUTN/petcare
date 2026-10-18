@@ -1,5 +1,6 @@
 package com.petcare.app.features.servicios.ui
 
+import com.petcare.app.ui.components.elevacionBotonContorno
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -47,6 +49,14 @@ import com.petcare.app.features.servicios.data.remote.ServicioResponse
 import com.petcare.app.features.servicios.domain.ServicioValidationResult
 import com.petcare.app.features.servicios.domain.ServicioValidator
 import com.petcare.app.R
+import com.petcare.app.ui.components.AvisoFormulario
+import com.petcare.app.ui.components.BarraAccionFormulario
+import com.petcare.app.ui.components.CampoSeleccion
+import com.petcare.app.ui.components.CampoToque
+import com.petcare.app.ui.components.EncabezadoFormulario
+import com.petcare.app.ui.components.GrupoChips
+import com.petcare.app.ui.components.SeccionFormulario
+import com.petcare.app.ui.theme.PetCareSurfaceSoft
 import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMuted
 import com.petcare.app.ui.theme.PetCareTealDark
@@ -95,128 +105,121 @@ fun ServicioFormScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .systemBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.Start
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onCancel, enabled = !isSaving) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_arrow_back),
-                    contentDescription = "Volver",
-                    tint = PetCareTealDark
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = if (servicio == null) "Publicar servicio" else "Editar servicio",
-                    style = MaterialTheme.typography.headlineSmall
-                )
-                Text(
-                    text = "Categoria y disponibilidad semanal",
-                    color = PetCareMuted,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-        }
+        EncabezadoFormulario(
+            titulo = if (servicio == null) "Publicar servicio" else "Editar servicio",
+            subtitulo = "Categoría y horarios de atención",
+            onBack = onCancel,
+            enabled = !isSaving
+        )
 
-        Spacer(modifier = Modifier.height(18.dp))
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, PetCareLine),
-            shape = MaterialTheme.shapes.extraLarge
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            SeccionFormulario(
+                titulo = "Categoría",
+                iconRes = R.drawable.ic_services,
+                descripcion = if (servicio == null) {
+                    "Solo las categorías que ya te aprobaron."
+                } else {
+                    "La categoría no se puede cambiar al editar."
+                }
             ) {
-                EnumDropdownField(
-                    label = "Categoria",
-                    selectedValue = categoria,
-                    placeholder = "Seleccionar categoria",
-                    options = categoriaOptions.filter { it in categoriasAprobadas },
-                    optionLabel = ::categoriaLabel,
-                    enabled = !isSaving && servicio == null,
-                    isError = validation.categoriaError != null,
-                    supportingText = validation.categoriaError,
-                    onSelect = { categoria = it }
-                )
+                val disponibles = categoriaOptions.filter { it in categoriasAprobadas }
+                if (disponibles.isEmpty()) {
+                    AvisoFormulario(
+                        texto = "Todavía no tenés ninguna categoría aprobada. " +
+                            "Pedí la aprobación desde Mis servicios.",
+                        esError = false
+                    )
+                } else {
+                    GrupoChips(
+                        opciones = disponibles.map { it to categoriaLabel(it) },
+                        seleccionado = categoria.ifBlank { null },
+                        enabled = !isSaving && servicio == null,
+                        isError = validation.categoriaError != null,
+                        onSelect = { categoria = it }
+                    )
+                }
+                validation.categoriaError?.let {
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
 
+            SeccionFormulario(
+                titulo = "Descripción",
+                iconRes = R.drawable.ic_edit,
+                descripcion = "Opcional. Contá qué incluye y tu experiencia."
+            ) {
                 OutlinedTextField(
                     value = descripcion,
                     onValueChange = { descripcion = it },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(120.dp),
-                    label = { Text("Descripcion (opcional)") }
+                        .heightIn(min = 110.dp),
+                    label = { Text("Descripción") }
                 )
+            }
 
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(text = "Disponibilidad semanal", style = MaterialTheme.typography.labelLarge)
-
-                    disponibilidades.forEachIndexed { index, item ->
-                        DisponibilidadFormRow(
-                            item = item,
-                            enabled = !isSaving,
-                            canRemove = disponibilidades.size > 1,
-                            onChange = { updated ->
-                                disponibilidades = disponibilidades.toMutableList().also {
-                                    it[index] = updated
-                                }
-                            },
-                            onRemove = {
-                                disponibilidades = disponibilidades.toMutableList().also {
-                                    it.removeAt(index)
-                                }
-                            }
-                        )
-                    }
-
-                    OutlinedButton(
-                        onClick = {
-                            disponibilidades = disponibilidades + DisponibilidadFormItem(key = nextKey++)
-                        },
+            SeccionFormulario(
+                titulo = "Disponibilidad semanal",
+                iconRes = R.drawable.ic_calendar,
+                descripcion = "Los días y horarios en los que te pueden reservar."
+            ) {
+                disponibilidades.forEachIndexed { index, item ->
+                    DisponibilidadFormRow(
+                        item = item,
                         enabled = !isSaving,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.large
-                    ) {
-                        Text("+ Agregar disponibilidad")
-                    }
-
-                    validation.disponibilidadesError?.let {
-                        Text(
-                            text = it,
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
+                        canRemove = disponibilidades.size > 1,
+                        onChange = { updated ->
+                            disponibilidades = disponibilidades.toMutableList().also {
+                                it[index] = updated
+                            }
+                        },
+                        onRemove = {
+                            disponibilidades = disponibilidades.toMutableList().also {
+                                it.removeAt(index)
+                            }
+                        }
+                    )
                 }
 
-                saveError?.let {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = PetCareTealSoft,
-                        shape = MaterialTheme.shapes.medium
-                    ) {
-                        Text(
-                            text = it,
-                            modifier = Modifier.padding(12.dp),
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
+                OutlinedButton(
+                    elevation = elevacionBotonContorno(),
+                    colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
+                    onClick = {
+                        disponibilidades = disponibilidades + DisponibilidadFormItem(key = nextKey++)
+                    },
+                    enabled = !isSaving,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.large
+                ) {
+                    Text("+ Agregar horario")
+                }
+
+                validation.disponibilidadesError?.let {
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
         }
 
-        Button(
+        BarraAccionFormulario(
+            texto = "Guardar servicio",
+            isLoading = isSaving,
+            enabled = categoria in categoriasAprobadas,
+            aviso = saveError,
             onClick = {
                 val requestDisponibilidades = disponibilidades.map {
                     DisponibilidadRequest(
@@ -231,18 +234,8 @@ fun ServicioFormScreen(
                 if (nextValidation.isValid && categoria in categoriasAprobadas) {
                     onSave(categoria, descripcion.trim().ifBlank { null }, requestDisponibilidades)
                 }
-            },
-            enabled = !isSaving && categoria in categoriasAprobadas,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(54.dp)
-                .padding(top = 14.dp),
-            shape = MaterialTheme.shapes.large
-        ) {
-            Text(if (isSaving) "Guardando..." else "Guardar servicio")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
+            }
+        )
     }
 }
 
@@ -254,10 +247,11 @@ private fun DisponibilidadFormRow(
     onChange: (DisponibilidadFormItem) -> Unit,
     onRemove: () -> Unit
 ) {
-    Card(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = MaterialTheme.shapes.large
+        color = PetCareSurfaceSoft,
+        shape = MaterialTheme.shapes.large,
+        border = BorderStroke(1.dp, PetCareLine)
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
@@ -265,23 +259,26 @@ private fun DisponibilidadFormRow(
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                EnumDropdownField(
-                    label = "Dia",
-                    selectedValue = item.diaSemana,
-                    placeholder = "Seleccionar dia",
-                    options = diaSemanaOptions,
-                    optionLabel = ::diaLabel,
+                CampoSeleccion(
+                    label = "Día",
+                    valor = item.diaSemana,
+                    placeholder = "Seleccionar día",
+                    opciones = diaSemanaOptions,
+                    etiqueta = ::diaLabel,
                     enabled = enabled,
                     onSelect = { onChange(item.copy(diaSemana = it)) },
                     modifier = Modifier.weight(1f)
                 )
 
                 if (canRemove) {
-                    TextButton(onClick = onRemove, enabled = enabled) {
-                        Text("Quitar", color = MaterialTheme.colorScheme.error)
+                    IconButton(onClick = onRemove, enabled = enabled) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_delete),
+                            contentDescription = "Quitar horario",
+                            tint = MaterialTheme.colorScheme.error
+                        )
                     }
                 }
             }
@@ -309,64 +306,6 @@ private fun DisponibilidadFormRow(
     }
 }
 
-@Composable
-private fun EnumDropdownField(
-    label: String,
-    selectedValue: String,
-    placeholder: String,
-    options: List<String>,
-    optionLabel: (String) -> String,
-    enabled: Boolean,
-    onSelect: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    isError: Boolean = false,
-    supportingText: String? = null
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(text = label, style = MaterialTheme.typography.labelLarge)
-
-        Box(modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(
-                onClick = { expanded = true },
-                enabled = enabled,
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large,
-                border = BorderStroke(
-                    1.dp,
-                    if (isError) MaterialTheme.colorScheme.error else PetCareLine
-                )
-            ) {
-                Text(
-                    text = if (selectedValue.isBlank()) placeholder else optionLabel(selectedValue),
-                    color = if (selectedValue.isBlank()) PetCareMuted else MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                options.forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(optionLabel(option)) },
-                        onClick = {
-                            onSelect(option)
-                            expanded = false
-                        }
-                    )
-                }
-            }
-        }
-
-        supportingText?.let {
-            Text(text = it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-        }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TimeField(
@@ -384,17 +323,15 @@ private fun TimeField(
         is24Hour = true
     )
 
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(text = label, style = MaterialTheme.typography.labelLarge)
-        OutlinedButton(
-            onClick = { showPicker = true },
-            enabled = enabled,
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large
-        ) {
-            Text(text = value.ifBlank { "--:--" })
-        }
-    }
+    CampoToque(
+        label = label,
+        valor = value,
+        placeholder = "--:--",
+        onClick = { showPicker = true },
+        modifier = modifier,
+        enabled = enabled,
+        iconRes = R.drawable.ic_clock
+    )
 
     if (showPicker) {
         Dialog(onDismissRequest = { showPicker = false }) {

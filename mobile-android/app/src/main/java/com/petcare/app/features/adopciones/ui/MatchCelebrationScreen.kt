@@ -1,5 +1,6 @@
 package com.petcare.app.features.adopciones.ui
 
+import com.petcare.app.ui.components.elevacionBoton
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -123,7 +124,7 @@ fun MatchCelebrationScreen(
                 textAlign = TextAlign.Center
             )
             Text(
-                text = "Aceptaste la solicitud de adopción; ahora pueden coordinar los próximos pasos.",
+                text = "Aceptaron tu solicitud de adopción; ahora pueden coordinar los próximos pasos.",
                 modifier = Modifier.alpha(alphaTexto.value),
                 color = PetCareMuted,
                 style = MaterialTheme.typography.bodyMedium,
@@ -133,6 +134,7 @@ fun MatchCelebrationScreen(
             Spacer(modifier = Modifier.height(28.dp))
 
             Button(
+                elevation = elevacionBoton(),
                 onClick = onContinuar,
                 modifier = Modifier
                     .fillMaxWidth()

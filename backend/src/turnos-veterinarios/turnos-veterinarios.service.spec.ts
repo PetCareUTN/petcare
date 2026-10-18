@@ -573,7 +573,10 @@ describe('TurnosVeterinariosService', () => {
       const result = await service.findMisTurnos(duenio.idUsuario);
 
       expect(turnosRepository.find).toHaveBeenCalledWith({
-        where: { duenio: { idUsuario: duenio.idUsuario } },
+        where: [
+          { duenio: { idUsuario: duenio.idUsuario } },
+          { mascota: { usuarios: { idUsuario: duenio.idUsuario } } },
+        ],
         relations: ['veterinario', 'veterinario.usuario', 'mascota', 'duenio'],
         order: { fecha: 'ASC', hora: 'ASC', idTurno: 'ASC' },
       });
@@ -603,10 +606,16 @@ describe('TurnosVeterinariosService', () => {
       );
 
       expect(turnosRepository.find).toHaveBeenCalledWith({
-        where: {
-          duenio: { idUsuario: duenio.idUsuario },
-          estado: AppointmentStatus.CANCELADO,
-        },
+        where: [
+          {
+            duenio: { idUsuario: duenio.idUsuario },
+            estado: AppointmentStatus.CANCELADO,
+          },
+          {
+            mascota: { usuarios: { idUsuario: duenio.idUsuario } },
+            estado: AppointmentStatus.CANCELADO,
+          },
+        ],
         relations: ['veterinario', 'veterinario.usuario', 'mascota', 'duenio'],
         order: { fecha: 'ASC', hora: 'ASC', idTurno: 'ASC' },
       });
@@ -676,6 +685,38 @@ describe('TurnosVeterinariosService', () => {
         expect.objectContaining({ idDuenio: duenio.idUsuario, idPrestador: 3 }),
         'duenio',
         'Se enfermó el dueño',
+        duenio.idUsuario,
+      );
+    });
+
+    it('permite cancelar a otro dueño de la mascota compartida', async () => {
+      const otroDuenio = { idUsuario: 88, nombre: 'Marta', apellido: 'Paz' };
+      turnosRepository.findOne.mockResolvedValue({
+        ...turnoCancelable,
+        mascota: { ...mascota, usuarios: [duenio, otroDuenio] },
+      });
+      turnosRepository.save.mockImplementation((turno: TurnoVeterinario) =>
+        Promise.resolve(turno),
+      );
+
+      const result = await service.cancelar(otroDuenio.idUsuario, 30, {});
+
+      expect(result.estado).toBe(AppointmentStatus.CANCELADO);
+      expect(result.canceladoPor).toBe('dueño');
+      // Se avisa a todos los dueños, y se informa quién canceló para no
+      // avisarle a esa misma persona.
+      expect(
+        notificacionesTurnosService.notificarTurnoCancelado,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          duenios: [
+            expect.objectContaining({ idUsuario: duenio.idUsuario }),
+            expect.objectContaining({ idUsuario: 88 }),
+          ],
+        }),
+        'duenio',
+        null,
+        88,
       );
     });
 

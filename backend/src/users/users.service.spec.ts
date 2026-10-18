@@ -318,4 +318,31 @@ describe('UsersService', () => {
       BadRequestException,
     );
   });
+
+  it('updateFoto saves the new photo under /uploads/usuarios', async () => {
+    const user = { idUsuario: 1, foto: null } as User;
+    repository.findOne.mockResolvedValue(user);
+    repository.save.mockImplementation((saved: User) => Promise.resolve(saved));
+
+    const result = await service.updateFoto(1, {
+      mimetype: 'image/png',
+      originalname: 'yo.PNG',
+      buffer: Buffer.from('foto'),
+    });
+
+    expect(result.foto).toMatch(/^\/uploads\/usuarios\/usuario-.+\.png$/);
+    expect(repository.save).toHaveBeenCalledWith(user);
+  });
+
+  it('updateFoto throws NotFoundException when the user does not exist', async () => {
+    repository.findOne.mockResolvedValue(null);
+
+    await expect(
+      service.updateFoto(99, {
+        mimetype: 'image/png',
+        originalname: 'yo.png',
+        buffer: Buffer.from('foto'),
+      }),
+    ).rejects.toThrow(NotFoundException);
+  });
 });

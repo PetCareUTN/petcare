@@ -293,14 +293,25 @@ Compilar a mano tiene dos problemas: depende de la única máquina que tiene la
 keystore, y hay que acordarse de subir la versión en cada entrega. El workflow
 **APK de release** (`.github/workflows/apk-release.yml`) resuelve los dos.
 
-Se dispara a mano desde la pestaña **Actions** del repositorio, pidiendo la
-versión visible (por ejemplo `1.2`) y, opcionalmente, una URL de backend
-distinta para compilar contra otro ambiente. El APK queda como artefacto
-descargable de esa corrida, así que **cualquiera del equipo lo baja sin tener
-la keystore ni Android Studio**.
+Corre solo en **cada merge a `main`**, y también se puede disparar a mano desde
+la pestaña **Actions** del repositorio, con una versión fija o una URL de
+backend distinta para compilar contra otro ambiente. El APK queda como
+artefacto descargable de esa corrida, así que **cualquiera del equipo lo baja
+sin tener la keystore ni Android Studio**.
 
-El `versionCode` sale del número de corrida de GitHub, que siempre sube: no hay
-que acordarse de incrementarlo, y dos APK nunca comparten versión.
+La versión se arma sola: `<VERSION_BASE>.<número de corrida>`, por ejemplo
+`1.0.57`. El número de corrida de GitHub siempre sube, así que no hay que
+acordarse de incrementar nada ni guardar un contador en el repo, y dos APK
+nunca comparten versión. El mismo número va al `versionCode`, que es lo que
+Android usa para saber que un APK es más nuevo que el instalado.
+
+`VERSION_BASE` es una variable al principio del workflow. Cambiarla a `1.1`
+hace que las siguientes salgan `1.1.58`, `1.1.59`, y así.
+
+El archivo se publica como `petcare-<versión>.apk`, no como `app-release.apk`.
+No es cosmético: lo que la gente baja e instala es el `.apk`, y tener varios
+con el mismo nombre en la carpeta de Descargas lleva a instalar el que no era,
+cosa que ya nos pasó.
 
 Antes de publicar el artefacto, el workflow verifica con `apksigner` con qué
 llave quedó firmado y lo imprime en el log. Esa verificación corre contra el

@@ -1,3 +1,4 @@
+import { SuscripcionEstado } from '../../common/enums/suscripcion-estado.enum';
 import { Suscripcion } from '../entities/suscripcion.entity';
 
 export class SuscripcionResponseDto {
@@ -12,6 +13,10 @@ export class SuscripcionResponseDto {
   fechaVencimiento: Date | null;
   /** Inicio del período de gracia (null si no está en gracia). */
   fechaGraciaInicio: Date | null;
+  /** Fin del período de prueba gratuito (null si no hay trial). */
+  fechaPruebaFin: Date | null;
+  /** true si la suscripción está en período de prueba vigente. */
+  esPrueba: boolean;
   /** Si el veterinario puede usar la plataforma con esta suscripción. */
   accesoPermitido: boolean;
   /** Motivo del bloqueo legible (null si accesoPermitido es true). */
@@ -37,6 +42,11 @@ export class SuscripcionResponseDto {
     dto.fechaFin = suscripcion.fechaFin;
     dto.fechaVencimiento = suscripcion.fechaVencimiento;
     dto.fechaGraciaInicio = suscripcion.fechaGraciaInicio ?? null;
+    dto.fechaPruebaFin = suscripcion.fechaPruebaFin ?? null;
+    dto.esPrueba =
+      suscripcion.estado === SuscripcionEstado.EN_PRUEBA &&
+      suscripcion.fechaPruebaFin != null &&
+      suscripcion.fechaPruebaFin > new Date();
     dto.accesoPermitido = acceso?.accesoPermitido ?? true;
     dto.motivoBloqueo = acceso?.motivo ?? null;
     dto.codigoBloqueo = acceso?.codigo ?? null;

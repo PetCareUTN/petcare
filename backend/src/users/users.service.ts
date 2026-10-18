@@ -5,9 +5,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { mkdir, writeFile } from 'fs/promises';
+import { extname, join } from 'path';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { MailService } from '../mail/mail.service';
+import type { UploadedImageFile } from '../mascotas/types/uploaded-image-file.type';
 import { UpdatePreferenciasDto } from './dto/update-preferencias.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
@@ -144,6 +147,33 @@ export class UsersService {
     }
 
     return this.usersRepository.save(user);
+  }
+
+  /** Guarda la foto de perfil nueva; reemplaza a la anterior. */
+  async updateFoto(idUsuario: number, foto: UploadedImageFile): Promise<User> {
+    const user = await this.findById(idUsuario);
+
+    if (!user) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Usuario no encontrado',
+      });
+    }
+
+    user.foto = await this.saveFoto(foto);
+    return this.usersRepository.save(user);
+  }
+
+  private async saveFoto(foto: UploadedImageFile): Promise<string> {
+    const uploadPath = join(process.cwd(), 'uploads', 'usuarios');
+    await mkdir(uploadPath, { recursive: true });
+
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    const extension = extname(foto.originalname).toLowerCase();
+    const filename = `usuario-${uniqueSuffix}${extension}`;
+    await writeFile(join(uploadPath, filename), foto.buffer);
+
+    return `/uploads/usuarios/${filename}`;
   }
 
   async updateProvincia(

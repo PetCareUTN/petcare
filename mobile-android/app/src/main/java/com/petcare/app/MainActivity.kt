@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import com.petcare.app.features.adopciones.data.local.MatchesCelebradosPreferences
 import com.petcare.app.features.adopciones.data.remote.FavoritoResponse
 import com.petcare.app.features.adopciones.data.remote.FiltrosAdopcion
 import com.petcare.app.features.adopciones.data.remote.PublicacionAdopcionResponse
@@ -100,9 +101,13 @@ import com.petcare.app.features.perdidas.ui.UltimaUbicacionScreen
 import com.petcare.app.features.pets.data.remote.CreatePetRequest
 import com.petcare.app.features.pets.data.remote.PetResponse
 import com.petcare.app.features.pets.data.remote.UpdatePetRequest
+import com.petcare.app.features.auth.domain.currentUserId
+import com.petcare.app.features.pets.domain.MascotasCompartidasController
 import com.petcare.app.features.pets.domain.PetsController
 import com.petcare.app.features.pets.ui.EditPetScreen
+import com.petcare.app.features.pets.ui.CompartirMascotaScreen
 import com.petcare.app.features.pets.ui.PetProfileScreen
+import com.petcare.app.features.pets.ui.SolicitudesCompartirRecibidasScreen
 import com.petcare.app.features.pets.ui.RegisterPetScreen
 import com.petcare.app.features.profile.data.remote.UpdateProfileRequest
 import com.petcare.app.features.profile.data.remote.UserProfileResponse
@@ -195,6 +200,11 @@ class MainActivity : ComponentActivity() {
                         petsApi = RetrofitClient.petsApi(sessionStore)
                     )
                 }
+                val mascotasCompartidasController = remember {
+                    MascotasCompartidasController(
+                        api = RetrofitClient.mascotasCompartidasApi(sessionStore)
+                    )
+                }
                 val historiaClinicaController = remember {
                     HistoriaClinicaController(
                         historiaClinicaApi = RetrofitClient.historiaClinicaApi(sessionStore)
@@ -209,6 +219,9 @@ class MainActivity : ComponentActivity() {
                     AdopcionesController(
                         adopcionesApi = RetrofitClient.adopcionesApi(sessionStore)
                     )
+                }
+                val matchesCelebradosPreferences = remember {
+                    MatchesCelebradosPreferences(applicationContext)
                 }
                 val solicitudesAdopcionController = remember {
                     SolicitudesAdopcionController(
@@ -266,6 +279,14 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf(false)
                 }
                 var isSavingPet by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                // Dueños de la mascota abierta y cómo compartirla.
+                var isCompartiendoMascota by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                // Solicitudes que me hicieron para compartir una mascota.
+                var isViewingSolicitudesCompartir by rememberSaveable {
                     mutableStateOf(false)
                 }
                 var isRestoringSession by rememberSaveable {
@@ -437,6 +458,12 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf(false)
                 }
                 var profileError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var isUploadingProfilePhoto by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var profilePhotoError by rememberSaveable {
                     mutableStateOf<String?>(null)
                 }
                 var saveProfileError by rememberSaveable {
@@ -733,6 +760,8 @@ class MainActivity : ComponentActivity() {
                     isLoadingSolicitudesRecibidas = false
                     solicitudesRecibidasError = null
                     solicitudesRecibidas = emptyList()
+                    isCompartiendoMascota = false
+                    isViewingSolicitudesCompartir = false
                     procesandoSolicitudId = null
                     isViewingMisPublicaciones = false
                     isLoadingMisPublicaciones = false
@@ -827,6 +856,8 @@ class MainActivity : ComponentActivity() {
                     isViewingMisTurnos = false
                     isViewingSolicitudesServicios = false
                     isViewingNotificaciones = false
+                    isCompartiendoMascota = false
+                    isViewingSolicitudesCompartir = false
                 }
 
                 fun navigateBackInApp() {
@@ -837,6 +868,8 @@ class MainActivity : ComponentActivity() {
                             googleError = null
                         }
                         isViewingNotificaciones -> isViewingNotificaciones = false
+                        isCompartiendoMascota -> isCompartiendoMascota = false
+                        isViewingSolicitudesCompartir -> isViewingSolicitudesCompartir = false
                         isRegisteringPet -> {
                             savePetError = null
                             isRegisteringPet = false
@@ -1303,6 +1336,20 @@ class MainActivity : ComponentActivity() {
                     lifecycleScope.launch {
                         try {
                             misSolicitudes = solicitudesAdopcionController.listarMisSolicitudes()
+
+                            // El festejo del match es para el adoptante: se muestra la
+                            // primera vez que ve una solicitud suya aceptada.
+                            val nuevosMatches = misSolicitudes.filter {
+                                it.estado == "ACEPTADA" &&
+                                    !matchesCelebradosPreferences.fueCelebrado(it.idSolicitud)
+                            }
+                            nuevosMatches.maxByOrNull { it.createdAt }?.let { match ->
+                                matchCelebrationPetName = match.nombreMascota
+                                matchCelebrationPetFoto = match.fotoMascota
+                            }
+                            matchesCelebradosPreferences.marcarCelebrados(
+                                nuevosMatches.map { it.idSolicitud }
+                            )
                         } catch (exception: HttpException) {
                             if (exception.code() == 401) {
                                 logout()
@@ -1647,6 +1694,8 @@ class MainActivity : ComponentActivity() {
                 val canNavigateBackInApp =
                     registroGooglePendiente != null ||
                         isViewingNotificaciones ||
+                        isCompartiendoMascota ||
+                        isViewingSolicitudesCompartir ||
                         isRegisteringPet ||
                         editingPet != null ||
                         isCreatingServicio ||
@@ -2044,11 +2093,11 @@ class MainActivity : ComponentActivity() {
                                     try {
                                         val actualizada =
                                             solicitudesAdopcionController.aceptar(solicitud.idSolicitud)
+                                        // Quien publica no ve el festejo: la fila pasa a
+                                        // "Aceptada" con el contacto del adoptante.
                                         solicitudesRecibidas = solicitudesRecibidas.map {
                                             if (it.idSolicitud == actualizada.idSolicitud) actualizada else it
                                         }
-                                        matchCelebrationPetName = actualizada.nombreMascota
-                                        matchCelebrationPetFoto = actualizada.fotoMascota
                                     } catch (exception: HttpException) {
                                         if (exception.code() == 401) {
                                             logout()
@@ -2273,7 +2322,14 @@ class MainActivity : ComponentActivity() {
                                     serviciosError = null
                                     isViewingServicios = true
                                     loadServicios()
-                                }
+                                },
+                                onMascotasCompartidasClick = {
+                                    scope.launch { drawerState.close() }
+                                    volverAInicio()
+                                    isViewingSolicitudesCompartir = true
+                                },
+                                // El drawer vive dentro de la rama logueada: al salir se descarta solo.
+                                onLogout = { logout() }
                             )
                         }
                     ) {
@@ -2376,6 +2432,13 @@ class MainActivity : ComponentActivity() {
                                                 selectedPetId = idMascota
                                                 loadPetProfile(idMascota)
                                                 isReportandoPerdidaScreen = true
+                                            },
+                                            // La solicitud para compartir una mascota
+                                            // abre las solicitudes pendientes.
+                                            onAbrirSolicitudCompartir = {
+                                                isViewingNotificaciones = false
+                                                cerradoEnMs = System.currentTimeMillis()
+                                                isViewingSolicitudesCompartir = true
                                             }
                                         )
                                     }
@@ -2799,7 +2862,65 @@ class MainActivity : ComponentActivity() {
                             isEditingProfile = true
                         },
                         onConfiguracion = { isViewingSettings = true },
-                        onLogout = { logout() }
+                        onLogout = { logout() },
+                        isUploadingPhoto = isUploadingProfilePhoto,
+                        photoError = profilePhotoError,
+                        onPhotoSelected = { photoUri ->
+                            isUploadingProfilePhoto = true
+                            profilePhotoError = null
+
+                            lifecycleScope.launch {
+                                try {
+                                    profile = profileController.updateMyPhoto(
+                                        buildPhotoPart(photoUri)
+                                    )
+                                } catch (exception: HttpException) {
+                                    if (exception.code() == 401) {
+                                        logout()
+                                        serverError = "La sesion expiro. Inicia sesion nuevamente"
+                                    } else {
+                                        profilePhotoError = "No se pudo actualizar la foto"
+                                    }
+                                } catch (exception: IOException) {
+                                    profilePhotoError = "No se pudo conectar con el servidor"
+                                } catch (exception: Exception) {
+                                    profilePhotoError = "Ocurrio un error inesperado"
+                                } finally {
+                                    isUploadingProfilePhoto = false
+                                }
+                            }
+                        }
+                    )
+                } else if (loggedUserName != null && isCompartiendoMascota && selectedPet != null) {
+                    CompartirMascotaScreen(
+                        controller = mascotasCompartidasController,
+                        pet = selectedPet!!,
+                        miIdUsuario = currentUserId(sessionStore),
+                        onBack = { isCompartiendoMascota = false },
+                        onSesionExpirada = {
+                            logout()
+                            serverError = "La sesion expiro. Inicia sesion nuevamente"
+                        },
+                        onCambio = { loadPets() },
+                        onSalio = {
+                            // Ya no ve la mascota: no hay perfil al que volver.
+                            isCompartiendoMascota = false
+                            selectedPetId = null
+                            selectedPet = null
+                            petProfileError = null
+                            reportePerdidaActivo = null
+                            tagBleDeLaMascota = null
+                        }
+                    )
+                } else if (loggedUserName != null && isViewingSolicitudesCompartir) {
+                    SolicitudesCompartirRecibidasScreen(
+                        controller = mascotasCompartidasController,
+                        onBack = { isViewingSolicitudesCompartir = false },
+                        onSesionExpirada = {
+                            logout()
+                            serverError = "La sesion expiro. Inicia sesion nuevamente"
+                        },
+                        onAceptada = { loadPets() }
                     )
                 } else if (loggedUserName != null && selectedPetId != null && isViewingHistoria) {
                     HistoriaClinicaScreen(
@@ -3121,7 +3242,16 @@ class MainActivity : ComponentActivity() {
                         tagBle = tagBleDeLaMascota,
                         isLoadingTagBle = isLoadingTagBle,
                         tagBleError = tagBleError,
-                        onVerTagBle = { isVinculandoTagScreen = true }
+                        onVerTagBle = { isVinculandoTagScreen = true },
+                        onCompartir = { isCompartiendoMascota = true },
+                        // La pantalla de edición va antes en la cadena: al volver
+                        // de ella se regresa a este perfil.
+                        onEdit = {
+                            selectedPet?.let {
+                                updatePetError = null
+                                editingPet = it
+                            }
+                        }
                     )
                 } else if (loggedUserName != null && isViewingMisTurnos) {
                     MisTurnosScreen(
@@ -3271,8 +3401,14 @@ class MainActivity : ComponentActivity() {
                         }
                     )
                         } else {
+                    // El encabezado muestra la foto de perfil: sin esto el perfil
+                    // recien se cargaba al entrar a "Mi perfil".
+                    LaunchedEffect(loggedUserName) {
+                        if (profile == null && !isLoadingProfile) loadProfile()
+                    }
                     AuthenticatedHomeScreen(
                         userName = loggedUserName.orEmpty(),
+                        userPhoto = profile?.foto,
                         pets = pets,
                         isLoadingPets = isLoadingPets,
                         petsError = petsError,

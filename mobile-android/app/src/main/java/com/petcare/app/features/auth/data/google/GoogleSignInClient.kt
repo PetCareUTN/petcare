@@ -7,7 +7,7 @@ import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.petcare.app.R
 
@@ -41,17 +41,17 @@ class GoogleSignInClient(private val context: Context) {
         }
 
         /*
-         * filterByAuthorizedAccounts = false para que también aparezcan cuentas
-         * que todavía no usaron PetCare: si no, alguien que se registra por
-         * primera vez no vería ninguna opción.
+         * GetSignInWithGoogleOption, y no GetGoogleIdOption, porque este botón
+         * es un "Continuar con Google" explícito: abre el selector completo de
+         * Google, que además de las cuentas del teléfono ofrece **agregar
+         * otra**. GetGoogleIdOption muestra una hoja reducida, limitada a las
+         * cuentas ya configuradas, y deja sin salida a quien quiere entrar con
+         * una cuenta distinta de la del dispositivo.
          */
-        val googleIdOption = GetGoogleIdOption.Builder()
-            .setFilterByAuthorizedAccounts(false)
-            .setServerClientId(clientId)
-            .build()
+        val signInWithGoogleOption = GetSignInWithGoogleOption.Builder(clientId).build()
 
         val request = GetCredentialRequest.Builder()
-            .addCredentialOption(googleIdOption)
+            .addCredentialOption(signInWithGoogleOption)
             .build()
 
         return try {
@@ -69,8 +69,18 @@ class GoogleSignInClient(private val context: Context) {
         } catch (exception: GetCredentialCancellationException) {
             GoogleSignInResult.Cancelado
         } catch (exception: NoCredentialException) {
+            /*
+             * Google devuelve esto tanto cuando el teléfono no tiene ninguna
+             * cuenta como cuando rechaza la firma de la app, que es el caso
+             * mucho más frecuente mientras se desarrolla: pasa cuando el SHA-1
+             * de la keystore no está registrado en Google Cloud. Por eso el
+             * mensaje nombra las dos causas: decir solo la primera manda a
+             * buscar el problema al lado equivocado.
+             */
             GoogleSignInResult.Error(
-                "No hay ninguna cuenta de Google configurada en el telefono"
+                "No se pudo entrar con Google. Revisá que el teléfono tenga una " +
+                    "cuenta de Google y que la firma de la app esté registrada en " +
+                    "Google Cloud (ver docs/ingreso-con-google.md)"
             )
         } catch (exception: GetCredentialException) {
             GoogleSignInResult.Error("No se pudo conectar con Google")

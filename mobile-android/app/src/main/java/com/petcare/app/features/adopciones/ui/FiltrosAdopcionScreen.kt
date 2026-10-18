@@ -1,5 +1,7 @@
 package com.petcare.app.features.adopciones.ui
 
+import com.petcare.app.ui.components.elevacionBoton
+import com.petcare.app.ui.components.elevacionBotonContorno
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -144,6 +146,7 @@ fun FiltrosAdopcionScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
+            elevation = elevacionBoton(),
             onClick = {
                 onAplicar(
                     FiltrosAdopcion(
@@ -171,6 +174,8 @@ fun FiltrosAdopcionScreen(
         Spacer(modifier = Modifier.height(10.dp))
 
         OutlinedButton(
+            elevation = elevacionBotonContorno(),
+            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface),
             onClick = { onAplicar(FiltrosAdopcion()) },
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.large

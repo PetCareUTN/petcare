@@ -18,6 +18,7 @@ import { GeocodingService } from '../geocoding/geocoding.service';
 import { NotificacionesService } from '../notificaciones/notificaciones.service';
 import { Role } from '../roles/entities/role.entity';
 import { Suscripcion } from '../suscripciones/entities/suscripcion.entity';
+import { SuscripcionesService } from '../suscripciones/suscripciones.service';
 import { UsersService } from '../users/users.service';
 import { RegisterVeterinarioDto } from './dto/register-veterinario.dto';
 import {
@@ -41,6 +42,7 @@ export class VeterinariosService {
     private readonly suscripcionesRepository: Repository<Suscripcion>,
     private readonly usersService: UsersService,
     private readonly notificacionesService: NotificacionesService,
+    private readonly suscripcionesService: SuscripcionesService,
     private readonly geocoding: GeocodingService,
   ) {}
 
@@ -354,11 +356,17 @@ export class VeterinariosService {
     veterinario.estadoValidacion = ValidationStatus.APROBADO;
     await this.veterinariosRepository.save(veterinario);
 
+    // Activación explícita del período de prueba gratuito (3 meses).
+    // Fuera de los GET: solo ocurre al aprobar (decisión de diseño).
+    await this.suscripcionesService.activarPrueba(
+      veterinario.usuario.idUsuario,
+    );
+
     await this.notificacionesService.crear(
       veterinario.usuario.idUsuario,
       NotificationType.APROBACION,
       'Cuenta aprobada',
-      'Tu cuenta de veterinario ha sido validada. Para usar la plataforma, suscribite desde "Mis suscripción".',
+      'Tu cuenta de veterinario ha sido validada. Tenés un período de prueba gratuito para usar la plataforma.',
     );
 
     return { mensaje: 'Solicitud aprobada correctamente' };

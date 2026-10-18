@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -43,9 +44,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.petcare.app.R
 import com.petcare.app.features.pets.data.remote.CreatePetRequest
 import com.petcare.app.features.pets.domain.PetRegistrationValidationResult
 import com.petcare.app.features.pets.domain.PetRegistrationValidator
+import com.petcare.app.ui.components.BarraAccionFormulario
+import com.petcare.app.ui.components.CampoSeleccion
+import com.petcare.app.ui.components.CampoToque
+import com.petcare.app.ui.components.EncabezadoFormulario
+import com.petcare.app.ui.components.FilaInterruptor
+import com.petcare.app.ui.components.GrupoChips
+import com.petcare.app.ui.components.SeccionFormulario
 import com.petcare.app.ui.theme.PetCareLine
 import com.petcare.app.ui.theme.PetCareMuted
 import com.petcare.app.ui.theme.PetCareSurfaceSoft
@@ -117,63 +126,24 @@ fun RegisterPetScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .systemBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.Start
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        EncabezadoFormulario(
+            titulo = "Nueva mascota",
+            subtitulo = "Contanos sobre tu compañero",
+            onBack = onCancel,
+            enabled = !isSaving
+        )
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Column {
-                Text(
-                    text = "Nueva mascota",
-                    style = MaterialTheme.typography.headlineMedium
-                )
-                Text(
-                    text = "Datos basicos del perfil",
-                    color = PetCareMuted,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-            OutlinedButton(
-                onClick = onCancel,
-                enabled = !isSaving,
-                shape = MaterialTheme.shapes.large
-            ) {
-                Text("Cerrar")
-            }
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = PetCareTealSoft,
-            shape = MaterialTheme.shapes.extraLarge
-        ) {
-            Text(
-                text = "La mascota queda asociada automaticamente a tu sesion.",
-                modifier = Modifier.padding(16.dp),
-                color = PetCareTealDark,
-                style = MaterialTheme.typography.bodyMedium
-            )
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.dp, PetCareLine),
-            shape = MaterialTheme.shapes.extraLarge
-        ) {
-            Column(
-                modifier = Modifier.padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            SeccionFormulario(
+                titulo = "Datos básicos",
+                iconRes = R.drawable.ic_person
             ) {
                 OutlinedTextField(
                     value = name,
@@ -185,27 +155,34 @@ fun RegisterPetScreen(
                     singleLine = true
                 )
 
-                PetDropdownField(
-                    label = "Especie",
-                    selectedValue = species,
-                    placeholder = "Seleccionar especie",
-                    options = speciesOptions,
-                    enabled = !isSaving,
-                    isError = validation.speciesError != null,
-                    supportingText = validation.speciesError,
-                    onSelect = {
-                        species = it
-                        breed = ""
-                        customBreed = ""
-                        customBreedError = null
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = "Especie", style = MaterialTheme.typography.labelLarge)
+                    GrupoChips(
+                        opciones = speciesOptions.map { it to it },
+                        seleccionado = species.ifBlank { null },
+                        enabled = !isSaving,
+                        isError = validation.speciesError != null,
+                        onSelect = {
+                            species = it
+                            breed = ""
+                            customBreed = ""
+                            customBreedError = null
+                        }
+                    )
+                    validation.speciesError?.let {
+                        Text(
+                            text = it,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
                     }
-                )
+                }
 
-                PetDropdownField(
+                CampoSeleccion(
                     label = "Raza",
-                    selectedValue = breed,
-                    placeholder = "Seleccionar raza",
-                    options = breedOptions,
+                    valor = breed,
+                    placeholder = if (species.isBlank()) "Elegí primero la especie" else "Seleccionar raza",
+                    opciones = breedOptions,
                     enabled = !isSaving && species.isNotBlank(),
                     onSelect = {
                         breed = it
@@ -232,27 +209,14 @@ fun RegisterPetScreen(
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "Sexo",
-                        style = MaterialTheme.typography.labelLarge
+                    Text(text = "Sexo", style = MaterialTheme.typography.labelLarge)
+                    GrupoChips(
+                        opciones = listOf("macho" to "Macho", "hembra" to "Hembra"),
+                        seleccionado = sex.ifBlank { null },
+                        enabled = !isSaving,
+                        isError = validation.sexError != null,
+                        onSelect = { sex = it }
                     )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        FilterChip(
-                            selected = sex == "macho",
-                            onClick = { sex = "macho" },
-                            label = { Text("Macho") }
-                        )
-                        FilterChip(
-                            selected = sex == "hembra",
-                            onClick = { sex = "hembra" },
-                            label = { Text("Hembra") }
-                        )
-                    }
-
                     validation.sexError?.let {
                         Text(
                             text = it,
@@ -261,7 +225,24 @@ fun RegisterPetScreen(
                         )
                     }
                 }
+            }
 
+            SeccionFormulario(
+                titulo = "Foto",
+                iconRes = R.drawable.ic_paw,
+                descripcion = "Opcional. Ayuda a reconocerla en la app."
+            ) {
+                PetPhotoField(
+                    photoUri = photoUri,
+                    enabled = !isSaving,
+                    onPhotoAdjusted = { photoUriText = it.toString() }
+                )
+            }
+
+            SeccionFormulario(
+                titulo = "Detalles",
+                iconRes = R.drawable.ic_calendar
+            ) {
                 BirthDatePickerField(
                     selectedDate = birthDate,
                     modifier = Modifier.fillMaxWidth(),
@@ -284,32 +265,25 @@ fun RegisterPetScreen(
                     singleLine = true
                 )
 
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = PetCareSurfaceSoft,
-                    shape = MaterialTheme.shapes.large
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(
-                            checked = isSterilized,
-                            onCheckedChange = { isSterilized = it }
-                        )
-                        Text(
-                            text = "Esterilizado",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
+                FilaInterruptor(
+                    titulo = "Esterilizado/a",
+                    checked = isSterilized,
+                    onChange = { isSterilized = it },
+                    enabled = !isSaving
+                )
+            }
 
+            SeccionFormulario(
+                titulo = "Salud",
+                iconRes = R.drawable.ic_heart,
+                descripcion = "Opcional. Podés completarlo más adelante."
+            ) {
                 OutlinedTextField(
                     value = allergies,
                     onValueChange = { allergies = it },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(100.dp),
+                        .heightIn(min = 90.dp),
                     label = { Text("Alergias") }
                 )
 
@@ -318,34 +292,16 @@ fun RegisterPetScreen(
                     onValueChange = { observations = it },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(120.dp),
+                        .heightIn(min = 110.dp),
                     label = { Text("Observaciones") }
                 )
-
-                PetPhotoField(
-                    photoUri = photoUri,
-                    enabled = !isSaving,
-                    onPhotoAdjusted = { photoUriText = it.toString() }
-                )
-
-                saveError?.let {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = PetCareTealSoft,
-                        shape = MaterialTheme.shapes.medium
-                    ) {
-                        Text(
-                            text = it,
-                            modifier = Modifier.padding(12.dp),
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
             }
         }
 
-        Button(
+        BarraAccionFormulario(
+            texto = "Guardar mascota",
+            isLoading = isSaving,
+            aviso = saveError,
             onClick = {
                 val nextValidation = PetRegistrationValidator.validate(
                     name = name,
@@ -380,18 +336,8 @@ fun RegisterPetScreen(
                         photoUri
                     )
                 }
-            },
-            enabled = !isSaving,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(54.dp)
-                .padding(top = 14.dp),
-            shape = MaterialTheme.shapes.large
-        ) {
-            Text(if (isSaving) "Guardando..." else "Guardar mascota")
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
+            }
+        )
     }
 }
 
@@ -410,39 +356,17 @@ private fun BirthDatePickerField(
         initialSelectedDateMillis = selectedDate.toBirthDateMillis()
     )
 
-    Column(
+    CampoToque(
+        label = "Fecha de nacimiento",
+        valor = selectedDate,
+        placeholder = "Seleccionar fecha",
+        onClick = { showPicker = true },
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Text(
-            text = "Nacimiento",
-            style = MaterialTheme.typography.labelLarge
-        )
-
-        OutlinedButton(
-            onClick = { showPicker = true },
-            enabled = enabled,
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-            border = BorderStroke(
-                1.dp,
-                if (isError) MaterialTheme.colorScheme.error else PetCareLine
-            )
-        ) {
-            Text(
-                text = selectedDate.ifBlank { "Seleccionar fecha" },
-                color = if (selectedDate.isBlank()) PetCareMuted else MaterialTheme.colorScheme.onSurface
-            )
-        }
-
-        supportingText?.let {
-            Text(
-                text = it,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-    }
+        enabled = enabled,
+        isError = isError,
+        supportingText = supportingText,
+        iconRes = R.drawable.ic_calendar
+    )
 
     if (showPicker) {
         DatePickerDialog(
@@ -466,69 +390,6 @@ private fun BirthDatePickerField(
             }
         ) {
             DatePicker(state = datePickerState)
-        }
-    }
-}
-
-@Composable
-private fun PetDropdownField(
-    label: String,
-    selectedValue: String,
-    placeholder: String,
-    options: List<String>,
-    enabled: Boolean,
-    onSelect: (String) -> Unit,
-    isError: Boolean = false,
-    supportingText: String? = null
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge
-        )
-
-        Box(modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(
-                onClick = { expanded = true },
-                enabled = enabled,
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large,
-                border = BorderStroke(
-                    1.dp,
-                    if (isError) MaterialTheme.colorScheme.error else PetCareLine
-                )
-            ) {
-                Text(
-                    text = selectedValue.ifBlank { placeholder },
-                    color = if (selectedValue.isBlank()) PetCareMuted else MaterialTheme.colorScheme.onSurface
-                )
-            }
-
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                options.forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(option) },
-                        onClick = {
-                            onSelect(option)
-                            expanded = false
-                        }
-                    )
-                }
-            }
-        }
-
-        supportingText?.let {
-            Text(
-                text = it,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
-            )
         }
     }
 }
