@@ -122,6 +122,7 @@
                           type="button"
                           [class]="'event-chip ' + turno.estado + ' tipo-' + turno.tipo"
                           [class.selected]="turnoSeleccionadoClave() === turno.clave"
+                          [class.espera-registro]="esperaRegistro(turno)"
                           [attr.aria-label]="
                             tipoLabel(turno.tipo) + ' ' + formatTime(turno.hora) + ' ' +
                             etiquetaCorta(turno)
@@ -182,6 +183,7 @@
                             type="button"
                             [class]="'event-block ' + turno.estado + ' tipo-' + turno.tipo"
                             [class.selected]="turnoSeleccionadoClave() === turno.clave"
+                            [class.espera-registro]="esperaRegistro(turno)"
                             (click)="seleccionarTurno(turno)"
                           >
                             <span class="event-time">
@@ -330,8 +332,55 @@
                     </button>
                   </div>
                 </div>
+              } @else if (asistenciaPendiente() !== null) {
+                <div class="reject-box">
+                  <p class="confirm-question">
+                    @if (asistenciaPendiente()) {
+                      ¿Confirmás que <strong>{{ turno.nombreMascota }}</strong> se
+                      presentó al turno de las {{ formatTime(turno.hora) }}?
+                    } @else {
+                      ¿Confirmás que <strong>{{ turno.nombreMascota }}</strong> no se
+                      presentó al turno de las {{ formatTime(turno.hora) }}?
+                    }
+                  </p>
+                  <div class="reject-actions">
+                    <button
+                      type="button"
+                      [class]="asistenciaPendiente() ? 'btn-primary' : 'btn-warning'"
+                      [disabled]="processingClave() === turno.clave"
+                      (click)="registrarAsistencia(turno, asistenciaPendiente()!)"
+                    >
+                      Confirmar
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-secondary"
+                      (click)="cancelarConfirmacionAsistencia()"
+                    >
+                      Volver
+                    </button>
+                  </div>
+                </div>
               } @else {
                 <div class="appointment-actions">
+                  @if (puedeRegistrarAsistencia(turno)) {
+                    <button
+                      type="button"
+                      class="btn-primary"
+                      [disabled]="processingClave() === turno.clave"
+                      (click)="pedirConfirmacionAsistencia(true)"
+                    >
+                      Se presentó
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-warning"
+                      [disabled]="processingClave() === turno.clave"
+                      (click)="pedirConfirmacionAsistencia(false)"
+                    >
+                      No se presentó
+                    </button>
+                  }
                   <button
                     type="button"
                     class="btn-danger"
@@ -342,6 +391,26 @@
                   </button>
                 </div>
               }
+            }
+
+            <!-- Asistencia ya registrada: se puede corregir el mismo dia -->
+            @if (tieneAsistencia(turno)) {
+              <div class="appointment-actions">
+                @if (puedeCorregirAsistencia(turno)) {
+                  <button
+                    type="button"
+                    class="btn-secondary"
+                    [disabled]="processingClave() === turno.clave"
+                    (click)="revertirAsistencia(turno)"
+                  >
+                    Deshacer
+                  </button>
+                } @else {
+                  <p class="detail-placeholder">
+                    La asistencia solo se puede corregir el mismo día del turno.
+                  </p>
+                }
+              </div>
             }
           } @else {
             <p class="detail-placeholder">
