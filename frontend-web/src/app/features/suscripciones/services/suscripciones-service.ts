@@ -30,6 +30,15 @@ export class SuscripcionesService {
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
   }
 
+  /** Cancela la suscripción (en Mercado Pago si tiene preapproval). */
+  cancelar(): Observable<SuscripcionResponse> {
+    return this.http
+      .delete<SuscripcionResponse>(`${this.baseUrl}/mia`, {
+        headers: this.getAuthHeaders(),
+      })
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
   historial(): Observable<PagoResponse[]> {
     return this.http
       .get<PagoResponse[]>(`${this.baseUrl}/historial`, { headers: this.getAuthHeaders() })

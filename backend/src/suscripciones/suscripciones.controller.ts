@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
   HttpCode,
@@ -12,11 +13,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import {
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -25,6 +22,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { EtiquetasApi } from '../common/constants/documentacion-api';
 import {
+  ApiConflicto,
   ApiNoEncontrado,
   ApiProtegido,
 } from '../common/decorators/api-protegido.decorator';
@@ -73,11 +71,36 @@ export class SuscripcionesController {
     description:
       'Devuelve initPoint, la URL del checkout de Mercado Pago a la que hay que mandar al navegador. La suscripción recién queda activa cuando Mercado Pago confirma el pago por el webhook.',
   })
-  @ApiResponse({ status: 200, description: 'Checkout creado, con su URL de pago.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Checkout creado, con su URL de pago.',
+  })
   suscribirme(
     @CurrentUser() user: JwtPayload,
   ): Promise<{ initPoint: string; suscripcion: SuscripcionResponseDto }> {
     return this.suscripcionesService.suscribirme(user.sub);
+  }
+
+  @Delete('mia')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleName.VETERINARIO)
+  @HttpCode(HttpStatus.OK)
+  @ApiProtegido(RoleName.VETERINARIO)
+  @ApiOperation({
+    summary: 'Cancelar mi suscripción',
+    description:
+      'Cancela la suscripción de forma inmediata: primero la cancela en Mercado Pago (si tiene un preapproval) y recién entonces la marca como cancelada. Si Mercado Pago falla, responde 409 sin cambiar nada para que se pueda reintentar. Durante el período de prueba no hay preapproval, así que la cancelación es solo local.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Suscripción cancelada.',
+    type: SuscripcionResponseDto,
+  })
+  @ApiConflicto(
+    'La suscripción ya está cancelada, no está activa, o Mercado Pago rechazó la cancelación (reintentar).',
+  )
+  cancelar(@CurrentUser() user: JwtPayload): Promise<SuscripcionResponseDto> {
+    return this.suscripcionesService.cancelarSuscripcion(user.sub);
   }
 
   @Get('historial')
@@ -150,7 +173,9 @@ export class SuscripcionesAdminController {
   @Get('suscripciones')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(RoleName.ADMINISTRADOR)
-  @ApiOperation({ summary: 'Listar las suscripciones de todas las veterinarias' })
+  @ApiOperation({
+    summary: 'Listar las suscripciones de todas las veterinarias',
+  })
   @ApiResponse({
     status: 200,
     description: 'Suscripciones con su estado.',

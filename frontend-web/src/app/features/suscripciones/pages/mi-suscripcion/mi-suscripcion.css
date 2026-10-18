@@ -84,6 +84,11 @@
   color: #383d41;
 }
 
+.estado-en_prueba {
+  background: #e8eaf6;
+  color: #3949ab;
+}
+
 .suscripcion-accion {
   display: flex;
   flex-direction: column;
@@ -130,6 +135,104 @@
 
 .suscripcion-ok p {
   margin: 0;
+}
+
+.suscripcion-cancelar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #eee;
+}
+
+.btn-cancelar {
+  align-self: flex-start;
+  padding: 0.6rem 1.2rem;
+  border: 1px solid #c82333;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #c82333;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.btn-cancelar:hover {
+  background: #fdecea;
+}
+
+.btn-cancelar:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.confirmacion-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: #fdecea;
+  border: 1px solid #c82333;
+}
+
+.confirmacion-texto {
+  margin: 0;
+  font-weight: 600;
+  color: #721c24;
+}
+
+.confirmacion-botones {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.25rem;
+}
+
+.btn-cancelar-confirmar {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: #c82333;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.btn-cancelar-confirmar:hover {
+  background: #a71d2a;
+}
+
+.btn-cancelar-confirmar:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.btn-cancelar-rechazar {
+  padding: 0.5rem 1rem;
+  border: 1px solid #6c757d;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #495057;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.btn-cancelar-rechazar:hover {
+  background: #f8f9fa;
+}
+
+.btn-cancelar-rechazar:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.suscripcion-cancelar-ayuda {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #6b6f80;
 }
 
 .historial h2 {

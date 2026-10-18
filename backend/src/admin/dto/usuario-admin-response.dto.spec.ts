@@ -82,6 +82,17 @@ describe('UsuarioAdminResponseDto', () => {
     expect(dto.estado).toBe('cancelada');
   });
 
+  it('veterinario APROBADO con suscripción EN_PRUEBA devuelve en_prueba', () => {
+    const user = makeUser({
+      veterinario: makeVet(ValidationStatus.APROBADO),
+    });
+    const dto = UsuarioAdminResponseDto.fromEntity(
+      user,
+      makeSub(SuscripcionEstado.EN_PRUEBA),
+    );
+    expect(dto.estado).toBe('en_prueba');
+  });
+
   it('mapea el resto de los campos del usuario', () => {
     const dto = UsuarioAdminResponseDto.fromEntity(makeUser());
     expect(dto).toMatchObject({
