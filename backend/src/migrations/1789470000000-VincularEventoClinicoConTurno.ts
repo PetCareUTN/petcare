@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class VincularEventoClinicoConTurno1789440000000 implements MigrationInterface {
-  name = 'VincularEventoClinicoConTurno1789440000000';
+export class VincularEventoClinicoConTurno1789470000000 implements MigrationInterface {
+  name = 'VincularEventoClinicoConTurno1789470000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Nullable a propósito: una atención puede no venir de un turno agendado
