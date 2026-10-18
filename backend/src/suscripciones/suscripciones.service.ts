@@ -11,6 +11,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
   MercadoPagoConfig,
+  MercadoPagoError,
   Payment,
   PreApproval,
   WebhookSignatureValidator,
@@ -27,7 +28,6 @@ import { PagoSuscripcion } from './entities/pago-suscripcion.entity';
 import { Suscripcion } from './entities/suscripcion.entity';
 
 const DIA_EN_MS = 24 * 60 * 60 * 1000;
-const DIAS_PERIODOS = 30;
 
 /**
  * Resultado de evaluar el acceso de un veterinario a la plataforma.
@@ -88,6 +88,10 @@ export class SuscripcionesService {
 
   private get diasGracia(): number {
     return Number(process.env.SUSCRIPCION_GRACIA_DIAS ?? 3);
+  }
+
+  private get diasTrial(): number {
+    return Number(process.env.SUSCRIPCION_TRIAL_DIAS ?? 90);
   }
 
   /**
@@ -263,6 +267,16 @@ export class SuscripcionesService {
       });
     }
 
+    // Período de prueba vigente: no hay nada que pagar todavía
+    // (decisión de plan: el pago durante el trial está bloqueado).
+    if (this.esPeriodoPrueba(suscripcion)) {
+      throw new ConflictException({
+        codigoEstado: 409,
+        mensaje:
+          'Tenés un período de prueba activo. No necesitás pagar hasta que termine.',
+      });
+    }
+
     const email = veterinario.usuario?.email;
     if (!email) {
       throw new ConflictException({
@@ -314,6 +328,86 @@ export class SuscripcionesService {
           'No se pudo iniciar el pago con Mercado Pago. Intentá de nuevo.',
       });
     }
+  }
+
+  /**
+   * Cancela la suscripción del veterinario (decisión de plan: la cancelación
+   * es inmediata).
+   *
+   * Si hay un preapproval en Mercado Pago primero se cancela allí y recién
+   * cuando MP confirma se guarda el estado local CANCELADA. Si MP falla se
+   * devuelve un 409 reintentable sin tocar la base: así nunca queda una
+   * suscripción "cancelada" localmente con el preapproval de MP vivo
+   * cobrando la tarjeta. Un 404 de MP se tolera (ya estaba cancelado).
+   *
+   * Sin preapproval (período de prueba o prueba ya expirada sin pago) la
+   * cancelación es solo local: no hay cobros que frenar en MP.
+   *
+   * Cancelables: todos los estados salvo CANCELADA (ya cancelada) y
+   * PENDIENTE_PAGO (nunca pagó ni autorizó cobros, no hay nada que
+   * cancelar).
+   */
+  async cancelarSuscripcion(
+    idUsuario: number,
+  ): Promise<SuscripcionResponseDto> {
+    const suscripcion = await this.buscarPorUsuario(idUsuario);
+
+    if (suscripcion.estado === SuscripcionEstado.CANCELADA) {
+      throw new ConflictException({
+        codigoEstado: 409,
+        mensaje: 'La suscripción ya está cancelada',
+      });
+    }
+
+    if (suscripcion.estado === SuscripcionEstado.PENDIENTE_PAGO) {
+      throw new ConflictException({
+        codigoEstado: 409,
+        mensaje:
+          'Tu suscripción todavía no está activa: no hay nada que cancelar.',
+      });
+    }
+
+    if (suscripcion.mpPreapprovalId) {
+      try {
+        await this.preApproval.update({
+          id: suscripcion.mpPreapprovalId,
+          body: { status: 'cancelled' },
+        });
+      } catch (error) {
+        // 404: MP ya no tiene el preapproval (cancelado antes): seguimos.
+        if (!(error instanceof MercadoPagoError) || error.status !== 404) {
+          this.logger.error(
+            `No se pudo cancelar el preapproval ${suscripcion.mpPreapprovalId} en MP para el usuario ${idUsuario}`,
+            error instanceof Error ? error.stack : undefined,
+          );
+          throw new ConflictException({
+            codigoEstado: 409,
+            mensaje:
+              'No se pudo cancelar la suscripción en Mercado Pago. Intentá de nuevo.',
+          });
+        }
+      }
+    }
+
+    suscripcion.estado = SuscripcionEstado.CANCELADA;
+    suscripcion.fechaGraciaInicio = null;
+    await this.suscripcionesRepository.save(suscripcion);
+
+    this.logger.log(
+      `Suscripción ${suscripcion.idSuscripcion} cancelada por el usuario ${idUsuario}`,
+    );
+
+    await this.notificacionesService.crear(
+      idUsuario,
+      NotificationType.SUSCRIPCION_CANCELADA,
+      'Suscripción cancelada',
+      'Tu suscripción fue cancelada. Suscribite de nuevo para continuar.',
+    );
+
+    return SuscripcionResponseDto.fromEntity(
+      suscripcion,
+      this.evaluarAccesoDe(suscripcion),
+    );
   }
 
   /** Historial de pagos de la suscripción del veterinario. */
@@ -425,7 +519,8 @@ export class SuscripcionesService {
   /**
    * Cron horario: detecta suscripciones ACTIVAS cuyo período terminó y las
    * pasa a VENCIDA iniciando la gracia; suspende las que se pasaron de la
-   * gracia; avisa cuando la gracia está por vencer.
+   * gracia; avisa cuando la gracia está por vencer; expira los períodos de
+   * prueba terminados y avisa 30 días antes del fin del trial.
    */
   @Cron(CronExpression.EVERY_HOUR)
   async revisarVencimientos(): Promise<void> {
@@ -442,8 +537,80 @@ export class SuscripcionesService {
       await this.vencer(suscripcion, ahora);
     }
 
+    await this.expirarPruebas(ahora);
     await this.suspenderPorGraciaExpirada(ahora);
     await this.notificarGraciaPorVencer(ahora);
+    await this.notificarPruebaPorVencer(ahora);
+  }
+
+  /**
+   * Pasa a PENDIENTE_PAGO los trials con la fecha de fin ya pasada
+   * (acceso igual ya cortado por evaluarAccesoDe, que chequea la fecha).
+   * `fechaPruebaFin` se conserva para mostrarle al usuario cuándo terminó.
+   */
+  private async expirarPruebas(ahora: Date): Promise<void> {
+    const enPrueba = await this.suscripcionesRepository.find({
+      where: { estado: SuscripcionEstado.EN_PRUEBA },
+      relations: ['usuario'],
+    });
+
+    for (const suscripcion of enPrueba) {
+      if (!suscripcion.fechaPruebaFin || suscripcion.fechaPruebaFin > ahora) {
+        continue;
+      }
+
+      suscripcion.estado = SuscripcionEstado.PENDIENTE_PAGO;
+      await this.suscripcionesRepository.save(suscripcion);
+
+      this.logger.log(
+        `Período de prueba expirado para la suscripción ${suscripcion.idSuscripcion}`,
+      );
+
+      const idUsuario = suscripcion.usuario?.idUsuario;
+      if (idUsuario) {
+        await this.notificacionesService.crear(
+          idUsuario,
+          NotificationType.SUSCRIPCION_PRUEBA_FINALIZADA,
+          'Período de prueba finalizado',
+          'Tu período de prueba terminó. Suscribite desde "Mi suscripción" para seguir usando la plataforma.',
+        );
+      }
+    }
+  }
+
+  /** Avisa una sola vez (30 días antes) que el período de prueba termina. */
+  private async notificarPruebaPorVencer(ahora: Date): Promise<void> {
+    const enPrueba = await this.suscripcionesRepository.find({
+      where: {
+        estado: SuscripcionEstado.EN_PRUEBA,
+        pruebaNotificada: false,
+      },
+      relations: ['usuario'],
+    });
+
+    for (const suscripcion of enPrueba) {
+      if (!suscripcion.fechaPruebaFin) {
+        continue;
+      }
+      const finPrueba = suscripcion.fechaPruebaFin.getTime();
+      const en30Dias = finPrueba - 30 * DIA_EN_MS;
+      if (ahora.getTime() < en30Dias) {
+        continue;
+      }
+
+      suscripcion.pruebaNotificada = true;
+      await this.suscripcionesRepository.save(suscripcion);
+
+      const idUsuario = suscripcion.usuario?.idUsuario;
+      if (idUsuario) {
+        await this.notificacionesService.crear(
+          idUsuario,
+          NotificationType.SUSCRIPCION_PRUEBA_POR_VENCER,
+          'Período de prueba por vencer',
+          'Tu período de prueba termina en 30 días. Suscribite desde "Mi suscripción" para no perder el acceso.',
+        );
+      }
+    }
   }
 
   /**
@@ -481,6 +648,8 @@ export class SuscripcionesService {
    * Evalúa el acceso según el estado de la suscripción:
    *
    * - ACTIVA: acceso.
+   * - EN_PRUEBA con trial vigente: acceso.
+   * - EN_PRUEBA con trial expirado (aún sin pasar el cron): sin acceso.
    * - VENCIDA todavía dentro de la gracia: acceso.
    * - VENCIDA fuera de la gracia, SUSPENDIDA, CANCELADA o PENDIENTE_PAGO:
    *   sin acceso, hay que pagar.
@@ -492,6 +661,20 @@ export class SuscripcionesService {
         codigo: 'SUSCRIPCION_PENDIENTE',
         motivo:
           'Necesitás una suscripción activa para usar la plataforma. Suscribite desde "Mi suscripción".',
+      };
+    }
+
+    if (suscripcion.estado === SuscripcionEstado.EN_PRUEBA) {
+      if (this.esPeriodoPrueba(suscripcion)) {
+        return { accesoPermitido: true, codigo: null, motivo: null };
+      }
+      // Trial expirado: el cron lo pasará a PENDIENTE_PAGO en la próxima
+      // corrida; mientras tanto el acceso ya está cortado.
+      return {
+        accesoPermitido: false,
+        codigo: 'SUSCRIPCION_PENDIENTE',
+        motivo:
+          'Tu período de prueba terminó. Suscribite desde "Mi suscripción" para usar la plataforma.',
       };
     }
 
@@ -546,6 +729,77 @@ export class SuscripcionesService {
       new Date(suscripcion.fechaGraciaInicio).getTime() +
       this.diasGracia * DIA_EN_MS;
     return Date.now() < finGracia;
+  }
+
+  /**
+   * True si la suscripción está en período de prueba y el trial sigue
+   * vigente (fecha de fin aún no pasó). Lectura pura, sin mutaciones.
+   */
+  esPeriodoPrueba(suscripcion: Suscripcion): boolean {
+    return (
+      suscripcion.estado === SuscripcionEstado.EN_PRUEBA &&
+      suscripcion.fechaPruebaFin != null &&
+      suscripcion.fechaPruebaFin > new Date()
+    );
+  }
+
+  /**
+   * Activa el período de prueba gratuito (90 días por defecto) para un
+   * veterinario recién aprobado.
+   *
+   * Se llama explícitamente desde VeterinariosService.aprobar(): los
+   * métodos GET de este servicio no mutan la base (decisión de diseño).
+   *
+   * Reglas:
+   * - Solo si la suscripción nunca usó el trial (`pruebaUsada` false).
+   * - Solo si la suscripción está en PENDIENTE_PAGO (nunca pagó).
+   * - NO setea `fechaInicio`: ese campo significa "activada con pago" y
+   *   lo usa la lógica de webhooks de MP para distinguir un primer pago
+   *   rechazado de una cancelación real.
+   */
+  async activarPrueba(idUsuario: number): Promise<void> {
+    const suscripcion = await this.suscripcionesRepository.findOne({
+      where: { usuario: { idUsuario } },
+      relations: ['usuario'],
+    });
+
+    if (suscripcion && suscripcion.pruebaUsada) {
+      return;
+    }
+    if (
+      suscripcion &&
+      suscripcion.estado !== SuscripcionEstado.PENDIENTE_PAGO
+    ) {
+      return;
+    }
+
+    const ahora = new Date();
+    const fin = new Date(ahora.getTime() + this.diasTrial * DIA_EN_MS);
+
+    const creada =
+      suscripcion ??
+      this.suscripcionesRepository.create({
+        usuario: { idUsuario } as User,
+        monto: this.monto,
+        moneda: this.moneda,
+      });
+    creada.estado = SuscripcionEstado.EN_PRUEBA;
+    creada.fechaPruebaFin = fin;
+    creada.fechaVencimiento = fin;
+    creada.pruebaUsada = true;
+    creada.pruebaNotificada = false;
+    await this.suscripcionesRepository.save(creada);
+
+    this.logger.log(
+      `Período de prueba activado para el usuario ${idUsuario}: hasta ${fin.toISOString()}`,
+    );
+
+    await this.notificacionesService.crear(
+      idUsuario,
+      NotificationType.SUSCRIPCION_PRUEBA_INICIADA,
+      'Período de prueba activado',
+      `Tu cuenta de veterinario fue validada. Tenés ${this.diasTrial} días de prueba gratis para usar la plataforma.`,
+    );
   }
 
   private async buscarPorUsuario(idUsuario: number): Promise<Suscripcion> {
@@ -771,8 +1025,19 @@ export class SuscripcionesService {
    *
    * Si ya estaba activa (renovación), el período nuevo arranca desde el fin
    * del actual para no perder días; si estaba vencida, desde ahora.
+   *
+   * Nunca resucita una suscripción CANCELADA: un webhook atrasado (payment
+   * o preapproval approved que llegó después de la cancelación) no puede
+   * deshacerla.
    */
   private async activarORenovar(suscripcion: Suscripcion): Promise<void> {
+    if (suscripcion.estado === SuscripcionEstado.CANCELADA) {
+      this.logger.log(
+        `Activación ignorada: la suscripción ${suscripcion.idSuscripcion} está cancelada`,
+      );
+      return;
+    }
+
     const eraActiva = suscripcion.estado === SuscripcionEstado.ACTIVA;
     const ahora = new Date();
 
@@ -780,7 +1045,7 @@ export class SuscripcionesService {
       eraActiva && suscripcion.fechaFin && suscripcion.fechaFin > ahora
         ? suscripcion.fechaFin
         : ahora;
-    const fin = new Date(base.getTime() + DIAS_PERIODOS * DIA_EN_MS);
+    const fin = this.sumarUnMesCalendario(base);
 
     suscripcion.estado = SuscripcionEstado.ACTIVA;
     suscripcion.fechaInicio = eraActiva ? suscripcion.fechaInicio : base;
@@ -801,6 +1066,35 @@ export class SuscripcionesService {
           : 'Tu suscripción quedó activada. Ya podés usar la plataforma.',
       );
     }
+  }
+
+  /**
+   * Suma un mes calendario a la fecha, con ajuste a fin de mes.
+   *
+   * Ejemplos:
+   * - 18/10/2026 → 18/11/2026
+   * - 31/01/2026 → 28/02/2026 (febrero no tiene 31)
+   * - 30/04/2026 → 30/05/2026 (mayo sí tiene día 30)
+   */
+  private sumarUnMesCalendario(fecha: Date): Date {
+    const dia = fecha.getDate();
+    const resultado = new Date(fecha);
+
+    // Primero al día 1 del mes siguiente
+    resultado.setDate(1);
+    resultado.setMonth(resultado.getMonth() + 1);
+
+    // Último día del mes destino
+    const ultimoDiaMesDestino = new Date(
+      resultado.getFullYear(),
+      resultado.getMonth() + 1,
+      0,
+    ).getDate();
+
+    // Si el día original no existe en el mes destino, usar el último día
+    resultado.setDate(Math.min(dia, ultimoDiaMesDestino));
+
+    return resultado;
   }
 
   /** Pasa la suscripción a VENCIDA, inicia la gracia y notifica (una sola vez). */

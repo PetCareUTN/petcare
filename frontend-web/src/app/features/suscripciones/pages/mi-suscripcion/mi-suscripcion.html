@@ -33,6 +33,18 @@
           <span>{{ sub.monto | currency: sub.moneda : 'symbol-narrow' : '1.0-0' }}</span>
         </div>
 
+        @if (sub.estado === 'en_prueba' && sub.fechaPruebaFin) {
+          <div class="estado-row">
+            <span class="estado-label">Prueba gratis hasta:</span>
+            <span>
+              {{ sub.fechaPruebaFin | date: 'dd/MM/yyyy' }}
+              @if (diasRestantesPrueba(sub); as dias) {
+                (faltan {{ dias }} días)
+              }
+            </span>
+          </div>
+        }
+
         @if (sub.fechaInicio) {
           <div class="estado-row">
             <span class="estado-label">Inicio del período:</span>
@@ -73,6 +85,48 @@
         @if (sub.estado === 'activa') {
           <div class="suscripcion-ok">
             <p>Tu suscripción está activa. Se renueva automáticamente cada mes.</p>
+          </div>
+        }
+
+        @if (puedeCancelar(sub)) {
+          <div class="suscripcion-cancelar">
+            @if (!confirmandoCancelacion()) {
+              <button
+                type="button"
+                class="btn-cancelar"
+                [disabled]="isCancelling()"
+                (click)="cancelar()"
+              >
+                @if (isCancelling()) {
+                  Cancelando...
+                } @else {
+                  Cancelar suscripción
+                }
+              </button>
+            } @else {
+              <div class="confirmacion-inline">
+                <p class="confirmacion-texto">¿Seguro? Se corta el acceso y dejan de renovarse los cobros.</p>
+                <div class="confirmacion-botones">
+                  <button
+                    type="button"
+                    class="btn-cancelar-confirmar"
+                    [disabled]="isCancelling()"
+                    (click)="cancelar()"
+                  >
+                    Sí, cancelar
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-cancelar-rechazar"
+                    [disabled]="isCancelling()"
+                    (click)="confirmandoCancelacion.set(false)"
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+              <p class="suscripcion-cancelar-ayuda">Podés suscribirte de nuevo cuando quieras.</p>
+            }
           </div>
         }
       </div>
