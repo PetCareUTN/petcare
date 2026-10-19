@@ -2,7 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { NotificationType } from '../common/enums/notification-type.enum';
-import { Notificacion } from './entities/notificacion.entity';
+import {
+  Notificacion,
+  TipoReferenciaNotificacion,
+} from './entities/notificacion.entity';
 import { NotificacionResponseDto } from './dto/notificacion-response.dto';
 
 @Injectable()
@@ -19,6 +22,7 @@ export class NotificacionesService {
     cuerpo: string,
     /** Id del registro que abre la notificación al tocarla (ver la entidad). */
     idReferencia: number | null = null,
+    tipoReferencia: TipoReferenciaNotificacion | null = null,
   ): Promise<NotificacionResponseDto> {
     const notificacion = this.notificacionesRepository.create({
       usuario: { idUsuario } as any,
@@ -27,6 +31,7 @@ export class NotificacionesService {
       cuerpo,
       leida: false,
       idReferencia,
+      tipoReferencia,
     });
 
     const guardada = await this.notificacionesRepository.save(notificacion);

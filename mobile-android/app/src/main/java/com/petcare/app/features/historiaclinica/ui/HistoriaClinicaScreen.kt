@@ -1,5 +1,6 @@
 package com.petcare.app.features.historiaclinica.ui
 
+import com.petcare.app.ui.components.LocalEspacioBarraInferior
 import com.petcare.app.ui.components.elevacionTarjeta
 import com.petcare.app.ui.components.elevacionBoton
 import com.petcare.app.ui.components.elevacionBotonContorno
@@ -70,7 +71,8 @@ fun HistoriaClinicaScreen(
             .background(MaterialTheme.colorScheme.background)
             .systemBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(20.dp),
+            .padding(20.dp)
+            .padding(bottom = LocalEspacioBarraInferior.current),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.Start
     ) {

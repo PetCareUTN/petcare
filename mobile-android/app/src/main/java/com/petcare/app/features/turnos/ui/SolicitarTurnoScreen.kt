@@ -1,5 +1,6 @@
 package com.petcare.app.features.turnos.ui
 
+import com.petcare.app.ui.components.LocalEspacioBarraInferior
 import com.petcare.app.ui.components.elevacionTarjeta
 import com.petcare.app.ui.components.elevacionBoton
 import com.petcare.app.ui.components.elevacionBotonContorno
@@ -205,7 +206,8 @@ fun SolicitarTurnoScreen(
             .background(MaterialTheme.colorScheme.background)
             .systemBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .padding(24.dp)
+            .padding(bottom = LocalEspacioBarraInferior.current),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.Start
     ) {

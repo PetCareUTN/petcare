@@ -1,5 +1,6 @@
 package com.petcare.app.features.adopciones.ui
 
+import com.petcare.app.ui.components.LocalEspacioBarraInferior
 import com.petcare.app.ui.components.elevacionBoton
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -72,7 +73,8 @@ fun SolicitarAdopcionFormScreen(
             .background(MaterialTheme.colorScheme.background)
             .systemBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(20.dp),
+            .padding(20.dp)
+            .padding(bottom = LocalEspacioBarraInferior.current),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.Start
     ) {

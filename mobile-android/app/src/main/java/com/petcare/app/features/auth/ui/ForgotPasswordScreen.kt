@@ -76,7 +76,7 @@ fun ForgotPasswordScreen(
 
         if (!codeSent) {
             Text(
-                text = "Ingrese su email y le enviaremos un codigo para recuperar su contrasena o activar su cuenta.",
+                text = "Ingrese su email y le enviaremos un código para recuperar su contraseña o activar su cuenta.",
                 modifier = Modifier.padding(bottom = 16.dp),
                 style = MaterialTheme.typography.bodyMedium
             )

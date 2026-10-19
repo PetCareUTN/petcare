@@ -11,6 +11,8 @@ describe('NotificacionesTurnosService', () => {
   let notificacionesService: { crear: jest.Mock };
 
   const turno: DatosTurno = {
+    idTurno: 7,
+    tipoTurno: 'turno_veterinario',
     idDuenio: 12,
     idPrestador: 99,
     nombreDuenio: 'Ana Gomez',
@@ -46,12 +48,16 @@ describe('NotificacionesTurnosService', () => {
         NotificationType.TURNO_CONFIRMADO,
         'Turno confirmado',
         expect.stringContaining('Luna'),
+        7,
+        'turno_veterinario',
       );
       expect(notificacionesService.crear).toHaveBeenCalledWith(
         99,
         NotificationType.TURNO_CONFIRMADO,
         'Nuevo turno reservado',
         expect.stringContaining('Ana Gomez'),
+        7,
+        'turno_veterinario',
       );
     });
 
@@ -90,6 +96,8 @@ describe('NotificacionesTurnosService', () => {
         NotificationType.TURNO_CONFIRMADO,
         'Turno confirmado',
         expect.stringContaining('Tu turno'),
+        7,
+        'turno_veterinario',
       );
       // El otro dueño: quién lo reservó.
       expect(notificacionesService.crear).toHaveBeenCalledWith(
@@ -97,12 +105,16 @@ describe('NotificacionesTurnosService', () => {
         NotificationType.TURNO_CONFIRMADO,
         'Turno confirmado',
         expect.stringContaining('Ana Gomez reservó'),
+        7,
+        'turno_veterinario',
       );
       expect(notificacionesService.crear).toHaveBeenCalledWith(
         99,
         NotificationType.TURNO_CONFIRMADO,
         'Nuevo turno reservado',
         expect.any(String),
+        7,
+        'turno_veterinario',
       );
     });
 
@@ -164,6 +176,8 @@ describe('NotificacionesTurnosService', () => {
         NotificationType.TURNO_CANCELADO,
         'Turno cancelado',
         expect.stringContaining('Ana Gomez canceló'),
+        7,
+        'turno_veterinario',
       );
       const [, , , cuerpo] = notificacionesService.crear.mock.calls[0];
       expect(cuerpo).toContain('Motivo: Me surgió un viaje');
@@ -178,6 +192,8 @@ describe('NotificacionesTurnosService', () => {
         NotificationType.TURNO_CANCELADO,
         'Turno cancelado',
         expect.stringContaining('Clinica San Roque canceló'),
+        7,
+        'turno_veterinario',
       );
     });
 
