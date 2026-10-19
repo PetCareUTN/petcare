@@ -525,6 +525,8 @@ export class TurnosVeterinariosService {
   /** Datos del turno que necesitan las notificaciones de la US-22. */
   private aDatosTurno(turno: TurnoVeterinario): DatosTurno {
     return {
+      idTurno: turno.idTurno,
+      tipoTurno: 'turno_veterinario',
       idDuenio: turno.duenio.idUsuario,
       idPrestador: turno.veterinario.usuario.idUsuario,
       nombreDuenio: this.nombreCompleto(turno.duenio),

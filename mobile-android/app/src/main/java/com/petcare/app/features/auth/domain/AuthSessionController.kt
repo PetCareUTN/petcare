@@ -22,6 +22,14 @@ sealed interface GoogleAuthResult {
     ) : GoogleAuthResult
 }
 
+/** Un veterinario intento entrar a la app mobile, que es solo para dueños. */
+class VeterinarioEnMobileException : Exception(MENSAJE) {
+    companion object {
+        const val MENSAJE =
+            "Las cuentas de veterinario solo pueden ingresar desde la web de PetCare"
+    }
+}
+
 class AuthSessionController(
     private val authApi: AuthApi,
     private val sessionStore: SessionStore
@@ -101,6 +109,8 @@ class AuthSessionController(
             throw IllegalStateException("El servidor no devolvio la sesion de Google")
         }
 
+        if (esTokenDeVeterinario(token)) throw VeterinarioEnMobileException()
+
         val session = AuthSession(
             token = token,
             userName = usuario.nombre
@@ -117,6 +127,8 @@ class AuthSessionController(
                 password = password
             )
         )
+        if (esTokenDeVeterinario(response.token)) throw VeterinarioEnMobileException()
+
         val session = AuthSession(
             token = response.token,
             userName = response.usuario.nombre

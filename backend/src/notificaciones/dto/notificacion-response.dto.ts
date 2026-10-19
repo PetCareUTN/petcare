@@ -1,5 +1,8 @@
 import { NotificationType } from '../../common/enums/notification-type.enum';
-import { Notificacion } from '../entities/notificacion.entity';
+import {
+  Notificacion,
+  TipoReferenciaNotificacion,
+} from '../entities/notificacion.entity';
 
 export class NotificacionResponseDto {
   idNotificacion: number;
@@ -10,6 +13,8 @@ export class NotificacionResponseDto {
   fechaEnvio: Date;
   /** Ver `Notificacion.idReferencia`. */
   idReferencia: number | null;
+  /** Ver `Notificacion.tipoReferencia`. */
+  tipoReferencia: TipoReferenciaNotificacion | null;
 
   static fromEntity(notif: Notificacion): NotificacionResponseDto {
     const dto = new NotificacionResponseDto();
@@ -20,6 +25,7 @@ export class NotificacionResponseDto {
     dto.leida = notif.leida;
     dto.fechaEnvio = notif.fechaEnvio;
     dto.idReferencia = notif.idReferencia ?? null;
+    dto.tipoReferencia = notif.tipoReferencia ?? null;
     return dto;
   }
 }

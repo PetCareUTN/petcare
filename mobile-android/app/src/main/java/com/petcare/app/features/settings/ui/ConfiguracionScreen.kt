@@ -1,5 +1,6 @@
 package com.petcare.app.features.settings.ui
 
+import com.petcare.app.ui.components.LocalEspacioBarraInferior
 import com.petcare.app.ui.components.elevacionTarjeta
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -44,7 +45,8 @@ fun ConfiguracionScreen(
             // La tarjeta de colaboracion crece cuando pide el permiso de ubicacion en
             // segundo plano, y sin scroll el boton queda fuera de la pantalla.
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .padding(24.dp)
+            .padding(bottom = LocalEspacioBarraInferior.current),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.Start
     ) {

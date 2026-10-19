@@ -1,5 +1,6 @@
 package com.petcare.app.features.adopciones.ui
 
+import com.petcare.app.ui.components.LocalEspacioBarraInferior
 import com.petcare.app.ui.components.elevacionTarjeta
 import com.petcare.app.ui.components.elevacionBoton
 import com.petcare.app.ui.components.elevacionBotonContorno
@@ -61,7 +62,8 @@ fun AdopcionDetalleScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(rememberScrollState())
+            .padding(bottom = LocalEspacioBarraInferior.current),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.Start
     ) {

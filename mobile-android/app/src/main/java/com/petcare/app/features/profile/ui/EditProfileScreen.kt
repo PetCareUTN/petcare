@@ -1,5 +1,6 @@
 package com.petcare.app.features.profile.ui
 
+import com.petcare.app.ui.components.LocalEspacioBarraInferior
 import com.petcare.app.ui.components.elevacionBoton
 import com.petcare.app.ui.components.elevacionBotonContorno
 import androidx.compose.foundation.clickable
@@ -75,7 +76,8 @@ fun EditProfileScreen(
             .fillMaxSize()
             .systemBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .padding(24.dp)
+            .padding(bottom = LocalEspacioBarraInferior.current),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.Start
     ) {

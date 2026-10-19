@@ -21,7 +21,12 @@ data class NotificacionResponse(
      * cuando llega ese aviso todavía no hay ningún reporte creado. Null en los
      * tipos que todavía no llevan a ninguna pantalla.
      */
-    val idReferencia: Int? = null
+    val idReferencia: Int? = null,
+    /**
+     * En las de turnos, de qué lista es `idReferencia`: "turno_veterinario" o
+     * "turno_servicio" (los ids de las dos tablas se pisan). Null en el resto.
+     */
+    val tipoReferencia: String? = null
 )
 
 /** Pide dejar en el historial el aviso de separación del tag (US-34). */
