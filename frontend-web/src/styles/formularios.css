@@ -469,3 +469,56 @@ label.ap-field,
   justify-content: space-between;
   gap: 0.5rem;
 }
+
+/* ---------- Tarjetas de resumen (números grandes) ---------- */
+.ap-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.ap-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.15rem 1.5rem;
+  border: 1px solid var(--ap-hairline);
+  border-radius: 20px;
+  background-color: var(--surface);
+  box-shadow: var(--ap-card-shadow);
+}
+
+.ap-stat-label {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.ap-stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.ap-stat-value small {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+@media (max-width: 1100px) {
+  .ap-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .ap-stats {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--spacing-md);
+  }
+}
