@@ -11,7 +11,7 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: var(--spacing-md);
-  width: min(100%, 900px);
+  width: min(100%, var(--page-max));
   margin: 0 auto var(--spacing-lg);
 }
 
@@ -26,14 +26,14 @@
 }
 
 .status-text {
-  width: min(100%, 900px);
+  width: min(100%, var(--page-max));
   margin: 0 auto;
   color: var(--text-secondary);
   font-size: 0.9rem;
 }
 
 .banner {
-  width: min(100%, 900px);
+  width: min(100%, var(--page-max));
   margin: 0 auto var(--spacing-md);
   padding: 0.65rem 0.8rem;
   border-radius: var(--radius-sm);
@@ -104,7 +104,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: var(--spacing-md);
-  width: min(100%, 900px);
+  width: min(100%, var(--page-max));
   margin: 0 auto var(--spacing-lg);
 }
 
@@ -136,7 +136,7 @@
 /* Agenda de hoy */
 
 .agenda-card {
-  width: min(100%, 900px);
+  width: min(100%, var(--page-max));
   margin: 0 auto;
   padding: var(--spacing-xl);
   border: 1px solid var(--border);

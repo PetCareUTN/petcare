@@ -6,7 +6,7 @@
 }
 
 .availability-card {
-  width: min(100%, 780px);
+  width: min(100%, var(--page-max));
   margin: 0 auto;
   padding: var(--spacing-xl);
   border: 1px solid var(--border);
@@ -58,7 +58,6 @@
 
 .add-form {
   padding: var(--spacing-lg);
-  margin-bottom: var(--spacing-lg);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background-color: var(--background);
@@ -173,6 +172,7 @@
 
 .reglas-list {
   margin-bottom: var(--spacing-lg);
+  min-width: 0;
 }
 
 .reglas-list h2 {
@@ -254,6 +254,45 @@
 
 .btn-remove:hover:not(:disabled) {
   background-color: color-mix(in srgb, var(--danger) 12%, white);
+}
+
+/* En pantallas anchas el formulario queda a la izquierda y los horarios a la derecha,
+   para aprovechar el ancho en lugar de dejar espacio vacío a los costados. */
+.availability-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-lg);
+}
+
+.availability-side {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+@media (min-width: 1000px) {
+  .availability-layout {
+    grid-template-columns: minmax(360px, 440px) minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .add-form {
+    position: sticky;
+    top: 4.5rem;
+  }
+
+  .horario-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .horario-row > :nth-child(3),
+  .horario-row > .btn-secondary {
+    grid-column: 1 / -1;
+  }
+
+  .horario-row > .btn-secondary {
+    width: 100%;
+  }
 }
 
 @media (max-width: 640px) {

@@ -10,7 +10,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--spacing-md);
-  max-width: 960px;
+  max-width: var(--page-max);
   margin: 0 auto var(--spacing-lg);
 }
 
@@ -36,7 +36,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.6fr);
   gap: var(--spacing-lg);
-  max-width: 960px;
+  max-width: var(--page-max);
   margin: 0 auto;
   align-items: start;
 }

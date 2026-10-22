@@ -10,7 +10,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-md);
-  max-width: 960px;
+  max-width: var(--page-max);
   margin: 0 auto var(--spacing-lg);
 }
 
@@ -19,7 +19,7 @@
 }
 
 .search-bar {
-  max-width: 960px;
+  max-width: var(--page-max);
   margin: 0 auto var(--spacing-lg);
 }
 
@@ -73,13 +73,13 @@
 }
 
 .status-text {
-  max-width: 960px;
+  max-width: var(--page-max);
   margin: 0 auto;
   color: var(--text-secondary);
 }
 
 .banner {
-  max-width: 960px;
+  max-width: var(--page-max);
   margin: 0 auto var(--spacing-md);
   padding: 0.7rem 0.9rem;
   border-radius: var(--radius-sm);
@@ -92,7 +92,7 @@
 }
 
 .empty-state {
-  max-width: 960px;
+  max-width: var(--page-max);
   margin: 0 auto;
   padding: var(--spacing-xl);
   background-color: var(--surface);
@@ -113,7 +113,7 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--spacing-md);
-  max-width: 960px;
+  max-width: var(--page-max);
   margin: 0 auto;
 }
 

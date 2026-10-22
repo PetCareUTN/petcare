@@ -21,7 +21,7 @@
 }
 
 .appointments-panel {
-  width: min(100%, 1240px);
+  width: min(100%, var(--page-max));
   margin: 0 auto;
   padding: var(--spacing-xl);
   border: 1px solid var(--hairline);

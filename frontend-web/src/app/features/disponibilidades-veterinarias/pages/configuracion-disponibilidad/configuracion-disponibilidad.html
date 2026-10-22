@@ -19,115 +19,119 @@
     }
 
     @if (!isLoading()) {
-      <div class="add-form">
-        <div class="field">
-          <label>Días</label>
-          <div class="dias-selector">
-            @for (dia of dias; track dia.value) {
-              <button
-                type="button"
-                class="dia-circle"
-                [class.active]="esDiaSeleccionado(dia.value)"
-                [attr.aria-pressed]="esDiaSeleccionado(dia.value)"
-                [attr.aria-label]="dia.label"
-                [title]="dia.label"
-                (click)="toggleDia(dia.value)"
-              >
-                {{ dia.letra }}
-              </button>
-            }
+      <div class="availability-layout">
+        <div class="add-form">
+          <div class="field">
+            <label>Días</label>
+            <div class="dias-selector">
+              @for (dia of dias; track dia.value) {
+                <button
+                  type="button"
+                  class="dia-circle"
+                  [class.active]="esDiaSeleccionado(dia.value)"
+                  [attr.aria-pressed]="esDiaSeleccionado(dia.value)"
+                  [attr.aria-label]="dia.label"
+                  [title]="dia.label"
+                  (click)="toggleDia(dia.value)"
+                >
+                  {{ dia.letra }}
+                </button>
+              }
+            </div>
           </div>
+
+          <div class="horario-row">
+            <div class="field">
+              <label for="hora-inicio">Desde</label>
+              <input
+                id="hora-inicio"
+                type="time"
+                [value]="horaInicio()"
+                (input)="setHoraInicio($any($event.target).value)"
+              />
+            </div>
+
+            <div class="field">
+              <label for="hora-fin">Hasta</label>
+              <input
+                id="hora-fin"
+                type="time"
+                [value]="horaFin()"
+                (input)="setHoraFin($any($event.target).value)"
+              />
+            </div>
+
+            <div class="field">
+              <label for="cantidad-turnos">Cantidad de turnos</label>
+              <input
+                id="cantidad-turnos"
+                type="number"
+                min="1"
+                max="20"
+                [value]="cantidadTurnos()"
+                (input)="setCantidadTurnos($any($event.target).value)"
+              />
+            </div>
+
+            <button type="button" class="btn-secondary" (click)="agregarRegla()">
+              Agregar horario
+            </button>
+          </div>
+
+          @if (formError()) {
+            <p class="banner banner-error">{{ formError() }}</p>
+          }
         </div>
 
-        <div class="horario-row">
-          <div class="field">
-            <label for="hora-inicio">Desde</label>
-            <input
-              id="hora-inicio"
-              type="time"
-              [value]="horaInicio()"
-              (input)="setHoraInicio($any($event.target).value)"
-            />
-          </div>
+        <div class="availability-side">
+          <section class="reglas-list">
+            <h2>Horarios configurados</h2>
 
-          <div class="field">
-            <label for="hora-fin">Hasta</label>
-            <input
-              id="hora-fin"
-              type="time"
-              [value]="horaFin()"
-              (input)="setHoraFin($any($event.target).value)"
-            />
-          </div>
+            @if (reglas().length === 0) {
+              <p class="status-text">Todavía no agregaste ningún horario de atención.</p>
+            }
 
-          <div class="field">
-            <label for="cantidad-turnos">Cantidad de turnos</label>
-            <input
-              id="cantidad-turnos"
-              type="number"
-              min="1"
-              max="20"
-              [value]="cantidadTurnos()"
-              (input)="setCantidadTurnos($any($event.target).value)"
-            />
-          </div>
+            @if (reglas().length > 0) {
+              <ul>
+                @for (regla of reglas(); track regla.id) {
+                  <li class="regla-row">
+                    <div class="regla-dias">
+                      @for (dia of dias; track dia.value) {
+                        <span
+                          class="dia-badge"
+                          [class.active]="regla.dias.includes(dia.value)"
+                          [title]="dia.label"
+                        >
+                          {{ dia.letra }}
+                        </span>
+                      }
+                    </div>
+                    <div class="regla-info">
+                      <span class="regla-horario">{{ regla.horaInicio }} a {{ regla.horaFin }}</span>
+                      <span class="regla-cantidad">
+                        {{ regla.cantidadTurnos }}
+                        {{ regla.cantidadTurnos === 1 ? 'turno' : 'turnos' }}
+                      </span>
+                    </div>
+                    <button type="button" class="btn-remove" (click)="quitarRegla(regla.id)">
+                      Quitar
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          </section>
 
-          <button type="button" class="btn-secondary" (click)="agregarRegla()">
-            Agregar horario
+          <button
+            type="button"
+            class="btn-primary"
+            [disabled]="isSubmitting()"
+            (click)="guardar()"
+          >
+            {{ isSubmitting() ? 'Guardando...' : 'Guardar disponibilidad' }}
           </button>
         </div>
-
-        @if (formError()) {
-          <p class="banner banner-error">{{ formError() }}</p>
-        }
       </div>
-
-      <section class="reglas-list">
-        <h2>Horarios configurados</h2>
-
-        @if (reglas().length === 0) {
-          <p class="status-text">Todavía no agregaste ningún horario de atención.</p>
-        }
-
-        @if (reglas().length > 0) {
-          <ul>
-            @for (regla of reglas(); track regla.id) {
-              <li class="regla-row">
-                <div class="regla-dias">
-                  @for (dia of dias; track dia.value) {
-                    <span
-                      class="dia-badge"
-                      [class.active]="regla.dias.includes(dia.value)"
-                      [title]="dia.label"
-                    >
-                      {{ dia.letra }}
-                    </span>
-                  }
-                </div>
-                <div class="regla-info">
-                  <span class="regla-horario">{{ regla.horaInicio }} a {{ regla.horaFin }}</span>
-                  <span class="regla-cantidad">
-                    {{ regla.cantidadTurnos }}
-                    {{ regla.cantidadTurnos === 1 ? 'turno' : 'turnos' }}
-                  </span>
-                </div>
-                <button type="button" class="btn-remove" (click)="quitarRegla(regla.id)">
-                  Quitar
-                </button>
-              </li>
-            }
-          </ul>
-        }
-      </section>
-
-      <button
-        type="button"
-        class="btn-primary"
-        [disabled]="isSubmitting()"
-        (click)="guardar()"
-      >
-        {{ isSubmitting() ? 'Guardando...' : 'Guardar disponibilidad' }}
-      </button>
     }
   </section>
 </main>
