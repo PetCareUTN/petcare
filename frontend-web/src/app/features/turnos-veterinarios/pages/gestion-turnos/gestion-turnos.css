@@ -148,44 +148,43 @@
 
 .filters {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-lg);
+  gap: 0.35rem 0.4rem;
+  margin-bottom: var(--spacing-md);
 }
 
 .filter-group {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-xs);
+  flex-wrap: nowrap;
+  gap: 0.15rem;
 }
 
 .filter-group + .filter-group {
-  padding-left: var(--spacing-md);
-  border-left: 1px solid var(--border);
+  padding-left: 0.4rem;
+  border-left: 1px solid var(--hairline);
 }
 
 .status-filter {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.7rem;
-  border: 1px solid var(--border);
-  background-color: var(--surface);
+  gap: 0.35rem;
+  padding: 0.28rem 0.6rem;
+  border: none;
+  background-color: transparent;
   color: var(--text-secondary);
-  font-size: 0.85rem;
-  opacity: 0.55;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.status-filter:hover {
+  background-color: var(--fill);
 }
 
 .status-filter.active {
-  color: var(--text-primary);
-  opacity: 1;
-}
-
-.status-count {
-  padding: 0 0.35rem;
-  border-radius: 999px;
-  background-color: var(--background);
-  font-size: 0.78rem;
+  background-color: var(--primary-soft);
+  color: #3a6358;
 }
 
 .status-dot,

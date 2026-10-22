@@ -141,7 +141,7 @@ export class GestionTurnosVeterinariosPage implements OnInit {
 
   protected readonly tipos: TipoOption[] = [
     { value: 'veterinaria', label: 'Veterinaria' },
-    { value: 'servicio', label: 'Mis servicios' },
+    { value: 'servicio', label: 'Servicios' },
   ];
 
   protected readonly vistas: VistaOption[] = [
@@ -155,7 +155,9 @@ export class GestionTurnosVeterinariosPage implements OnInit {
   protected readonly vista = signal<VistaCalendario>('semana');
   /** Fecha de referencia (YYYY-MM-DD) sobre la que se arma la vista actual. */
   protected readonly fechaFoco = signal(this.claveDeHoy());
-  protected readonly estadosVisibles = signal<EstadoTurno[]>(['confirmado']);
+  // Por defecto se ve todo menos lo cancelado: así un turno no desaparece de la agenda
+  // apenas se marca como asistido o ausente.
+  protected readonly estadosVisibles = signal<EstadoTurno[]>(['confirmado', 'asistio', 'ausente']);
   protected readonly tiposVisibles = signal<TipoTurno[]>(['veterinaria', 'servicio']);
 
   protected readonly turnos = signal<TurnoVeterinarioResponse[]>([]);
@@ -242,26 +244,6 @@ export class GestionTurnosVeterinariosPage implements OnInit {
     return clave === null
       ? null
       : (this.todosLosTurnos().find((turno) => turno.clave === clave) ?? null);
-  });
-
-  protected readonly conteoPorEstado = computed(() => {
-    const conteo = new Map<EstadoTurno, number>();
-    const tipos = this.tiposVisibles();
-    for (const turno of this.todosLosTurnos()) {
-      if (!tipos.includes(turno.tipo)) {
-        continue;
-      }
-      conteo.set(turno.estado, (conteo.get(turno.estado) ?? 0) + 1);
-    }
-    return conteo;
-  });
-
-  protected readonly conteoPorTipo = computed(() => {
-    const conteo = new Map<TipoTurno, number>();
-    for (const turno of this.todosLosTurnos()) {
-      conteo.set(turno.tipo, (conteo.get(turno.tipo) ?? 0) + 1);
-    }
-    return conteo;
   });
 
   /** Grilla de 6 semanas del mes en foco, empezando siempre en lunes. */
@@ -474,14 +456,6 @@ export class GestionTurnosVeterinariosPage implements OnInit {
 
   protected esTipoVisible(tipo: TipoTurno): boolean {
     return this.tiposVisibles().includes(tipo);
-  }
-
-  protected conteo(estado: EstadoTurno): number {
-    return this.conteoPorEstado().get(estado) ?? 0;
-  }
-
-  protected conteoTipo(tipo: TipoTurno): number {
-    return this.conteoPorTipo().get(tipo) ?? 0;
   }
 
   protected seleccionarTurno(turno: EventoTurno): void {
