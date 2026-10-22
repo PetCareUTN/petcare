@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { DiaSemana } from '../common/enums/dia-semana.enum';
+import { TipoDisponibilidad } from '../common/enums/tipo-disponibilidad.enum';
 import { ValidationStatus } from '../common/enums/validation-status.enum';
 import { Veterinario } from '../veterinarios/entities/veterinario.entity';
 import { DisponibilidadVeterinariaResponseDto } from './dto/disponibilidad-veterinaria-response.dto';
@@ -48,6 +49,7 @@ export class DisponibilidadesVeterinariasService {
         horaInicio: disponibilidad.horaInicio,
         horaFin: disponibilidad.horaFin,
         cuposPorTurno: disponibilidad.cuposPorTurno ?? 1,
+        tipo: disponibilidad.tipo ?? TipoDisponibilidad.ATENCION,
       }),
     );
 
@@ -109,7 +111,10 @@ export class DisponibilidadesVeterinariasService {
   private validarDisponibilidades(
     disponibilidades: DisponibilidadVeterinariaDto[],
   ): void {
-    const porDia = new Map<DiaSemana, DisponibilidadVeterinariaDto[]>();
+    // Las franjas de atención y las de sobreturno se suman, así que pueden
+    // coincidir en horario: lo que no puede solaparse es dos franjas del mismo
+    // tipo en el mismo día.
+    const porDia = new Map<string, DisponibilidadVeterinariaDto[]>();
 
     for (const disponibilidad of disponibilidades) {
       if (disponibilidad.horaInicio >= disponibilidad.horaFin) {
@@ -119,10 +124,10 @@ export class DisponibilidadesVeterinariasService {
         });
       }
 
-      const disponibilidadesDelDia =
-        porDia.get(disponibilidad.diaSemana) ?? [];
+      const clave = `${disponibilidad.diaSemana}:${disponibilidad.tipo ?? TipoDisponibilidad.ATENCION}`;
+      const disponibilidadesDelDia = porDia.get(clave) ?? [];
       disponibilidadesDelDia.push(disponibilidad);
-      porDia.set(disponibilidad.diaSemana, disponibilidadesDelDia);
+      porDia.set(clave, disponibilidadesDelDia);
     }
 
     for (const disponibilidadesDelDia of porDia.values()) {
@@ -150,9 +155,13 @@ export class DisponibilidadesVeterinariasService {
     const order = Object.values(DiaSemana);
     return [...disponibilidades].sort((a, b) => {
       const diaDiff = order.indexOf(a.diaSemana) - order.indexOf(b.diaSemana);
-      return diaDiff !== 0
-        ? diaDiff
-        : a.horaInicio.localeCompare(b.horaInicio);
+      if (diaDiff !== 0) {
+        return diaDiff;
+      }
+      return (
+        a.horaInicio.localeCompare(b.horaInicio) ||
+        a.tipo.localeCompare(b.tipo)
+      );
     });
   }
 }

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
@@ -25,7 +26,9 @@ describe('TurnosVeterinariosService', () => {
     findOne: jest.Mock;
     save: jest.Mock;
     create: jest.Mock;
+    manager: { transaction: jest.Mock };
   };
+  let managerQuery: jest.Mock;
   let veterinariosRepository: {
     findOne: jest.Mock;
   };
@@ -42,6 +45,7 @@ describe('TurnosVeterinariosService', () => {
   };
   let sobreturnosVeterinariosService: {
     obtenerCuposExtraPorHora: jest.Mock;
+    obtenerCuposExtraPorRango: jest.Mock;
   };
 
   const usuarioVeterinario = {
@@ -88,7 +92,10 @@ describe('TurnosVeterinariosService', () => {
     };
     sobreturnosVeterinariosService = {
       obtenerCuposExtraPorHora: jest.fn().mockResolvedValue(new Map()),
+      obtenerCuposExtraPorRango: jest.fn().mockResolvedValue(new Map()),
     };
+    // El bloqueo de agenda corre dentro de una transacción de Postgres.
+    managerQuery = jest.fn().mockResolvedValue(undefined);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -108,6 +115,12 @@ describe('TurnosVeterinariosService', () => {
             findOne: jest.fn(),
             save: jest.fn(),
             create: jest.fn(),
+            manager: {
+              transaction: jest.fn(
+                (callback: (manager: unknown) => Promise<unknown>) =>
+                  callback({ query: managerQuery }),
+              ),
+            },
           },
         },
         {
@@ -172,6 +185,8 @@ describe('TurnosVeterinariosService', () => {
         motivoConsulta: 'Control anual',
         estado: AppointmentStatus.CONFIRMADO,
         motivoRechazo: null,
+        creadoPor: 'dueño',
+        sobrecupo: false,
       },
     ]);
   });
@@ -892,6 +907,400 @@ describe('TurnosVeterinariosService', () => {
           ForbiddenException,
         );
       });
+    });
+  });
+
+  describe('agendarComoVeterinario', () => {
+    const idUsuarioVet = 99;
+    // 2027-03-01 es lunes y está en el futuro.
+    const dto = {
+      idMascota: 21,
+      fecha: '2027-03-01',
+      hora: '10:00',
+      motivoConsulta: 'Control a las dos semanas',
+    };
+    const otroDuenio = {
+      idUsuario: 13,
+      nombre: 'Beto',
+      apellido: 'Paz',
+    } as User;
+    const mascotaCompartida = {
+      idMascota: 21,
+      nombre: 'Luna',
+      idDuenioPrincipal: 12,
+      usuarios: [otroDuenio, duenio],
+    } as Mascota;
+    const atencionLunes = {
+      diaSemana: DiaSemana.LUNES,
+      horaInicio: '09:00',
+      horaFin: '12:00',
+      cuposPorTurno: 1,
+      tipo: 'atencion',
+    } as DisponibilidadVeterinaria;
+    const turnoOcupado = {
+      fecha: dto.fecha,
+      hora: '10:00',
+      estado: AppointmentStatus.CONFIRMADO,
+    } as TurnoVeterinario;
+
+    beforeEach(() => {
+      veterinariosRepository.findOne.mockResolvedValue(veterinario);
+      mascotasRepository.findOne.mockResolvedValue(mascotaCompartida);
+      disponibilidadesRepository.find.mockResolvedValue([atencionLunes]);
+      turnosRepository.find.mockResolvedValue([]);
+      turnosRepository.create.mockImplementation((e: unknown) => e);
+      turnosRepository.save.mockImplementation((e: object) =>
+        Promise.resolve({ ...e, idTurno: 77 }),
+      );
+      turnosRepository.findOne.mockResolvedValue({
+        ...turnoConfirmado,
+        idTurno: 77,
+        creadoPor: 'veterinario',
+        sobrecupo: false,
+      });
+    });
+
+    it('agenda un turno confirmado marcado como cargado por la veterinaria', async () => {
+      const result = await service.agendarComoVeterinario(idUsuarioVet, dto);
+
+      expect(turnosRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          veterinario,
+          mascota: mascotaCompartida,
+          duenio: duenio,
+          estado: AppointmentStatus.CONFIRMADO,
+          creadoPor: 'veterinario',
+          sobrecupo: false,
+        }),
+      );
+      expect(result.idTurno).toBe(77);
+      expect(result.creadoPor).toBe('veterinario');
+    });
+
+    it('bloquea la agenda mientras chequea el cupo y guarda', async () => {
+      await service.agendarComoVeterinario(idUsuarioVet, dto);
+
+      expect(managerQuery).toHaveBeenCalledWith(
+        'SELECT pg_advisory_xact_lock($1, hashtext($2))',
+        [7, dto.fecha],
+      );
+    });
+
+    it('asocia el turno al dueño principal cuando no se indica otro', async () => {
+      await service.agendarComoVeterinario(idUsuarioVet, dto);
+
+      expect(turnosRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ duenio }),
+      );
+    });
+
+    it('asocia el turno al dueño indicado entre los de la mascota', async () => {
+      await service.agendarComoVeterinario(idUsuarioVet, {
+        ...dto,
+        idDuenio: 13,
+      });
+
+      expect(turnosRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ duenio: otroDuenio }),
+      );
+    });
+
+    it('rechaza un cliente que no es dueño de la mascota', async () => {
+      await expect(
+        service.agendarComoVeterinario(idUsuarioVet, { ...dto, idDuenio: 500 }),
+      ).rejects.toThrow(BadRequestException);
+      expect(turnosRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('notifica a los dueños y no a la veterinaria que cargó el turno', async () => {
+      await service.agendarComoVeterinario(idUsuarioVet, dto);
+
+      expect(
+        notificacionesTurnosService.notificarTurnoConfirmado,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ creadoPor: 'veterinario' }),
+      );
+    });
+
+    it('rechaza un horario fuera de su atención y de sus sobreturnos', async () => {
+      await expect(
+        service.agendarComoVeterinario(idUsuarioVet, { ...dto, hora: '18:00' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(turnosRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('rechaza un horario que ya pasó', async () => {
+      await expect(
+        service.agendarComoVeterinario(idUsuarioVet, {
+          ...dto,
+          fecha: '2020-01-06',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('avisa con 409 CUPO_LLENO cuando el horario no tiene cupos y no se confirmó', async () => {
+      turnosRepository.find.mockResolvedValue([turnoOcupado]);
+
+      const error = await service
+        .agendarComoVeterinario(idUsuarioVet, dto)
+        .catch((e: unknown) => e);
+
+      expect(error).toBeInstanceOf(ConflictException);
+      expect((error as ConflictException).getResponse()).toMatchObject({
+        codigo: 'CUPO_LLENO',
+        cupos: 1,
+        ocupados: 1,
+      });
+      expect(turnosRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('agenda igual como sobrecupo cuando el veterinario lo confirma', async () => {
+      turnosRepository.find.mockResolvedValue([turnoOcupado]);
+
+      await service.agendarComoVeterinario(idUsuarioVet, {
+        ...dto,
+        forzar: true,
+      });
+
+      expect(turnosRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ sobrecupo: true, creadoPor: 'veterinario' }),
+      );
+      expect(turnosRepository.save).toHaveBeenCalled();
+    });
+
+    it('no marca sobrecupo si forzó pero había lugar', async () => {
+      await service.agendarComoVeterinario(idUsuarioVet, {
+        ...dto,
+        forzar: true,
+      });
+
+      expect(turnosRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ sobrecupo: false }),
+      );
+    });
+
+    it('permite agendar en un sobreturno semanal que está fuera de su atención', async () => {
+      disponibilidadesRepository.find.mockResolvedValue([
+        atencionLunes,
+        {
+          diaSemana: DiaSemana.LUNES,
+          horaInicio: '15:00',
+          horaFin: '16:00',
+          cuposPorTurno: 2,
+          tipo: 'sobreturno',
+        } as DisponibilidadVeterinaria,
+      ]);
+
+      await service.agendarComoVeterinario(idUsuarioVet, {
+        ...dto,
+        hora: '15:00',
+      });
+
+      expect(turnosRepository.save).toHaveBeenCalled();
+    });
+
+    it('rechaza una mascota inexistente', async () => {
+      mascotasRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.agendarComoVeterinario(idUsuarioVet, dto),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('rechaza una veterinaria no validada', async () => {
+      veterinariosRepository.findOne.mockResolvedValue({
+        idVeterinario: 7,
+        estadoValidacion: ValidationStatus.PENDIENTE,
+      });
+
+      await expect(
+        service.agendarComoVeterinario(idUsuarioVet, dto),
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
+  describe('reserva del dueño con sobreturnos semanales', () => {
+    const dueno = 12;
+    const mascotaPropia = {
+      idMascota: 21,
+      nombre: 'Luna',
+      usuarios: [{ idUsuario: dueno }],
+    } as Mascota;
+    const dto: CreateTurnoVeterinarioDto = {
+      idMascota: 21,
+      idVeterinario: 7,
+      fecha: '2027-03-01',
+      hora: '15:00',
+    };
+    const sobreturnoLunes = {
+      diaSemana: DiaSemana.LUNES,
+      horaInicio: '15:00',
+      horaFin: '16:00',
+      cuposPorTurno: 2,
+      tipo: 'sobreturno',
+    } as DisponibilidadVeterinaria;
+
+    beforeEach(() => {
+      mascotasRepository.findOne.mockResolvedValue(mascotaPropia);
+      veterinariosRepository.findOne.mockResolvedValue(veterinario);
+      disponibilidadesRepository.find.mockResolvedValue([sobreturnoLunes]);
+      turnosRepository.create.mockReturnValue({});
+      turnosRepository.save.mockResolvedValue({ idTurno: 30 });
+      turnosRepository.findOne.mockResolvedValue({ ...turnoConfirmado });
+    });
+
+    it('permite reservar en un sobreturno semanal con cupo', async () => {
+      turnosRepository.find.mockResolvedValue([]);
+
+      await service.solicitar(dueno, dto);
+
+      expect(turnosRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ creadoPor: 'dueño', sobrecupo: false }),
+      );
+    });
+
+    it('no deja reservar cuando se ocuparon los cupos del sobreturno', async () => {
+      const ocupado = {
+        fecha: dto.fecha,
+        hora: '15:00',
+        estado: AppointmentStatus.CONFIRMADO,
+      } as TurnoVeterinario;
+      turnosRepository.find.mockResolvedValue([ocupado, ocupado]);
+
+      await expect(service.solicitar(dueno, dto)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(turnosRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('guarda y chequea el cupo bajo el mismo bloqueo de agenda', async () => {
+      turnosRepository.find.mockResolvedValue([]);
+
+      await service.solicitar(dueno, dto);
+
+      expect(managerQuery).toHaveBeenCalledWith(
+        'SELECT pg_advisory_xact_lock($1, hashtext($2))',
+        [7, dto.fecha],
+      );
+    });
+  });
+
+  describe('capacidadAgenda', () => {
+    const franjas = [
+      {
+        diaSemana: DiaSemana.LUNES,
+        horaInicio: '09:00',
+        horaFin: '10:00',
+        cuposPorTurno: 1,
+        tipo: 'atencion',
+      },
+      {
+        diaSemana: DiaSemana.LUNES,
+        horaInicio: '09:30',
+        horaFin: '10:30',
+        cuposPorTurno: 2,
+        tipo: 'sobreturno',
+      },
+    ] as DisponibilidadVeterinaria[];
+
+    beforeEach(() => {
+      veterinariosRepository.findOne.mockResolvedValue(veterinario);
+      disponibilidadesRepository.find.mockResolvedValue(franjas);
+      turnosRepository.find.mockResolvedValue([]);
+    });
+
+    it('separa los cupos de atención de los de sobreturno por franja', async () => {
+      const result = await service.capacidadAgenda(
+        99,
+        '2027-03-01',
+        '2027-03-01',
+      );
+
+      expect(result).toEqual([
+        {
+          fecha: '2027-03-01',
+          hora: '09:00',
+          cuposAtencion: 1,
+          cuposSobreturno: 0,
+          ocupados: 0,
+        },
+        {
+          fecha: '2027-03-01',
+          hora: '09:30',
+          cuposAtencion: 1,
+          cuposSobreturno: 2,
+          ocupados: 0,
+        },
+        {
+          fecha: '2027-03-01',
+          hora: '10:00',
+          cuposAtencion: 0,
+          cuposSobreturno: 2,
+          ocupados: 0,
+        },
+      ]);
+    });
+
+    it('cuenta los turnos que ocupan la franja y ignora los cancelados', async () => {
+      turnosRepository.find.mockResolvedValue([
+        {
+          fecha: '2027-03-01',
+          hora: '09:00:00',
+          estado: AppointmentStatus.CONFIRMADO,
+        },
+        {
+          fecha: '2027-03-01',
+          hora: '09:00:00',
+          estado: AppointmentStatus.CANCELADO,
+        },
+      ] as TurnoVeterinario[]);
+
+      const result = await service.capacidadAgenda(
+        99,
+        '2027-03-01',
+        '2027-03-01',
+      );
+
+      expect(result[0]).toMatchObject({ hora: '09:00', ocupados: 1 });
+    });
+
+    it('incluye los sobreturnos de fecha puntual como cupos de sobreturno', async () => {
+      sobreturnosVeterinariosService.obtenerCuposExtraPorRango.mockResolvedValue(
+        new Map([['2027-03-01', new Map([['18:00', 1]])]]),
+      );
+
+      const result = await service.capacidadAgenda(
+        99,
+        '2027-03-01',
+        '2027-03-01',
+      );
+
+      expect(result).toContainEqual({
+        fecha: '2027-03-01',
+        hora: '18:00',
+        cuposAtencion: 0,
+        cuposSobreturno: 1,
+        ocupados: 0,
+      });
+    });
+
+    it('no devuelve franjas de un día sin disponibilidad', async () => {
+      const result = await service.capacidadAgenda(
+        99,
+        '2027-03-02',
+        '2027-03-02',
+      );
+
+      expect(result).toEqual([]);
+    });
+
+    it('rechaza un rango demasiado grande o invertido', async () => {
+      await expect(
+        service.capacidadAgenda(99, '2027-03-01', '2027-08-01'),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.capacidadAgenda(99, '2027-03-05', '2027-03-01'),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

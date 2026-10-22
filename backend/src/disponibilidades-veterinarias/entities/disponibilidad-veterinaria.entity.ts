@@ -6,6 +6,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { DiaSemana } from '../../common/enums/dia-semana.enum';
+import { TipoDisponibilidad } from '../../common/enums/tipo-disponibilidad.enum';
 import { Veterinario } from '../../veterinarios/entities/veterinario.entity';
 
 @Entity('disponibilidades_veterinaria')
@@ -28,4 +29,11 @@ export class DisponibilidadVeterinaria {
 
   @Column({ name: 'cupos_por_turno', type: 'int', default: 1 })
   cuposPorTurno: number;
+
+  @Column({
+    type: 'varchar',
+    length: 20,
+    default: TipoDisponibilidad.ATENCION,
+  })
+  tipo: TipoDisponibilidad;
 }

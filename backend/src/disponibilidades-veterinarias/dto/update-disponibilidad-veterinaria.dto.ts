@@ -4,7 +4,7 @@ import { DisponibilidadVeterinariaDto } from './disponibilidad-veterinaria.dto';
 
 export class UpdateDisponibilidadVeterinariaDto {
   @IsArray()
-  @ArrayMaxSize(21)
+  @ArrayMaxSize(42)
   @ValidateNested({ each: true })
   @Type(() => DisponibilidadVeterinariaDto)
   disponibilidades: DisponibilidadVeterinariaDto[];

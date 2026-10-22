@@ -27,7 +27,9 @@ import {
 } from '../common/decorators/api-protegido.decorator';
 import { AppointmentStatus } from '../common/enums/appointment-status.enum';
 import { RoleName } from '../common/enums/role-name.enum';
+import { AgendarTurnoVeterinarioDto } from './dto/agendar-turno-veterinario.dto';
 import { CancelarTurnoVeterinarioDto } from './dto/cancelar-turno-veterinario.dto';
+import { CapacidadHorarioResponseDto } from './dto/capacidad-horario-response.dto';
 import { CreateTurnoVeterinarioDto } from './dto/create-turno-veterinario.dto';
 import { RegistrarAsistenciaDto } from './dto/registrar-asistencia.dto';
 import { TurnoDuenioResponseDto } from './dto/turno-duenio-response.dto';
@@ -116,6 +118,58 @@ export class TurnosVeterinariosController {
     estado?: AppointmentStatus,
   ): Promise<TurnoVeterinarioResponseDto[]> {
     return this.turnosVeterinariosService.findMine(user.sub, estado);
+  }
+
+  @Post('mia')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleName.VETERINARIO)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiProtegido(RoleName.VETERINARIO)
+  @ApiOperation({
+    summary: 'Agendar un turno desde la veterinaria',
+    description:
+      'El veterinario carga un turno para la mascota de un cliente, dentro de su horario de atención o sus sobreturnos. Si el horario ya no tiene cupos responde 409 con codigo CUPO_LLENO; repitiendo con forzar=true se agenda igual como sobrecupo.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Turno agendado.',
+    type: TurnoVeterinarioResponseDto,
+  })
+  @ApiConflicto('El horario no tiene cupos y falta confirmar con forzar.')
+  @ApiNoEncontrado('La mascota no existe.')
+  agendarComoVeterinario(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: AgendarTurnoVeterinarioDto,
+  ): Promise<TurnoVeterinarioResponseDto> {
+    return this.turnosVeterinariosService.agendarComoVeterinario(user.sub, dto);
+  }
+
+  @Get('mia/agenda')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleName.VETERINARIO)
+  @ApiProtegido(RoleName.VETERINARIO)
+  @ApiOperation({
+    summary: 'Capacidad y ocupación de mi agenda',
+    description:
+      'Franjas de 30 minutos con sus cupos de atención y de sobreturno y los turnos que las ocupan, para un rango de hasta 62 días.',
+  })
+  @ApiQuery({ name: 'desde', example: '2026-10-19' })
+  @ApiQuery({ name: 'hasta', example: '2026-10-25' })
+  @ApiResponse({
+    status: 200,
+    description: 'Franjas con cupos o turnos en el rango.',
+    type: [CapacidadHorarioResponseDto],
+  })
+  capacidadAgenda(
+    @CurrentUser() user: JwtPayload,
+    @Query('desde') desde: string,
+    @Query('hasta') hasta: string,
+  ): Promise<CapacidadHorarioResponseDto[]> {
+    return this.turnosVeterinariosService.capacidadAgenda(
+      user.sub,
+      desde,
+      hasta,
+    );
   }
 
   @Get('mios')

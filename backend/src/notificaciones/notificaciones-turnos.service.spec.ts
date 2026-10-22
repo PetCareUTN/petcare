@@ -77,6 +77,42 @@ describe('NotificacionesTurnosService', () => {
     });
   });
 
+  describe('turno agendado por la veterinaria', () => {
+    const turnoDeLaVeterinaria: DatosTurno = {
+      ...turno,
+      creadoPor: 'veterinario',
+      duenios: [
+        { idUsuario: 12, nombre: 'Ana Gomez' },
+        { idUsuario: 13, nombre: 'Marta Paz' },
+      ],
+    };
+
+    it('avisa a todos los dueños que se les agendó un turno', async () => {
+      await service.notificarTurnoConfirmado(turnoDeLaVeterinaria);
+
+      expect(notificacionesService.crear).toHaveBeenCalledTimes(2);
+      for (const idDuenio of [12, 13]) {
+        expect(notificacionesService.crear).toHaveBeenCalledWith(
+          idDuenio,
+          NotificationType.TURNO_CONFIRMADO,
+          'Turno confirmado',
+          expect.stringContaining('te agendó un turno'),
+          7,
+          'turno_veterinario',
+        );
+      }
+    });
+
+    it('no le avisa a la veterinaria de un turno que cargó ella', async () => {
+      await service.notificarTurnoConfirmado(turnoDeLaVeterinaria);
+
+      const destinatarios = notificacionesService.crear.mock.calls.map(
+        ([idUsuario]: [number]) => idUsuario,
+      );
+      expect(destinatarios).not.toContain(99);
+    });
+  });
+
   describe('mascota compartida con varios dueños', () => {
     const turnoCompartido: DatosTurno = {
       ...turno,

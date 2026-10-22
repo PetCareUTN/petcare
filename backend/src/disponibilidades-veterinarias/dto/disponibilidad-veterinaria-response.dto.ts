@@ -1,4 +1,5 @@
 import { DiaSemana } from '../../common/enums/dia-semana.enum';
+import { TipoDisponibilidad } from '../../common/enums/tipo-disponibilidad.enum';
 import { DisponibilidadVeterinaria } from '../entities/disponibilidad-veterinaria.entity';
 
 export class DisponibilidadVeterinariaResponseDto {
@@ -8,6 +9,7 @@ export class DisponibilidadVeterinariaResponseDto {
   horaInicio: string;
   horaFin: string;
   cuposPorTurno: number;
+  tipo: TipoDisponibilidad;
 
   static fromEntity(
     disponibilidad: DisponibilidadVeterinaria,
@@ -19,6 +21,7 @@ export class DisponibilidadVeterinariaResponseDto {
       horaInicio: disponibilidad.horaInicio,
       horaFin: disponibilidad.horaFin,
       cuposPorTurno: disponibilidad.cuposPorTurno,
+      tipo: disponibilidad.tipo,
     };
   }
 }

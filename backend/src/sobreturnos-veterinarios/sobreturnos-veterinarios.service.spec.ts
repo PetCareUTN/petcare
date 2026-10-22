@@ -228,4 +228,27 @@ describe('SobreturnosVeterinariosService', () => {
       expect(result).toEqual(new Map());
     });
   });
+
+  describe('obtenerCuposExtraPorRango', () => {
+    it('agrupa los cupos por fecha y hora dentro del rango', async () => {
+      sobreturnosRepository.find.mockResolvedValue([
+        { fecha: '2099-01-15', hora: '22:00:00', cupos: 1 },
+        { fecha: '2099-01-15', hora: '22:00:00', cupos: 2 },
+        { fecha: '2099-01-16', hora: '09:30:00', cupos: 1 },
+      ]);
+
+      const result = await service.obtenerCuposExtraPorRango(
+        7,
+        '2099-01-15',
+        '2099-01-21',
+      );
+
+      expect(result).toEqual(
+        new Map([
+          ['2099-01-15', new Map([['22:00', 3]])],
+          ['2099-01-16', new Map([['09:30', 1]])],
+        ]),
+      );
+    });
+  });
 });
