@@ -892,7 +892,7 @@
 }
 
 .slot.sobreturno {
-  background-color: color-mix(in srgb, var(--tipo-sobreturno) 7%, white);
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 12%, white);
 }
 
 .slot.sobreturno:hover,
@@ -902,7 +902,7 @@
 }
 
 .slot.sobreturno .slot-plus {
-  background-color: color-mix(in srgb, var(--tipo-sobreturno) 18%, white);
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 28%, white);
   color: var(--tipo-sobreturno);
 }
 
@@ -912,29 +912,24 @@
   color: #ffffff;
 }
 
-/* Horario completo: no hay hueco, solo un "+" discreto que aparece al pasar por la
-   celda para poder agendar igual (el formulario avisa antes de confirmar). */
+/* Horario completo: no hay hueco, solo un "+" azul para agregar un sobreturno. */
 .slot-forzar {
-  display: none;
+  display: grid;
   align-self: flex-end;
   place-items: center;
-  width: 1.15rem;
-  height: 1.15rem;
+  width: 1.3rem;
+  height: 1.3rem;
   padding: 0;
   border: none;
   border-radius: 50%;
-  background-color: color-mix(in srgb, var(--tipo-sobreturno) 16%, white);
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 28%, white);
   color: var(--tipo-sobreturno);
   font: inherit;
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
-}
-
-.time-cell:hover .slot-forzar,
-.slot-forzar:focus-visible {
-  display: grid;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .slot-forzar:hover {
@@ -960,8 +955,8 @@
 .event-chip.confirmado.sobreturno,
 .event-block.confirmado.sobreturno {
   border-left-color: var(--tipo-sobreturno);
-  background-color: color-mix(in srgb, var(--tipo-sobreturno) 13%, white);
-  color: var(--tipo-sobreturno);
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 20%, white);
+  color: #24557f;
 }
 
 .tipo-dot.sobreturno {
