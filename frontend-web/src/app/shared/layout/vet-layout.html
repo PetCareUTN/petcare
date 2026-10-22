@@ -5,6 +5,14 @@
       <span class="vet-brand-name">PetCare</span>
     </div>
 
+    <div class="vet-user">
+      <span class="vet-user-avatar" aria-hidden="true">{{ iniciales() }}</span>
+      <div class="vet-user-info">
+        <p class="vet-user-name" [title]="nombreCompleto()">{{ nombreCompleto() }}</p>
+        <p class="vet-user-role">Veterinario/a</p>
+      </div>
+    </div>
+
     <nav class="vet-nav">
       <a routerLink="/eventos-clinicos/inicio" [class.active]="isInicioActive()">
         <svg class="vet-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>
@@ -41,15 +49,9 @@
     </nav>
 
     <div class="vet-footer">
-      <div class="vet-user">
-        <span class="vet-user-avatar" aria-hidden="true">{{ iniciales() }}</span>
-        <div class="vet-user-info">
-          <p class="vet-user-name" [title]="nombreCompleto()">{{ nombreCompleto() }}</p>
-          <p class="vet-user-role">Veterinario/a</p>
-        </div>
-      </div>
-      <button type="button" class="vet-logout" (click)="logout()" title="Cerrar sesión" aria-label="Cerrar sesión">
+      <button type="button" class="vet-logout" (click)="logout()" aria-label="Cerrar sesión">
         <svg class="vet-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3M16 16l4-4-4-4M20 12H9"/></svg>
+        <span>Cerrar sesión</span>
       </button>
     </div>
   </aside>

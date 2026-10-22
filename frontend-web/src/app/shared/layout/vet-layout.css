@@ -100,28 +100,31 @@
 }
 
 .vet-footer {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
   margin-top: var(--spacing-md);
-  padding: 0.75rem 0.4rem 0 0.4rem;
+  padding-top: 0.6rem;
   border-top: 1px solid rgba(37, 51, 47, 0.08);
 }
 
+/* Tarjeta del usuario arriba, como el encabezado de cuenta de macOS. */
 .vet-user {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  flex: 1;
+  gap: 0.65rem;
   min-width: 0;
+  margin-bottom: 1.1rem;
+  padding: 0.6rem 0.7rem;
+  background-color: #ffffff;
+  border: 1px solid rgba(37, 51, 47, 0.07);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(37, 51, 47, 0.05);
 }
 
 .vet-user-avatar {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
   flex-shrink: 0;
   border-radius: 50%;
   background: linear-gradient(180deg, #6f9c90 0%, #4f7f73 100%);
@@ -157,15 +160,18 @@
 .vet-logout {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-  padding: 0;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
   border: none;
-  border-radius: 8px;
+  border-radius: 9px;
   background: transparent;
   color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-align: left;
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
@@ -176,8 +182,6 @@
 }
 
 .vet-logout .vet-icon {
-  width: 18px;
-  height: 18px;
   color: inherit;
 }
 
@@ -204,6 +208,7 @@
   }
 
   .vet-brand,
+  .vet-user,
   .vet-footer {
     flex-shrink: 0;
   }
@@ -215,6 +220,23 @@
   .vet-brand-name,
   .vet-user-info {
     display: none;
+  }
+
+  .vet-user {
+    margin-bottom: 0;
+    padding: 0;
+    background: none;
+    border: none;
+    box-shadow: none;
+  }
+
+  .vet-logout span {
+    display: none;
+  }
+
+  .vet-logout {
+    width: 32px;
+    padding: 0.4rem;
   }
 
   .vet-nav {
