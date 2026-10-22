@@ -1,9 +1,14 @@
+import { DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { catchError, forkJoin, of } from 'rxjs';
 import { ApiError } from '../../../auth/models/user';
-import { TurnoServicioResponse } from '../../../turnos-servicios/models/turno-servicio';
-import { TurnosServiciosService } from '../../../turnos-servicios/services/turnos-servicios-service';
-import { CategoriaServicio, ServicioResponse } from '../../models/servicio';
+import {
+  CategoriaServicio,
+  PerfilPrestadorResponse,
+  ResenaServicio,
+  ServicioResponse,
+} from '../../models/servicio';
 import { ServiciosService } from '../../services/servicios-service';
 
 const CATEGORIA_LABELS: Record<CategoriaServicio, string> = {
@@ -14,80 +19,71 @@ const CATEGORIA_LABELS: Record<CategoriaServicio, string> = {
 
 const DIAS_ORDEN = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
 const DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-const DIAS_FECHA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-const MESES_CORTOS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-/** Cuántos turnos se listan en "Próximos turnos". */
-const MAX_PROXIMOS = 6;
-const SIETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;
 
-const DIA_LABELS: Record<string, string> = {
-  lunes: 'Lunes',
-  martes: 'Martes',
-  miercoles: 'Miércoles',
-  jueves: 'Jueves',
-  viernes: 'Viernes',
-  sabado: 'Sábado',
-  domingo: 'Domingo',
-};
+/** Cuántas reseñas se listan: las más recientes. */
+const MAX_RESENAS = 5;
+
+interface ResenaConServicio extends ResenaServicio {
+  categoria: CategoriaServicio;
+}
 
 @Component({
   selector: 'app-servicios-list',
-  imports: [RouterLink],
+  imports: [RouterLink, DatePipe],
   templateUrl: './servicios-list.html',
   styleUrl: './servicios-list.css',
 })
 export class ServiciosListPage implements OnInit {
   private readonly serviciosService = inject(ServiciosService);
-  private readonly turnosServiciosService = inject(TurnosServiciosService);
+
+  protected readonly estrellas = [1, 2, 3, 4, 5];
 
   protected readonly isLoading = signal(true);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly servicios = signal<ServicioResponse[]>([]);
   protected readonly deletingId = signal<number | null>(null);
-  private readonly turnos = signal<TurnoServicioResponse[]>([]);
+  private readonly perfiles = signal<Map<CategoriaServicio, PerfilPrestadorResponse>>(new Map());
 
-  /** Turnos confirmados que todavía no empezaron, del más cercano al más lejano. */
-  private readonly turnosFuturos = computed(() =>
-    this.turnos()
-      .filter((turno) => turno.estado === 'confirmado' && this.inicio(turno) > Date.now())
-      .sort((a, b) => this.inicio(a) - this.inicio(b)),
+  /** Todas las reseñas de todos sus servicios, de la más nueva a la más vieja. */
+  private readonly todasLasResenas = computed<ResenaConServicio[]>(() =>
+    [...this.perfiles()]
+      .flatMap(([categoria, perfil]) => perfil.resenas.map((resena) => ({ ...resena, categoria })))
+      .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()),
   );
 
-  protected readonly proximos = computed(() => this.turnosFuturos().slice(0, MAX_PROXIMOS));
+  protected readonly ultimasResenas = computed(() => this.todasLasResenas().slice(0, MAX_RESENAS));
 
-  protected readonly turnosProximos = computed(() => this.turnosFuturos().length);
+  protected readonly totalResenas = computed(() => this.todasLasResenas().length);
 
-  protected readonly turnosSemana = computed(
-    () =>
-      this.turnosFuturos().filter((turno) => this.inicio(turno) - Date.now() <= SIETE_DIAS_MS)
-        .length,
+  /** Promedio de todas las reseñas juntas (no el promedio de los promedios). */
+  protected readonly promedio = computed<number | null>(() => {
+    const resenas = this.todasLasResenas();
+    return resenas.length
+      ? resenas.reduce((suma, resena) => suma + resena.puntuacion, 0) / resenas.length
+      : null;
+  });
+
+  protected readonly serviciosCompletados = computed(() =>
+    [...this.perfiles().values()].reduce((suma, perfil) => suma + perfil.serviciosCompletados, 0),
   );
 
-  /** Mascotas distintas que ya pasaron por alguno de sus servicios. */
-  protected readonly mascotasAtendidas = computed(
-    () =>
-      new Set(
-        this.turnos()
-          .filter(
-            (turno) =>
-              turno.estado === 'completado' ||
-              (turno.estado === 'confirmado' && this.inicio(turno) <= Date.now()),
-          )
-          .map((turno) => turno.idMascota),
-      ).size,
+  /** Puntaje por categoría, para los servicios que ya tienen reseñas. */
+  protected readonly puntajePorCategoria = computed(() =>
+    [...this.perfiles()]
+      .filter(([, perfil]) => perfil.promedio !== null)
+      .map(([categoria, perfil]) => ({
+        categoria,
+        promedio: perfil.promedio as number,
+        cantidad: perfil.resenas.length,
+      })),
   );
 
   ngOnInit(): void {
-    // Los turnos solo enriquecen la pantalla: si no cargan, se muestra el resto.
-    this.turnosServiciosService.getRecibidas().subscribe({
-      next: (turnos) => this.turnos.set(turnos),
-      error: () => this.turnos.set([]),
-    });
-
     this.serviciosService.getMine().subscribe({
       next: (servicios) => {
         this.isLoading.set(false);
         this.servicios.set(servicios);
+        this.cargarPerfiles(servicios);
       },
       error: (error: ApiError) => {
         this.isLoading.set(false);
@@ -100,12 +96,31 @@ export class ServiciosListPage implements OnInit {
     return CATEGORIA_LABELS[categoria as CategoriaServicio] ?? categoria;
   }
 
-  protected diaLabel(dia: string): string {
-    return DIA_LABELS[dia] ?? dia;
-  }
-
   protected formatHora(hora: string): string {
     return hora.slice(0, 5);
+  }
+
+  /** "4,8": un decimal y con coma. */
+  protected formatPromedio(promedio: number): string {
+    return promedio.toFixed(1).replace('.', ',');
+  }
+
+  /** Cuántas estrellas se pintan: el puntaje redondeado. */
+  protected estrellasLlenas(puntuacion: number): number {
+    return Math.round(puntuacion);
+  }
+
+  /** Horarios de un servicio agrupados: "Lun a Vie · 09:00 – 18:00". */
+  protected horarios(servicio: ServicioResponse): string[] {
+    const grupos = new Map<string, number[]>();
+    for (const disponibilidad of servicio.disponibilidades) {
+      const clave = `${this.formatHora(disponibilidad.horaInicio)} – ${this.formatHora(disponibilidad.horaFin)}`;
+      const indice = DIAS_ORDEN.indexOf(disponibilidad.diaSemana);
+      grupos.set(clave, [...(grupos.get(clave) ?? []), indice]);
+    }
+    return [...grupos.entries()].map(
+      ([rango, indices]) => `${this.resumenDias(indices)} · ${rango}`,
+    );
   }
 
   protected eliminar(servicio: ServicioResponse): void {
@@ -130,38 +145,35 @@ export class ServiciosListPage implements OnInit {
     });
   }
 
-  /** Horarios de un servicio agrupados: "Lun a Vie · 09:00 – 18:00". */
-  protected horarios(servicio: ServicioResponse): string[] {
-    const grupos = new Map<string, number[]>();
-    for (const disponibilidad of servicio.disponibilidades) {
-      const clave = `${this.formatHora(disponibilidad.horaInicio)} – ${this.formatHora(disponibilidad.horaFin)}`;
-      const indice = DIAS_ORDEN.indexOf(disponibilidad.diaSemana);
-      grupos.set(clave, [...(grupos.get(clave) ?? []), indice]);
+  /**
+   * Las reseñas solo enriquecen la pantalla: si alguna categoría no carga, se
+   * muestra el resto. Se pide un perfil por categoría, aunque haya varios servicios.
+   */
+  private cargarPerfiles(servicios: ServicioResponse[]): void {
+    const peticiones = new Map<CategoriaServicio, number>();
+    for (const servicio of servicios) {
+      peticiones.set(servicio.categoria, servicio.idUsuario);
     }
-    return [...grupos.entries()].map(([rango, indices]) => `${this.resumenDias(indices)} · ${rango}`);
-  }
+    if (peticiones.size === 0) {
+      return;
+    }
 
-  protected iniciales(nombre: string): string {
-    return (
-      nombre
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((parte) => parte.charAt(0).toUpperCase())
-        .join('') || '?'
-    );
-  }
-
-  protected diaCorto(turno: TurnoServicioResponse): string {
-    return DIAS_FECHA[this.fechaLocal(turno.fecha).getDay()];
-  }
-
-  protected diaNumero(turno: TurnoServicioResponse): number {
-    return this.fechaLocal(turno.fecha).getDate();
-  }
-
-  protected mes(turno: TurnoServicioResponse): string {
-    return MESES_CORTOS[this.fechaLocal(turno.fecha).getMonth()];
+    forkJoin(
+      [...peticiones].map(([categoria, idUsuario]) =>
+        this.serviciosService
+          .getPerfil(idUsuario, categoria)
+          .pipe(catchError(() => of(null as PerfilPrestadorResponse | null))),
+      ),
+    ).subscribe((resultados) => {
+      const perfiles = new Map<CategoriaServicio, PerfilPrestadorResponse>();
+      [...peticiones.keys()].forEach((categoria, indice) => {
+        const perfil = resultados[indice];
+        if (perfil) {
+          perfiles.set(categoria, perfil);
+        }
+      });
+      this.perfiles.set(perfiles);
+    });
   }
 
   private resumenDias(indices: number[]): string {
@@ -178,15 +190,5 @@ export class ServiciosListPage implements OnInit {
       return `${cortos.slice(0, -1).join(', ')} y ${cortos[cortos.length - 1]}`;
     }
     return cortos[0] ?? '';
-  }
-
-  private inicio(turno: TurnoServicioResponse): number {
-    return new Date(`${turno.fecha}T${turno.horaInicio}`).getTime();
-  }
-
-  /** Fecha local a partir de YYYY-MM-DD, sin que el huso horario corra el día. */
-  private fechaLocal(fecha: string): Date {
-    const [anio, mes, dia] = fecha.split('-').map(Number);
-    return new Date(anio, mes - 1, dia);
   }
 }

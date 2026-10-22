@@ -174,8 +174,7 @@
   list-style: none;
 }
 
-.servicio,
-.turno {
+.servicio {
   display: flex;
   align-items: center;
   gap: 0.9rem;
@@ -236,53 +235,6 @@
   gap: 0.4rem;
 }
 
-/* Fecha del turno: bloque chico como en Calendario. */
-.turno-fecha {
-  display: flex;
-  flex-shrink: 0;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 52px;
-  height: 56px;
-  border-radius: 12px;
-  background-color: var(--surface);
-  box-shadow: 0 1px 2px rgba(37, 51, 47, 0.08);
-}
-
-.turno-dia {
-  color: var(--primary);
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.turno-numero {
-  font-size: 1.25rem;
-  font-weight: 700;
-  line-height: 1.1;
-}
-
-.turno-mes {
-  color: var(--text-secondary);
-  font-size: 0.62rem;
-  text-transform: uppercase;
-}
-
-.enlace-turnos {
-  margin-top: auto;
-  align-self: flex-start;
-  color: var(--primary);
-  font-size: 0.88rem;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.enlace-turnos:hover {
-  text-decoration: underline;
-}
-
 .empty-state {
   display: flex;
   flex: 1;
@@ -307,6 +259,105 @@
 .empty-state p {
   margin: 0;
   font-size: 0.9rem;
+}
+
+/* ---------- Reseñas ---------- */
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.panel-resumen {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.stat-estrella {
+  margin-left: 0.2rem;
+  color: #f5a524;
+  font-size: 1.5rem;
+}
+
+.puntajes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.puntaje {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  background-color: var(--fill);
+  font-size: 0.82rem;
+}
+
+.puntaje-nombre {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.puntaje-valor {
+  font-weight: 700;
+}
+
+.estrellas {
+  display: inline-flex;
+  gap: 1px;
+}
+
+.estrella {
+  width: 14px;
+  height: 14px;
+  fill: #d9dfdc;
+}
+
+.estrella.llena {
+  fill: #f5a524;
+}
+
+.resena {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: 14px;
+  background-color: var(--fill);
+}
+
+.resena-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.resena-meta {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.resena-comentario {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.resena-autor {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
 }
 
 @media (max-width: 960px) {
