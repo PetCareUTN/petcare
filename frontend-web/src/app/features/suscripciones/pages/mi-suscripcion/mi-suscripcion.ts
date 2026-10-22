@@ -99,6 +99,21 @@ export class MiSuscripcionPage implements OnInit, OnDestroy {
     }
   }
 
+  protected etiquetaPago(estado: string): string {
+    switch (estado) {
+      case 'aprobado':
+        return 'Aprobado';
+      case 'pendiente':
+        return 'Pendiente';
+      case 'rechazado':
+        return 'Rechazado';
+      case 'cancelado':
+        return 'Cancelado';
+      default:
+        return estado;
+    }
+  }
+
   /** Aviso principal según el estado y si el acceso está permitido. */
   protected getAviso(sub: SuscripcionResponse): string {
     if (sub.codigoBloqueo === 'CUENTA_NO_APROBADA') {

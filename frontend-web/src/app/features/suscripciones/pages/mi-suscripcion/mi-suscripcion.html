@@ -1,99 +1,94 @@
-<main class="pet-page">
-  <div class="pet-form">
-    <header class="pet-header">
-      <div>
-        <h1>Mi suscripción</h1>
-        <p>Gestioná tu suscripción mensual para usar la plataforma.</p>
-      </div>
-    </header>
+<main class="ap-page">
+  <header class="ap-header">
+    <div>
+      <h1>Mi suscripción</h1>
+      <p>Gestioná tu suscripción mensual para usar la plataforma.</p>
+    </div>
+  </header>
 
-    @if (isLoading()) {
-      <p class="estado-loading">Cargando...</p>
-    }
+  @if (isLoading()) {
+    <p class="estado-loading">Cargando...</p>
+  }
 
-    @if (errorMessage()) {
-      <p class="banner banner-error">{{ errorMessage() }}</p>
-    }
+  @if (errorMessage()) {
+    <p class="ap-banner ap-banner-error" role="alert">{{ errorMessage() }}</p>
+  }
 
-    @if (successMessage()) {
-      <p class="banner banner-ok">{{ successMessage() }}</p>
-    }
+  @if (successMessage()) {
+    <p class="ap-banner ap-banner-success" role="status">{{ successMessage() }}</p>
+  }
 
-    @if (suscripcion(); as sub) {
-      <div class="estado-card">
-        <div class="estado-row">
-          <span class="estado-label">Estado:</span>
-          <span class="estado-badge" [class]="getEstadoClass(sub.estado)">
+  @if (suscripcion(); as sub) {
+    <div class="ap-grid">
+      <section class="ap-panel" aria-labelledby="estado-suscripcion">
+        <div class="ap-panel-head">
+          <h2 id="estado-suscripcion">Estado</h2>
+          <span class="estado-chip" [class]="'estado-chip ' + getEstadoClass(sub.estado)">
             {{ getEstadoLabel(sub.estado) }}
           </span>
         </div>
 
-        <div class="estado-row">
-          <span class="estado-label">Monto mensual:</span>
-          <span>{{ sub.monto | currency: sub.moneda : 'symbol-narrow' : '1.0-0' }}</span>
+        <div class="precio">
+          <span class="precio-monto">{{ sub.monto | currency: sub.moneda : 'symbol-narrow' : '1.0-0' }}</span>
+          <span class="precio-periodo">por mes</span>
         </div>
 
-        @if (sub.estado === 'en_prueba' && sub.fechaPruebaFin) {
-          <div class="estado-row">
-            <span class="estado-label">Prueba gratis hasta:</span>
-            <span>
-              {{ sub.fechaPruebaFin | date: 'dd/MM/yyyy' }}
-              @if (diasRestantesPrueba(sub); as dias) {
-                (faltan {{ dias }} días)
-              }
-            </span>
-          </div>
-        }
-
-        @if (sub.fechaInicio) {
-          <div class="estado-row">
-            <span class="estado-label">Inicio del período:</span>
-            <span>{{ sub.fechaInicio | date: 'dd/MM/yyyy' }}</span>
-          </div>
-        }
-
-        @if (sub.fechaFin) {
-          <div class="estado-row">
-            <span class="estado-label">Vence:</span>
-            <span>{{ sub.fechaFin | date: 'dd/MM/yyyy' }}</span>
-          </div>
-        }
-
-        @if (sub.estado !== 'activa') {
-          <div class="suscripcion-accion">
-            <p class="suscripcion-aviso">{{ getAviso(sub) }}</p>
-            @if (puedePagar(sub)) {
-              <button
-                type="button"
-                class="btn-primary btn-pagar"
-                [disabled]="isPaying()"
-                (click)="pagar()"
-              >
-                @if (isPaying()) {
-                  Redirigiendo a Mercado Pago...
-                } @else {
-                  Suscribirme / Pagar
+        <dl class="fechas">
+          @if (sub.estado === 'en_prueba' && sub.fechaPruebaFin) {
+            <div class="fecha">
+              <dt>Prueba gratis hasta</dt>
+              <dd>
+                {{ sub.fechaPruebaFin | date: 'dd/MM/yyyy' }}
+                @if (diasRestantesPrueba(sub); as dias) {
+                  <small>faltan {{ dias }} días</small>
                 }
-              </button>
-              <p class="suscripcion-test">
-                Entorno de prueba de Mercado Pago: no se cobra dinero real.
-              </p>
-            }
-          </div>
-        }
+              </dd>
+            </div>
+          }
+          @if (sub.fechaInicio) {
+            <div class="fecha">
+              <dt>Inicio del período</dt>
+              <dd>{{ sub.fechaInicio | date: 'dd/MM/yyyy' }}</dd>
+            </div>
+          }
+          @if (sub.fechaFin) {
+            <div class="fecha">
+              <dt>Vence</dt>
+              <dd>{{ sub.fechaFin | date: 'dd/MM/yyyy' }}</dd>
+            </div>
+          }
+        </dl>
 
         @if (sub.estado === 'activa') {
-          <div class="suscripcion-ok">
-            <p>Tu suscripción está activa. Se renueva automáticamente cada mes.</p>
-          </div>
+          <p class="mensaje mensaje-ok">
+            Tu suscripción está activa. Se renueva automáticamente cada mes.
+          </p>
+        } @else if (getAviso(sub)) {
+          <p class="mensaje">{{ getAviso(sub) }}</p>
         }
 
-        @if (puedeCancelar(sub)) {
-          <div class="suscripcion-cancelar">
+        <div class="acciones">
+          @if (puedePagar(sub)) {
+            <button
+              type="button"
+              class="ap-btn ap-btn-primary ap-panel-action"
+              [disabled]="isPaying()"
+              (click)="pagar()"
+            >
+              @if (isPaying()) {
+                Redirigiendo a Mercado Pago...
+              } @else {
+                Suscribirme / Pagar
+              }
+            </button>
+            <p class="nota">Entorno de prueba de Mercado Pago: no se cobra dinero real.</p>
+          }
+
+          @if (puedeCancelar(sub)) {
             @if (!confirmandoCancelacion()) {
               <button
                 type="button"
-                class="btn-cancelar"
+                class="ap-btn ap-btn-sm btn-cancelar"
                 [disabled]="isCancelling()"
                 (click)="cancelar()"
               >
@@ -104,12 +99,12 @@
                 }
               </button>
             } @else {
-              <div class="confirmacion-inline">
-                <p class="confirmacion-texto">¿Seguro? Se corta el acceso y dejan de renovarse los cobros.</p>
+              <div class="confirmacion">
+                <p>¿Seguro? Se corta el acceso y dejan de renovarse los cobros.</p>
                 <div class="confirmacion-botones">
                   <button
                     type="button"
-                    class="btn-cancelar-confirmar"
+                    class="ap-btn ap-btn-sm btn-cancelar"
                     [disabled]="isCancelling()"
                     (click)="cancelar()"
                   >
@@ -117,47 +112,47 @@
                   </button>
                   <button
                     type="button"
-                    class="btn-cancelar-rechazar"
+                    class="ap-btn ap-btn-soft ap-btn-sm"
                     [disabled]="isCancelling()"
                     (click)="confirmandoCancelacion.set(false)"
                   >
                     No
                   </button>
                 </div>
+                <p class="nota">Podés suscribirte de nuevo cuando quieras.</p>
               </div>
-              <p class="suscripcion-cancelar-ayuda">Podés suscribirte de nuevo cuando quieras.</p>
             }
-          </div>
-        }
-      </div>
-    }
-
-    @if (pagos().length > 0) {
-      <section class="historial">
-        <h2>Historial de pagos</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Monto</th>
-              <th>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (pago of pagos(); track pago.idPago) {
-              <tr>
-                <td>{{ pago.fechaPago ?? pago.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
-                <td>{{ pago.monto | currency: pago.moneda : 'symbol-narrow' : '1.0-0' }}</td>
-                <td>
-                  <span class="pago-badge" [class]="'pago-' + pago.estado">
-                    {{ pago.estado }}
-                  </span>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
+          }
+        </div>
       </section>
-    }
-  </div>
+
+      <section class="ap-panel" aria-labelledby="historial-pagos">
+        <h2 id="historial-pagos">Historial de pagos</h2>
+
+        @if (pagos().length === 0) {
+          <div class="vacio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="2.5" y="5" width="19" height="14" rx="3.5" />
+              <path d="M2.5 10h19M6.5 15h3" />
+            </svg>
+            <p>Todavía no hay pagos registrados.</p>
+          </div>
+        } @else {
+          <ul class="pagos">
+            @for (pago of pagos(); track pago.idPago) {
+              <li class="pago">
+                <div class="pago-info">
+                  <span class="pago-monto">{{ pago.monto | currency: pago.moneda : 'symbol-narrow' : '1.0-0' }}</span>
+                  <span class="pago-fecha">{{ pago.fechaPago ?? pago.createdAt | date: 'dd/MM/yyyy HH:mm' }}</span>
+                </div>
+                <span class="pago-chip" [class]="'pago-chip pago-' + pago.estado">
+                  {{ etiquetaPago(pago.estado) }}
+                </span>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    </div>
+  }
 </main>
