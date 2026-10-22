@@ -33,36 +33,53 @@
   color: var(--text-secondary);
 }
 
-/* Pasos: tres puntos unidos por una línea fina. */
+/* Pasos: el primero queda contra el borde izquierdo, el último contra el derecho
+   y el del medio justo al centro, igual que las dos tarjetas de abajo. Los lados
+   crecen por igual (flex: 1) y cada uno rellena con la línea que lo une al centro. */
 .flow-steps {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0;
+  display: flex;
+  align-items: center;
   margin: 0 0 var(--spacing-lg);
   padding: 0;
   list-style: none;
 }
 
 .flow-step {
-  position: relative;
   display: flex;
   align-items: center;
   gap: 0.6rem;
   color: var(--text-secondary);
   font-size: 0.9rem;
   font-weight: 600;
+  white-space: nowrap;
 }
 
-.flow-step:not(:last-child)::after {
+.flow-step:first-child,
+.flow-step:last-child {
+  flex: 1 1 0;
+}
+
+.flow-step:first-child::after,
+.flow-step:last-child::before {
   content: '';
   flex: 1;
   height: 2px;
-  margin: 0 0.9rem;
+  min-width: 1rem;
   border-radius: 2px;
   background-color: var(--hairline);
+  transition: background-color 0.2s ease;
 }
 
-.flow-step.done:not(:last-child)::after {
+.flow-step:first-child::after {
+  margin: 0 1rem 0 0.4rem;
+}
+
+.flow-step:last-child::before {
+  margin: 0 0.4rem 0 1rem;
+}
+
+.flow-step.done:first-child::after,
+.flow-step.done + .flow-step:last-child::before {
   background-color: var(--primary);
 }
 
@@ -652,12 +669,17 @@
     font-size: 1.7rem;
   }
 
-  .flow-label {
+  .flow-step {
+    gap: 0.4rem;
     font-size: 0.8rem;
   }
 
-  .flow-step:not(:last-child)::after {
-    margin: 0 0.4rem;
+  .flow-step:first-child::after {
+    margin: 0 0.5rem 0 0.2rem;
+  }
+
+  .flow-step:last-child::before {
+    margin: 0 0.2rem 0 0.5rem;
   }
 
   .owner-summary {
