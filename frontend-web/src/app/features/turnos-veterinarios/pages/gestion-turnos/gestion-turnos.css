@@ -1,4 +1,7 @@
 :host {
+  --hairline: rgba(37, 51, 47, 0.08);
+  --fill: #f1f4f3;
+  --primary-soft: rgba(79, 127, 115, 0.12);
   /* --success no está definido en styles.css, así que los estados se resuelven acá. */
   --estado-pendiente: #c9862e;
   --estado-confirmado: #3f8f6b;
@@ -21,10 +24,11 @@
   width: min(100%, 1240px);
   margin: 0 auto;
   padding: var(--spacing-xl);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--hairline);
+  border-radius: 20px;
   background-color: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 1px 2px rgba(37, 51, 47, 0.04), 0 8px 28px rgba(37, 51, 47, 0.06);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', sans-serif;
 }
 
 .appointments-header {
@@ -37,7 +41,9 @@
 
 .appointments-header h1 {
   margin: 0;
-  font-size: 1.6rem;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
 }
 
 .appointments-header p,
@@ -70,7 +76,9 @@
 
 .period-title {
   margin: 0 0 0 var(--spacing-sm);
-  font-size: 1.15rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .nav-button,
@@ -81,17 +89,18 @@
 .btn-secondary,
 .btn-danger,
 .btn-warning {
-  border-radius: var(--radius-sm);
+  border-radius: 999px;
   font: inherit;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
+  transition: background-color 0.15s ease;
 }
 
 .nav-button,
 .today-button,
 .view-switch button {
-  border: 1px solid var(--border);
-  background-color: var(--surface);
+  border: none;
+  background-color: var(--fill);
   color: var(--text-primary);
 }
 
@@ -99,33 +108,39 @@
   width: 2rem;
   height: 2rem;
   padding: 0;
+  border-radius: 50%;
   font-size: 1.1rem;
   line-height: 1;
 }
 
 .today-button {
-  padding: 0.4rem 0.8rem;
+  padding: 0.4rem 0.95rem;
+  border-radius: 999px;
 }
 
 .view-switch {
   display: flex;
-  gap: var(--spacing-xs);
+  padding: 0.2rem;
+  border-radius: 999px;
+  background-color: var(--fill);
 }
 
 .view-switch button {
-  padding: 0.45rem 0.9rem;
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  background-color: transparent;
 }
 
 .view-switch button.active {
-  border-color: var(--primary);
-  background-color: var(--primary);
-  color: #ffffff;
+  background-color: var(--surface);
+  color: var(--primary);
+  box-shadow: 0 1px 3px rgb(37 51 47 / 15%);
 }
 
 .nav-button:hover,
 .today-button:hover,
 .view-switch button:not(.active):hover {
-  border-color: var(--primary);
+  background-color: var(--primary-soft);
   color: var(--primary);
 }
 
@@ -206,17 +221,9 @@
 /* Layout calendario + panel de detalle */
 
 .calendar-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--spacing-lg);
+  display: block;
 }
 
-@media (min-width: 1100px) {
-  .calendar-layout {
-    grid-template-columns: minmax(0, 1fr) 320px;
-    align-items: start;
-  }
-}
 
 .calendar-area {
   min-width: 0;
@@ -407,8 +414,8 @@
 .time-grid {
   --hour-gutter-width: 3.5rem;
   min-width: 42rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
   overflow: hidden;
 }
 
@@ -430,8 +437,8 @@
 .time-grid-head {
   position: sticky;
   top: 0;
-  background-color: var(--background);
-  border-bottom: 1px solid var(--border);
+  background-color: var(--surface);
+  border-bottom: 1px solid var(--hairline);
 }
 
 .time-day-head {
@@ -441,7 +448,7 @@
   gap: 0.1rem;
   padding: 0.45rem 0.25rem;
   border: none;
-  border-left: 1px solid var(--border);
+  border-left: 1px solid var(--hairline);
   background-color: transparent;
   font: inherit;
   cursor: pointer;
@@ -469,7 +476,7 @@
 }
 
 .time-row {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--hairline);
 }
 
 .time-row:first-of-type {
@@ -484,23 +491,67 @@
 }
 
 .time-cell {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
   min-height: 3rem;
   min-width: 0;
   padding: 0.2rem;
-  border-left: 1px solid var(--border);
+  border-left: 1px solid var(--hairline);
   background-color: var(--surface);
+}
+
+.time-cell.today {
+  background-color: color-mix(in srgb, var(--primary) 4%, white);
+}
+
+/* Línea roja de "ahora", como en Apple Calendar. */
+.now-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  height: 2px;
+  background-color: #e5484d;
+  pointer-events: none;
+}
+
+.now-line::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #e5484d;
 }
 
 /* Panel de detalle */
 
-.detail-panel {
+.detail-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: var(--spacing-lg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background-color: var(--background);
+  background-color: rgb(0 0 0 / 35%);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+
+.detail-panel {
+  width: min(100%, 440px);
+  max-height: min(90vh, 720px);
+  overflow-y: auto;
+  padding: 1.5rem;
+  box-sizing: border-box;
+  border-radius: 20px;
+  background-color: var(--surface);
+  box-shadow: 0 20px 60px rgb(0 0 0 / 22%);
 }
 
 .detail-head {
@@ -663,15 +714,24 @@
 }
 
 .btn-secondary {
-  border: 1px solid var(--border);
-  background-color: var(--surface);
-  color: var(--primary);
+  border: none;
+  background-color: var(--primary-soft);
+  color: #3a6358;
 }
 
+.btn-secondary:hover:not(:disabled) {
+  background-color: rgba(79, 127, 115, 0.2);
+}
+
+/* Lo destructivo va en rojo suave: el rojo macizo queda para confirmar. */
 .btn-danger {
   border: none;
-  background-color: var(--danger);
-  color: #ffffff;
+  background-color: color-mix(in srgb, var(--danger) 13%, white);
+  color: #b84a4a;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--danger) 22%, white);
 }
 
 .btn-primary:disabled,
@@ -780,51 +840,9 @@
   background-color: #446f64;
 }
 
-.agenda-legend {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem 1.1rem;
-  margin: 0 0 var(--spacing-md);
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-}
-
-.legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.legend-swatch {
-  width: 0.8rem;
-  height: 0.8rem;
-  border: 1px solid;
-  border-radius: 4px;
-}
-
-.legend-swatch.libre {
-  border-color: color-mix(in srgb, var(--primary) 45%, white);
-  background-color: color-mix(in srgb, var(--primary) 10%, white);
-}
-
-.legend-swatch.sobreturno {
-  border-color: color-mix(in srgb, var(--tipo-sobreturno) 50%, white);
-  background-color: color-mix(in srgb, var(--tipo-sobreturno) 12%, white);
-}
-
-.legend-swatch.completo {
-  border-color: #e3c58a;
-  background-color: #fdf5e6;
-}
-
-.legend-hint {
-  margin-left: auto;
-  font-style: italic;
-}
-
 /* Hueco de la agenda: media hora con cupos. Doble clic para agendar. */
 .slot {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -832,7 +850,7 @@
   gap: 0 0.4rem;
   width: 100%;
   padding: 0.25rem 0.5rem;
-  border: 1px dashed color-mix(in srgb, var(--primary) 45%, white);
+  border: 1px solid transparent;
   border-radius: 8px;
   background-color: color-mix(in srgb, var(--primary) 7%, white);
   color: var(--text-secondary);
@@ -844,8 +862,9 @@
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.slot:hover:not(:disabled) {
-  border-style: solid;
+.slot:hover:not(:disabled),
+.slot:focus-visible {
+  border-color: color-mix(in srgb, var(--primary) 50%, white);
   background-color: color-mix(in srgb, var(--primary) 16%, white);
 }
 
@@ -858,26 +877,57 @@
   white-space: nowrap;
 }
 
+/* El "+" solo aparece al pasar por el hueco: invita a tocarlo sin necesidad de explicarlo. */
+.slot-plus {
+  position: absolute;
+  top: 50%;
+  right: 0.45rem;
+  display: none;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  background-color: var(--primary);
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
+  transform: translateY(-50%);
+}
+
+.slot:hover:not(:disabled) .slot-plus,
+.slot:focus-visible .slot-plus {
+  display: grid;
+}
+
 .slot.sobreturno {
-  border-color: color-mix(in srgb, var(--tipo-sobreturno) 50%, white);
   background-color: color-mix(in srgb, var(--tipo-sobreturno) 8%, white);
 }
 
 .slot.sobreturno:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--tipo-sobreturno) 50%, white);
   background-color: color-mix(in srgb, var(--tipo-sobreturno) 18%, white);
 }
 
+.slot.sobreturno .slot-plus {
+  background-color: var(--tipo-sobreturno);
+}
+
 .slot.completo {
-  border-color: #e3c58a;
   background-color: #fdf5e6;
 }
 
 .slot.completo:hover:not(:disabled) {
+  border-color: #e3c58a;
   background-color: #faebc9;
 }
 
 .slot.completo .slot-estado {
   color: #9a6a12;
+}
+
+.slot.completo .slot-plus {
+  background-color: #c9862e;
 }
 
 .slot.pasada {

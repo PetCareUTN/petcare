@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
+import { Component, HostListener, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiError } from '../../../auth/models/user';
 import {
@@ -83,6 +83,9 @@ interface FilaHoraria {
   etiqueta: string;
   celdas: {
     fecha: string;
+    esHoy: boolean;
+    /** Posición (0-100 %) de la línea de "ahora" dentro de la celda, si cae en esta hora. */
+    lineaAhora: number | null;
     mitades: MitadDeHora[];
   }[];
 }
@@ -151,7 +154,7 @@ export class GestionTurnosVeterinariosPage implements OnInit {
 
   protected readonly diasSemana = DIAS_SEMANA;
 
-  protected readonly vista = signal<VistaCalendario>('mes');
+  protected readonly vista = signal<VistaCalendario>('semana');
   /** Fecha de referencia (YYYY-MM-DD) sobre la que se arma la vista actual. */
   protected readonly fechaFoco = signal(this.claveDeHoy());
   protected readonly estadosVisibles = signal<EstadoTurno[]>(['confirmado']);
@@ -343,7 +346,12 @@ export class GestionTurnosVeterinariosPage implements OnInit {
               });
             }
           }
-          return { fecha: dia.fecha, mitades };
+          const ahora = new Date();
+          const lineaAhora =
+            dia.esHoy && ahora.getHours() === hora
+              ? Math.round((ahora.getMinutes() / 60) * 100)
+              : null;
+          return { fecha: dia.fecha, esHoy: dia.esHoy, lineaAhora, mitades };
         }),
       });
     }
@@ -385,6 +393,13 @@ export class GestionTurnosVeterinariosPage implements OnInit {
   ngOnInit(): void {
     this.loadTurnos();
     this.loadTurnosServicios();
+  }
+
+  @HostListener('document:keydown.escape')
+  protected cerrarConEscape(): void {
+    if (this.turnoSeleccionadoClave() !== null && this.nuevoTurno() === null) {
+      this.cerrarPanel();
+    }
   }
 
   protected setVista(vista: VistaCalendario): void {
@@ -676,8 +691,10 @@ export class GestionTurnosVeterinariosPage implements OnInit {
     if (franja.estado === 'completo') {
       return 'Completo';
     }
-    const cupos = franja.libres === 1 ? '1 cupo' : `${franja.libres} cupos`;
-    return franja.estado === 'sobreturno' ? `Sobreturno · ${cupos}` : cupos;
+    if (franja.estado === 'sobreturno') {
+      return franja.libres === 1 ? 'Sobreturno' : `Sobreturno · ${franja.libres}`;
+    }
+    return franja.libres === 1 ? 'Libre' : `${franja.libres} libres`;
   }
 
   private desdeVeterinario(turno: TurnoVeterinarioResponse): EventoTurno {

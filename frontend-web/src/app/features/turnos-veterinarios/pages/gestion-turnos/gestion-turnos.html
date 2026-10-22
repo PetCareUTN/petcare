@@ -1,10 +1,7 @@
 <main class="appointments-page">
   <section class="appointments-panel">
     <header class="appointments-header">
-      <div>
-        <h1>Turnos</h1>
-        <p>Organizá tu agenda de veterinaria y de servicios en un solo calendario.</p>
-      </div>
+      <h1>Turnos</h1>
       <button type="button" class="btn-new" (click)="abrirNuevoTurno()">+ Nuevo turno</button>
     </header>
 
@@ -76,13 +73,6 @@
           </button>
         }
       </nav>
-    </div>
-
-    <div class="agenda-legend" aria-label="Referencias de la agenda">
-      <span class="legend-item"><i class="legend-swatch libre"></i>Libre</span>
-      <span class="legend-item"><i class="legend-swatch sobreturno"></i>Sobreturno</span>
-      <span class="legend-item"><i class="legend-swatch completo"></i>Completo</span>
-      <span class="legend-hint">Doble clic en un horario para agendar un turno</span>
     </div>
 
     @if (successMessage()) {
@@ -171,7 +161,10 @@
                   <div class="time-row">
                     <div class="hour-gutter">{{ fila.etiqueta }}</div>
                     @for (celda of fila.celdas; track celda.fecha) {
-                      <div class="time-cell">
+                      <div class="time-cell" [class.today]="celda.esHoy">
+                        @if (celda.lineaAhora !== null) {
+                          <span class="now-line" [style.top.%]="celda.lineaAhora" aria-hidden="true"></span>
+                        }
                         @for (mitad of celda.mitades; track mitad.hora) {
                           @if (mitad.franja; as franja) {
                             <button
@@ -180,15 +173,13 @@
                               [class.pasada]="franja.pasada"
                               [disabled]="franja.pasada"
                               [attr.aria-label]="
-                                'Horario ' + mitad.hora + ', ' + etiquetaFranja(franja) +
-                                '. Doble clic para agendar un turno'
+                                'Agendar turno a las ' + mitad.hora + ' (' + etiquetaFranja(franja) + ')'
                               "
-                              title="Doble clic para agendar un turno"
-                              (dblclick)="abrirNuevoTurno(celda.fecha, mitad.hora)"
-                              (keydown.enter)="abrirNuevoTurno(celda.fecha, mitad.hora)"
+                              (click)="abrirNuevoTurno(celda.fecha, mitad.hora)"
                             >
                               <span class="slot-hora">{{ mitad.hora }}</span>
                               <span class="slot-estado">{{ etiquetaFranja(franja) }}</span>
+                              <span class="slot-plus" aria-hidden="true">+</span>
                             </button>
                           }
                           @for (turno of mitad.turnos; track turno.clave) {
@@ -220,7 +211,9 @@
           }
         </div>
 
-        <aside class="detail-panel" aria-live="polite">
+        @if (turnoSeleccionado()) {
+          <div class="detail-backdrop" (click)="cerrarPanel()">
+        <aside class="detail-panel" role="dialog" aria-modal="true" aria-label="Detalle del turno" (click)="$event.stopPropagation()">
           @if (turnoSeleccionado(); as turno) {
             <div class="detail-head">
               <div class="detail-badges">
@@ -387,12 +380,10 @@
                 }
               </div>
             }
-          } @else {
-            <p class="detail-placeholder">
-              Seleccioná un turno del calendario para ver el detalle y gestionarlo.
-            </p>
           }
         </aside>
+          </div>
+        }
       </div>
     }
   </section>
