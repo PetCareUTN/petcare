@@ -1,47 +1,59 @@
 <div class="vet-shell">
   <aside class="vet-sidebar">
     <div class="vet-brand">
-      <img class="vet-brand-logo" src="logo.png" alt="PetCare" />
-      <div>
-        <p class="vet-brand-title">PetCare Vet</p>
-        <p class="vet-brand-subtitle">Plataforma clínica</p>
+      <img class="vet-brand-logo" src="logo.png" alt="" />
+      <span class="vet-brand-name">PetCare</span>
+    </div>
+
+    <div class="vet-user">
+      <span class="vet-user-avatar" aria-hidden="true">{{ iniciales() }}</span>
+      <div class="vet-user-info">
+        <p class="vet-user-name" [title]="nombreCompleto()">{{ nombreCompleto() }}</p>
+        <p class="vet-user-role">Veterinario/a</p>
       </div>
     </div>
 
     <nav class="vet-nav">
       <a routerLink="/eventos-clinicos/inicio" [class.active]="isInicioActive()">
-        Inicio
+        <svg class="vet-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>
+        <span>Inicio</span>
       </a>
       <a routerLink="/eventos-clinicos" [class.active]="isAttentionActive()">
-        Atención veterinaria
+        <svg class="vet-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg>
+        <span>Atención veterinaria</span>
       </a>
       <a routerLink="/eventos-clinicos/turnos" [class.active]="isTurnosActive()">
-        Turnos
+        <svg class="vet-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        <span>Turnos</span>
       </a>
-      <a
-        routerLink="/eventos-clinicos/disponibilidad"
-        [class.active]="isDisponibilidadActive()"
-      >
-        Disponibilidad
+      <a routerLink="/eventos-clinicos/disponibilidad" [class.active]="isDisponibilidadActive()">
+        <svg class="vet-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <span>Disponibilidad</span>
       </a>
       <a routerLink="/servicios" [class.active]="isServiciosActive()">
-        Servicios
+        <svg class="vet-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="3"/><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M3 13h18"/></svg>
+        <span>Servicios</span>
       </a>
       <a routerLink="/eventos-clinicos/reportes" [class.active]="isReportesActive()">
-        Reportes
+        <svg class="vet-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20v-7M12 20V5M19 20v-10"/></svg>
+        <span>Reportes</span>
       </a>
-      <a
-        routerLink="/eventos-clinicos/configuracion"
-        [class.active]="isConfiguracionActive()"
-      >
-        Configuración
+      <a routerLink="/eventos-clinicos/configuracion" [class.active]="isConfiguracionActive()">
+        <svg class="vet-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h8M18 6h2M4 12h2M12 12h8M4 18h10M20 18h0"/><circle cx="15" cy="6" r="2.2"/><circle cx="9" cy="12" r="2.2"/><circle cx="17" cy="18" r="2.2"/></svg>
+        <span>Configuración</span>
       </a>
       <a routerLink="/suscripciones" [class.active]="isSuscripcionActive()">
-        Mi suscripción
+        <svg class="vet-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="19" height="14" rx="3.5"/><path d="M2.5 10h19M6.5 15h3"/></svg>
+        <span>Mi suscripción</span>
       </a>
     </nav>
 
-    <button type="button" class="vet-logout" (click)="logout()">Cerrar sesión</button>
+    <div class="vet-footer">
+      <button type="button" class="vet-logout" (click)="logout()" aria-label="Cerrar sesión">
+        <svg class="vet-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3M16 16l4-4-4-4M20 12H9"/></svg>
+        <span>Cerrar sesión</span>
+      </button>
+    </div>
   </aside>
 
   <main class="vet-content">

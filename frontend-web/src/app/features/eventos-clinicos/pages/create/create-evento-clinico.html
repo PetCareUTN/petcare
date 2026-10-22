@@ -145,6 +145,45 @@
       </div>
     </section>
 
+    @if (authService.isVeterinario()) {
+      <section class="adjuntos">
+        <div class="adjuntos-header">
+          <div>
+            <h2>Estudios y recetas</h2>
+            <p>Opcional. Se adjuntan al registrar el evento (JPG, PNG o PDF).</p>
+          </div>
+          <label class="btn-adjuntar" for="archivos-pendientes">+ Adjuntar</label>
+          <input
+            id="archivos-pendientes"
+            type="file"
+            class="archivo-input"
+            accept=".jpg,.jpeg,.png,.pdf"
+            multiple
+            [disabled]="isSubmitting()"
+            (change)="elegirArchivos($any($event.target))"
+          />
+        </div>
+        @if (archivosPendientes().length > 0) {
+          <ul class="adjuntos-lista">
+            @for (archivo of archivosPendientes(); track $index) {
+              <li>
+                <span class="adjunto-nombre">{{ archivo.name }}</span>
+                <button
+                  type="button"
+                  class="adjunto-quitar"
+                  [disabled]="isSubmitting()"
+                  [attr.aria-label]="'Quitar ' + archivo.name"
+                  (click)="quitarArchivoPendiente($index)"
+                >
+                  &times;
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    }
+
     <button type="submit" [disabled]="isSubmitting()">
       {{ isSubmitting() ? 'Registrando...' : 'Registrar evento' }}
     </button>
