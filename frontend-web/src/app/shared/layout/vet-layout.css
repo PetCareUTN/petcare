@@ -4,77 +4,44 @@
   background-color: var(--background);
 }
 
+/* Barra lateral estilo macOS: clara, translúcida y sin bordes marcados. */
 .vet-sidebar {
+  position: sticky;
+  top: 0;
   display: flex;
   flex-direction: column;
-  width: 256px;
+  width: 248px;
+  height: 100dvh;
   flex-shrink: 0;
-  padding: var(--spacing-lg) var(--spacing-md);
-  background: linear-gradient(180deg, #4f7f73 0%, #3f695f 100%);
-  color: #ffffff;
-  box-shadow: 2px 0 14px rgba(37, 51, 47, 0.12);
+  padding: 1.25rem 0.75rem 0.9rem;
+  background-color: rgba(246, 248, 247, 0.82);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  border-right: 1px solid rgba(37, 51, 47, 0.08);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', sans-serif;
 }
 
 .vet-brand {
   display: flex;
-  justify-content: center;
-  padding-bottom: var(--spacing-sm);
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.25rem 0.75rem 1.4rem;
 }
 
-/* El archivo trae aire propio arriba y abajo (ver login.css): lo compensamos. */
+/* Ver app-layout.css: el logo transparente no lleva recorte circular. */
 .vet-brand-logo {
-  display: block;
-  width: 200px;
-  max-width: 100%;
-  height: auto;
-  margin: -28px 0;
-}
-
-.vet-user {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  padding: 0.75rem;
-  margin-bottom: var(--spacing-lg);
-  background-color: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: var(--radius-md);
-}
-
-.vet-user-avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   flex-shrink: 0;
-  border-radius: 50%;
-  background-color: #ffffff;
-  color: var(--primary);
-  font-size: 0.95rem;
+  /* El PNG trae aire propio: se compensa para alinear con el menú. */
+  margin: -8px -4px -8px -8px;
+}
+
+.vet-brand-name {
+  color: var(--text-primary);
+  font-size: 1.15rem;
   font-weight: 700;
-}
-
-.vet-user-info {
-  min-width: 0;
-}
-
-.vet-user-name {
-  margin: 0;
-  overflow: hidden;
-  color: #ffffff;
-  font-size: 0.92rem;
-  font-weight: 600;
-  line-height: 1.3;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.vet-user-role {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.75);
-  font-size: 0.75rem;
-  line-height: 1.3;
+  letter-spacing: -0.02em;
 }
 
 /* Barra fija del contenido: sostiene la campana pegada al borde derecho. */
@@ -91,47 +58,127 @@
 .vet-nav {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
+  gap: 2px;
   flex: 1;
+  overflow-y: auto;
 }
 
 .vet-nav a {
-  padding: 0.65rem 0.85rem;
-  border-radius: var(--radius-md);
-  color: rgba(255, 255, 255, 0.88);
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 9px;
+  color: var(--text-primary);
   text-decoration: none;
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 500;
+  letter-spacing: -0.01em;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
+.vet-icon {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  transition: color 0.15s ease;
+}
+
 .vet-nav a:hover {
-  background-color: rgba(255, 255, 255, 0.14);
-  color: #ffffff;
+  background-color: rgba(37, 51, 47, 0.06);
 }
 
 .vet-nav a.active {
-  background-color: #ffffff;
+  background-color: rgba(79, 127, 115, 0.16);
+  color: #3a6358;
+  font-weight: 600;
+}
+
+.vet-nav a.active .vet-icon {
   color: var(--primary);
-  box-shadow: var(--shadow-sm);
+}
+
+.vet-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: var(--spacing-md);
+  padding: 0.75rem 0.4rem 0 0.4rem;
+  border-top: 1px solid rgba(37, 51, 47, 0.08);
+}
+
+.vet-user {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.vet-user-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #6f9c90 0%, #4f7f73 100%);
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.vet-user-info {
+  min-width: 0;
+}
+
+.vet-user-name {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vet-user-role {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.25;
 }
 
 .vet-logout {
-  margin-top: var(--spacing-lg);
-  padding: 0.65rem 0.85rem;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  border-radius: var(--radius-md);
-  background-color: transparent;
-  color: #ffffff;
-  font-family: inherit;
-  font-size: 0.85rem;
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .vet-logout:hover {
-  background-color: rgba(255, 255, 255, 0.14);
+  background-color: rgba(217, 108, 108, 0.12);
+  color: var(--danger);
+}
+
+.vet-logout .vet-icon {
+  width: 18px;
+  height: 18px;
+  color: inherit;
 }
 
 .vet-content {
@@ -146,16 +193,18 @@
 
   .vet-sidebar {
     width: auto;
+    height: auto;
     flex-direction: row;
     align-items: center;
     gap: var(--spacing-sm);
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: 0.5rem var(--spacing-md);
     overflow-x: auto;
-    box-shadow: 0 2px 10px rgba(37, 51, 47, 0.12);
+    border-right: none;
+    border-bottom: 1px solid rgba(37, 51, 47, 0.08);
   }
 
   .vet-brand,
-  .vet-user {
+  .vet-footer {
     flex-shrink: 0;
   }
 
@@ -163,32 +212,23 @@
     padding: 0;
   }
 
-  .vet-brand-logo {
-    width: 72px;
-    margin: -12px 0;
-  }
-
+  .vet-brand-name,
   .vet-user-info {
     display: none;
   }
 
-  .vet-user {
-    padding: 0;
-    margin-bottom: 0;
-    background: none;
-    border: none;
-  }
-
   .vet-nav {
     flex-direction: row;
+    overflow: visible;
   }
 
   .vet-nav a {
     white-space: nowrap;
   }
 
-  .vet-logout {
+  .vet-footer {
     margin-top: 0;
-    white-space: nowrap;
+    padding: 0;
+    border-top: none;
   }
 }
