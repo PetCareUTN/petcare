@@ -263,7 +263,6 @@
 .tipo-switch {
   display: inline-flex;
   align-self: flex-start;
-  margin-bottom: var(--spacing-md);
   padding: 0.2rem;
   border-radius: 999px;
   background-color: color-mix(in srgb, var(--text-primary) 7%, white);
@@ -292,23 +291,24 @@
   color: var(--tipo-sobreturno);
 }
 
-.form-hint {
-  margin: 0 0 var(--spacing-md);
-  padding: 0.65rem 0.8rem;
-  border-radius: var(--radius-sm);
-  background-color: color-mix(in srgb, var(--tipo-sobreturno) 10%, white);
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  line-height: 1.5;
-}
-
-.reglas-list.sobreturno .dia-badge.active {
+.regla-row.sobreturno .dia-badge.active {
   border-color: var(--tipo-sobreturno);
   background-color: var(--tipo-sobreturno);
 }
 
-.reglas-list.sobreturno .regla-horario {
+.add-form > .field:first-child {
+  margin-bottom: var(--spacing-md);
+}
+
+.tipo-tag {
+  margin-left: 0.4rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 14%, white);
   color: var(--tipo-sobreturno);
+  font-size: 0.7rem;
+  font-weight: 700;
+  vertical-align: middle;
 }
 
 .puntuales {
@@ -323,14 +323,8 @@
 }
 
 .puntuales h2 {
-  margin: 0 0 var(--spacing-xs);
-  font-size: 1rem;
-}
-
-.puntuales p {
   margin: 0;
-  color: var(--text-secondary);
-  font-size: 0.85rem;
+  font-size: 1rem;
 }
 
 @media (max-width: 640px) {

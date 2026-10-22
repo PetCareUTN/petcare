@@ -50,11 +50,9 @@ export class ConfiguracionDisponibilidadPage implements OnInit {
   protected readonly formError = signal<string | null>(null);
 
   protected readonly reglas = signal<ReglaDisponibilidad[]>([]);
-  protected readonly reglasAtencion = computed(() =>
-    this.reglas().filter((regla) => regla.tipo === 'atencion'),
-  );
-  protected readonly reglasSobreturno = computed(() =>
-    this.reglas().filter((regla) => regla.tipo === 'sobreturno'),
+  /** Una sola lista: primero la atención y después los sobreturnos. */
+  protected readonly reglasOrdenadas = computed(() =>
+    [...this.reglas()].sort((a, b) => a.tipo.localeCompare(b.tipo)),
   );
 
   /** Qué tipo de franja se está cargando en el formulario. */
