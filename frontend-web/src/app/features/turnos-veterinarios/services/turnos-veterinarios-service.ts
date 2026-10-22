@@ -5,8 +5,11 @@ import { environment } from '../../../../environments/environment';
 import { ApiError } from '../../auth/models/user';
 import { AuthService } from '../../auth/services/auth-service';
 import {
+  AgendarTurnoError,
+  AgendarTurnoVeterinarioRequest,
   AppointmentStatus,
   CancelarTurnoVeterinarioRequest,
+  CapacidadHorario,
   RegistrarAsistenciaRequest,
   TurnoVeterinarioResponse,
 } from '../models/turno-veterinario';
@@ -24,6 +27,45 @@ export class TurnosVeterinariosService {
         params: estado ? { estado } : {},
       })
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
+  /** Capacidad y ocupación de mi agenda, franja por franja, entre dos fechas. */
+  getAgenda(desde: string, hasta: string): Observable<CapacidadHorario[]> {
+    return this.http
+      .get<CapacidadHorario[]>(`${this.baseUrl}/mia/agenda`, {
+        headers: this.authHeaders(),
+        params: { desde, hasta },
+      })
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
+  /**
+   * Agenda un turno desde la veterinaria. Con el horario lleno responde 409 con
+   * `codigo: 'CUPO_LLENO'`; repitiendo con `forzar: true` se agenda igual.
+   */
+  agendar(data: AgendarTurnoVeterinarioRequest): Observable<TurnoVeterinarioResponse> {
+    return this.http
+      .post<TurnoVeterinarioResponse>(`${this.baseUrl}/mia`, data, {
+        headers: this.authHeaders(),
+      })
+      .pipe(
+        catchError((error: HttpErrorResponse) => {
+          const body = error.error as Partial<AgendarTurnoError> | null;
+          if (body && typeof body === 'object' && typeof body.mensaje === 'string') {
+            return throwError(
+              () =>
+                ({
+                  codigoEstado: body.codigoEstado ?? error.status,
+                  mensaje: body.mensaje,
+                  codigo: body.codigo,
+                  cupos: body.cupos,
+                  ocupados: body.ocupados,
+                }) as AgendarTurnoError,
+            );
+          }
+          return this.mapError(error);
+        }),
+      );
   }
 
   cancelar(

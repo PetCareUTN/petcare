@@ -50,9 +50,9 @@
           type="text"
           formControlName="direccion"
           autocomplete="street-address"
-          placeholder="Ej: Av. Colón 1234, Córdoba"
+          placeholder="Ej: Av. Colón 1234"
         />
-        <p class="field-hint">Calle, número y localidad.</p>
+        <p class="field-hint">Calle y número. La provincia la elegís abajo.</p>
         @if (form.controls.direccion.invalid && form.controls.direccion.touched) {
           <p class="field-error">La dirección es obligatoria.</p>
         }

@@ -1,0 +1,210 @@
+<div class="modal-backdrop" (click)="cerrar.emit()">
+  <div
+    class="modal-card"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="nuevo-turno-titulo"
+    (click)="$event.stopPropagation()"
+  >
+    <header class="modal-header">
+      <div>
+        <h2 id="nuevo-turno-titulo">Nuevo turno</h2>
+        <p>Agendá un turno para un cliente dentro de tu horario de atención.</p>
+      </div>
+      <button type="button" class="close-button" aria-label="Cerrar" (click)="cerrar.emit()">
+        ×
+      </button>
+    </header>
+
+    @if (errorMessage()) {
+      <p class="banner banner-error">{{ errorMessage() }}</p>
+    }
+
+    <section class="paso">
+      <h3>Cliente</h3>
+
+      @if (cliente(); as owner) {
+        <div class="cliente-elegido">
+          <span class="avatar" aria-hidden="true">{{ iniciales(owner) }}</span>
+          <div class="cliente-info">
+            <strong>{{ nombreCliente(owner) }}</strong>
+            <span>
+              @if (owner.numero_documento) {
+                DNI {{ owner.numero_documento }} &middot;
+              }
+              {{ owner.email }}
+            </span>
+          </div>
+          <button type="button" class="btn-link" (click)="cambiarCliente()">Cambiar</button>
+        </div>
+      } @else {
+        <input
+          type="search"
+          class="buscador"
+          autocomplete="off"
+          placeholder="DNI, email o nombre del cliente"
+          aria-label="Buscar cliente"
+          [ngModel]="busqueda()"
+          (ngModelChange)="buscar($event)"
+        />
+
+        @if (resultados().length > 0) {
+          <ul class="resultados">
+            @for (owner of resultados(); track owner.id_usuario) {
+              <li>
+                <button type="button" class="resultado" (click)="elegirCliente(owner)">
+                  <span class="avatar" aria-hidden="true">{{ iniciales(owner) }}</span>
+                  <span class="cliente-info">
+                    <strong>{{ nombreCliente(owner) }}</strong>
+                    <span>
+                      @if (owner.numero_documento) {
+                        DNI {{ owner.numero_documento }} &middot;
+                      }
+                      {{ owner.email }}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            }
+          </ul>
+        } @else if (buscando()) {
+          <p class="nota">Buscando...</p>
+        } @else if (pista(); as texto) {
+          <p class="nota">{{ texto }}</p>
+        } @else if (yaBusco()) {
+          <p class="nota">No encontramos ningún cliente con “{{ busqueda().trim() }}”.</p>
+        }
+      }
+    </section>
+
+    @if (cliente()) {
+      <section class="paso">
+        <h3>Mascota</h3>
+
+        @if (cargandoMascotas()) {
+          <p class="nota">Cargando mascotas...</p>
+        } @else if (mascotas().length === 0) {
+          <p class="nota">El cliente todavía no tiene mascotas registradas.</p>
+        } @else {
+          <ul class="mascotas">
+            @for (item of mascotas(); track item.idMascota) {
+              <li>
+                <button
+                  type="button"
+                  class="mascota"
+                  [class.elegida]="mascota()?.idMascota === item.idMascota"
+                  [attr.aria-pressed]="mascota()?.idMascota === item.idMascota"
+                  (click)="mascota.set(item)"
+                >
+                  @if (fotoUrl(item); as url) {
+                    <img class="mascota-foto" [src]="url" alt="" />
+                  } @else {
+                    <span class="mascota-foto inicial" aria-hidden="true">
+                      {{ item.nombre.charAt(0) }}
+                    </span>
+                  }
+                  <span class="mascota-datos">
+                    <strong>{{ item.nombre }}</strong>
+                    <span>{{ item.especie }}{{ item.raza ? ' · ' + item.raza : '' }}</span>
+                  </span>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    }
+
+    <section class="paso">
+      <h3>Fecha y horario</h3>
+
+      <div class="fecha-fila">
+        <label for="nt-fecha">Fecha</label>
+        <input
+          id="nt-fecha"
+          type="date"
+          [attr.min]="hoy"
+          [ngModel]="fecha()"
+          (ngModelChange)="cambiarFecha($event)"
+        />
+      </div>
+
+      @if (cargandoFranjas()) {
+        <p class="nota">Cargando horarios...</p>
+      } @else if (franjas().length === 0) {
+        <p class="nota">
+          No tenés horario de atención ese día. Podés configurarlo en Disponibilidad.
+        </p>
+      } @else {
+        <ul class="franjas" aria-label="Horarios">
+          @for (franja of franjas(); track franja.hora) {
+            <li>
+              <button
+                type="button"
+                class="franja"
+                [class]="'franja ' + franja.estado"
+                [class.elegida]="hora() === franja.hora"
+                [class.pasada]="franja.pasada"
+                [disabled]="franja.pasada"
+                [attr.aria-pressed]="hora() === franja.hora"
+                (click)="elegirHora(franja)"
+              >
+                <span class="franja-hora">{{ franja.hora }}</span>
+                @if (etiquetaFranja(franja); as texto) {
+                  <span class="franja-estado">{{ texto }}</span>
+                }
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    <section class="paso">
+      <h3>Motivo de la consulta <span class="opcional">(opcional)</span></h3>
+      <textarea
+        rows="2"
+        [attr.maxlength]="motivoMaxLength"
+        placeholder="Ej.: control a las dos semanas"
+        [ngModel]="motivo()"
+        (ngModelChange)="motivo.set($event)"
+      ></textarea>
+    </section>
+
+    @if (confirmarForzar(); as lleno) {
+      <div class="confirmar" role="alert">
+        <p>
+          Ese horario se acaba de llenar ({{ lleno.ocupados }} de {{ lleno.cupos }} turnos).
+          ¿Querés agregarlo como sobreturno?
+        </p>
+        <div class="confirmar-acciones">
+          <button type="button" class="btn-secondary" (click)="volverAElegirHorario()">
+            Elegir otro horario
+          </button>
+          <button type="button" class="btn-primary sobreturno" [disabled]="guardando()" (click)="agendarIgual()">
+            {{ guardando() ? 'Agregando...' : 'Agregar sobreturno' }}
+          </button>
+        </div>
+      </div>
+    } @else {
+      <footer class="modal-footer">
+        <button type="button" class="btn-secondary" (click)="cerrar.emit()">Cancelar</button>
+        <button
+          type="button"
+          class="btn-primary"
+          [class.sobreturno]="esSobreturno()"
+          [disabled]="!puedeAgendar()"
+          (click)="agendar()"
+        >
+          @if (guardando()) {
+            Agregando...
+          } @else if (esSobreturno()) {
+            Agregar sobreturno
+          } @else {
+            Agendar turno
+          }
+        </button>
+      </footer>
+    }
+  </div>
+</div>

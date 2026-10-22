@@ -1,18 +1,18 @@
-.availability-page {
-  min-height: 100%;
-  padding: var(--spacing-xl) var(--spacing-lg);
-  box-sizing: border-box;
-  background-color: var(--background);
+/* Estilo "Apple": dos tarjetas simétricas (mismo ancho y alto), controles de la misma
+   altura y el verde de marca como único acento. */
+:host {
+  --hairline: rgba(37, 51, 47, 0.08);
+  --fill: #f1f4f3;
+  --primary-soft: rgba(79, 127, 115, 0.12);
+  --card-shadow: 0 1px 2px rgba(37, 51, 47, 0.04), 0 8px 28px rgba(37, 51, 47, 0.06);
 }
 
-.availability-card {
-  width: min(100%, 780px);
+.availability-page {
+  width: min(100%, var(--page-max));
   margin: 0 auto;
-  padding: var(--spacing-xl);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background-color: var(--surface);
-  box-shadow: var(--shadow-sm);
+  padding: var(--spacing-xl) var(--spacing-lg) calc(var(--spacing-xl) * 1.5);
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', sans-serif;
 }
 
 .availability-header {
@@ -21,251 +21,296 @@
 
 .availability-header h1 {
   margin: 0;
-  font-size: 1.6rem;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
 }
 
-.availability-header p {
-  margin: var(--spacing-xs) 0 0;
-  color: var(--text-secondary);
-}
-
-.banner,
 .status-text {
   margin: 0 0 var(--spacing-md);
+  color: var(--text-secondary);
   font-size: 0.9rem;
 }
 
-.status-text {
-  color: var(--text-secondary);
-}
-
 .banner {
-  padding: 0.65rem 0.8rem;
-  border-radius: var(--radius-sm);
+  margin: 0 0 var(--spacing-md);
+  padding: 0.7rem 0.95rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
 }
 
 .banner-success {
-  background-color: color-mix(in srgb, var(--primary) 14%, white);
-  color: var(--primary);
+  background-color: color-mix(in srgb, var(--primary) 12%, white);
+  color: #3a6358;
 }
 
 .banner-error {
-  background-color: color-mix(in srgb, var(--danger) 14%, white);
-  color: var(--danger);
+  background-color: color-mix(in srgb, var(--danger) 12%, white);
+  color: #b84a4a;
 }
 
-/* Formulario para agregar un horario nuevo */
-
-.add-form {
-  padding: var(--spacing-lg);
-  margin-bottom: var(--spacing-lg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background-color: var(--background);
+/* Las dos tarjetas miden lo mismo; el botón de cada una queda abajo, alineado. */
+.availability-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-lg);
+  align-items: stretch;
 }
 
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  padding: 1.5rem;
+  border: 1px solid var(--hairline);
+  border-radius: 20px;
+  background-color: var(--surface);
+  box-shadow: var(--card-shadow);
+}
+
+.panel h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.panel-action {
+  margin-top: auto;
+}
+
+/* ---------- Formulario ---------- */
 .field {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
+  gap: 0.45rem;
+  min-width: 0;
 }
 
-.field label {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--text-primary);
+.field-label {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
-.field input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 0.6rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background-color: var(--surface);
-  color: var(--text-primary);
-  font: inherit;
-}
-
-.field input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
-}
-
-.dias-selector {
-  display: flex;
-  gap: var(--spacing-sm);
-  flex-wrap: wrap;
-}
-
-.dia-circle {
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 50%;
-  border: 1px solid var(--border);
-  background-color: var(--surface);
-  color: var(--text-primary);
-  font: inherit;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.dia-circle:hover {
-  border-color: var(--primary);
-}
-
-.dia-circle.active {
-  border-color: var(--primary);
-  background-color: var(--primary);
-  color: #ffffff;
-}
-
-.horario-row {
+.field-row {
   display: grid;
-  grid-template-columns: minmax(110px, 0.7fr) minmax(110px, 0.7fr) minmax(140px, 1fr) auto;
-  gap: var(--spacing-md);
-  align-items: end;
-  margin-top: var(--spacing-lg);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
 }
 
-.btn-primary,
-.btn-secondary,
-.btn-remove {
-  border-radius: var(--radius-sm);
+.dias-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.dia-btn {
+  height: 44px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background-color: var(--fill);
+  color: var(--text-primary);
   font: inherit;
-  font-weight: 700;
+  font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.btn-primary {
-  width: 100%;
-  padding: 0.75rem 1.4rem;
-  border: none;
+.dia-btn:hover:not(.active) {
+  background-color: var(--primary-soft);
+}
+
+.dia-btn.active {
   background-color: var(--primary);
   color: #ffffff;
+  box-shadow: 0 2px 6px rgba(79, 127, 115, 0.3);
+}
+
+.panel input[type='time'] {
+  width: 100%;
+  height: 44px;
+  padding: 0 0.85rem;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background-color: var(--fill);
+  font: inherit;
+  font-size: 0.95rem;
+}
+
+.panel input[type='time']:focus {
+  outline: none;
+  background-color: var(--surface);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-soft);
+}
+
+.stepper {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  height: 44px;
+  border-radius: 12px;
+  background-color: var(--fill);
+}
+
+.stepper-btn {
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-size: 1.3rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.stepper-btn:hover:not(:disabled) {
+  background-color: var(--primary-soft);
+}
+
+.stepper-btn:disabled {
+  color: #b7c2be;
+  cursor: default;
+}
+
+.stepper-value {
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* ---------- Botones ---------- */
+.btn-primary {
+  height: 46px;
+  padding: 0 1.4rem;
+  border: none;
+  border-radius: 999px;
+  background-color: var(--primary);
+  box-shadow: 0 2px 6px rgba(79, 127, 115, 0.28);
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
 }
 
 .btn-primary:hover:not(:disabled) {
   background-color: #446f64;
 }
 
-.btn-secondary {
-  padding: 0.6rem 1rem;
-  border: 1px solid var(--border);
-  background-color: var(--surface);
-  color: var(--primary);
-  height: fit-content;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background-color: var(--primary-light);
-}
-
-.btn-primary:disabled,
-.btn-secondary:disabled,
-.btn-remove:disabled {
+.btn-primary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-/* Lista de horarios ya configurados */
-
-.reglas-list {
-  margin-bottom: var(--spacing-lg);
-}
-
-.reglas-list h2 {
-  margin: 0 0 var(--spacing-md);
-  font-size: 1.1rem;
-}
-
-.reglas-list ul {
-  list-style: none;
+/* ---------- Lista de horarios ---------- */
+.reglas {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.55rem;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
+  list-style: none;
 }
 
-.regla-row {
+.regla {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background-color: var(--background);
-  flex-wrap: wrap;
-}
-
-.regla-dias {
-  display: flex;
-  gap: 0.3rem;
-}
-
-.dia-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.6rem;
-  height: 1.6rem;
-  border-radius: 50%;
-  font-size: 0.72rem;
-  font-weight: 800;
-  background-color: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
-  opacity: 0.45;
-}
-
-.dia-badge.active {
-  border-color: var(--primary);
-  background-color: var(--primary);
-  color: #ffffff;
-  opacity: 1;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 0.9rem 0.8rem 1.1rem;
+  border-radius: 14px;
+  background-color: var(--fill);
 }
 
 .regla-info {
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
-  flex: 1;
-  min-width: 8rem;
+  min-width: 0;
 }
 
 .regla-horario {
+  font-size: 1.05rem;
   font-weight: 700;
-  color: var(--text-primary);
+  letter-spacing: -0.01em;
 }
 
-.regla-cantidad {
+.regla-detalle {
   color: var(--text-secondary);
   font-size: 0.85rem;
 }
 
-.btn-remove {
-  padding: 0.45rem 0.85rem;
-  border: 1px solid var(--border);
-  background-color: var(--surface);
-  color: var(--danger);
-}
-
-.btn-remove:hover:not(:disabled) {
+.btn-quitar {
+  flex-shrink: 0;
+  height: 34px;
+  padding: 0 0.95rem;
+  border: none;
+  border-radius: 999px;
   background-color: color-mix(in srgb, var(--danger) 12%, white);
+  color: #b84a4a;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
 }
 
-@media (max-width: 640px) {
-  .availability-card {
-    padding: var(--spacing-lg);
+.btn-quitar:hover {
+  background-color: color-mix(in srgb, var(--danger) 22%, white);
+}
+
+.empty-state {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 9rem;
+  border: 1.5px dashed var(--hairline);
+  border-radius: 14px;
+  color: var(--text-secondary);
+}
+
+.empty-state svg {
+  width: 34px;
+  height: 34px;
+  color: #a4b0ab;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* En una sola columna cuando no hay lugar para dos tarjetas. */
+@media (max-width: 960px) {
+  .availability-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .availability-header h1 {
+    font-size: 1.7rem;
   }
 
-  .horario-row {
-    grid-template-columns: 1fr;
+  .panel {
+    padding: 1.15rem;
   }
 
-  .btn-secondary {
-    width: 100%;
+  .field-row {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

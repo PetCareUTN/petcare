@@ -1,0 +1,524 @@
+/*
+ * Formularios estilo "Apple" del panel del veterinario.
+ *
+ * Una sola definición para que Alta de dueño, Registrar mascota, Registrar evento
+ * clínico y el resto se vean igual: tarjetas por sección, campos de la misma altura
+ * y botones en píldora. Todo lo que está dentro de un `.ap-panel` hereda el estilo
+ * de campos, así las plantillas solo tienen que agrupar sus campos.
+ */
+:root {
+  --ap-hairline: rgba(37, 51, 47, 0.08);
+  --ap-fill: #f1f4f3;
+  --ap-primary-soft: rgba(79, 127, 115, 0.12);
+  --ap-danger-text: #b84a4a;
+  --ap-card-shadow: 0 1px 2px rgba(37, 51, 47, 0.04), 0 8px 28px rgba(37, 51, 47, 0.06);
+}
+
+/* ---------- Página ---------- */
+.ap-page {
+  width: min(100%, var(--page-max));
+  margin: 0 auto;
+  padding: var(--spacing-xl) var(--spacing-lg) calc(var(--spacing-xl) * 1.5);
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', sans-serif;
+}
+
+.ap-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.ap-header h1 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.ap-header p {
+  margin: 0.3rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+/* ---------- Tarjetas ---------- */
+.ap-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--spacing-lg);
+  align-items: stretch;
+}
+
+.ap-span {
+  grid-column: 1 / -1;
+}
+
+.ap-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  padding: 1.5rem;
+  border: 1px solid var(--ap-hairline);
+  border-radius: 20px;
+  background-color: var(--surface);
+  box-shadow: var(--ap-card-shadow);
+  min-width: 0;
+}
+
+.ap-panel > h2,
+.ap-panel-head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.ap-panel-sub {
+  margin: -0.7rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.ap-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+}
+
+.ap-panel-head .ap-panel-sub {
+  margin-top: 0.25rem;
+}
+
+/* ---------- Campos ---------- */
+.ap-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 0.9rem;
+}
+
+.ap-fields > .ap-wide {
+  grid-column: 1 / -1;
+}
+
+.ap-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.ap-field > label,
+label.ap-field,
+.ap-label {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.ap-field-grow {
+  flex: 1;
+}
+
+.ap-error {
+  margin: 0;
+  color: var(--ap-danger-text);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.ap-panel
+  :is(
+    input[type='text'],
+    input[type='email'],
+    input[type='tel'],
+    input[type='number'],
+    input[type='date'],
+    input[type='time'],
+    input[type='search'],
+    input[type='password'],
+    select
+  ) {
+  width: 100%;
+  height: 44px;
+  padding: 0 0.9rem;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background-color: var(--ap-fill);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.ap-panel textarea {
+  width: 100%;
+  min-height: 7rem;
+  padding: 0.8rem 0.95rem;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background-color: var(--ap-fill);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 400;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.ap-panel select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2.3rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%23657570' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m1.5 1.5 4.5 4.5 4.5-4.5'/%3E%3C/svg%3E");
+  background-position: right 0.9rem center;
+  background-repeat: no-repeat;
+}
+
+.ap-panel
+  :is(
+    input[type='text'],
+    input[type='email'],
+    input[type='tel'],
+    input[type='number'],
+    input[type='date'],
+    input[type='time'],
+    input[type='search'],
+    input[type='password'],
+    select,
+    textarea
+  ):focus {
+  outline: none;
+  border-color: var(--primary);
+  background-color: var(--surface);
+  box-shadow: 0 0 0 4px var(--ap-primary-soft);
+}
+
+.ap-panel :is(input, select, textarea)::placeholder {
+  color: #9aa7a2;
+}
+
+.ap-panel :is(input, select, textarea):disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Número con unidad al lado (peso en kg). */
+.ap-unit {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ap-unit input {
+  padding-right: 2.8rem;
+}
+
+.ap-unit > span {
+  position: absolute;
+  right: 0.9rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  pointer-events: none;
+}
+
+/* ---------- Interruptor (checkbox) ---------- */
+.ap-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.ap-switch input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ap-switch-track {
+  position: relative;
+  width: 44px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background-color: #d5dcd9;
+  transition: background-color 0.2s ease;
+}
+
+.ap-switch-track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease;
+}
+
+.ap-switch input:checked + .ap-switch-track {
+  background-color: var(--primary);
+}
+
+.ap-switch input:checked + .ap-switch-track::after {
+  transform: translateX(18px);
+}
+
+.ap-switch input:focus-visible + .ap-switch-track {
+  box-shadow: 0 0 0 4px var(--ap-primary-soft);
+}
+
+/* ---------- Selector segmentado (DNI | Email) ---------- */
+.ap-segmented {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 0.2rem;
+  border-radius: 999px;
+  background-color: var(--ap-fill);
+}
+
+.ap-segmented button {
+  padding: 0.4rem 1.1rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.ap-segmented button.active {
+  background-color: var(--surface);
+  color: var(--primary);
+  box-shadow: 0 1px 3px rgb(37 51 47 / 15%);
+}
+
+/* ---------- Botones ---------- */
+.ap-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  height: 44px;
+  padding: 0 1.3rem;
+  border: none;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.ap-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ap-btn-primary {
+  height: 46px;
+  background-color: var(--primary);
+  box-shadow: 0 2px 6px rgba(79, 127, 115, 0.28);
+  color: #ffffff;
+  font-size: 0.95rem;
+}
+
+.ap-btn-primary:hover:not(:disabled) {
+  background-color: #446f64;
+}
+
+.ap-btn-soft {
+  background-color: var(--ap-primary-soft);
+  color: #3a6358;
+}
+
+.ap-btn-soft:hover:not(:disabled) {
+  background-color: rgba(79, 127, 115, 0.22);
+}
+
+.ap-btn-sm {
+  height: 36px;
+  padding: 0 1rem;
+  font-size: 0.85rem;
+}
+
+/* El botón principal de una tarjeta va abajo del todo y de punta a punta. */
+.ap-panel-action {
+  margin-top: auto;
+  width: 100%;
+}
+
+/* ---------- Avisos ---------- */
+.ap-banner {
+  margin: 0 0 var(--spacing-md);
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+
+.ap-banner-success {
+  background-color: color-mix(in srgb, var(--primary) 12%, white);
+  color: #3a6358;
+}
+
+.ap-banner-error {
+  background-color: color-mix(in srgb, var(--danger) 12%, white);
+  color: var(--ap-danger-text);
+}
+
+.ap-banner a {
+  margin-left: 0.5rem;
+  color: inherit;
+  font-weight: 600;
+}
+
+/* ---------- Carga de archivo ---------- */
+.ap-upload {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  border: 1.5px dashed var(--ap-hairline);
+  border-radius: 14px;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.ap-upload:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, white);
+  background-color: var(--ap-primary-soft);
+}
+
+.ap-upload svg {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  color: var(--primary);
+}
+
+.ap-upload strong {
+  display: block;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.ap-upload input[type='file'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 960px) {
+  .ap-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 560px) {
+  .ap-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ap-panel {
+    padding: 1.15rem;
+  }
+
+  .ap-header h1 {
+    font-size: 1.7rem;
+  }
+}
+
+/* ---------- Textos de ayuda ---------- */
+.ap-hint {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+/* Etiqueta de un campo con su botón de dictado al lado. */
+.ap-label-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+/* ---------- Tarjetas de resumen (números grandes) ---------- */
+.ap-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-lg);
+}
+
+.ap-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.15rem 1.5rem;
+  border: 1px solid var(--ap-hairline);
+  border-radius: 20px;
+  background-color: var(--surface);
+  box-shadow: var(--ap-card-shadow);
+}
+
+.ap-stat-label {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.ap-stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.ap-stat-value small {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+@media (max-width: 1100px) {
+  .ap-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .ap-stats {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--spacing-md);
+  }
+}

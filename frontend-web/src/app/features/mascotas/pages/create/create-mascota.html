@@ -1,41 +1,43 @@
-<main class="pet-page">
-  <form class="pet-form" [formGroup]="form" (ngSubmit)="submit()">
-    <header class="pet-header">
-      <div>
-        <h1>Registrar mascota</h1>
-        <p>
-          @if (isVeterinaryFlow) {
-            Alta para dueño existente desde veterinaria/local.
-          } @else {
-            Alta de mascota asociada a tu usuario.
-          }
-        </p>
-      </div>
-      <a [routerLink]="backLink()" [queryParams]="backQueryParams()">Volver</a>
-    </header>
-
-    @if (successMessage()) {
-      <p class="banner banner-success">
-        {{ successMessage() }}
-        @if (createdPetId(); as petId) {
-          <a [routerLink]="profileLink(petId)" [queryParams]="profileQueryParams(petId)">Ver perfil</a>
+<main class="ap-page">
+  <header class="ap-header">
+    <div>
+      <h1>Registrar mascota</h1>
+      <p>
+        @if (isVeterinaryFlow) {
+          Alta para dueño existente desde veterinaria/local.
+        } @else {
+          Alta de mascota asociada a tu usuario.
         }
       </p>
-    }
+    </div>
+    <a class="ap-btn ap-btn-soft" [routerLink]="backLink()" [queryParams]="backQueryParams()">Volver</a>
+  </header>
 
-    @if (errorMessage()) {
-      <p class="banner banner-error">{{ errorMessage() }}</p>
-    }
+  @if (successMessage()) {
+    <p class="ap-banner ap-banner-success" role="status">
+      {{ successMessage() }}
+      @if (createdPetId(); as petId) {
+        <a [routerLink]="profileLink(petId)" [queryParams]="profileQueryParams(petId)">Ver perfil</a>
+      }
+    </p>
+  }
 
+  @if (errorMessage()) {
+    <p class="ap-banner ap-banner-error" role="alert">{{ errorMessage() }}</p>
+  }
+
+  <form class="pet-form" [formGroup]="form" (ngSubmit)="submit()">
     @if (isVeterinaryFlow) {
-      <section class="owner-lookup" [formGroup]="ownerSearchForm">
-        <div>
-          <h2>Dueño de la mascota</h2>
-          <p>Elegí un dato de búsqueda para asociar la mascota al responsable.</p>
+      <section class="ap-panel" [formGroup]="ownerSearchForm" aria-labelledby="duenio-mascota">
+        <div class="ap-panel-head">
+          <div>
+            <h2 id="duenio-mascota">Dueño de la mascota</h2>
+            <p class="ap-panel-sub">Elegí un dato de búsqueda para asociar la mascota al responsable.</p>
+          </div>
         </div>
 
         <div class="owner-search-row">
-          <div class="segmented-control">
+          <div class="ap-segmented" role="group" aria-label="Buscar por">
             <button
               type="button"
               [class.active]="ownerSearchMode() === 'documento'"
@@ -53,162 +55,184 @@
           </div>
 
           @if (ownerSearchMode() === 'documento') {
-          <div class="field">
-            <label for="ownerDocument">DNI del dueño</label>
-            <input
-              id="ownerDocument"
-              type="text"
-              inputmode="numeric"
-              formControlName="documento"
-              (input)="onOwnerSearchChanged()"
-            />
-            @if (ownerSearchForm.controls.documento.invalid && ownerSearchForm.controls.documento.touched) {
-              <p class="field-error">Ingresá solo números.</p>
-            }
-          </div>
+            <div class="ap-field">
+              <label for="ownerDocument">DNI del dueño</label>
+              <input
+                id="ownerDocument"
+                type="text"
+                inputmode="numeric"
+                formControlName="documento"
+                (input)="onOwnerSearchChanged()"
+              />
+              @if (ownerSearchForm.controls.documento.invalid && ownerSearchForm.controls.documento.touched) {
+                <p class="ap-error">Ingresá solo números.</p>
+              }
+            </div>
           } @else {
-          <div class="field">
-            <label for="ownerEmail">Email del dueño</label>
-            <input
-              id="ownerEmail"
-              type="email"
-              formControlName="email"
-              (input)="onOwnerSearchChanged()"
-            />
-            @if (ownerSearchForm.controls.email.invalid && ownerSearchForm.controls.email.touched) {
-              <p class="field-error">Ingresa un email valido.</p>
-            }
-          </div>
+            <div class="ap-field">
+              <label for="ownerEmail">Email del dueño</label>
+              <input
+                id="ownerEmail"
+                type="email"
+                formControlName="email"
+                (input)="onOwnerSearchChanged()"
+              />
+              @if (ownerSearchForm.controls.email.invalid && ownerSearchForm.controls.email.touched) {
+                <p class="ap-error">Ingresa un email valido.</p>
+              }
+            </div>
           }
 
-          <button type="button" class="btn-secondary" [disabled]="isSearchingOwner()" (click)="searchOwner()">
+          <button type="button" class="ap-btn ap-btn-soft" [disabled]="isSearchingOwner()" (click)="searchOwner()">
             {{ isSearchingOwner() ? 'Buscando...' : 'Buscar dueño' }}
           </button>
         </div>
 
         @if (selectedOwner(); as owner) {
           <p class="owner-result">
-            Dueño seleccionado: <strong>{{ ownerDisplayName(owner) }}</strong>
-            @if (owner.numero_documento) {
-              <span>- DNI {{ owner.numero_documento }}</span>
-            }
-            <span>- {{ owner.email }}</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
+            <span>
+              Dueño seleccionado: <strong>{{ ownerDisplayName(owner) }}</strong>
+              @if (owner.numero_documento) {
+                <span>- DNI {{ owner.numero_documento }}</span>
+              }
+              <span>- {{ owner.email }}</span>
+            </span>
           </p>
         }
 
         @if (ownerSearchMessage()) {
-          <p class="field-error">{{ ownerSearchMessage() }}</p>
+          <p class="ap-error">{{ ownerSearchMessage() }}</p>
         }
       </section>
     }
 
-    <section class="form-grid">
-      <div class="field">
-        <label for="nombre">Nombre</label>
-        <input id="nombre" type="text" formControlName="nombre" />
-        @if (form.controls.nombre.invalid && form.controls.nombre.touched) {
-          <p class="field-error">El nombre es obligatorio.</p>
-        }
-      </div>
+    <div class="ap-grid">
+      <section class="ap-panel" aria-labelledby="datos-mascota">
+        <h2 id="datos-mascota">Datos de la mascota</h2>
 
-      <div class="field">
-        <label for="especie">Especie</label>
-        <select id="especie" formControlName="especie" (change)="onSpeciesChanged()">
-          <option value="">Seleccionar especie</option>
-          @for (species of speciesOptions; track species) {
-            <option [value]="species">{{ species }}</option>
-          }
-        </select>
-        @if (form.controls.especie.invalid && form.controls.especie.touched) {
-          <p class="field-error">La especie es obligatoria.</p>
-        }
-      </div>
+        <div class="ap-fields">
+          <div class="ap-field ap-wide">
+            <label for="nombre">Nombre</label>
+            <input id="nombre" type="text" formControlName="nombre" />
+            @if (form.controls.nombre.invalid && form.controls.nombre.touched) {
+              <p class="ap-error">El nombre es obligatorio.</p>
+            }
+          </div>
 
-      <div class="field">
-        <label for="raza">Raza</label>
-        <select
-          id="raza"
-          formControlName="raza"
-          [disabled]="!form.controls.especie.value"
-          (change)="onBreedChanged()"
-        >
-          <option value="">Seleccionar raza</option>
-          @for (breed of breedOptions(); track breed) {
-            <option [value]="breed">{{ breed }}</option>
-          }
-        </select>
-      </div>
+          <div class="ap-field">
+            <label for="especie">Especie</label>
+            <select id="especie" formControlName="especie" (change)="onSpeciesChanged()">
+              <option value="">Seleccionar especie</option>
+              @for (species of speciesOptions; track species) {
+                <option [value]="species">{{ species }}</option>
+              }
+            </select>
+            @if (form.controls.especie.invalid && form.controls.especie.touched) {
+              <p class="ap-error">La especie es obligatoria.</p>
+            }
+          </div>
 
-      @if (isCustomBreed()) {
-        <div class="field">
-          <label for="razaPersonalizada">Especificá la raza</label>
-          <input
-            id="razaPersonalizada"
-            type="text"
-            formControlName="razaPersonalizada"
-            placeholder="Ej: Border Collie"
-          />
-          @if (form.controls.razaPersonalizada.touched && !form.controls.razaPersonalizada.value?.trim()) {
-            <p class="field-error">Especificá la raza de la mascota.</p>
+          <div class="ap-field">
+            <label for="raza">Raza</label>
+            <select
+              id="raza"
+              formControlName="raza"
+              [disabled]="!form.controls.especie.value"
+              (change)="onBreedChanged()"
+            >
+              <option value="">Seleccionar raza</option>
+              @for (breed of breedOptions(); track breed) {
+                <option [value]="breed">{{ breed }}</option>
+              }
+            </select>
+          </div>
+
+          @if (isCustomBreed()) {
+            <div class="ap-field ap-wide">
+              <label for="razaPersonalizada">Especificá la raza</label>
+              <input
+                id="razaPersonalizada"
+                type="text"
+                formControlName="razaPersonalizada"
+                placeholder="Ej: Border Collie"
+              />
+              @if (form.controls.razaPersonalizada.touched && !form.controls.razaPersonalizada.value?.trim()) {
+                <p class="ap-error">Especificá la raza de la mascota.</p>
+              }
+            </div>
           }
+
+          <div class="ap-field">
+            <label for="sexo">Sexo</label>
+            <select id="sexo" formControlName="sexo">
+              <option value="macho">Macho</option>
+              <option value="hembra">Hembra</option>
+            </select>
+          </div>
+
+          <div class="ap-field">
+            <label for="fechaNacimiento">Fecha de nacimiento</label>
+            <input id="fechaNacimiento" type="date" formControlName="fechaNacimiento" />
+          </div>
+
+          <div class="ap-field">
+            <label for="peso">Peso</label>
+            <div class="ap-unit">
+              <input id="peso" type="number" min="0" step="0.01" formControlName="peso" />
+              <span>kg</span>
+            </div>
+            @if (form.controls.peso.invalid && form.controls.peso.touched) {
+              <p class="ap-error">El peso no puede ser negativo.</p>
+            }
+          </div>
+
+          <div class="ap-field">
+            <span class="ap-label">Esterilizado</span>
+            <label class="ap-switch switch-row">
+              <input type="checkbox" formControlName="esterilizado" />
+              <span class="ap-switch-track"></span>
+            </label>
+          </div>
+
+          <div class="ap-field ap-wide">
+            <span class="ap-label">Foto</span>
+            <label class="ap-upload" for="foto">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8a2 2 0 0 1 2-2h1.5l1-1.5h5l1 1.5H18a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z" /><circle cx="12" cy="12.5" r="3.5" /></svg>
+              <span>
+                <strong>{{ selectedFile()?.name ?? 'Elegir una foto' }}</strong>
+                PNG, JPG o WEBP
+              </span>
+              <input
+                id="foto"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                (change)="onFileSelected($event)"
+              />
+            </label>
+          </div>
         </div>
-      }
+      </section>
 
-      <div class="field">
-        <label for="sexo">Sexo</label>
-        <select id="sexo" formControlName="sexo">
-          <option value="macho">Macho</option>
-          <option value="hembra">Hembra</option>
-        </select>
-      </div>
+      <section class="ap-panel" aria-labelledby="salud-mascota">
+        <h2 id="salud-mascota">Salud</h2>
 
-      <div class="field">
-        <label for="fechaNacimiento">Fecha de nacimiento</label>
-        <input id="fechaNacimiento" type="date" formControlName="fechaNacimiento" />
-      </div>
-
-      <div class="field">
-        <label for="peso">Peso</label>
-        <div class="input-with-unit">
-          <input id="peso" type="number" min="0" step="0.01" formControlName="peso" />
-          <span>kg</span>
+        <div class="ap-field ap-field-grow editor-field">
+          <label for="alergias">Alergias</label>
+          <app-rich-text-editor id="alergias" formControlName="alergias" />
         </div>
-        @if (form.controls.peso.invalid && form.controls.peso.touched) {
-          <p class="field-error">El peso no puede ser negativo.</p>
-        }
-      </div>
 
-      <div class="field field-wide">
-        <label for="foto">Foto</label>
-        <input
-          id="foto"
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          (change)="onFileSelected($event)"
-        />
-        @if (selectedFile()) {
-          <p class="file-name">{{ selectedFile()?.name }}</p>
-        }
-      </div>
+        <div class="ap-field ap-field-grow editor-field">
+          <label for="observaciones">Observaciones</label>
+          <app-rich-text-editor id="observaciones" formControlName="observaciones" />
+        </div>
+      </section>
+    </div>
 
-      <label class="checkbox-field field-wide">
-        <input type="checkbox" formControlName="esterilizado" />
-        Esterilizado
-      </label>
-
-      <div class="field field-wide">
-        <label for="alergias">Alergias</label>
-        <app-rich-text-editor id="alergias" formControlName="alergias" />
-      </div>
-
-      <div class="field field-wide">
-        <label for="observaciones">Observaciones</label>
-        <app-rich-text-editor id="observaciones" formControlName="observaciones" />
-      </div>
-    </section>
-
-    <button type="submit" [disabled]="isSubmitting()">
-      {{ isSubmitting() ? 'Registrando...' : 'Registrar mascota' }}
-    </button>
+    <div class="pet-actions">
+      <button type="submit" class="ap-btn ap-btn-primary" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Registrando...' : 'Registrar mascota' }}
+      </button>
+    </div>
   </form>
 </main>

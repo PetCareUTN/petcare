@@ -7,6 +7,7 @@ import { AuthService } from '../../auth/services/auth-service';
 import {
   CategoriaServicio,
   CreateServicioRequest,
+  PerfilPrestadorResponse,
   ServicioResponse,
   UpdateServicioRequest,
 } from '../models/servicio';
@@ -26,6 +27,16 @@ export class ServiciosService {
   getMine(): Observable<ServicioResponse[]> {
     return this.http
       .get<ServicioResponse[]>(`${this.baseUrl}/mios`, { headers: this.authHeaders() })
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
+  /** Puntaje y reseñas del prestador en una categoría. */
+  getPerfil(idUsuario: number, categoria: CategoriaServicio): Observable<PerfilPrestadorResponse> {
+    return this.http
+      .get<PerfilPrestadorResponse>(
+        `${environment.apiUrl}/prestadores/${idUsuario}/${categoria}/perfil`,
+        { headers: this.authHeaders() },
+      )
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
   }
 

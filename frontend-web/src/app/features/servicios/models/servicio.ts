@@ -38,3 +38,22 @@ export interface ServicioResponse {
   descripcion: string | null;
   disponibilidades: DisponibilidadResponse[];
 }
+
+export interface ResenaServicio {
+  id: number;
+  puntuacion: number;
+  comentario: string;
+  /** Fecha ISO. */
+  fecha: string;
+  /** Nombre del dueño que la escribió. */
+  autor: string;
+}
+
+/** Perfil de un prestador en una categoría: su puntaje y las reseñas recibidas. */
+export interface PerfilPrestadorResponse {
+  serviciosCompletados: number;
+  /** Promedio de 1 a 5, o `null` si todavía no tiene reseñas. */
+  promedio: number | null;
+  resenas: ResenaServicio[];
+}
+

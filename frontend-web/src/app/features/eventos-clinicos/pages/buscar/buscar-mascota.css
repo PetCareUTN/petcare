@@ -9,7 +9,7 @@
 
 .atencion-page {
   flex: 1;
-  max-width: 1040px;
+  max-width: var(--page-max);
   margin: 0 auto;
   padding: var(--spacing-xl) var(--spacing-lg) calc(var(--spacing-xl) * 1.5);
   box-sizing: border-box;

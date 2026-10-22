@@ -37,6 +37,12 @@ export interface DatosTurno {
   hora: string;
   /** Texto legible del turno, por ejemplo "consulta veterinaria" o "paseo". */
   servicio: string;
+  /**
+   * Quién cargó el turno. Si fue el prestador (agenda de la web), los dueños
+   * reciben un aviso de que se les agendó un turno y el prestador no recibe
+   * ninguno, porque lo acaba de cargar él.
+   */
+  creadoPor?: 'dueño' | 'veterinario';
 }
 
 /**
@@ -62,6 +68,19 @@ export class NotificacionesTurnosService {
    */
   async notificarTurnoConfirmado(turno: DatosTurno): Promise<void> {
     const cuando = `${this.formatearFecha(turno.fecha)} a las ${this.formatearHora(turno.hora)}`;
+
+    if (turno.creadoPor === 'veterinario') {
+      for (const duenio of this.duenios(turno)) {
+        await this.registrar(
+          turno,
+          duenio.idUsuario,
+          NotificationType.TURNO_CONFIRMADO,
+          'Turno confirmado',
+          `${turno.nombrePrestador} te agendó un turno de ${turno.servicio} para ${turno.nombreMascota} el ${cuando}.`,
+        );
+      }
+      return;
+    }
 
     for (const duenio of this.duenios(turno)) {
       const loReservo = duenio.idUsuario === turno.idDuenio;

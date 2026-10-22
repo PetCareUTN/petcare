@@ -6,11 +6,12 @@
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  padding: 0.2rem 0.6rem;
-  border: 1px solid var(--border);
+  height: 28px;
+  padding: 0 0.75rem;
+  border: none;
   border-radius: 999px;
-  background-color: var(--surface);
-  color: var(--primary);
+  background-color: rgba(79, 127, 115, 0.12);
+  color: #3a6358;
   font: inherit;
   font-size: 0.8rem;
   font-weight: 600;
@@ -18,12 +19,11 @@
 }
 
 .btn-mic:hover {
-  background-color: var(--primary-light);
+  background-color: rgba(79, 127, 115, 0.22);
 }
 
 .btn-mic.grabando {
-  border-color: var(--danger);
-  background-color: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  background-color: color-mix(in srgb, var(--danger) 12%, white);
   color: var(--danger);
   animation: latido-grabando 1.2s ease-in-out infinite;
 }
