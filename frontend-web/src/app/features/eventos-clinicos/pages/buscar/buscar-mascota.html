@@ -133,21 +133,8 @@
 
   <div class="attention-grid">
     <section class="card pets-card">
-      <div class="card-title-row">
-        <div>
-          <h2>Mascotas del cliente</h2>
-          <p class="card-subtitle">Tocá una mascota para continuar.</p>
-        </div>
-        @if (selectedOwner() && ownerPets().length > 0) {
-          <a
-            class="btn-secondary"
-            routerLink="/eventos-clinicos/pacientes/nueva"
-            [queryParams]="attentionQueryParams()"
-          >
-            Registrar mascota
-          </a>
-        }
-      </div>
+      <h2>Mascotas del cliente</h2>
+      <p class="card-subtitle">Tocá una mascota para continuar.</p>
 
       @if (!selectedOwner()) {
         <div class="placeholder">
@@ -200,12 +187,19 @@
             </li>
           }
         </ul>
+        <a
+          class="add-pet"
+          routerLink="/eventos-clinicos/pacientes/nueva"
+          [queryParams]="attentionQueryParams()"
+        >
+          + Registrar otra mascota
+        </a>
       }
     </section>
 
     <section class="card actions-card">
       <h2>Evento clínico</h2>
-      <p class="card-subtitle">Con la mascota elegida, continuá con la atención.</p>
+      <p class="card-subtitle">Continuá con la atención de la mascota.</p>
 
       @if (selectedPet(); as pet) {
         <div class="selected-pet">

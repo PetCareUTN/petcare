@@ -133,16 +133,9 @@
 
 .attention-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--spacing-lg);
-  align-items: start;
-}
-
-.card-title-row {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--spacing-sm);
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 /* ---------- Buscador ---------- */
@@ -448,8 +441,30 @@
   margin-top: 0.6rem;
 }
 
+.add-pet {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.5rem;
+  padding: 0.7rem;
+  border: 1.5px dashed var(--hairline);
+  border-radius: 14px;
+  color: var(--primary);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.add-pet:hover {
+  border-color: var(--primary);
+  background-color: var(--primary-soft);
+}
+
 /* ---------- Estados vacíos ---------- */
 .placeholder {
+  flex: 1;
+  justify-content: center;
   display: flex;
   flex-direction: column;
   align-items: center;
