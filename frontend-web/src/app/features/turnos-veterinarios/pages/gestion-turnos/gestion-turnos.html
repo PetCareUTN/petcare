@@ -170,51 +170,58 @@
                           <span class="now-line" [style.top.%]="celda.lineaAhora" aria-hidden="true"></span>
                         }
                         @for (mitad of celda.mitades; track mitad.hora) {
-                          @if (mitad.franja; as franja) {
-                            @if (franja.estado !== 'completo' && !franja.pasada) {
-                              <button
-                                type="button"
-                                [class]="'slot ' + franja.estado"
-                                [attr.aria-label]="'Agendar turno a las ' + mitad.hora"
-                                [title]="franja.estado === 'sobreturno' ? 'Sobreturno' : 'Agendar turno'"
-                                (click)="abrirNuevoTurno(celda.fecha, mitad.hora)"
-                              >
-                                <span class="slot-hora">{{ mitad.hora }}</span>
-                                <span class="slot-plus" aria-hidden="true">+</span>
-                              </button>
+                          @let franja = mitad.franja;
+                          @let puedeAgregar = !!franja && !franja.pasada;
+                          @let azul = franja?.estado !== 'libre';
+                          <div class="half">
+                            @if (mitad.turnos.length === 0) {
+                              @if (puedeAgregar) {
+                                <button
+                                  type="button"
+                                  class="slot-empty"
+                                  [class.sobreturno]="azul"
+                                  [attr.aria-label]="'Agendar turno a las ' + mitad.hora"
+                                  (click)="abrirNuevoTurno(celda.fecha, mitad.hora)"
+                                >
+                                  <span class="slot-hora">{{ mitad.hora }}</span>
+                                  <span class="slot-plus" aria-hidden="true">+</span>
+                                </button>
+                              }
+                            } @else {
+                              @for (turno of mitad.turnos; track turno.clave; let ultimo = $last) {
+                                <div class="event-row">
+                                  <button
+                                    type="button"
+                                    [class]="'event-block ' + turno.estado + ' tipo-' + turno.tipo"
+                                    [class.selected]="turnoSeleccionadoClave() === turno.clave"
+                                    [class.espera-registro]="esperaRegistro(turno)"
+                                    [class.sobreturno]="turno.esSobreturno"
+                                    [attr.aria-label]="formatTime(turno.hora) + ' ' + etiquetaCorta(turno)"
+                                    (click)="seleccionarTurno(turno)"
+                                  >
+                                    <span class="event-time">
+                                      {{ formatTime(turno.hora) }}
+                                      @if (turno.horaFin) {
+                                        <span class="event-time-end">– {{ formatTime(turno.horaFin) }}</span>
+                                      }
+                                    </span>
+                                    <span class="event-pet">{{ etiquetaCorta(turno) }}</span>
+                                  </button>
+                                  @if (ultimo && puedeAgregar) {
+                                    <button
+                                      type="button"
+                                      class="add-mini"
+                                      [class.sobreturno]="azul"
+                                      [attr.aria-label]="(azul ? 'Agregar sobreturno a las ' : 'Agendar turno a las ') + mitad.hora"
+                                      (click)="abrirNuevoTurno(celda.fecha, mitad.hora)"
+                                    >
+                                      +
+                                    </button>
+                                  }
+                                </div>
+                              }
                             }
-                          }
-                          @for (turno of mitad.turnos; track turno.clave) {
-                            <button
-                              type="button"
-                              [class]="'event-block ' + turno.estado + ' tipo-' + turno.tipo"
-                              [class.selected]="turnoSeleccionadoClave() === turno.clave"
-                              [class.espera-registro]="esperaRegistro(turno)"
-                              [class.sobreturno]="turno.esSobreturno"
-                              (click)="seleccionarTurno(turno)"
-                            >
-                              <span class="event-time">
-                                {{ formatTime(turno.hora) }}
-                                @if (turno.horaFin) {
-                                  <span class="event-time-end">
-                                    – {{ formatTime(turno.horaFin) }}
-                                  </span>
-                                }
-                              </span>
-                              <span class="event-pet">{{ etiquetaCorta(turno) }}</span>
-                            </button>
-                          }
-                          @if (mitad.franja?.estado === 'completo' && !mitad.franja?.pasada) {
-                            <button
-                              type="button"
-                              class="slot-forzar"
-                              [attr.aria-label]="'Agregar sobreturno a las ' + mitad.hora"
-                              title="Agregar sobreturno"
-                              (click)="abrirNuevoTurno(celda.fecha, mitad.hora)"
-                            >
-                              +
-                            </button>
-                          }
+                          </div>
                         }
                       </div>
                     }

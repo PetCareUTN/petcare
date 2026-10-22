@@ -318,10 +318,11 @@
 }
 
 .event-block {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.1rem;
-  padding: 0.35rem 0.5rem;
+  flex: 1;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.45rem;
 }
 
 /* El borde punteado marca los turnos de servicios sin depender del color. */
@@ -494,7 +495,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
-  min-height: 3rem;
+  min-height: 3.4rem;
   min-width: 0;
   padding: 0.2rem;
   border-left: 1px solid var(--hairline);
@@ -840,101 +841,145 @@
 }
 
 /* Hueco de la agenda: media hora con cupos. Doble clic para agendar. */
-.slot {
+/* Una media hora: sus turnos en una línea cada uno y el "+" para agregar. */
+.half {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.event-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.4rem;
-  width: 100%;
-  padding: 0.2rem 0.4rem 0.2rem 0.5rem;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background-color: color-mix(in srgb, var(--primary) 6%, white);
-  color: var(--text-secondary);
-  font: inherit;
-  font-size: 0.72rem;
-  text-align: left;
-  cursor: pointer;
-  user-select: none;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  gap: 4px;
 }
 
-.slot:hover,
-.slot:focus-visible {
-  border-color: color-mix(in srgb, var(--primary) 50%, white);
-  background-color: color-mix(in srgb, var(--primary) 16%, white);
+.event-row .event-block {
+  min-width: 0;
 }
 
-.slot-hora {
-  font-weight: 700;
-  color: var(--text-secondary);
-}
-
-/* El "+" es toda la invitación a agendar: sin textos de cupos. */
-.slot-plus {
+/* "+" de agregar al final del grupo de turnos. Los de atención aparecen al pasar por
+   la celda; los azules (sobreturno) quedan siempre a la vista. */
+.add-mini {
   display: grid;
-  place-items: center;
-  width: 1.15rem;
-  height: 1.15rem;
-  border-radius: 50%;
-  background-color: color-mix(in srgb, var(--primary) 18%, white);
-  color: var(--primary);
-  font-size: 0.95rem;
-  font-weight: 700;
-  line-height: 1;
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-.slot:hover .slot-plus,
-.slot:focus-visible .slot-plus {
-  background-color: var(--primary);
-  color: #ffffff;
-}
-
-.slot.sobreturno {
-  background-color: color-mix(in srgb, var(--tipo-sobreturno) 12%, white);
-}
-
-.slot.sobreturno:hover,
-.slot.sobreturno:focus-visible {
-  border-color: color-mix(in srgb, var(--tipo-sobreturno) 50%, white);
-  background-color: color-mix(in srgb, var(--tipo-sobreturno) 16%, white);
-}
-
-.slot.sobreturno .slot-plus {
-  background-color: color-mix(in srgb, var(--tipo-sobreturno) 28%, white);
-  color: var(--tipo-sobreturno);
-}
-
-.slot.sobreturno:hover .slot-plus,
-.slot.sobreturno:focus-visible .slot-plus {
-  background-color: var(--tipo-sobreturno);
-  color: #ffffff;
-}
-
-/* Horario completo: no hay hueco, solo un "+" azul para agregar un sobreturno. */
-.slot-forzar {
-  display: grid;
-  align-self: flex-end;
+  flex-shrink: 0;
   place-items: center;
   width: 1.3rem;
   height: 1.3rem;
   padding: 0;
   border: none;
   border-radius: 50%;
-  background-color: color-mix(in srgb, var(--tipo-sobreturno) 28%, white);
-  color: var(--tipo-sobreturno);
+  background-color: color-mix(in srgb, var(--primary) 18%, white);
+  color: var(--primary);
   font: inherit;
   font-size: 1rem;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  opacity: 0;
+  transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
 }
 
-.slot-forzar:hover {
+.time-cell:hover .add-mini,
+.add-mini:focus-visible {
+  opacity: 1;
+}
+
+.add-mini:hover {
+  background-color: var(--primary);
+  color: #ffffff;
+}
+
+.add-mini.sobreturno {
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 28%, white);
+  color: var(--tipo-sobreturno);
+  opacity: 1;
+}
+
+.add-mini.sobreturno:hover {
   background-color: var(--tipo-sobreturno);
   color: #ffffff;
+}
+
+/* Hueco sin turnos: en blanco hasta que se pasa el mouse, y entonces muestra la hora y el "+". */
+.slot-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  width: 100%;
+  min-height: 1.7rem;
+  padding: 0.15rem 0.4rem 0.15rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background-color: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.slot-empty .slot-hora,
+.slot-empty .slot-plus {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.slot-empty:hover,
+.slot-empty:focus-visible {
+  border-color: color-mix(in srgb, var(--primary) 40%, white);
+  background-color: color-mix(in srgb, var(--primary) 10%, white);
+}
+
+.slot-empty:hover .slot-hora,
+.slot-empty:hover .slot-plus,
+.slot-empty:focus-visible .slot-hora,
+.slot-empty:focus-visible .slot-plus {
+  opacity: 1;
+}
+
+.slot-hora {
+  font-weight: 700;
+}
+
+.slot-plus {
+  display: grid;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  background-color: var(--primary);
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Sobreturno con lugar: siempre visible, en azul suave. */
+.slot-empty.sobreturno {
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 12%, white);
+}
+
+.slot-empty.sobreturno .slot-hora,
+.slot-empty.sobreturno .slot-plus {
+  opacity: 1;
+}
+
+.slot-empty.sobreturno .slot-hora {
+  color: var(--tipo-sobreturno);
+}
+
+.slot-empty.sobreturno .slot-plus {
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 28%, white);
+  color: var(--tipo-sobreturno);
+}
+
+.slot-empty.sobreturno:hover,
+.slot-empty.sobreturno:focus-visible {
+  border-color: color-mix(in srgb, var(--tipo-sobreturno) 50%, white);
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 20%, white);
 }
 
 .origin-badge {
