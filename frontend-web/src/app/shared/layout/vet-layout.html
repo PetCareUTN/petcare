@@ -1,10 +1,14 @@
 <div class="vet-shell">
   <aside class="vet-sidebar">
     <div class="vet-brand">
-      <img class="vet-brand-logo" src="logo.png" alt="PetCare" />
-      <div>
-        <p class="vet-brand-title">PetCare Vet</p>
-        <p class="vet-brand-subtitle">Plataforma clínica</p>
+      <img class="vet-brand-logo" src="logo-blanco.png" alt="PetCare" />
+    </div>
+
+    <div class="vet-user">
+      <span class="vet-user-avatar" aria-hidden="true">{{ iniciales() }}</span>
+      <div class="vet-user-info">
+        <p class="vet-user-name" [title]="nombreCompleto()">{{ nombreCompleto() }}</p>
+        <p class="vet-user-role">Veterinario/a</p>
       </div>
     </div>
 
