@@ -333,17 +333,11 @@
   color: var(--text-secondary);
 }
 
-.franja.sobreturno {
-  border-color: color-mix(in srgb, var(--tipo-sobreturno) 40%, white);
-  background-color: color-mix(in srgb, var(--tipo-sobreturno) 7%, white);
-}
-
 .franja.completo {
   border-color: color-mix(in srgb, var(--tipo-sobreturno) 40%, white);
   background-color: color-mix(in srgb, var(--tipo-sobreturno) 7%, white);
 }
 
-.franja.sobreturno .franja-estado,
 .franja.completo .franja-estado {
   color: var(--tipo-sobreturno);
   font-weight: 600;
@@ -360,7 +354,6 @@
   box-shadow: 0 0 0 3px var(--primary-soft);
 }
 
-.franja.elegida.sobreturno,
 .franja.elegida.completo {
   border-color: var(--tipo-sobreturno);
   background-color: var(--tipo-sobreturno);

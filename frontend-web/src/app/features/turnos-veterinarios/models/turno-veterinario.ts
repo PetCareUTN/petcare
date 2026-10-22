@@ -46,8 +46,8 @@ export interface AgendarTurnoVeterinarioRequest {
 export interface CapacidadHorario {
   fecha: string;
   hora: string;
-  cuposAtencion: number;
-  cuposSobreturno: number;
+  /** Cupos del horario de atención. */
+  cupos: number;
   ocupados: number;
 }
 

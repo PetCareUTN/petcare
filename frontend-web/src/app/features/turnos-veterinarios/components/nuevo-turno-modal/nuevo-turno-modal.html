@@ -9,7 +9,7 @@
     <header class="modal-header">
       <div>
         <h2 id="nuevo-turno-titulo">Nuevo turno</h2>
-        <p>Agendá un turno para un cliente dentro de tu horario de atención y tus sobreturnos.</p>
+        <p>Agendá un turno para un cliente dentro de tu horario de atención.</p>
       </div>
       <button type="button" class="close-button" aria-label="Cerrar" (click)="cerrar.emit()">
         ×
@@ -133,8 +133,7 @@
         <p class="nota">Cargando horarios...</p>
       } @else if (franjas().length === 0) {
         <p class="nota">
-          No tenés horario de atención ni sobreturnos ese día. Podés configurarlos en
-          Disponibilidad.
+          No tenés horario de atención ese día. Podés configurarlo en Disponibilidad.
         </p>
       } @else {
         <ul class="franjas" aria-label="Horarios">

@@ -55,7 +55,7 @@ interface EventoTurno {
 /** Estados en los que un turno sigue ocupando su lugar en la agenda. */
 const ESTADOS_QUE_OCUPAN: EstadoTurno[] = ['confirmado', 'asistio', 'ausente'];
 
-type EstadoFranja = 'libre' | 'sobreturno' | 'completo';
+type EstadoFranja = 'libre' | 'completo';
 
 /** Capacidad de una franja de 30 minutos de la agenda, lista para mostrar. */
 interface FranjaAgenda {
@@ -259,7 +259,7 @@ export class GestionTurnosVeterinariosPage implements OnInit {
       [...turnos]
         .sort((a, b) => a.idTurno - b.idTurno)
         .forEach((turno, indice) => {
-          if (indice >= capacidad.cuposAtencion) {
+          if (indice >= capacidad.cupos) {
             ids.add(turno.idTurno);
           }
         });
@@ -786,17 +786,11 @@ export class GestionTurnosVeterinariosPage implements OnInit {
   }
 
   private aFranjaAgenda(capacidad: CapacidadHorario): FranjaAgenda {
-    const total = capacidad.cuposAtencion + capacidad.cuposSobreturno;
-    const libres = total - capacidad.ocupados;
+    const libres = capacidad.cupos - capacidad.ocupados;
     return {
-      total,
+      total: capacidad.cupos,
       libres,
-      estado:
-        libres <= 0
-          ? 'completo'
-          : capacidad.ocupados >= capacidad.cuposAtencion
-            ? 'sobreturno'
-            : 'libre',
+      estado: libres <= 0 ? 'completo' : 'libre',
       pasada: this.yaPaso(capacidad.fecha, capacidad.hora),
     };
   }

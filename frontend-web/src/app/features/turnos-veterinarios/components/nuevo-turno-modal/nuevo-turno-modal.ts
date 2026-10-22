@@ -17,17 +17,14 @@ import { TurnosVeterinariosService } from '../../services/turnos-veterinarios-se
 const SEARCH_DEBOUNCE_MS = 300;
 const MOTIVO_MAX_LENGTH = 500;
 
-type EstadoFranja = 'libre' | 'sobreturno' | 'completo';
+type EstadoFranja = 'libre' | 'completo';
 
 interface Franja {
   hora: string;
   /** Cupos de atención que siguen libres. */
   libres: number;
   total: number;
-  /**
-   * `libre`: queda un turno normal. `sobreturno`: el turno que se agregue ya cuenta
-   * como sobreturno. `completo`: no queda nada, y agregar uno es forzar el horario.
-   */
+  /** `completo`: no queda cupo, y agregar un turno es agregar un sobreturno. */
   estado: EstadoFranja;
   /** Ya pasó: no se puede agendar. */
   pasada: boolean;
@@ -37,8 +34,8 @@ interface Franja {
  * Alta de un turno por parte de la veterinaria. Se abre desde la agenda, con
  * la fecha y la hora ya elegidas si vino de un doble clic sobre un horario.
  *
- * Solo se puede agendar dentro del horario de atención y de los sobreturnos.
- * Un horario completo se puede agendar igual, pero avisando antes.
+ * Solo se puede agendar dentro del horario de atención.
+ * En un horario completo se agrega un sobreturno.
  */
 @Component({
   selector: 'app-nuevo-turno-modal',
@@ -92,23 +89,14 @@ export class NuevoTurnoModalComponent implements OnInit {
   protected readonly franjas = computed<Franja[]>(() => {
     const fecha = this.fecha();
     return this.capacidad()
-      .filter((c) => c.fecha === fecha && c.cuposAtencion + c.cuposSobreturno > 0)
-      .map((c) => {
-        const total = c.cuposAtencion + c.cuposSobreturno;
-        const estado: EstadoFranja =
-          total - c.ocupados <= 0
-            ? 'completo'
-            : c.ocupados >= c.cuposAtencion
-              ? 'sobreturno'
-              : 'libre';
-        return {
-          hora: c.hora,
-          libres: Math.max(c.cuposAtencion - c.ocupados, 0),
-          total,
-          estado,
-          pasada: new Date(`${fecha}T${c.hora}`).getTime() <= Date.now(),
-        };
-      })
+      .filter((c) => c.fecha === fecha && c.cupos > 0)
+      .map((c) => ({
+        hora: c.hora,
+        libres: Math.max(c.cupos - c.ocupados, 0),
+        total: c.cupos,
+        estado: (c.ocupados >= c.cupos ? 'completo' : 'libre') as EstadoFranja,
+        pasada: new Date(`${fecha}T${c.hora}`).getTime() <= Date.now(),
+      }))
       .sort((a, b) => a.hora.localeCompare(b.hora));
   });
 
@@ -232,10 +220,7 @@ export class NuevoTurnoModalComponent implements OnInit {
   }
 
   /** El turno que se va a cargar queda como sobreturno (hay que aclararlo en la pantalla). */
-  protected readonly esSobreturno = computed(() => {
-    const estado = this.franjaElegida()?.estado;
-    return estado === 'sobreturno' || estado === 'completo';
-  });
+  protected readonly esSobreturno = computed(() => this.franjaElegida()?.estado === 'completo');
 
   protected agendar(): void {
     this.enviar(this.franjaElegida()?.estado === 'completo');
