@@ -858,8 +858,8 @@
   min-width: 0;
 }
 
-/* "+" de agregar al final del grupo de turnos. Los de atención aparecen al pasar por
-   la celda; los azules (sobreturno) quedan siempre a la vista. */
+/* "+" de agregar al final del grupo de turnos, siempre a la vista: verde si queda
+   cupo de atención y azul si el turno que se agregue es un sobreturno. */
 .add-mini {
   display: grid;
   flex-shrink: 0;
@@ -876,13 +876,7 @@
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
-}
-
-.time-cell:hover .add-mini,
-.add-mini:focus-visible {
-  opacity: 1;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .add-mini:hover {
@@ -893,7 +887,6 @@
 .add-mini.sobreturno {
   background-color: color-mix(in srgb, var(--tipo-sobreturno) 28%, white);
   color: var(--tipo-sobreturno);
-  opacity: 1;
 }
 
 .add-mini.sobreturno:hover {
@@ -901,7 +894,7 @@
   color: #ffffff;
 }
 
-/* Hueco sin turnos: en blanco hasta que se pasa el mouse, y entonces muestra la hora y el "+". */
+/* Hueco sin turnos: siempre a la vista, con la hora y el "+" (10:00 +, 10:30 +...). */
 .slot-empty {
   display: flex;
   align-items: center;
@@ -912,7 +905,7 @@
   padding: 0.15rem 0.4rem 0.15rem 0.5rem;
   border: 1px solid transparent;
   border-radius: 8px;
-  background-color: transparent;
+  background-color: color-mix(in srgb, var(--primary) 6%, white);
   color: var(--text-secondary);
   font: inherit;
   font-size: 0.72rem;
@@ -921,23 +914,10 @@
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.slot-empty .slot-hora,
-.slot-empty .slot-plus {
-  opacity: 0;
-  transition: opacity 0.15s ease;
-}
-
 .slot-empty:hover,
 .slot-empty:focus-visible {
-  border-color: color-mix(in srgb, var(--primary) 40%, white);
-  background-color: color-mix(in srgb, var(--primary) 10%, white);
-}
-
-.slot-empty:hover .slot-hora,
-.slot-empty:hover .slot-plus,
-.slot-empty:focus-visible .slot-hora,
-.slot-empty:focus-visible .slot-plus {
-  opacity: 1;
+  border-color: color-mix(in srgb, var(--primary) 50%, white);
+  background-color: color-mix(in srgb, var(--primary) 16%, white);
 }
 
 .slot-hora {
@@ -950,21 +930,23 @@
   width: 1.15rem;
   height: 1.15rem;
   border-radius: 50%;
-  background-color: var(--primary);
-  color: #ffffff;
+  background-color: color-mix(in srgb, var(--primary) 18%, white);
+  color: var(--primary);
   font-size: 0.95rem;
   font-weight: 700;
   line-height: 1;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-/* Sobreturno con lugar: siempre visible, en azul suave. */
+.slot-empty:hover .slot-plus,
+.slot-empty:focus-visible .slot-plus {
+  background-color: var(--primary);
+  color: #ffffff;
+}
+
+/* Sobreturno con lugar: en azul. */
 .slot-empty.sobreturno {
   background-color: color-mix(in srgb, var(--tipo-sobreturno) 12%, white);
-}
-
-.slot-empty.sobreturno .slot-hora,
-.slot-empty.sobreturno .slot-plus {
-  opacity: 1;
 }
 
 .slot-empty.sobreturno .slot-hora {
@@ -980,6 +962,12 @@
 .slot-empty.sobreturno:focus-visible {
   border-color: color-mix(in srgb, var(--tipo-sobreturno) 50%, white);
   background-color: color-mix(in srgb, var(--tipo-sobreturno) 20%, white);
+}
+
+.slot-empty.sobreturno:hover .slot-plus,
+.slot-empty.sobreturno:focus-visible .slot-plus {
+  background-color: var(--tipo-sobreturno);
+  color: #ffffff;
 }
 
 .origin-badge {
