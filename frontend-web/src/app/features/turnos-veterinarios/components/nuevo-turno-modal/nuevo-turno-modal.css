@@ -339,12 +339,14 @@
 }
 
 .franja.completo {
-  border-color: #e3c58a;
-  background-color: #fdf5e6;
+  border-color: color-mix(in srgb, var(--tipo-sobreturno) 40%, white);
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 7%, white);
 }
 
+.franja.sobreturno .franja-estado,
 .franja.completo .franja-estado {
-  color: #9a6a12;
+  color: var(--tipo-sobreturno);
+  font-weight: 600;
 }
 
 .franja.pasada {
@@ -358,6 +360,13 @@
   box-shadow: 0 0 0 3px var(--primary-soft);
 }
 
+.franja.elegida.sobreturno,
+.franja.elegida.completo {
+  border-color: var(--tipo-sobreturno);
+  background-color: var(--tipo-sobreturno);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tipo-sobreturno) 18%, transparent);
+}
+
 .franja.elegida .franja-hora,
 .franja.elegida .franja-estado {
   color: #ffffff;
@@ -368,8 +377,8 @@
   margin: 0.75rem 0 0;
   padding: 0.7rem 0.9rem;
   border-radius: 12px;
-  background-color: #fdf5e6;
-  color: #7a5410;
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 9%, white);
+  color: #24557f;
   font-size: 0.86rem;
   line-height: 1.5;
 }
@@ -414,6 +423,15 @@
 
 .btn-primary:hover:not(:disabled) {
   background-color: #446f64;
+}
+
+.btn-primary.sobreturno {
+  background-color: var(--tipo-sobreturno);
+  box-shadow: 0 2px 6px rgba(47, 111, 176, 0.28);
+}
+
+.btn-primary.sobreturno:hover:not(:disabled) {
+  background-color: #275d93;
 }
 
 .btn-primary:disabled {

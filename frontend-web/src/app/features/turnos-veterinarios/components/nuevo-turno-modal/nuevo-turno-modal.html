@@ -151,22 +151,13 @@
                 (click)="elegirHora(franja)"
               >
                 <span class="franja-hora">{{ franja.hora }}</span>
-                <span class="franja-estado">
-                  {{ franja.estado === 'sobreturno' ? 'Sobreturno · ' : '' }}{{ etiquetaFranja(franja) }}
-                </span>
+                @if (etiquetaFranja(franja); as texto) {
+                  <span class="franja-estado">{{ texto }}</span>
+                }
               </button>
             </li>
           }
         </ul>
-      }
-
-      @if (franjaElegida(); as franja) {
-        @if (franja.estado === 'completo' && !confirmarForzar()) {
-          <p class="aviso">
-            Este horario ya no tiene cupos disponibles. Si lo agendás igual, el turno queda como
-            sobrecupo.
-          </p>
-        }
       }
     </section>
 
@@ -184,26 +175,32 @@
     @if (confirmarForzar(); as lleno) {
       <div class="confirmar" role="alert">
         <p>
-          Ese horario se quedó sin cupos ({{ lleno.ocupados }} de {{ lleno.cupos }} ocupados).
-          ¿Querés agendar el turno igual?
+          Ese horario se acaba de llenar ({{ lleno.ocupados }} de {{ lleno.cupos }} turnos).
+          ¿Querés agregarlo como sobreturno?
         </p>
         <div class="confirmar-acciones">
           <button type="button" class="btn-secondary" (click)="volverAElegirHorario()">
             Elegir otro horario
           </button>
-          <button type="button" class="btn-primary" [disabled]="guardando()" (click)="agendarIgual()">
-            {{ guardando() ? 'Agendando...' : 'Agendar igual' }}
+          <button type="button" class="btn-primary sobreturno" [disabled]="guardando()" (click)="agendarIgual()">
+            {{ guardando() ? 'Agregando...' : 'Agregar sobreturno' }}
           </button>
         </div>
       </div>
     } @else {
       <footer class="modal-footer">
         <button type="button" class="btn-secondary" (click)="cerrar.emit()">Cancelar</button>
-        <button type="button" class="btn-primary" [disabled]="!puedeAgendar()" (click)="agendar()">
+        <button
+          type="button"
+          class="btn-primary"
+          [class.sobreturno]="esSobreturno()"
+          [disabled]="!puedeAgendar()"
+          (click)="agendar()"
+        >
           @if (guardando()) {
-            Agendando...
-          } @else if (franjaElegida()?.estado === 'completo') {
-            Agendar igual
+            Agregando...
+          } @else if (esSobreturno()) {
+            Agregar sobreturno
           } @else {
             Agendar turno
           }

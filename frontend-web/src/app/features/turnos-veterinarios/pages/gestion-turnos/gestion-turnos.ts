@@ -48,7 +48,12 @@ interface EventoTurno {
   canceladoPor: CanceladoPor | null;
   veterinario: TurnoVeterinarioResponse | null;
   servicio: TurnoServicioResponse | null;
+  /** Ocupa un cupo de sobreturno o se cargó con el horario lleno. */
+  esSobreturno: boolean;
 }
+
+/** Estados en los que un turno sigue ocupando su lugar en la agenda. */
+const ESTADOS_QUE_OCUPAN: EstadoTurno[] = ['confirmado', 'asistio', 'ausente'];
 
 type EstadoFranja = 'libre' | 'sobreturno' | 'completo';
 
@@ -159,6 +164,7 @@ export class GestionTurnosVeterinariosPage implements OnInit {
   // apenas se marca como asistido o ausente.
   protected readonly estadosVisibles = signal<EstadoTurno[]>(['confirmado', 'asistio', 'ausente']);
   protected readonly tiposVisibles = signal<TipoTurno[]>(['veterinaria', 'servicio']);
+  protected readonly sobreturnosVisibles = signal(true);
 
   protected readonly turnos = signal<TurnoVeterinarioResponse[]>([]);
   protected readonly turnosServicios = signal<TurnoServicioResponse[]>([]);
@@ -194,8 +200,12 @@ export class GestionTurnosVeterinariosPage implements OnInit {
   protected readonly turnosVisibles = computed(() => {
     const estados = this.estadosVisibles();
     const tipos = this.tiposVisibles();
+    const verSobreturnos = this.sobreturnosVisibles();
     return this.todosLosTurnos().filter(
-      (turno) => estados.includes(turno.estado) && tipos.includes(turno.tipo),
+      (turno) =>
+        estados.includes(turno.estado) &&
+        tipos.includes(turno.tipo) &&
+        (verSobreturnos || !turno.esSobreturno),
     );
   });
 
@@ -223,6 +233,38 @@ export class GestionTurnosVeterinariosPage implements OnInit {
       porClave.set(`${franja.fecha}|${franja.hora}`, franja);
     }
     return porClave;
+  });
+
+  /**
+   * Turnos veterinarios que son sobreturnos: los cargados con el horario lleno y
+   * los que ocupan un cupo de sobreturno. En cada franja, los primeros turnos
+   * (por orden de carga) usan los cupos de atención y el resto son sobreturnos.
+   */
+  private readonly idsSobreturno = computed(() => {
+    const porFranja = new Map<string, TurnoVeterinarioResponse[]>();
+    for (const turno of this.turnos()) {
+      if (!ESTADOS_QUE_OCUPAN.includes(turno.estado)) {
+        continue;
+      }
+      const clave = `${turno.fecha}|${turno.hora.slice(0, 5)}`;
+      porFranja.set(clave, [...(porFranja.get(clave) ?? []), turno]);
+    }
+
+    const ids = new Set<number>();
+    for (const [clave, turnos] of porFranja) {
+      const capacidad = this.capacidadPorFranja().get(clave);
+      if (!capacidad) {
+        continue;
+      }
+      [...turnos]
+        .sort((a, b) => a.idTurno - b.idTurno)
+        .forEach((turno, indice) => {
+          if (indice >= capacidad.cuposAtencion) {
+            ids.add(turno.idTurno);
+          }
+        });
+    }
+    return ids;
   });
 
   /** Rango de fechas que muestra la vista actual, para pedir su capacidad. */
@@ -393,7 +435,7 @@ export class GestionTurnosVeterinariosPage implements OnInit {
     this.fechaFoco.set(turno.fecha);
     this.successMessage.set(
       turno.sobrecupo
-        ? 'Turno agendado como sobrecupo. Le avisamos al cliente.'
+        ? 'Sobreturno agregado. Le avisamos al cliente.'
         : 'Turno agendado. Le avisamos al cliente.',
     );
     this.loadTurnos();
@@ -452,6 +494,10 @@ export class GestionTurnosVeterinariosPage implements OnInit {
         ? visibles.filter((value) => value !== tipo)
         : [...visibles, tipo],
     );
+  }
+
+  protected toggleSobreturnos(): void {
+    this.sobreturnosVisibles.update((visible) => !visible);
   }
 
   protected esTipoVisible(tipo: TipoTurno): boolean {
@@ -666,6 +712,7 @@ export class GestionTurnosVeterinariosPage implements OnInit {
       canceladoPor: turno.canceladoPor,
       veterinario: turno,
       servicio: null,
+      esSobreturno: turno.sobrecupo || this.idsSobreturno().has(turno.idTurno),
     };
   }
 
@@ -688,6 +735,7 @@ export class GestionTurnosVeterinariosPage implements OnInit {
       canceladoPor: turno.canceladoPor,
       veterinario: null,
       servicio: turno,
+      esSobreturno: false,
     };
   }
 
@@ -743,7 +791,12 @@ export class GestionTurnosVeterinariosPage implements OnInit {
     return {
       total,
       libres,
-      estado: libres <= 0 ? 'completo' : capacidad.cuposAtencion > 0 ? 'libre' : 'sobreturno',
+      estado:
+        libres <= 0
+          ? 'completo'
+          : capacidad.ocupados >= capacidad.cuposAtencion
+            ? 'sobreturno'
+            : 'libre',
       pasada: this.yaPaso(capacidad.fecha, capacidad.hora),
     };
   }

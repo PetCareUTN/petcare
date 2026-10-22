@@ -55,6 +55,16 @@
             {{ tipo.label }}
           </button>
         }
+        <button
+          type="button"
+          class="status-filter"
+          [class.active]="sobreturnosVisibles()"
+          [attr.aria-pressed]="sobreturnosVisibles()"
+          (click)="toggleSobreturnos()"
+        >
+          <span class="tipo-dot sobreturno"></span>
+          Sobreturnos
+        </button>
       </nav>
 
       <nav class="filter-group" aria-label="Estados visibles en el calendario">
@@ -117,6 +127,7 @@
                           [class]="'event-chip ' + turno.estado + ' tipo-' + turno.tipo"
                           [class.selected]="turnoSeleccionadoClave() === turno.clave"
                           [class.espera-registro]="esperaRegistro(turno)"
+                          [class.sobreturno]="turno.esSobreturno"
                           [attr.aria-label]="
                             tipoLabel(turno.tipo) + ' ' + formatTime(turno.hora) + ' ' +
                             etiquetaCorta(turno)
@@ -179,6 +190,7 @@
                               [class]="'event-block ' + turno.estado + ' tipo-' + turno.tipo"
                               [class.selected]="turnoSeleccionadoClave() === turno.clave"
                               [class.espera-registro]="esperaRegistro(turno)"
+                              [class.sobreturno]="turno.esSobreturno"
                               (click)="seleccionarTurno(turno)"
                             >
                               <span class="event-time">
@@ -196,8 +208,8 @@
                             <button
                               type="button"
                               class="slot-forzar"
-                              [attr.aria-label]="'Horario completo: agendar igual a las ' + mitad.hora"
-                              title="Horario completo: agendar igual"
+                              [attr.aria-label]="'Agregar sobreturno a las ' + mitad.hora"
+                              title="Agregar sobreturno"
                               (click)="abrirNuevoTurno(celda.fecha, mitad.hora)"
                             >
                               +
@@ -225,8 +237,8 @@
                 <span class="status-badge" [class]="turno.estado">
                   {{ estadoLabelSingular(turno.estado) }}
                 </span>
-                @if (turno.veterinario?.sobrecupo) {
-                  <span class="origin-badge sobrecupo">Sobrecupo</span>
+                @if (turno.esSobreturno) {
+                  <span class="origin-badge sobreturno">Sobreturno</span>
                 }
                 @if (turno.veterinario?.creadoPor === 'veterinario') {
                   <span class="origin-badge">Agendado por la veterinaria</span>

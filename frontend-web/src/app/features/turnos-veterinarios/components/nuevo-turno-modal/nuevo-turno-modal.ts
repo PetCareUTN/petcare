@@ -21,9 +21,13 @@ type EstadoFranja = 'libre' | 'sobreturno' | 'completo';
 
 interface Franja {
   hora: string;
-  /** Cupos que siguen libres (puede ser 0 o menos si ya está completo). */
+  /** Cupos de atención que siguen libres. */
   libres: number;
   total: number;
+  /**
+   * `libre`: queda un turno normal. `sobreturno`: el turno que se agregue ya cuenta
+   * como sobreturno. `completo`: no queda nada, y agregar uno es forzar el horario.
+   */
   estado: EstadoFranja;
   /** Ya pasó: no se puede agendar. */
   pasada: boolean;
@@ -91,12 +95,15 @@ export class NuevoTurnoModalComponent implements OnInit {
       .filter((c) => c.fecha === fecha && c.cuposAtencion + c.cuposSobreturno > 0)
       .map((c) => {
         const total = c.cuposAtencion + c.cuposSobreturno;
-        const libres = total - c.ocupados;
         const estado: EstadoFranja =
-          libres <= 0 ? 'completo' : c.cuposAtencion > 0 ? 'libre' : 'sobreturno';
+          total - c.ocupados <= 0
+            ? 'completo'
+            : c.ocupados >= c.cuposAtencion
+              ? 'sobreturno'
+              : 'libre';
         return {
           hora: c.hora,
-          libres,
+          libres: Math.max(c.cuposAtencion - c.ocupados, 0),
           total,
           estado,
           pasada: new Date(`${fecha}T${c.hora}`).getTime() <= Date.now(),
@@ -216,12 +223,19 @@ export class NuevoTurnoModalComponent implements OnInit {
     this.errorMessage.set(null);
   }
 
-  protected etiquetaFranja(franja: Franja): string {
-    if (franja.estado === 'completo') {
-      return 'Completo';
+  /** Los sobreturnos se distinguen solo por el color, sin texto. */
+  protected etiquetaFranja(franja: Franja): string | null {
+    if (franja.estado !== 'libre') {
+      return null;
     }
     return franja.libres === 1 ? '1 cupo' : `${franja.libres} cupos`;
   }
+
+  /** El turno que se va a cargar queda como sobreturno (hay que aclararlo en la pantalla). */
+  protected readonly esSobreturno = computed(() => {
+    const estado = this.franjaElegida()?.estado;
+    return estado === 'sobreturno' || estado === 'completo';
+  });
 
   protected agendar(): void {
     this.enviar(this.franjaElegida()?.estado === 'completo');
