@@ -126,17 +126,22 @@ export class BuscarMascotaPage implements OnInit {
     const ownerEmail = this.route.snapshot.queryParamMap.get('ownerEmail')?.trim() ?? '';
     const selectedPetId = Number(this.route.snapshot.queryParamMap.get('selectedPetId'));
     const mascotaCreada = this.route.snapshot.queryParamMap.get('mascotaCreada');
+    const eventoRegistrado = this.route.snapshot.queryParamMap.get('eventoRegistrado');
 
     if (Number.isInteger(selectedPetId) && selectedPetId > 0) {
       this.petIdToRestore.set(selectedPetId);
     }
 
-    if (mascotaCreada) {
-      this.mostrarToast(`Mascota ${mascotaCreada} registrada con éxito.`);
+    if (mascotaCreada || eventoRegistrado) {
+      this.mostrarToast(
+        eventoRegistrado
+          ? 'Evento clínico registrado con éxito.'
+          : `Mascota ${mascotaCreada} registrada con éxito.`,
+      );
       // Se saca de la URL para que un refresh no vuelva a mostrar el cartel.
       this.router.navigate([], {
         relativeTo: this.route,
-        queryParams: { mascotaCreada: null },
+        queryParams: { mascotaCreada: null, eventoRegistrado: null },
         queryParamsHandling: 'merge',
         replaceUrl: true,
       });
