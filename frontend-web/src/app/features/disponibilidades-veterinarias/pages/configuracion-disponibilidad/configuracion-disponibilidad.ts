@@ -1,9 +1,11 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ApiError } from '../../../auth/models/user';
+import { SobreturnosModalComponent } from '../../components/sobreturnos-modal/sobreturnos-modal';
 import {
   DiaSemana,
   DisponibilidadVeterinariaRequest,
   DisponibilidadVeterinariaResponse,
+  TipoDisponibilidad,
 } from '../../models/disponibilidad-veterinaria';
 import { DisponibilidadesVeterinariasService } from '../../services/disponibilidades-veterinarias-service';
 
@@ -13,6 +15,7 @@ type DiaOption = { value: DiaSemana; letra: string; label: string };
 interface ReglaDisponibilidad {
   /** Id local, solo para trackear la fila en la UI hasta guardar. */
   id: number;
+  tipo: TipoDisponibilidad;
   dias: DiaSemana[];
   horaInicio: string;
   horaFin: string;
@@ -31,7 +34,7 @@ const DIAS: DiaOption[] = [
 
 @Component({
   selector: 'app-configuracion-disponibilidad',
-  imports: [],
+  imports: [SobreturnosModalComponent],
   templateUrl: './configuracion-disponibilidad.html',
   styleUrl: './configuracion-disponibilidad.css',
 })
@@ -47,6 +50,16 @@ export class ConfiguracionDisponibilidadPage implements OnInit {
   protected readonly formError = signal<string | null>(null);
 
   protected readonly reglas = signal<ReglaDisponibilidad[]>([]);
+  protected readonly reglasAtencion = computed(() =>
+    this.reglas().filter((regla) => regla.tipo === 'atencion'),
+  );
+  protected readonly reglasSobreturno = computed(() =>
+    this.reglas().filter((regla) => regla.tipo === 'sobreturno'),
+  );
+
+  /** Qué tipo de franja se está cargando en el formulario. */
+  protected readonly tipoFormulario = signal<TipoDisponibilidad>('atencion');
+  protected readonly mostrarSobreturnosPuntuales = signal(false);
 
   /** Estado del formulario para agregar una nueva franja. */
   protected readonly diasSeleccionados = signal<ReadonlySet<DiaSemana>>(new Set());
@@ -67,6 +80,19 @@ export class ConfiguracionDisponibilidadPage implements OnInit {
         this.errorMessage.set(error.mensaje ?? 'No se pudo cargar la disponibilidad.');
       },
     });
+  }
+
+  protected setTipoFormulario(tipo: TipoDisponibilidad): void {
+    this.tipoFormulario.set(tipo);
+    this.formError.set(null);
+  }
+
+  protected abrirSobreturnosPuntuales(): void {
+    this.mostrarSobreturnosPuntuales.set(true);
+  }
+
+  protected cerrarSobreturnosPuntuales(): void {
+    this.mostrarSobreturnosPuntuales.set(false);
   }
 
   protected toggleDia(dia: DiaSemana): void {
@@ -121,6 +147,7 @@ export class ConfiguracionDisponibilidadPage implements OnInit {
       ...this.reglas(),
       {
         id: this.siguienteId++,
+        tipo: this.tipoFormulario(),
         dias,
         horaInicio: this.horaInicio(),
         horaFin: this.horaFin(),
@@ -143,7 +170,7 @@ export class ConfiguracionDisponibilidadPage implements OnInit {
     this.successMessage.set(null);
 
     if (this.reglas().length === 0) {
-      this.errorMessage.set('Agregá al menos un horario de atención antes de guardar.');
+      this.errorMessage.set('Agregá al menos un horario antes de guardar.');
       return;
     }
 
@@ -155,6 +182,7 @@ export class ConfiguracionDisponibilidadPage implements OnInit {
         horaInicio: regla.horaInicio,
         horaFin: regla.horaFin,
         cuposPorTurno: regla.cantidadTurnos,
+        tipo: regla.tipo,
       })),
     );
 
@@ -187,7 +215,8 @@ export class ConfiguracionDisponibilidadPage implements OnInit {
     for (const disponibilidad of disponibilidades) {
       const horaInicio = disponibilidad.horaInicio.slice(0, 5);
       const horaFin = disponibilidad.horaFin.slice(0, 5);
-      const clave = `${horaInicio}-${horaFin}-${disponibilidad.cuposPorTurno}`;
+      const tipo = disponibilidad.tipo ?? 'atencion';
+      const clave = `${tipo}-${horaInicio}-${horaFin}-${disponibilidad.cuposPorTurno}`;
       const existente = grupos.get(clave);
 
       if (existente) {
@@ -195,6 +224,7 @@ export class ConfiguracionDisponibilidadPage implements OnInit {
       } else {
         grupos.set(clave, {
           id: this.siguienteId++,
+          tipo,
           dias: [disponibilidad.diaSemana],
           horaInicio,
           horaFin,

@@ -5,9 +5,7 @@
         <h1>Turnos</h1>
         <p>Organizá tu agenda de veterinaria y de servicios en un solo calendario.</p>
       </div>
-      <button type="button" class="btn-secondary" (click)="abrirSobreturnos()">
-        Agregar sobreturno
-      </button>
+      <button type="button" class="btn-new" (click)="abrirNuevoTurno()">+ Nuevo turno</button>
     </header>
 
     <div class="calendar-toolbar">
@@ -80,6 +78,13 @@
       </nav>
     </div>
 
+    <div class="agenda-legend" aria-label="Referencias de la agenda">
+      <span class="legend-item"><i class="legend-swatch libre"></i>Libre</span>
+      <span class="legend-item"><i class="legend-swatch sobreturno"></i>Sobreturno</span>
+      <span class="legend-item"><i class="legend-swatch completo"></i>Completo</span>
+      <span class="legend-hint">Doble clic en un horario para agendar un turno</span>
+    </div>
+
     @if (successMessage()) {
       <p class="banner banner-success">{{ successMessage() }}</p>
     }
@@ -106,6 +111,7 @@
                     [class.outside]="!dia.esDelMesActual"
                     [class.today]="dia.esHoy"
                     role="gridcell"
+                    (dblclick)="dobleClickDia($event, dia.fecha)"
                   >
                     <button
                       type="button"
@@ -133,22 +139,10 @@
                           <span class="event-pet">{{ etiquetaCorta(turno) }}</span>
                         </button>
                       }
-                      @for (sobreturno of dia.sobreturnos; track sobreturno.idSobreturno) {
-                        <button
-                          type="button"
-                          class="event-chip sobreturno"
-                          [class.selected]="sobreturnoSeleccionadoId() === sobreturno.idSobreturno"
-                          [attr.aria-label]="
-                            'Sobreturno ' + formatTime(sobreturno.hora) + ' ' +
-                            etiquetaCupos(sobreturno.cupos)
-                          "
-                          (click)="seleccionarSobreturno(sobreturno)"
-                        >
-                          <span class="event-time">{{ formatTime(sobreturno.hora) }}</span>
-                          <span class="event-pet">
-                            Sobreturno · {{ etiquetaCupos(sobreturno.cupos) }}
-                          </span>
-                        </button>
+                      @if (dia.libres > 0) {
+                        <span class="day-libres">
+                          {{ dia.libres }} {{ dia.libres === 1 ? 'libre' : 'libres' }}
+                        </span>
                       }
                     </div>
                   </div>
@@ -178,37 +172,44 @@
                     <div class="hour-gutter">{{ fila.etiqueta }}</div>
                     @for (celda of fila.celdas; track celda.fecha) {
                       <div class="time-cell">
-                        @for (turno of celda.turnos; track turno.clave) {
-                          <button
-                            type="button"
-                            [class]="'event-block ' + turno.estado + ' tipo-' + turno.tipo"
-                            [class.selected]="turnoSeleccionadoClave() === turno.clave"
-                            [class.espera-registro]="esperaRegistro(turno)"
-                            (click)="seleccionarTurno(turno)"
-                          >
-                            <span class="event-time">
-                              {{ formatTime(turno.hora) }}
-                              @if (turno.horaFin) {
-                                <span class="event-time-end">
-                                  – {{ formatTime(turno.horaFin) }}
-                                </span>
-                              }
-                            </span>
-                            <span class="event-pet">{{ etiquetaCorta(turno) }}</span>
-                          </button>
-                        }
-                        @for (sobreturno of celda.sobreturnos; track sobreturno.idSobreturno) {
-                          <button
-                            type="button"
-                            class="event-block sobreturno"
-                            [class.selected]="sobreturnoSeleccionadoId() === sobreturno.idSobreturno"
-                            (click)="seleccionarSobreturno(sobreturno)"
-                          >
-                            <span class="event-time">{{ formatTime(sobreturno.hora) }}</span>
-                            <span class="event-pet">
-                              Sobreturno · {{ etiquetaCupos(sobreturno.cupos) }}
-                            </span>
-                          </button>
+                        @for (mitad of celda.mitades; track mitad.hora) {
+                          @if (mitad.franja; as franja) {
+                            <button
+                              type="button"
+                              [class]="'slot ' + franja.estado"
+                              [class.pasada]="franja.pasada"
+                              [disabled]="franja.pasada"
+                              [attr.aria-label]="
+                                'Horario ' + mitad.hora + ', ' + etiquetaFranja(franja) +
+                                '. Doble clic para agendar un turno'
+                              "
+                              title="Doble clic para agendar un turno"
+                              (dblclick)="abrirNuevoTurno(celda.fecha, mitad.hora)"
+                              (keydown.enter)="abrirNuevoTurno(celda.fecha, mitad.hora)"
+                            >
+                              <span class="slot-hora">{{ mitad.hora }}</span>
+                              <span class="slot-estado">{{ etiquetaFranja(franja) }}</span>
+                            </button>
+                          }
+                          @for (turno of mitad.turnos; track turno.clave) {
+                            <button
+                              type="button"
+                              [class]="'event-block ' + turno.estado + ' tipo-' + turno.tipo"
+                              [class.selected]="turnoSeleccionadoClave() === turno.clave"
+                              [class.espera-registro]="esperaRegistro(turno)"
+                              (click)="seleccionarTurno(turno)"
+                            >
+                              <span class="event-time">
+                                {{ formatTime(turno.hora) }}
+                                @if (turno.horaFin) {
+                                  <span class="event-time-end">
+                                    – {{ formatTime(turno.horaFin) }}
+                                  </span>
+                                }
+                              </span>
+                              <span class="event-pet">{{ etiquetaCorta(turno) }}</span>
+                            </button>
+                          }
                         }
                       </div>
                     }
@@ -220,39 +221,7 @@
         </div>
 
         <aside class="detail-panel" aria-live="polite">
-          @if (sobreturnoSeleccionado(); as sobreturno) {
-            <div class="detail-head">
-              <div class="detail-badges">
-                <span class="tipo-badge sobreturno">Sobreturno</span>
-              </div>
-              <button
-                type="button"
-                class="close-button"
-                aria-label="Cerrar detalle"
-                (click)="cerrarPanel()"
-              >
-                ×
-              </button>
-            </div>
-
-            <p class="appointment-date">
-              {{ formatDate(sobreturno.fecha) }} · {{ formatTime(sobreturno.hora) }}
-            </p>
-            <p class="appointment-owner">
-              {{ etiquetaCupos(sobreturno.cupos) }} extra disponibles para este horario.
-            </p>
-
-            <div class="appointment-actions">
-              <button
-                type="button"
-                class="btn-danger"
-                [disabled]="processingSobreturnoId() === sobreturno.idSobreturno"
-                (click)="eliminarSobreturno(sobreturno)"
-              >
-                Eliminar sobreturno
-              </button>
-            </div>
-          } @else if (turnoSeleccionado(); as turno) {
+          @if (turnoSeleccionado(); as turno) {
             <div class="detail-head">
               <div class="detail-badges">
                 <span class="tipo-badge" [class]="turno.tipo">
@@ -261,6 +230,12 @@
                 <span class="status-badge" [class]="turno.estado">
                   {{ estadoLabelSingular(turno.estado) }}
                 </span>
+                @if (turno.veterinario?.sobrecupo) {
+                  <span class="origin-badge sobrecupo">Sobrecupo</span>
+                }
+                @if (turno.veterinario?.creadoPor === 'veterinario') {
+                  <span class="origin-badge">Agendado por la veterinaria</span>
+                }
               </div>
               <button
                 type="button"
@@ -422,7 +397,12 @@
     }
   </section>
 
-  @if (mostrarSobreturnos()) {
-    <app-sobreturnos-modal (close)="cerrarSobreturnos()" />
+  @if (nuevoTurno(); as alta) {
+    <app-nuevo-turno-modal
+      [fechaInicial]="alta.fecha"
+      [horaInicial]="alta.hora"
+      (cerrar)="cerrarNuevoTurno()"
+      (agendado)="turnoAgendado($event)"
+    />
   }
 </main>

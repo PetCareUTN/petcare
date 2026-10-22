@@ -24,6 +24,40 @@ export interface TurnoVeterinarioResponse {
   motivoRechazo: string | null;
   canceladoPor: CanceladoPorVeterinaria | null;
   motivoCancelacion: string | null;
+  /** Quién cargó el turno: el dueño desde la app o la veterinaria desde la web. */
+  creadoPor: CanceladoPorVeterinaria;
+  /** La veterinaria lo cargó con el horario ya lleno, a propósito. */
+  sobrecupo: boolean;
+}
+
+/** Turno que carga la veterinaria para la mascota de un cliente. */
+export interface AgendarTurnoVeterinarioRequest {
+  idMascota: number;
+  /** Dueño al que se asocia; si falta, el backend usa el principal. */
+  idDuenio?: number;
+  fecha: string;
+  hora: string;
+  motivoConsulta?: string;
+  /** Agendar igual aunque el horario ya no tenga cupos. */
+  forzar?: boolean;
+}
+
+/** Una franja de 30 minutos de la agenda con su capacidad y ocupación. */
+export interface CapacidadHorario {
+  fecha: string;
+  hora: string;
+  cuposAtencion: number;
+  cuposSobreturno: number;
+  ocupados: number;
+}
+
+/** Error del alta de turno; en un 409 por horario lleno trae los cupos. */
+export interface AgendarTurnoError {
+  codigoEstado: number;
+  mensaje: string;
+  codigo?: string;
+  cupos?: number;
+  ocupados?: number;
 }
 
 export interface RegistrarAsistenciaRequest {

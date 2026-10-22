@@ -2,21 +2,10 @@ import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angula
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import {
-  Observable,
-  OperatorFunction,
-  Subject,
-  catchError,
-  debounceTime,
-  distinctUntilChanged,
-  forkJoin,
-  map,
-  of,
-  switchMap,
-  tap,
-} from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, of, switchMap, tap } from 'rxjs';
 import { ApiError } from '../../../auth/models/user';
 import { MascotaOwner, MascotaResponse } from '../../../mascotas/models/mascota';
+import { BusquedaClientesService } from '../../../mascotas/services/busqueda-clientes-service';
 import { MascotasService } from '../../../mascotas/services/mascotas-service';
 import { ListaClientesModal } from '../../components/lista-clientes/lista-clientes';
 
@@ -24,12 +13,7 @@ type AttentionStep = 'cliente' | 'mascota' | 'evento';
 
 /** Espera tras la última tecla antes de consultar al backend. */
 const SEARCH_DEBOUNCE_MS = 300;
-/** Mínimos para no consultar con textos que todavía no identifican a nadie. */
-const MIN_NAME_CHARS = 2;
-const MIN_DOCUMENT_DIGITS = 6;
-const MAX_RESULTS = 8;
-
-/** Cuánto queda visible el cartel temporal de "mascota registrada". */
+/** Cuánto queda visible el cartel temporal de "registrado con éxito". */
 const TOAST_DURATION_MS = 4000;
 
 @Component({
@@ -43,6 +27,7 @@ export class BuscarMascotaPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly busquedaClientes = inject(BusquedaClientesService);
 
   protected readonly toastMessage = signal<string | null>(null);
   protected readonly isListaClientesOpen = signal(false);
@@ -70,19 +55,7 @@ export class BuscarMascotaPage implements OnInit {
     return 'evento';
   });
 
-  protected readonly searchHint = computed(() => {
-    const query = this.searchQuery().trim();
-    if (!query || query.includes('@')) {
-      return null;
-    }
-    if (/^\d+$/.test(query) && query.length < MIN_DOCUMENT_DIGITS) {
-      return 'Seguí escribiendo el DNI completo.';
-    }
-    if (!/^\d+$/.test(query) && query.length < MIN_NAME_CHARS) {
-      return 'Escribí al menos 2 letras.';
-    }
-    return null;
-  });
+  protected readonly searchHint = computed(() => this.busquedaClientes.pista(this.searchQuery()));
 
   constructor() {
     this.searchInput$
@@ -90,9 +63,11 @@ export class BuscarMascotaPage implements OnInit {
         debounceTime(SEARCH_DEBOUNCE_MS),
         distinctUntilChanged(),
         tap((query) => {
-          this.isSearchingOwner.set(this.puedeBuscar(query));
+          this.isSearchingOwner.set(this.busquedaClientes.puedeBuscar(query));
         }),
-        switchMap((query) => (this.puedeBuscar(query) ? this.buscarClientes(query) : of(null))),
+        switchMap((query) =>
+          this.busquedaClientes.puedeBuscar(query) ? this.busquedaClientes.buscar(query) : of(null),
+        ),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((resultados) => {
@@ -242,64 +217,6 @@ export class BuscarMascotaPage implements OnInit {
       idMascota: pet.idMascota,
       selectedPetId: pet.idMascota,
     };
-  }
-
-  private puedeBuscar(query: string): boolean {
-    if (query.includes('@')) {
-      return true;
-    }
-    if (/^\d+$/.test(query)) {
-      return query.length >= MIN_DOCUMENT_DIGITS;
-    }
-    return query.length >= MIN_NAME_CHARS;
-  }
-
-  /**
-   * Una sola barra para todo: el texto decide el tipo de búsqueda. Con "@" es
-   * un email, con solo números un DNI (ambos exactos) y, si no, un nombre. Para
-   * el nombre se prueban las combinaciones nombre/apellido porque el backend
-   * filtra cada campo por separado y quien escribe puede usar cualquier orden.
-   */
-  private buscarClientes(texto: string): Observable<MascotaOwner[]> {
-    const sinResultados = (): OperatorFunction<MascotaOwner[], MascotaOwner[]> =>
-      catchError(() => of([] as MascotaOwner[]));
-
-    if (texto.includes('@')) {
-      return this.mascotasService
-        .findOwner({ email: texto.toLowerCase() })
-        .pipe(map((owner) => [owner]), sinResultados());
-    }
-    if (/^\d+$/.test(texto)) {
-      return this.mascotasService
-        .findOwner({ documento: texto })
-        .pipe(map((owner) => [owner]), sinResultados());
-    }
-
-    const palabras = texto.split(/\s+/);
-    const consultas = [
-      this.mascotasService.findAllOwners({ nombre: texto }),
-      this.mascotasService.findAllOwners({ apellido: texto }),
-    ];
-    if (palabras.length > 1) {
-      const primera = palabras[0];
-      const resto = palabras.slice(1).join(' ');
-      const ultima = palabras[palabras.length - 1];
-      const anteriores = palabras.slice(0, -1).join(' ');
-      consultas.push(
-        this.mascotasService.findAllOwners({ nombre: primera, apellido: resto }),
-        this.mascotasService.findAllOwners({ nombre: ultima, apellido: anteriores }),
-      );
-    }
-
-    return forkJoin(consultas.map((consulta) => consulta.pipe(sinResultados()))).pipe(
-      map((listas) => {
-        const porId = new Map<number, MascotaOwner>();
-        for (const owner of listas.flat()) {
-          porId.set(owner.id_usuario, owner);
-        }
-        return [...porId.values()].slice(0, MAX_RESULTS);
-      }),
-    );
   }
 
   /** Vuelve a seleccionar al cliente cuando se regresa desde otra pantalla. */

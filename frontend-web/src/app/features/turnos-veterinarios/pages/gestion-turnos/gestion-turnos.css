@@ -395,14 +395,6 @@
   font-weight: 600;
 }
 
-/* Sobreturno: cupo extra cargado por el veterinario, no un turno reservado. */
-.event-chip.sobreturno,
-.event-block.sobreturno {
-  border-left-style: dotted;
-  border-left-color: var(--tipo-sobreturno);
-  background-color: color-mix(in srgb, var(--tipo-sobreturno) 14%, white);
-  color: var(--tipo-sobreturno);
-}
 
 .event-chip.selected,
 .event-block.selected {
@@ -765,4 +757,152 @@
   .btn-danger {
     width: 100%;
   }
+}
+
+/* Agenda única: botón de alta, leyenda y huecos de disponibilidad */
+
+.btn-new {
+  flex-shrink: 0;
+  padding: 0.65rem 1.3rem;
+  border: none;
+  border-radius: 999px;
+  background-color: var(--primary);
+  box-shadow: 0 2px 6px rgba(79, 127, 115, 0.28);
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.btn-new:hover {
+  background-color: #446f64;
+}
+
+.agenda-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 1.1rem;
+  margin: 0 0 var(--spacing-md);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.legend-swatch {
+  width: 0.8rem;
+  height: 0.8rem;
+  border: 1px solid;
+  border-radius: 4px;
+}
+
+.legend-swatch.libre {
+  border-color: color-mix(in srgb, var(--primary) 45%, white);
+  background-color: color-mix(in srgb, var(--primary) 10%, white);
+}
+
+.legend-swatch.sobreturno {
+  border-color: color-mix(in srgb, var(--tipo-sobreturno) 50%, white);
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 12%, white);
+}
+
+.legend-swatch.completo {
+  border-color: #e3c58a;
+  background-color: #fdf5e6;
+}
+
+.legend-hint {
+  margin-left: auto;
+  font-style: italic;
+}
+
+/* Hueco de la agenda: media hora con cupos. Doble clic para agendar. */
+.slot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 0.4rem;
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  border: 1px dashed color-mix(in srgb, var(--primary) 45%, white);
+  border-radius: 8px;
+  background-color: color-mix(in srgb, var(--primary) 7%, white);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.72rem;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.slot:hover:not(:disabled) {
+  border-style: solid;
+  background-color: color-mix(in srgb, var(--primary) 16%, white);
+}
+
+.slot-hora {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.slot-estado {
+  white-space: nowrap;
+}
+
+.slot.sobreturno {
+  border-color: color-mix(in srgb, var(--tipo-sobreturno) 50%, white);
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 8%, white);
+}
+
+.slot.sobreturno:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 18%, white);
+}
+
+.slot.completo {
+  border-color: #e3c58a;
+  background-color: #fdf5e6;
+}
+
+.slot.completo:hover:not(:disabled) {
+  background-color: #faebc9;
+}
+
+.slot.completo .slot-estado {
+  color: #9a6a12;
+}
+
+.slot.pasada {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.day-libres {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.origin-badge {
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--text-primary) 8%, white);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.origin-badge.sobrecupo {
+  background-color: #fdf5e6;
+  color: #9a6a12;
 }
