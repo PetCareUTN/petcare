@@ -1,137 +1,143 @@
 <main class="availability-page">
-  <section class="availability-card">
-    <header class="availability-header">
-      <div>
-        <h1>Disponibilidad</h1>
-      </div>
-    </header>
+  <header class="availability-header">
+    <h1>Disponibilidad</h1>
+  </header>
 
-    @if (isLoading()) {
-      <p class="status-text">Cargando disponibilidad...</p>
-    }
+  @if (isLoading()) {
+    <p class="status-text">Cargando disponibilidad...</p>
+  }
 
-    @if (successMessage()) {
-      <p class="banner banner-success">{{ successMessage() }}</p>
-    }
+  @if (successMessage()) {
+    <p class="banner banner-success" role="status">{{ successMessage() }}</p>
+  }
 
-    @if (errorMessage()) {
-      <p class="banner banner-error">{{ errorMessage() }}</p>
-    }
+  @if (errorMessage()) {
+    <p class="banner banner-error" role="alert">{{ errorMessage() }}</p>
+  }
 
-    @if (!isLoading()) {
-      <div class="availability-layout">
-        <div class="add-form">
+  @if (!isLoading()) {
+    <div class="availability-grid">
+      <section class="panel" aria-labelledby="nuevo-horario">
+        <h2 id="nuevo-horario">Nuevo horario</h2>
+
+        <div class="field">
+          <span class="field-label">Días</span>
+          <div class="dias-grid" role="group" aria-label="Días de la semana">
+            @for (dia of dias; track dia.value) {
+              <button
+                type="button"
+                class="dia-btn"
+                [class.active]="esDiaSeleccionado(dia.value)"
+                [attr.aria-pressed]="esDiaSeleccionado(dia.value)"
+                [attr.aria-label]="dia.label"
+                (click)="toggleDia(dia.value)"
+              >
+                {{ dia.corto }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="field-row">
           <div class="field">
-            <label>Días</label>
-            <div class="dias-selector">
-              @for (dia of dias; track dia.value) {
-                <button
-                  type="button"
-                  class="dia-circle"
-                  [class.active]="esDiaSeleccionado(dia.value)"
-                  [attr.aria-pressed]="esDiaSeleccionado(dia.value)"
-                  [attr.aria-label]="dia.label"
-                  [title]="dia.label"
-                  (click)="toggleDia(dia.value)"
-                >
-                  {{ dia.letra }}
-                </button>
-              }
-            </div>
+            <label class="field-label" for="hora-inicio">Desde</label>
+            <input
+              id="hora-inicio"
+              type="time"
+              [value]="horaInicio()"
+              (input)="setHoraInicio($any($event.target).value)"
+            />
           </div>
 
-          <div class="horario-row">
-            <div class="field">
-              <label for="hora-inicio">Desde</label>
-              <input
-                id="hora-inicio"
-                type="time"
-                [value]="horaInicio()"
-                (input)="setHoraInicio($any($event.target).value)"
-              />
-            </div>
+          <div class="field">
+            <label class="field-label" for="hora-fin">Hasta</label>
+            <input
+              id="hora-fin"
+              type="time"
+              [value]="horaFin()"
+              (input)="setHoraFin($any($event.target).value)"
+            />
+          </div>
+        </div>
 
-            <div class="field">
-              <label for="hora-fin">Hasta</label>
-              <input
-                id="hora-fin"
-                type="time"
-                [value]="horaFin()"
-                (input)="setHoraFin($any($event.target).value)"
-              />
-            </div>
-
-            <div class="field">
-              <label for="cantidad-turnos">Cantidad de turnos</label>
-              <input
-                id="cantidad-turnos"
-                type="number"
-                min="1"
-                max="20"
-                [value]="cantidadTurnos()"
-                (input)="setCantidadTurnos($any($event.target).value)"
-              />
-            </div>
-
-            <button type="button" class="btn-secondary" (click)="agregarRegla()">
-              Agregar horario
+        <div class="field">
+          <span class="field-label" id="cantidad-label">Cantidad de turnos</span>
+          <div class="stepper" role="group" aria-labelledby="cantidad-label">
+            <button
+              type="button"
+              class="stepper-btn"
+              aria-label="Menos turnos"
+              [disabled]="cantidadTurnos() <= 1"
+              (click)="cambiarCantidad(-1)"
+            >
+              −
+            </button>
+            <output class="stepper-value" aria-live="polite">{{ cantidadTurnos() }}</output>
+            <button
+              type="button"
+              class="stepper-btn"
+              aria-label="Más turnos"
+              [disabled]="cantidadTurnos() >= 20"
+              (click)="cambiarCantidad(1)"
+            >
+              +
             </button>
           </div>
-
-          @if (formError()) {
-            <p class="banner banner-error">{{ formError() }}</p>
-          }
         </div>
 
-        <div class="availability-side">
-          <section class="reglas-list">
-            <h2>Horarios configurados</h2>
+        @if (formError()) {
+          <p class="banner banner-error" role="alert">{{ formError() }}</p>
+        }
 
-            @if (reglas().length === 0) {
-              <p class="status-text">Todavía no agregaste ningún horario de atención.</p>
+        <button type="button" class="btn-primary panel-action" (click)="agregarRegla()">
+          Agregar horario
+        </button>
+      </section>
+
+      <section class="panel" aria-labelledby="horarios-configurados">
+        <h2 id="horarios-configurados">Horarios configurados</h2>
+
+        @if (reglas().length === 0) {
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v5l3 2" />
+            </svg>
+            <p>Todavía no agregaste ningún horario.</p>
+          </div>
+        } @else {
+          <ul class="reglas">
+            @for (regla of reglas(); track regla.id) {
+              <li class="regla">
+                <div class="regla-info">
+                  <span class="regla-horario">{{ regla.horaInicio }} – {{ regla.horaFin }}</span>
+                  <span class="regla-detalle">
+                    {{ resumenDias(regla.dias) }} · {{ regla.cantidadTurnos }}
+                    {{ regla.cantidadTurnos === 1 ? 'turno' : 'turnos' }}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  class="btn-quitar"
+                  [attr.aria-label]="'Quitar el horario de ' + regla.horaInicio + ' a ' + regla.horaFin"
+                  (click)="quitarRegla(regla.id)"
+                >
+                  Quitar
+                </button>
+              </li>
             }
+          </ul>
+        }
 
-            @if (reglas().length > 0) {
-              <ul>
-                @for (regla of reglas(); track regla.id) {
-                  <li class="regla-row">
-                    <div class="regla-dias">
-                      @for (dia of dias; track dia.value) {
-                        <span
-                          class="dia-badge"
-                          [class.active]="regla.dias.includes(dia.value)"
-                          [title]="dia.label"
-                        >
-                          {{ dia.letra }}
-                        </span>
-                      }
-                    </div>
-                    <div class="regla-info">
-                      <span class="regla-horario">{{ regla.horaInicio }} a {{ regla.horaFin }}</span>
-                      <span class="regla-cantidad">
-                        {{ regla.cantidadTurnos }}
-                        {{ regla.cantidadTurnos === 1 ? 'turno' : 'turnos' }}
-                      </span>
-                    </div>
-                    <button type="button" class="btn-remove" (click)="quitarRegla(regla.id)">
-                      Quitar
-                    </button>
-                  </li>
-                }
-              </ul>
-            }
-          </section>
-
-          <button
-            type="button"
-            class="btn-primary"
-            [disabled]="isSubmitting()"
-            (click)="guardar()"
-          >
-            {{ isSubmitting() ? 'Guardando...' : 'Guardar disponibilidad' }}
-          </button>
-        </div>
-      </div>
-    }
-  </section>
+        <button
+          type="button"
+          class="btn-primary panel-action"
+          [disabled]="isSubmitting()"
+          (click)="guardar()"
+        >
+          {{ isSubmitting() ? 'Guardando...' : 'Guardar disponibilidad' }}
+        </button>
+      </section>
+    </div>
+  }
 </main>
