@@ -1,116 +1,137 @@
-<main class="historia-page">
+<main class="atencion-page">
   @if (toastMessage(); as mensaje) {
     <p class="toast toast-success">{{ mensaje }}</p>
   }
 
-  <header class="historia-header">
+  <header class="atencion-header">
     <h1>Atención veterinaria</h1>
-    <p class="page-subtitle">Buscá el cliente, seleccioná una mascota y registrá el evento clínico.</p>
+    <p class="page-subtitle">Buscá al cliente, elegí la mascota y registrá la atención.</p>
   </header>
 
-  <section class="flow-steps" aria-label="Flujo de atención">
-    <div class="flow-step" [class.active]="currentStep() === 'cliente'" [class.done]="selectedOwner()">
-      <span>1</span>
-      <p>Cliente</p>
-    </div>
-    <div class="flow-step" [class.active]="currentStep() === 'mascota'" [class.done]="selectedPet()">
-      <span>2</span>
-      <p>Mascota</p>
-    </div>
-    <div class="flow-step" [class.active]="currentStep() === 'evento'">
-      <span>3</span>
-      <p>Evento clínico</p>
-    </div>
+  <ol class="flow-steps" aria-label="Flujo de atención">
+    <li class="flow-step" [class.active]="currentStep() === 'cliente'" [class.done]="selectedOwner()">
+      <span class="flow-dot">
+        @if (selectedOwner()) {
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
+        } @else {
+          1
+        }
+      </span>
+      <span class="flow-label">Cliente</span>
+    </li>
+    <li class="flow-step" [class.active]="currentStep() === 'mascota'" [class.done]="selectedPet()">
+      <span class="flow-dot">
+        @if (selectedPet()) {
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
+        } @else {
+          2
+        }
+      </span>
+      <span class="flow-label">Mascota</span>
+    </li>
+    <li class="flow-step" [class.active]="currentStep() === 'evento'">
+      <span class="flow-dot">3</span>
+      <span class="flow-label">Evento clínico</span>
+    </li>
+  </ol>
+
+  <section class="card client-card">
+    @if (selectedOwner(); as owner) {
+      <div class="owner-summary">
+        <span class="avatar avatar-lg" aria-hidden="true">{{ ownerInitials(owner) }}</span>
+        <div class="owner-info">
+          <span class="eyebrow">Cliente</span>
+          <strong class="owner-name">{{ ownerDisplayName(owner) }}</strong>
+          <p class="owner-meta">
+            @if (owner.numero_documento) {
+              <span>DNI {{ owner.numero_documento }}</span>
+            }
+            <span>{{ owner.email }}</span>
+            @if (owner.telefono) {
+              <span>{{ owner.telefono }}</span>
+            }
+          </p>
+        </div>
+        <button type="button" class="btn-secondary" (click)="clearOwnerSelection()">Cambiar</button>
+      </div>
+    } @else {
+      <h2>Buscar cliente</h2>
+      <p class="card-subtitle">Escribí el DNI, el email o el nombre. Te mostramos las coincidencias al instante.</p>
+
+      <div class="search-field">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.5-3.5" />
+        </svg>
+        <input
+          type="search"
+          autocomplete="off"
+          placeholder="DNI, email o nombre del cliente"
+          aria-label="Buscar cliente por DNI, email o nombre"
+          [ngModel]="searchQuery()"
+          (ngModelChange)="onSearchInput($event)"
+          (keydown)="onSearchKeydown($event)"
+        />
+        @if (searchQuery()) {
+          <button type="button" class="search-clear" aria-label="Borrar búsqueda" (click)="limpiarBusqueda()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" /></svg>
+          </button>
+        }
+      </div>
+
+      @if (searchResults().length > 0) {
+        <ul class="search-results" role="listbox" aria-label="Clientes encontrados">
+          @for (owner of searchResults(); track owner.id_usuario; let i = $index) {
+            <li>
+              <button
+                type="button"
+                class="search-result"
+                role="option"
+                [class.active]="i === activeResultIndex()"
+                [attr.aria-selected]="i === activeResultIndex()"
+                (click)="seleccionarCliente(owner)"
+                (mouseenter)="activeResultIndex.set(i)"
+              >
+                <span class="avatar" aria-hidden="true">{{ ownerInitials(owner) }}</span>
+                <span class="result-info">
+                  <span class="result-name">{{ ownerDisplayName(owner) }}</span>
+                  <span class="result-meta">
+                    @if (owner.numero_documento) {
+                      DNI {{ owner.numero_documento }} &middot;
+                    }
+                    {{ owner.email }}
+                  </span>
+                </span>
+                <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6" /></svg>
+              </button>
+            </li>
+          }
+        </ul>
+      } @else if (isSearchingOwner()) {
+        <p class="search-status">Buscando...</p>
+      } @else if (searchHint(); as pista) {
+        <p class="search-status">{{ pista }}</p>
+      } @else if (hasSearched()) {
+        <div class="empty-state">
+          <p>No encontramos ningún cliente con “{{ searchQuery().trim() }}”.</p>
+          <a class="btn-primary" routerLink="/eventos-clinicos/duenos/alta-asistida">Crear cliente</a>
+        </div>
+      }
+
+      <div class="client-links">
+        <button type="button" class="btn-link" (click)="abrirListaClientes()">Ver todos los clientes</button>
+        <span class="dot-separator" aria-hidden="true">&middot;</span>
+        <a class="btn-link" routerLink="/eventos-clinicos/duenos/alta-asistida">Crear cliente nuevo</a>
+      </div>
+    }
   </section>
 
   <div class="attention-grid">
-    <section class="historia-card">
-      <h2>Buscar cliente</h2>
-      <p class="card-subtitle">Elegí un dato de búsqueda para identificar al responsable.</p>
-
-      <div class="owner-search">
-        <div class="segmented-control" aria-label="Método de búsqueda">
-          <button
-            type="button"
-            [class.active]="ownerSearchMode() === 'documento'"
-            (click)="setOwnerSearchMode('documento')"
-          >
-            DNI
-          </button>
-          <button
-            type="button"
-            [class.active]="ownerSearchMode() === 'email'"
-            (click)="setOwnerSearchMode('email')"
-          >
-            Email
-          </button>
-        </div>
-
-        @if (ownerSearchMode() === 'documento') {
-          <label>
-            DNI
-            <input
-              type="search"
-              inputmode="numeric"
-              placeholder="Ej: 30111222"
-              [ngModel]="ownerDocument()"
-              (ngModelChange)="ownerDocument.set($event)"
-            />
-          </label>
-        } @else {
-          <label>
-            Email
-            <input
-              type="email"
-              placeholder="cliente@email.com"
-              [ngModel]="ownerEmail()"
-              (ngModelChange)="ownerEmail.set($event)"
-            />
-          </label>
-        }
-
-        <button type="button" class="btn-primary" [disabled]="isSearchingOwner()" (click)="searchOwner()">
-          {{ isSearchingOwner() ? 'Buscando...' : 'Buscar cliente' }}
-        </button>
-      </div>
-
-      <button type="button" class="btn-link" (click)="abrirListaClientes()">
-        Ver todos los clientes
-      </button>
-
-      @if (ownerSearchMessage()) {
-        <p class="banner banner-error">{{ ownerSearchMessage() }}</p>
-      }
-
-      @if (selectedOwner(); as owner) {
-        <div class="owner-summary">
-          <div>
-            <span class="eyebrow">Cliente seleccionado</span>
-            <strong>{{ ownerDisplayName(owner) }}</strong>
-            <p>
-              @if (owner.numero_documento) {
-                DNI {{ owner.numero_documento }} &middot;
-              }
-              {{ owner.email }}
-            </p>
-          </div>
-          <button type="button" class="btn-secondary" (click)="clearOwnerSelection()">Cambiar</button>
-        </div>
-      } @else {
-        <div class="hint-box">
-          <p>Si el cliente no existe, creá el alta asistida para iniciar la atención.</p>
-          <a class="btn-link" routerLink="/eventos-clinicos/duenos/alta-asistida">
-            Crear cliente
-          </a>
-        </div>
-      }
-    </section>
-
-    <section class="historia-card">
+    <section class="card pets-card">
       <div class="card-title-row">
         <div>
           <h2>Mascotas del cliente</h2>
-          <p class="card-subtitle">Seleccioná una mascota para consultar historia o cargar la atención.</p>
+          <p class="card-subtitle">Tocá una mascota para continuar.</p>
         </div>
         @if (selectedOwner() && ownerPets().length > 0) {
           <a
@@ -124,13 +145,16 @@
       </div>
 
       @if (!selectedOwner()) {
-        <p class="status-text">Primero buscá un cliente por DNI o email.</p>
+        <div class="placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5.5" cy="10" r="2" /><circle cx="9.5" cy="5.5" r="2" /><circle cx="14.5" cy="5.5" r="2" /><circle cx="18.5" cy="10" r="2" /><path d="M12 11c-3 0-5.5 3-5.5 5.5 0 1.8 1.4 2.5 3 2.5 1 0 1.6-.4 2.5-.4s1.5.4 2.5.4c1.6 0 3-.7 3-2.5C17.5 14 15 11 12 11Z" /></svg>
+          <p>Las mascotas aparecen cuando elegís un cliente.</p>
+        </div>
       } @else if (isLoadingOwnerPets()) {
         <p class="status-text">Cargando mascotas...</p>
       } @else if (errorMessage()) {
         <p class="banner banner-error">{{ errorMessage() }}</p>
       } @else if (ownerPets().length === 0) {
-        <div class="hint-box">
+        <div class="empty-state">
           <p>El cliente todavía no tiene mascotas registradas.</p>
           <a
             class="btn-primary"
@@ -141,38 +165,55 @@
           </a>
         </div>
       } @else {
-        <ul class="result-list">
+        <ul class="pet-list">
           @for (pet of ownerPets(); track pet.idMascota) {
-            <li class="result-item" [class.selected]="selectedPet()?.idMascota === pet.idMascota">
-              @if (pet.foto) {
-                <img
-                  class="result-photo"
-                  [src]="mascotasService.resolveFotoUrl(pet.foto)"
-                  alt="Foto de {{ pet.nombre }}"
-                />
-              } @else {
-                <div class="result-photo result-placeholder">{{ pet.nombre.charAt(0) }}</div>
-              }
-              <div class="result-info">
-                <span class="result-name">{{ pet.nombre }}</span>
-                <span class="result-meta">ID {{ pet.idMascota }} &middot; {{ pet.especie }}</span>
-              </div>
-              <button type="button" class="btn-secondary" (click)="selectPet(pet)">Seleccionar</button>
+            <li>
+              <button
+                type="button"
+                class="pet-row"
+                [class.selected]="selectedPet()?.idMascota === pet.idMascota"
+                [attr.aria-pressed]="selectedPet()?.idMascota === pet.idMascota"
+                (click)="selectPet(pet)"
+              >
+                @if (pet.foto) {
+                  <img
+                    class="result-photo"
+                    [src]="mascotasService.resolveFotoUrl(pet.foto)"
+                    alt="Foto de {{ pet.nombre }}"
+                  />
+                } @else {
+                  <span class="result-photo result-placeholder" aria-hidden="true">{{ pet.nombre.charAt(0) }}</span>
+                }
+                <span class="result-info">
+                  <span class="result-name">{{ pet.nombre }}</span>
+                  <span class="result-meta">{{ pet.especie }}{{ pet.raza ? ' · ' + pet.raza : '' }}</span>
+                </span>
+                <span class="pet-check" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
+                </span>
+              </button>
             </li>
           }
         </ul>
       }
     </section>
 
-    <section class="historia-card attention-actions">
+    <section class="card actions-card">
       <h2>Evento clínico</h2>
-      <p class="card-subtitle">Con la mascota seleccionada, continuá con la carga clínica.</p>
+      <p class="card-subtitle">Con la mascota elegida, continuá con la atención.</p>
 
       @if (selectedPet(); as pet) {
         <div class="selected-pet">
-          <span class="eyebrow">Mascota seleccionada</span>
-          <strong>{{ pet.nombre }}</strong>
-          <p>{{ pet.especie }}{{ pet.raza ? ' · ' + pet.raza : '' }}</p>
+          @if (pet.foto) {
+            <img class="result-photo" [src]="mascotasService.resolveFotoUrl(pet.foto)" alt="Foto de {{ pet.nombre }}" />
+          } @else {
+            <span class="result-photo result-placeholder" aria-hidden="true">{{ pet.nombre.charAt(0) }}</span>
+          }
+          <div>
+            <span class="eyebrow">Mascota</span>
+            <strong>{{ pet.nombre }}</strong>
+            <p>{{ pet.especie }}{{ pet.raza ? ' · ' + pet.raza : '' }}</p>
+          </div>
         </div>
         <a
           class="btn-primary btn-large"
@@ -182,14 +223,17 @@
           Registrar evento clínico
         </a>
         <a
-          class="btn-secondary btn-large btn-spaced"
+          class="btn-secondary btn-large"
           [routerLink]="['/eventos-clinicos/mascota', pet.idMascota]"
           [queryParams]="attentionQueryParams()"
         >
           Ver historia clínica
         </a>
       } @else {
-        <p class="status-text">Seleccioná una mascota del cliente para continuar.</p>
+        <div class="placeholder">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" /><path d="M9 8h6M9 12h6M9 16h3" /></svg>
+          <p>Elegí una mascota para registrar la atención o ver su historia.</p>
+        </div>
       }
     </section>
   </div>
