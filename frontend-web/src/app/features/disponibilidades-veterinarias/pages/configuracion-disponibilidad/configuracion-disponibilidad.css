@@ -263,6 +263,7 @@
 .tipo-switch {
   display: inline-flex;
   align-self: flex-start;
+  margin-bottom: var(--spacing-md);
   padding: 0.2rem;
   border-radius: 999px;
   background-color: color-mix(in srgb, var(--text-primary) 7%, white);
@@ -291,40 +292,13 @@
   color: var(--tipo-sobreturno);
 }
 
-.regla-row.sobreturno .dia-badge.active {
+.reglas-list.sobreturno .dia-badge.active {
   border-color: var(--tipo-sobreturno);
   background-color: var(--tipo-sobreturno);
 }
 
-.add-form > .field:first-child {
-  margin-bottom: var(--spacing-md);
-}
-
-.tipo-tag {
-  margin-left: 0.4rem;
-  padding: 0.1rem 0.5rem;
-  border-radius: 999px;
-  background-color: color-mix(in srgb, var(--tipo-sobreturno) 14%, white);
+.reglas-list.sobreturno .regla-horario {
   color: var(--tipo-sobreturno);
-  font-size: 0.7rem;
-  font-weight: 700;
-  vertical-align: middle;
-}
-
-.puntuales {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-lg);
-  padding: var(--spacing-md) var(--spacing-lg);
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-md);
-}
-
-.puntuales h2 {
-  margin: 0;
-  font-size: 1rem;
 }
 
 @media (max-width: 640px) {

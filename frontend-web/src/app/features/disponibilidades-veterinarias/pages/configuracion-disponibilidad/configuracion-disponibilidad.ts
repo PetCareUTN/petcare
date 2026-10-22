@@ -1,6 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ApiError } from '../../../auth/models/user';
-import { SobreturnosModalComponent } from '../../components/sobreturnos-modal/sobreturnos-modal';
 import {
   DiaSemana,
   DisponibilidadVeterinariaRequest,
@@ -34,7 +33,7 @@ const DIAS: DiaOption[] = [
 
 @Component({
   selector: 'app-configuracion-disponibilidad',
-  imports: [SobreturnosModalComponent],
+  imports: [],
   templateUrl: './configuracion-disponibilidad.html',
   styleUrl: './configuracion-disponibilidad.css',
 })
@@ -50,14 +49,15 @@ export class ConfiguracionDisponibilidadPage implements OnInit {
   protected readonly formError = signal<string | null>(null);
 
   protected readonly reglas = signal<ReglaDisponibilidad[]>([]);
-  /** Una sola lista: primero la atención y después los sobreturnos. */
-  protected readonly reglasOrdenadas = computed(() =>
-    [...this.reglas()].sort((a, b) => a.tipo.localeCompare(b.tipo)),
+  protected readonly reglasAtencion = computed(() =>
+    this.reglas().filter((regla) => regla.tipo === 'atencion'),
+  );
+  protected readonly reglasSobreturno = computed(() =>
+    this.reglas().filter((regla) => regla.tipo === 'sobreturno'),
   );
 
   /** Qué tipo de franja se está cargando en el formulario. */
   protected readonly tipoFormulario = signal<TipoDisponibilidad>('atencion');
-  protected readonly mostrarSobreturnosPuntuales = signal(false);
 
   /** Estado del formulario para agregar una nueva franja. */
   protected readonly diasSeleccionados = signal<ReadonlySet<DiaSemana>>(new Set());
@@ -83,14 +83,6 @@ export class ConfiguracionDisponibilidadPage implements OnInit {
   protected setTipoFormulario(tipo: TipoDisponibilidad): void {
     this.tipoFormulario.set(tipo);
     this.formError.set(null);
-  }
-
-  protected abrirSobreturnosPuntuales(): void {
-    this.mostrarSobreturnosPuntuales.set(true);
-  }
-
-  protected cerrarSobreturnosPuntuales(): void {
-    this.mostrarSobreturnosPuntuales.set(false);
   }
 
   protected toggleDia(dia: DiaSemana): void {

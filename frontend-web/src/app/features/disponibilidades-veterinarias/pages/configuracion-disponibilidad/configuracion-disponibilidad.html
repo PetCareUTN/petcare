@@ -20,27 +20,24 @@
 
     @if (!isLoading()) {
       <div class="add-form">
-        <div class="field">
-          <label>Tipo</label>
-          <div class="tipo-switch" role="group" aria-label="Tipo de horario">
-            <button
-              type="button"
-              [class.active]="tipoFormulario() === 'atencion'"
-              [attr.aria-pressed]="tipoFormulario() === 'atencion'"
-              (click)="setTipoFormulario('atencion')"
-            >
-              Atención
-            </button>
-            <button
-              type="button"
-              class="sobreturno"
-              [class.active]="tipoFormulario() === 'sobreturno'"
-              [attr.aria-pressed]="tipoFormulario() === 'sobreturno'"
-              (click)="setTipoFormulario('sobreturno')"
-            >
-              Sobreturno
-            </button>
-          </div>
+        <div class="tipo-switch" role="group" aria-label="Tipo de horario">
+          <button
+            type="button"
+            [class.active]="tipoFormulario() === 'atencion'"
+            [attr.aria-pressed]="tipoFormulario() === 'atencion'"
+            (click)="setTipoFormulario('atencion')"
+          >
+            Horario de atención
+          </button>
+          <button
+            type="button"
+            class="sobreturno"
+            [class.active]="tipoFormulario() === 'sobreturno'"
+            [attr.aria-pressed]="tipoFormulario() === 'sobreturno'"
+            (click)="setTipoFormulario('sobreturno')"
+          >
+            Sobreturnos
+          </button>
         </div>
 
         <div class="field">
@@ -84,7 +81,9 @@
           </div>
 
           <div class="field">
-            <label for="cantidad-turnos">Cantidad de turnos</label>
+            <label for="cantidad-turnos">
+              {{ tipoFormulario() === 'sobreturno' ? 'Cantidad de sobreturnos' : 'Cantidad de turnos' }}
+            </label>
             <input
               id="cantidad-turnos"
               type="number"
@@ -96,7 +95,7 @@
           </div>
 
           <button type="button" class="btn-secondary" (click)="agregarRegla()">
-            Agregar horario
+            {{ tipoFormulario() === 'sobreturno' ? 'Agregar sobreturno' : 'Agregar horario' }}
           </button>
         </div>
 
@@ -105,17 +104,17 @@
         }
       </div>
 
-      <section class="reglas-list">
-        <h2>Horarios configurados</h2>
+      <section class="reglas-list atencion">
+        <h2>Horarios de atención</h2>
 
-        @if (reglas().length === 0) {
-          <p class="status-text">Todavía no agregaste ningún horario.</p>
+        @if (reglasAtencion().length === 0) {
+          <p class="status-text">Todavía no agregaste ningún horario de atención.</p>
         }
 
-        @if (reglas().length > 0) {
+        @if (reglasAtencion().length > 0) {
           <ul>
-            @for (regla of reglasOrdenadas(); track regla.id) {
-              <li class="regla-row" [class.sobreturno]="regla.tipo === 'sobreturno'">
+            @for (regla of reglasAtencion(); track regla.id) {
+              <li class="regla-row">
                 <div class="regla-dias">
                   @for (dia of dias; track dia.value) {
                     <span
@@ -128,12 +127,7 @@
                   }
                 </div>
                 <div class="regla-info">
-                  <span class="regla-horario">
-                    {{ regla.horaInicio }} a {{ regla.horaFin }}
-                    @if (regla.tipo === 'sobreturno') {
-                      <span class="tipo-tag">Sobreturno</span>
-                    }
-                  </span>
+                  <span class="regla-horario">{{ regla.horaInicio }} a {{ regla.horaFin }}</span>
                   <span class="regla-cantidad">
                     {{ regla.cantidadTurnos }}
                     {{ regla.cantidadTurnos === 1 ? 'turno' : 'turnos' }}
@@ -148,11 +142,42 @@
         }
       </section>
 
-      <section class="puntuales">
-        <h2>Sobreturnos de una fecha puntual</h2>
-        <button type="button" class="btn-secondary" (click)="abrirSobreturnosPuntuales()">
-          Administrar
-        </button>
+      <section class="reglas-list sobreturno">
+        <h2>Sobreturnos semanales</h2>
+
+        @if (reglasSobreturno().length === 0) {
+          <p class="status-text">Todavía no agregaste sobreturnos semanales.</p>
+        }
+
+        @if (reglasSobreturno().length > 0) {
+          <ul>
+            @for (regla of reglasSobreturno(); track regla.id) {
+              <li class="regla-row">
+                <div class="regla-dias">
+                  @for (dia of dias; track dia.value) {
+                    <span
+                      class="dia-badge"
+                      [class.active]="regla.dias.includes(dia.value)"
+                      [title]="dia.label"
+                    >
+                      {{ dia.letra }}
+                    </span>
+                  }
+                </div>
+                <div class="regla-info">
+                  <span class="regla-horario">{{ regla.horaInicio }} a {{ regla.horaFin }}</span>
+                  <span class="regla-cantidad">
+                    {{ regla.cantidadTurnos }}
+                    {{ regla.cantidadTurnos === 1 ? 'sobreturno' : 'sobreturnos' }}
+                  </span>
+                </div>
+                <button type="button" class="btn-remove" (click)="quitarRegla(regla.id)">
+                  Quitar
+                </button>
+              </li>
+            }
+          </ul>
+        }
       </section>
 
       <button
@@ -166,7 +191,3 @@
     }
   </section>
 </main>
-
-@if (mostrarSobreturnosPuntuales()) {
-  <app-sobreturnos-modal (close)="cerrarSobreturnosPuntuales()" />
-}
