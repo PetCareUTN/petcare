@@ -1,6 +1,5 @@
 import { IsEnum, IsInt, IsOptional, Matches, Max, Min } from 'class-validator';
 import { DiaSemana } from '../../common/enums/dia-semana.enum';
-import { TipoDisponibilidad } from '../../common/enums/tipo-disponibilidad.enum';
 
 const HORA_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
@@ -20,9 +19,4 @@ export class DisponibilidadVeterinariaDto {
   @Min(1)
   @Max(20)
   cuposPorTurno?: number;
-
-  /** Horario de atención (por defecto) o sobreturno semanal. */
-  @IsOptional()
-  @IsEnum(TipoDisponibilidad)
-  tipo?: TipoDisponibilidad;
 }

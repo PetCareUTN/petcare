@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { ValidationStatus } from '../common/enums/validation-status.enum';
 import { Veterinario } from '../veterinarios/entities/veterinario.entity';
 import { CreateSobreturnoVeterinarioDto } from './dto/create-sobreturno-veterinario.dto';
@@ -130,29 +130,6 @@ export class SobreturnosVeterinariosService {
     }
 
     return cuposPorHora;
-  }
-
-  /**
-   * Igual que `obtenerCuposExtraPorHora` pero para un rango de fechas, para
-   * armar la agenda de varios días con una sola consulta.
-   */
-  async obtenerCuposExtraPorRango(
-    idVeterinario: number,
-    desde: string,
-    hasta: string,
-  ): Promise<Map<string, Map<string, number>>> {
-    const sobreturnos = await this.sobreturnosRepository.find({
-      where: { veterinario: { idVeterinario }, fecha: Between(desde, hasta) },
-    });
-
-    const porFecha = new Map<string, Map<string, number>>();
-    for (const sobreturno of sobreturnos) {
-      const horas = porFecha.get(sobreturno.fecha) ?? new Map<string, number>();
-      const hora = sobreturno.hora.slice(0, 5);
-      horas.set(hora, (horas.get(hora) ?? 0) + sobreturno.cupos);
-      porFecha.set(sobreturno.fecha, horas);
-    }
-    return porFecha;
   }
 
   private async findVeterinarioValidado(

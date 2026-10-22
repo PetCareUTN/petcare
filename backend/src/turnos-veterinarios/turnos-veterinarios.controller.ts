@@ -128,7 +128,7 @@ export class TurnosVeterinariosController {
   @ApiOperation({
     summary: 'Agendar un turno desde la veterinaria',
     description:
-      'El veterinario carga un turno para la mascota de un cliente, dentro de su horario de atención o sus sobreturnos. Si el horario ya no tiene cupos responde 409 con codigo CUPO_LLENO; repitiendo con forzar=true se agenda igual como sobrecupo.',
+      'El veterinario carga un turno para la mascota de un cliente, dentro de su horario de atención. Si el horario ya no tiene cupos responde 409 con codigo CUPO_LLENO; repitiendo con forzar=true se agenda igual como sobreturno.',
   })
   @ApiResponse({
     status: 201,
@@ -151,7 +151,7 @@ export class TurnosVeterinariosController {
   @ApiOperation({
     summary: 'Capacidad y ocupación de mi agenda',
     description:
-      'Franjas de 30 minutos con sus cupos de atención y de sobreturno y los turnos que las ocupan, para un rango de hasta 62 días.',
+      'Franjas de 30 minutos con sus cupos de atención y los turnos que las ocupan, para un rango de hasta 62 días.',
   })
   @ApiQuery({ name: 'desde', example: '2026-10-19' })
   @ApiQuery({ name: 'hasta', example: '2026-10-25' })

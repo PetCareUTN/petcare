@@ -7,15 +7,11 @@ export type DiaSemana =
   | 'sabado'
   | 'domingo';
 
-/** Horario de atención o sobreturno semanal: las dos suman cupos. */
-export type TipoDisponibilidad = 'atencion' | 'sobreturno';
-
 export interface DisponibilidadVeterinariaRequest {
   diaSemana: DiaSemana;
   horaInicio: string;
   horaFin: string;
   cuposPorTurno: number;
-  tipo: TipoDisponibilidad;
 }
 
 export interface UpdateDisponibilidadVeterinariaRequest {
@@ -29,5 +25,4 @@ export interface DisponibilidadVeterinariaResponse {
   horaInicio: string;
   horaFin: string;
   cuposPorTurno: number;
-  tipo: TipoDisponibilidad;
 }

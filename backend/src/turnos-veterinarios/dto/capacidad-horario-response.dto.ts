@@ -3,9 +3,7 @@ export class CapacidadHorarioResponseDto {
   fecha: string;
   hora: string;
   /** Cupos del horario de atención. */
-  cuposAtencion: number;
-  /** Cupos de sobreturno (semanales y de fecha puntual). */
-  cuposSobreturno: number;
-  /** Turnos que ya ocupan la franja. */
+  cupos: number;
+  /** Turnos que ya ocupan la franja (si superan los cupos, el excedente son sobreturnos). */
   ocupados: number;
 }

@@ -9,7 +9,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Between, Repository } from 'typeorm';
 import { AppointmentStatus } from '../common/enums/appointment-status.enum';
 import { DiaSemana } from '../common/enums/dia-semana.enum';
-import { TipoDisponibilidad } from '../common/enums/tipo-disponibilidad.enum';
 import { ValidationStatus } from '../common/enums/validation-status.enum';
 import { DisponibilidadVeterinaria } from '../disponibilidades-veterinarias/entities/disponibilidad-veterinaria.entity';
 import { Mascota } from '../mascotas/entities/mascota.entity';
@@ -17,7 +16,6 @@ import {
   DatosTurno,
   NotificacionesTurnosService,
 } from '../notificaciones/notificaciones-turnos.service';
-import { SobreturnosVeterinariosService } from '../sobreturnos-veterinarios/sobreturnos-veterinarios.service';
 import { User } from '../users/entities/user.entity';
 import { Veterinario } from '../veterinarios/entities/veterinario.entity';
 import { AgendarTurnoVeterinarioDto } from './dto/agendar-turno-veterinario.dto';
@@ -67,7 +65,6 @@ export class TurnosVeterinariosService {
     @InjectRepository(DisponibilidadVeterinaria)
     private readonly disponibilidadesRepository: Repository<DisponibilidadVeterinaria>,
     private readonly notificacionesTurnosService: NotificacionesTurnosService,
-    private readonly sobreturnosVeterinariosService: SobreturnosVeterinariosService,
   ) {}
 
   async solicitar(
@@ -164,9 +161,9 @@ export class TurnosVeterinariosService {
   }
 
   /**
-   * Cupos que tiene un horario para esa fecha: la suma de las franjas
-   * semanales (atención y sobreturno) que lo contienen entero, más los
-   * sobreturnos de fecha puntual cargados para esa hora.
+   * Cupos de atención que tiene un horario para esa fecha: la suma de las
+   * franjas semanales que lo contienen entero. Los sobreturnos no cuentan: los
+   * dueños no los reservan, los agrega la veterinaria encima de un horario lleno.
    */
   private async cuposDelHorario(
     idVeterinario: number,
@@ -181,7 +178,7 @@ export class TurnosVeterinariosService {
 
     const inicioMinutos = this.aMinutos(horaInicio);
     const finMinutos = this.aMinutos(horaFin);
-    const deFranjas = disponibilidades
+    return disponibilidades
       .filter(
         (disponibilidad) =>
           inicioMinutos >= this.aMinutos(disponibilidad.horaInicio) &&
@@ -191,14 +188,6 @@ export class TurnosVeterinariosService {
         (total, disponibilidad) => total + disponibilidad.cuposPorTurno,
         0,
       );
-
-    const cuposExtra =
-      await this.sobreturnosVeterinariosService.obtenerCuposExtraPorHora(
-        idVeterinario,
-        fecha,
-      );
-
-    return deFranjas + (cuposExtra.get(horaInicio) ?? 0);
   }
 
   /** Turnos que ocupan su lugar y se solapan con el horario pedido. */
@@ -277,8 +266,8 @@ export class TurnosVeterinariosService {
    * horarios y cupos que la reserva del dueño, pero el veterinario puede
    * agendar aunque el horario esté lleno: en ese caso la primera llamada
    * responde 409 `CUPO_LLENO` y, si confirma, se repite con `forzar: true` y
-   * el turno queda marcado como sobrecupo. Fuera de su atención y de sus
-   * sobreturnos no se puede agendar.
+   * el turno queda marcado como sobrecupo (un sobreturno). Fuera de su horario
+   * de atención no se puede agendar.
    */
   async agendarComoVeterinario(
     idUsuario: number,
@@ -317,7 +306,7 @@ export class TurnosVeterinariosService {
       throw new BadRequestException({
         codigoEstado: 400,
         mensaje:
-          'Ese horario está fuera de tu horario de atención y de tus sobreturnos. Configuralo en Disponibilidad.',
+          'Ese horario está fuera de tu horario de atención. Configuralo en Disponibilidad.',
       });
     }
 
@@ -420,15 +409,10 @@ export class TurnosVeterinariosService {
       });
     }
 
-    const [disponibilidades, extrasPorFecha, turnos] = await Promise.all([
+    const [disponibilidades, turnos] = await Promise.all([
       this.disponibilidadesRepository.find({
         where: { veterinario: { idVeterinario } },
       }),
-      this.sobreturnosVeterinariosService.obtenerCuposExtraPorRango(
-        idVeterinario,
-        desde,
-        hasta,
-      ),
       this.turnosRepository.find({
         where: { veterinario: { idVeterinario }, fecha: Between(desde, hasta) },
       }),
@@ -437,16 +421,13 @@ export class TurnosVeterinariosService {
     const resultado: CapacidadHorarioResponseDto[] = [];
     for (const fecha of fechas) {
       const diaSemana = this.obtenerDiaSemana(fecha);
-      const franjas = new Map<
-        string,
-        { atencion: number; sobreturno: number; ocupados: number }
-      >();
+      const franjas = new Map<string, { cupos: number; ocupados: number }>();
       const franja = (hora: string) => {
         const existente = franjas.get(hora);
         if (existente) {
           return existente;
         }
-        const nueva = { atencion: 0, sobreturno: 0, ocupados: 0 };
+        const nueva = { cupos: 0, ocupados: 0 };
         franjas.set(hora, nueva);
         return nueva;
       };
@@ -461,17 +442,8 @@ export class TurnosVeterinariosService {
           minuto + DURACION_TURNO_MINUTOS <= fin;
           minuto += DURACION_TURNO_MINUTOS
         ) {
-          const destino = franja(this.deMinutos(minuto));
-          if (disponibilidad.tipo === TipoDisponibilidad.SOBRETURNO) {
-            destino.sobreturno += disponibilidad.cuposPorTurno;
-          } else {
-            destino.atencion += disponibilidad.cuposPorTurno;
-          }
+          franja(this.deMinutos(minuto)).cupos += disponibilidad.cuposPorTurno;
         }
-      }
-
-      for (const [hora, cupos] of extrasPorFecha.get(fecha) ?? []) {
-        franja(hora).sobreturno += cupos;
       }
 
       for (const turno of turnos) {
@@ -484,14 +456,8 @@ export class TurnosVeterinariosService {
       }
 
       for (const hora of [...franjas.keys()].sort()) {
-        const { atencion, sobreturno, ocupados } = franjas.get(hora)!;
-        resultado.push({
-          fecha,
-          hora,
-          cuposAtencion: atencion,
-          cuposSobreturno: sobreturno,
-          ocupados,
-        });
+        const { cupos, ocupados } = franjas.get(hora)!;
+        resultado.push({ fecha, hora, cupos, ocupados });
       }
     }
 
@@ -558,15 +524,6 @@ export class TurnosVeterinariosService {
           (capacidadPorHora.get(hora) ?? 0) + disponibilidad.cuposPorTurno,
         );
       }
-    }
-
-    const cuposExtra =
-      await this.sobreturnosVeterinariosService.obtenerCuposExtraPorHora(
-        idVeterinario,
-        fecha,
-      );
-    for (const [hora, cupoExtra] of cuposExtra) {
-      capacidadPorHora.set(hora, (capacidadPorHora.get(hora) ?? 0) + cupoExtra);
     }
 
     const slots = new Set<string>();

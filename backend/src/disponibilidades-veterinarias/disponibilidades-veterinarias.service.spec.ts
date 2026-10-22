@@ -6,7 +6,6 @@ import {
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DiaSemana } from '../common/enums/dia-semana.enum';
-import { TipoDisponibilidad } from '../common/enums/tipo-disponibilidad.enum';
 import { ValidationStatus } from '../common/enums/validation-status.enum';
 import { Veterinario } from '../veterinarios/entities/veterinario.entity';
 import { DisponibilidadesVeterinariasService } from './disponibilidades-veterinarias.service';
@@ -95,14 +94,12 @@ describe('DisponibilidadesVeterinariasService', () => {
     expect(disponibilidadesRepository.create).toHaveBeenCalledWith({
       veterinario,
       ...disponibilidad,
-      tipo: TipoDisponibilidad.ATENCION,
     });
     expect(result).toEqual([
       {
         idDisponibilidad: 1,
         idVeterinario: 7,
         ...disponibilidad,
-        tipo: TipoDisponibilidad.ATENCION,
       },
     ]);
   });
@@ -129,69 +126,7 @@ describe('DisponibilidadesVeterinariasService', () => {
       horaInicio: '09:00',
       horaFin: '12:00',
       cuposPorTurno: 1,
-      tipo: TipoDisponibilidad.ATENCION,
     });
-  });
-
-  it('permite una franja de sobreturno que coincide con la de atención', async () => {
-    veterinariosRepository.findOne.mockResolvedValue(veterinario);
-    disponibilidadesRepository.create.mockImplementation(
-      (entity: Partial<DisponibilidadVeterinaria>) =>
-        entity as DisponibilidadVeterinaria,
-    );
-    disponibilidadesRepository.save.mockImplementation((entities) =>
-      Promise.resolve(entities),
-    );
-
-    await service.replaceMine(10, {
-      disponibilidades: [
-        { diaSemana: DiaSemana.MARTES, horaInicio: '09:00', horaFin: '12:00' },
-        {
-          diaSemana: DiaSemana.MARTES,
-          horaInicio: '15:00',
-          horaFin: '15:30',
-          cuposPorTurno: 2,
-          tipo: TipoDisponibilidad.SOBRETURNO,
-        },
-        {
-          diaSemana: DiaSemana.MARTES,
-          horaInicio: '10:00',
-          horaFin: '11:00',
-          tipo: TipoDisponibilidad.SOBRETURNO,
-        },
-      ],
-    });
-
-    expect(disponibilidadesRepository.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        horaInicio: '15:00',
-        cuposPorTurno: 2,
-        tipo: TipoDisponibilidad.SOBRETURNO,
-      }),
-    );
-  });
-
-  it('rechaza dos franjas de sobreturno que se solapan el mismo día', async () => {
-    veterinariosRepository.findOne.mockResolvedValue(veterinario);
-
-    await expect(
-      service.replaceMine(10, {
-        disponibilidades: [
-          {
-            diaSemana: DiaSemana.MARTES,
-            horaInicio: '15:00',
-            horaFin: '16:00',
-            tipo: TipoDisponibilidad.SOBRETURNO,
-          },
-          {
-            diaSemana: DiaSemana.MARTES,
-            horaInicio: '15:30',
-            horaFin: '17:00',
-            tipo: TipoDisponibilidad.SOBRETURNO,
-          },
-        ],
-      }),
-    ).rejects.toThrow(BadRequestException);
   });
 
   it('lista la disponibilidad propia ordenada por dia y horario', async () => {
