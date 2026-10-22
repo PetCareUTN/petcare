@@ -842,17 +842,15 @@
 
 /* Hueco de la agenda: media hora con cupos. Doble clic para agendar. */
 .slot {
-  position: relative;
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: 0 0.4rem;
+  gap: 0.4rem;
   width: 100%;
-  padding: 0.25rem 0.5rem;
+  padding: 0.2rem 0.4rem 0.2rem 0.5rem;
   border: 1px solid transparent;
   border-radius: 8px;
-  background-color: color-mix(in srgb, var(--primary) 7%, white);
+  background-color: color-mix(in srgb, var(--primary) 6%, white);
   color: var(--text-secondary);
   font: inherit;
   font-size: 0.72rem;
@@ -862,7 +860,7 @@
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.slot:hover:not(:disabled),
+.slot:hover,
 .slot:focus-visible {
   border-color: color-mix(in srgb, var(--primary) 50%, white);
   background-color: color-mix(in srgb, var(--primary) 16%, white);
@@ -870,77 +868,79 @@
 
 .slot-hora {
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--text-secondary);
 }
 
-.slot-estado {
-  white-space: nowrap;
-}
-
-/* El "+" solo aparece al pasar por el hueco: invita a tocarlo sin necesidad de explicarlo. */
+/* El "+" es toda la invitación a agendar: sin textos de cupos. */
 .slot-plus {
-  position: absolute;
-  top: 50%;
-  right: 0.45rem;
-  display: none;
+  display: grid;
   place-items: center;
   width: 1.15rem;
   height: 1.15rem;
   border-radius: 50%;
-  background-color: var(--primary);
-  color: #ffffff;
+  background-color: color-mix(in srgb, var(--primary) 18%, white);
+  color: var(--primary);
   font-size: 0.95rem;
   font-weight: 700;
   line-height: 1;
-  transform: translateY(-50%);
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.slot:hover:not(:disabled) .slot-plus,
+.slot:hover .slot-plus,
 .slot:focus-visible .slot-plus {
-  display: grid;
+  background-color: var(--primary);
+  color: #ffffff;
 }
 
 .slot.sobreturno {
-  background-color: color-mix(in srgb, var(--tipo-sobreturno) 8%, white);
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 7%, white);
 }
 
-.slot.sobreturno:hover:not(:disabled) {
+.slot.sobreturno:hover,
+.slot.sobreturno:focus-visible {
   border-color: color-mix(in srgb, var(--tipo-sobreturno) 50%, white);
-  background-color: color-mix(in srgb, var(--tipo-sobreturno) 18%, white);
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 16%, white);
 }
 
 .slot.sobreturno .slot-plus {
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 18%, white);
+  color: var(--tipo-sobreturno);
+}
+
+.slot.sobreturno:hover .slot-plus,
+.slot.sobreturno:focus-visible .slot-plus {
   background-color: var(--tipo-sobreturno);
+  color: #ffffff;
 }
 
-.slot.completo {
-  background-color: #fdf5e6;
+/* Horario completo: no hay hueco, solo un "+" discreto que aparece al pasar por la
+   celda para poder agendar igual (el formulario avisa antes de confirmar). */
+.slot-forzar {
+  display: none;
+  align-self: flex-end;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background-color: color-mix(in srgb, var(--text-secondary) 18%, white);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
 }
 
-.slot.completo:hover:not(:disabled) {
-  border-color: #e3c58a;
-  background-color: #faebc9;
+.time-cell:hover .slot-forzar,
+.slot-forzar:focus-visible {
+  display: grid;
 }
 
-.slot.completo .slot-estado {
-  color: #9a6a12;
-}
-
-.slot.completo .slot-plus {
+.slot-forzar:hover {
   background-color: #c9862e;
-}
-
-.slot.pasada {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.day-libres {
-  display: block;
-  margin-top: 0.15rem;
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--primary);
+  color: #ffffff;
 }
 
 .origin-badge {

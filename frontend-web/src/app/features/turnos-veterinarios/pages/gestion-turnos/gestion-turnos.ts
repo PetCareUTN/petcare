@@ -74,8 +74,6 @@ interface DiaCalendario {
   esDelMesActual: boolean;
   esHoy: boolean;
   turnos: EventoTurno[];
-  /** Turnos que todavía se pueden agendar ese día (0 si no hay cupos). */
-  libres: number;
 }
 
 interface FilaHoraria {
@@ -223,18 +221,6 @@ export class GestionTurnosVeterinariosPage implements OnInit {
       porClave.set(`${franja.fecha}|${franja.hora}`, franja);
     }
     return porClave;
-  });
-
-  /** Turnos que todavía se pueden agendar cada día (solo franjas futuras). */
-  private readonly libresPorFecha = computed(() => {
-    const libres = new Map<string, number>();
-    for (const franja of this.capacidad()) {
-      const disponibles = franja.cuposAtencion + franja.cuposSobreturno - franja.ocupados;
-      if (disponibles > 0 && !this.yaPaso(franja.fecha, franja.hora)) {
-        libres.set(franja.fecha, (libres.get(franja.fecha) ?? 0) + disponibles);
-      }
-    }
-    return libres;
   });
 
   /** Rango de fechas que muestra la vista actual, para pedir su capacidad. */
@@ -687,16 +673,6 @@ export class GestionTurnosVeterinariosPage implements OnInit {
       : turno.nombreMascota;
   }
 
-  protected etiquetaFranja(franja: FranjaAgenda): string {
-    if (franja.estado === 'completo') {
-      return 'Completo';
-    }
-    if (franja.estado === 'sobreturno') {
-      return franja.libres === 1 ? 'Sobreturno' : `Sobreturno · ${franja.libres}`;
-    }
-    return franja.libres === 1 ? 'Libre' : `${franja.libres} libres`;
-  }
-
   private desdeVeterinario(turno: TurnoVeterinarioResponse): EventoTurno {
     return {
       clave: `veterinaria-${turno.idTurno}`,
@@ -810,7 +786,6 @@ export class GestionTurnosVeterinariosPage implements OnInit {
       esDelMesActual,
       esHoy: clave === this.claveDeHoy(),
       turnos: this.turnosPorFecha().get(clave) ?? [],
-      libres: this.libresPorFecha().get(clave) ?? 0,
     };
   }
 

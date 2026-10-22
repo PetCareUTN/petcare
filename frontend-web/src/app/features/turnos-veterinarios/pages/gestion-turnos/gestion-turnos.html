@@ -129,11 +129,6 @@
                           <span class="event-pet">{{ etiquetaCorta(turno) }}</span>
                         </button>
                       }
-                      @if (dia.libres > 0) {
-                        <span class="day-libres">
-                          {{ dia.libres }} {{ dia.libres === 1 ? 'libre' : 'libres' }}
-                        </span>
-                      }
                     </div>
                   </div>
                 }
@@ -167,20 +162,18 @@
                         }
                         @for (mitad of celda.mitades; track mitad.hora) {
                           @if (mitad.franja; as franja) {
-                            <button
-                              type="button"
-                              [class]="'slot ' + franja.estado"
-                              [class.pasada]="franja.pasada"
-                              [disabled]="franja.pasada"
-                              [attr.aria-label]="
-                                'Agendar turno a las ' + mitad.hora + ' (' + etiquetaFranja(franja) + ')'
-                              "
-                              (click)="abrirNuevoTurno(celda.fecha, mitad.hora)"
-                            >
-                              <span class="slot-hora">{{ mitad.hora }}</span>
-                              <span class="slot-estado">{{ etiquetaFranja(franja) }}</span>
-                              <span class="slot-plus" aria-hidden="true">+</span>
-                            </button>
+                            @if (franja.estado !== 'completo' && !franja.pasada) {
+                              <button
+                                type="button"
+                                [class]="'slot ' + franja.estado"
+                                [attr.aria-label]="'Agendar turno a las ' + mitad.hora"
+                                [title]="franja.estado === 'sobreturno' ? 'Sobreturno' : 'Agendar turno'"
+                                (click)="abrirNuevoTurno(celda.fecha, mitad.hora)"
+                              >
+                                <span class="slot-hora">{{ mitad.hora }}</span>
+                                <span class="slot-plus" aria-hidden="true">+</span>
+                              </button>
+                            }
                           }
                           @for (turno of mitad.turnos; track turno.clave) {
                             <button
@@ -199,6 +192,17 @@
                                 }
                               </span>
                               <span class="event-pet">{{ etiquetaCorta(turno) }}</span>
+                            </button>
+                          }
+                          @if (mitad.franja?.estado === 'completo' && !mitad.franja?.pasada) {
+                            <button
+                              type="button"
+                              class="slot-forzar"
+                              [attr.aria-label]="'Horario completo: agendar igual a las ' + mitad.hora"
+                              title="Horario completo: agendar igual"
+                              (click)="abrirNuevoTurno(celda.fecha, mitad.hora)"
+                            >
+                              +
                             </button>
                           }
                         }
