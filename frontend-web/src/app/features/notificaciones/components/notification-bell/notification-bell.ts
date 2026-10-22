@@ -23,6 +23,11 @@ export class NotificationBellComponent implements OnInit {
     return this.notificaciones().filter((n) => !n.leida).length;
   }
 
+  /** Con más de 9 sin leer se muestra "9+", para que la burbuja no se ensanche. */
+  protected get unreadLabel(): string {
+    return this.unreadCount > 9 ? '9+' : String(this.unreadCount);
+  }
+
   ngOnInit(): void {
     this.cargarNotificaciones();
   }
