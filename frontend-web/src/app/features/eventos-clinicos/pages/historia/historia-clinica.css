@@ -1,171 +1,97 @@
-.historia-page {
-  flex: 1;
-  padding: var(--spacing-lg);
-  box-sizing: border-box;
-  background-color: var(--background);
-}
-
-.historia-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--spacing-md);
-  width: min(100%, var(--page-max));
-  margin: 0 auto var(--spacing-lg);
-}
-
-.historia-header h1 {
-  margin: 0;
-  font-size: 1.5rem;
-}
-
-.historia-header p {
-  margin: var(--spacing-xs) 0 0;
-  color: var(--text-secondary);
+/* Estilos compartidos: src/styles/formularios.css. Acá solo lo propio de esta pantalla. */
+:host {
+  --hairline: rgba(37, 51, 47, 0.08);
+  --fill: #f1f4f3;
+  --primary-soft: rgba(79, 127, 115, 0.12);
 }
 
 .historia-header-actions {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
+  gap: 0.6rem;
 }
 
-.historia-header a {
-  padding: 0.45rem 0.9rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  color: var(--primary);
-  font-weight: 600;
-  font-size: 0.9rem;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.historia-header a:hover {
-  background-color: var(--primary-light);
-}
-
-.btn-primary {
-  padding: 0.55rem 1.1rem;
-  border: none;
-  border-radius: var(--radius-sm);
-  background-color: var(--primary);
-  color: #ffffff;
-  font-size: 0.9rem;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background-color: #446f64;
-}
-
-.btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.btn-text {
-  padding: 0;
-  border: none;
-  background: none;
+.status-text {
+  margin: 0 0 var(--spacing-md);
   color: var(--text-secondary);
-  font-family: inherit;
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: underline;
+  font-size: 0.9rem;
 }
 
-.pet-card {
+.historia-error {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--spacing-md);
-  width: min(100%, var(--page-max));
-  margin: 0 auto var(--spacing-lg);
-  padding: var(--spacing-lg);
-  border-radius: var(--radius-lg);
-  background-color: var(--surface);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
+}
+
+/* ---------- Mascota ---------- */
+.pet-card {
+  flex-direction: row;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: var(--spacing-lg);
 }
 
 .pet-card-photo {
   width: 72px;
   height: 72px;
+  flex-shrink: 0;
   border-radius: 50%;
   object-fit: cover;
-  flex-shrink: 0;
 }
 
 .pet-card-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: var(--primary-light);
+  display: grid;
+  place-items: center;
+  background-color: var(--primary-soft);
   color: var(--primary);
-  font-size: 1.75rem;
+  font-size: 1.7rem;
   font-weight: 700;
+  text-transform: uppercase;
 }
 
 .pet-card-info h2 {
-  margin: 0 0 0.15rem;
-  font-size: 1.15rem;
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .pet-card-info p {
-  margin: 0.1rem 0;
+  margin: 0.15rem 0 0;
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  font-size: 0.92rem;
 }
 
-.status-text {
-  width: min(100%, var(--page-max));
-  margin: 0 auto;
-  color: var(--text-secondary);
-  text-align: center;
+/* ---------- Nueva consulta ---------- */
+.consulta-form {
+  margin-bottom: var(--spacing-lg);
 }
 
-.banner {
+.consulta-form-header {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: var(--spacing-sm);
-  width: min(100%, var(--page-max));
-  margin: 0 auto;
-  padding: 0.65rem 0.8rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.9rem;
+  justify-content: space-between;
+  gap: var(--spacing-md);
 }
 
-.banner-error {
-  background-color: color-mix(in srgb, var(--danger) 14%, white);
-  color: var(--danger);
+.consulta-form-header h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
-.banner-error button {
-  padding: 0.35rem 0.75rem;
-  border: 1px solid var(--danger);
-  border-radius: var(--radius-sm);
-  background-color: transparent;
-  color: var(--danger);
-  font-weight: 600;
-  cursor: pointer;
+.consulta-guardar {
+  align-self: flex-end;
+  min-width: 14rem;
 }
 
 .empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--spacing-md);
-  width: min(100%, var(--page-max));
-  margin: 0 auto;
-  padding: var(--spacing-xl);
-  border-radius: var(--radius-lg);
-  background-color: var(--surface);
-  border: 1px solid var(--border);
+  align-items: center;
+  gap: 1rem;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
 }
 
 .empty-state p {
@@ -173,165 +99,95 @@
   color: var(--text-secondary);
 }
 
-.consulta-form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-  width: min(100%, var(--page-max));
-  margin: 0 auto var(--spacing-lg);
-  padding: var(--spacing-lg);
-  border-radius: var(--radius-lg);
-  background-color: var(--surface);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
-}
-
-.consulta-form-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.consulta-form-header h2 {
-  margin: 0;
-  font-size: 1.05rem;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--spacing-md);
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
-}
-
-.field-wide {
-  grid-column: 1 / -1;
-}
-
-.field label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.field input,
-.field select,
-.field textarea {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 0.5rem 0.7rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font: inherit;
-  color: var(--text-primary);
-  background-color: var(--surface);
-}
-
-.field input:focus,
-.field select:focus,
-.field textarea:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
-}
-
-.field-error {
-  margin: 0;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--danger);
-}
-
+/* ---------- Eventos ---------- */
 .evento-list {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
-  width: min(100%, var(--page-max));
-  margin: 0 auto;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .evento-card {
-  padding: var(--spacing-lg);
-  border-radius: var(--radius-lg);
-  background-color: var(--surface);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
+  gap: 0.9rem;
 }
 
 .evento-card-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-sm);
+  justify-content: space-between;
+  gap: var(--spacing-md);
 }
 
 .evento-tipo {
-  padding: 0.25rem 0.7rem;
-  border-radius: var(--radius-sm);
-  background-color: var(--primary-light);
-  color: var(--primary);
-  font-weight: 700;
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+  background-color: var(--primary-soft);
+  color: #3a6358;
   font-size: 0.8rem;
-  text-transform: uppercase;
+  font-weight: 700;
+  text-transform: capitalize;
 }
 
 .evento-fecha {
   color: var(--text-secondary);
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   font-weight: 600;
 }
 
 .evento-descripcion {
-  margin: 0 0 var(--spacing-sm);
-  color: var(--text-primary);
+  font-size: 0.98rem;
+  line-height: 1.55;
 }
 
 .evento-detalle {
-  margin: 0.25rem 0;
-  color: var(--text-secondary);
-  font-size: 0.9rem;
+  padding: 0.75rem 0.95rem;
+  border-radius: 12px;
+  background-color: var(--fill);
+  font-size: 0.92rem;
+  line-height: 1.5;
 }
 
 .evento-detalle strong {
-  color: var(--text-primary);
+  display: block;
+  margin-bottom: 0.15rem;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .evento-archivos {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--spacing-xs);
-  margin-top: var(--spacing-sm);
-  padding-top: var(--spacing-sm);
-  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
 }
 
 .archivo-list {
   display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
+  flex-wrap: wrap;
+  gap: 0.4rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .archivo-list a {
+  display: inline-block;
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+  background-color: var(--fill);
   color: var(--primary);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 600;
-  text-decoration: underline;
+  text-decoration: none;
 }
 
-.archivo-upload-label {
-  cursor: pointer;
+.archivo-list a:hover {
+  background-color: var(--primary-soft);
 }
 
 .archivo-input {
@@ -344,50 +200,12 @@
 }
 
 @media (max-width: 640px) {
-  .historia-page {
-    padding: var(--spacing-md);
-  }
-
-  .historia-header {
+  .pet-card {
     flex-direction: column;
+    align-items: flex-start;
   }
 
-  .form-grid {
-    grid-template-columns: 1fr;
+  .historia-header-actions {
+    flex-wrap: wrap;
   }
-}
-
-/* Etiqueta del campo con su botón de dictado (P1-182) */
-.field-label-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-xs);
-}
-
-/* Aclaración bajo un campo, sin connotación de error (US-40). */
-.field-hint {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--muted, #6b7280);
-}
-
-/* Casilla de última dosis bajo la próxima aplicación. */
-.field .checkbox-ultima-dosis {
-  align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.field .checkbox-ultima-dosis input {
-  width: auto;
-  margin: 0;
-  padding: 0;
-  box-shadow: none;
-  accent-color: var(--primary);
 }
