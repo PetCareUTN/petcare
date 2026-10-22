@@ -40,7 +40,8 @@
   display: flex;
   align-items: center;
   margin: 0 0 var(--spacing-lg);
-  padding: 0;
+  /* Mismo margen que el texto dentro de las tarjetas (1.5rem de padding). */
+  padding: 0 1.5rem;
   list-style: none;
 }
 
@@ -661,6 +662,10 @@
 }
 
 @media (max-width: 820px) {
+  .flow-steps {
+    padding: 0 0.5rem;
+  }
+
   .attention-grid {
     grid-template-columns: 1fr;
   }
