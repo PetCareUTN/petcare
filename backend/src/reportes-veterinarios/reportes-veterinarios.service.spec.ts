@@ -108,6 +108,7 @@ describe('ReportesVeterinariosService', () => {
       asistidos: 0,
       ausentes: 0,
       sinRegistrar: 3,
+      sobreturnos: 0,
       tasaAusentismo: 0,
       cancelados: 1,
       tasaCancelacion: 25,
@@ -163,6 +164,7 @@ describe('ReportesVeterinariosService', () => {
       asistidos: 1,
       ausentes: 1,
       sinRegistrar: 1,
+      sobreturnos: 0,
       // 1 ausente sobre los 2 turnos ya cerrados.
       tasaAusentismo: 50,
       cancelados: 1,

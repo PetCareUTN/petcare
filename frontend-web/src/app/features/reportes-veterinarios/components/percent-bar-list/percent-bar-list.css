@@ -20,7 +20,7 @@
 .percent-track {
   height: 0.6rem;
   border-radius: 999px;
-  background-color: var(--background);
+  background-color: var(--ap-fill);
   overflow: hidden;
 }
 

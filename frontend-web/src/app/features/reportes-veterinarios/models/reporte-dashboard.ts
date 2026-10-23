@@ -34,6 +34,8 @@ export interface ResumenReporte {
   ausentes: number;
   /** Turnos ya pasados que el veterinario todavia no cerro. */
   sinRegistrar: number;
+  /** Turnos que el veterinario agendo sobre un horario ya completo. */
+  sobreturnos: number;
   cancelados: number;
   tasaCancelacion: number;
   /** Ausentes sobre los turnos ya cerrados. */

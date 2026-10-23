@@ -132,6 +132,10 @@ export class ReportesVeterinariosService {
     const sinRegistrar = turnosEnRango.filter(
       (turno) => turno.estado === AppointmentStatus.CONFIRMADO,
     );
+    // Turnos que el veterinario agendo sobre un horario ya completo.
+    const sobreturnosEnRango = ocurridosEnRango.filter(
+      (turno) => turno.sobrecupo,
+    );
     const atendidosEnRango = turnosEnRango.filter((turno) =>
       ESTADOS_CON_ATENCION.includes(turno.estado),
     );
@@ -148,6 +152,7 @@ export class ReportesVeterinariosService {
         asistidos: asistidosEnRango.length,
         ausentes: ausentesEnRango.length,
         sinRegistrar: sinRegistrar.length,
+        sobreturnos: sobreturnosEnRango.length,
         cancelados: canceladosEnRango.length,
         tasaCancelacion: this.calcularPorcentaje(
           canceladosEnRango.length,

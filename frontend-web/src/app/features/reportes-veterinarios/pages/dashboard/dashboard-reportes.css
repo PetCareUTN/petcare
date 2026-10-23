@@ -1,186 +1,99 @@
+/* Estilos compartidos: src/styles/formularios.css. Acá solo lo propio de esta pantalla. */
 :host {
   --chart-confirmados: var(--primary);
-  --chart-cancelados: #8a9a95;
+  --chart-cancelados: #b9c4c0;
   --chart-nuevos: var(--primary);
-  --chart-recurrentes: #6f63b8;
+  --chart-recurrentes: #a8c7bd;
   --chart-horarios: var(--primary);
 
   --kpi-good: #3f8f6b;
   --kpi-warn: #c9862e;
   --kpi-bad: var(--danger);
+  --sobreturno: #2f6fb0;
 }
 
-.reportes-page {
-  min-height: 100%;
-  padding: var(--spacing-xl) var(--spacing-lg);
-  box-sizing: border-box;
-  background-color: var(--background);
-}
-
-.reportes-header {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--spacing-md);
-  width: min(100%, var(--page-max));
-  margin: 0 auto var(--spacing-lg);
-}
-
-.reportes-header h1 {
-  margin: 0;
-  font-size: 1.6rem;
-}
-
-.reportes-header p {
-  margin: var(--spacing-xs) 0 0;
-  color: var(--text-secondary);
-}
-
-.rango-switch {
-  display: flex;
-  gap: var(--spacing-xs);
-}
-
-.rango-switch button {
-  padding: 0.45rem 0.9rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background-color: var(--surface);
-  color: var(--text-primary);
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.rango-switch button:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-.rango-switch button.active {
-  border-color: var(--primary);
-  background-color: var(--primary);
-  color: #ffffff;
-}
-
-.status-text {
-  width: min(100%, var(--page-max));
-  margin: 0 auto;
+.estado-texto {
+  margin: 0 0 var(--spacing-md);
   color: var(--text-secondary);
   font-size: 0.9rem;
 }
 
-.banner {
-  width: min(100%, var(--page-max));
-  margin: 0 auto var(--spacing-md);
-  padding: 0.65rem 0.8rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.9rem;
+/* Al cambiar el período se mantienen los datos viejos, atenuados, hasta que llegan los nuevos. */
+.cargando {
+  opacity: 0.55;
+  transition: opacity 0.15s ease;
 }
 
-.banner-error {
-  background-color: color-mix(in srgb, var(--danger) 14%, white);
-  color: var(--danger);
-}
-
-/* Tarjetas de resumen */
-
-.kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: var(--spacing-md);
-  width: min(100%, var(--page-max));
-  margin: 0 auto var(--spacing-lg);
-}
-
-.kpi-card {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  padding: var(--spacing-lg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background-color: var(--surface);
-  box-shadow: var(--shadow-sm);
-}
-
-.kpi-label {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
-.kpi-value {
-  font-size: 2rem;
-  font-weight: 800;
-  color: var(--text-primary);
-}
-
-.kpi-value.kpi-good {
+.ap-stats .ap-stat-value.kpi-good {
   color: var(--kpi-good);
 }
 
-.kpi-value.kpi-warn {
+.ap-stats .ap-stat-value.kpi-warn {
   color: var(--kpi-warn);
 }
 
-.kpi-value.kpi-bad {
+.ap-stats .ap-stat-value.kpi-bad {
   color: var(--kpi-bad);
 }
 
-/* Aclaracion al pie de un KPI, p.ej. los turnos que faltan cerrar (P1-193). */
-.kpi-hint {
-  display: block;
-  margin-top: 0.25rem;
-  font-size: 0.75rem;
-  line-height: 1.3;
-  color: var(--text-secondary, #6b7280);
-}
-
-/* Grilla de gráficos */
-
-.charts-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--spacing-lg);
-  width: min(100%, var(--page-max));
-  margin: 0 auto;
-}
-
-.chart-card {
-  padding: var(--spacing-lg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background-color: var(--surface);
-  box-shadow: var(--shadow-sm);
-}
-
-.chart-card h2 {
-  margin: 0;
-  font-size: 1.05rem;
-}
-
-.chart-subtitle {
-  margin: 0.2rem 0 var(--spacing-md);
-  font-size: 0.82rem;
+.stat-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.6rem;
   color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.sobreturnos {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--sobreturno);
+  font-weight: 600;
+}
+
+.sobreturnos i {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background-color: var(--sobreturno);
+}
+
+.vacio {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 10rem;
+  border: 1.5px dashed var(--ap-hairline);
+  border-radius: 14px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.vacio svg {
+  width: 34px;
+  height: 34px;
+  color: #a4b0ab;
+}
+
+.vacio p {
+  margin: 0;
+  font-size: 0.9rem;
 }
 
 @media (max-width: 900px) {
-  .charts-grid {
-    grid-template-columns: 1fr;
+  .ap-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
 @media (max-width: 640px) {
-  .kpi-value {
-    font-size: 1.6rem;
-  }
-
-  .reportes-header {
+  .ap-header {
     flex-direction: column;
+    align-items: flex-start;
   }
 }
