@@ -1014,6 +1014,7 @@
   position: relative;
   flex: 1 1 220px;
   max-width: 320px;
+  margin-left: auto;
 }
 
 .busqueda input {
