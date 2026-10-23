@@ -563,7 +563,7 @@ describe('TurnosServiciosService', () => {
       expect(result).toEqual(['09:00', '10:00', '10:30', '11:00', '11:30']);
     });
 
-    it('con otra duracion, descarta los horarios que pisan un turno existente', async () => {
+    it('con otra duracion, ofrece cada media hora y descarta los que pisan un turno existente', async () => {
       serviciosRepository.findOne.mockResolvedValue({
         ...servicio,
         duracionMinutos: 60,
@@ -578,7 +578,8 @@ describe('TurnosServiciosService', () => {
 
       const result = await service.horariosDisponibles(8, '2026-09-07');
 
-      expect(result).toEqual(['09:00', '11:00']);
+      // Cada media hora; el 10:30 entra porque el turno existente termina a las 10:30.
+      expect(result).toEqual(['09:00', '10:30', '11:00']);
     });
 
     it('solo considera los turnos del mismo servicio, no los de otros servicios del prestador', async () => {

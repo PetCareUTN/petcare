@@ -386,6 +386,11 @@ export class HistoriaClinicaPage implements OnInit {
   }
 
   private today(): string {
-    return new Date().toISOString().slice(0, 10);
+    // Fecha local: toISOString() usa UTC y de noche (después de las 21 h en Argentina)
+    // devolvería el día siguiente.
+    const hoy = new Date();
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+    const dia = String(hoy.getDate()).padStart(2, '0');
+    return `${hoy.getFullYear()}-${mes}-${dia}`;
   }
 }

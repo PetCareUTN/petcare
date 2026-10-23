@@ -25,6 +25,9 @@ import { TurnoServicioPrestadorResponseDto } from './dto/turno-servicio-prestado
 import { TurnoServicio } from './entities/turno-servicio.entity';
 import { PrestadoresService } from '../prestadores/prestadores.service';
 
+/** Cada cuántos minutos puede empezar un turno dentro de la franja de un servicio. */
+const PASO_HORARIOS_MINUTOS = 30;
+
 /** Texto legible de cada categoría para los mensajes de notificación. */
 const NOMBRE_POR_CATEGORIA: Record<CategoriaServicio, string> = {
   [CategoriaServicio.PASEADOR]: 'paseo',
@@ -315,6 +318,9 @@ export class TurnosServiciosService {
       fin: this.aMinutos(turno.horaFin),
     }));
 
+    // Los turnos pueden empezar en cualquier media hora de la franja (no solo en
+    // múltiplos de la duración desde el inicio), así no quedan huecos sin ofrecer
+    // después de un turno que termina a mitad de franja.
     const slots = new Set<string>();
     for (const disponibilidad of servicio.disponibilidades ?? []) {
       if (disponibilidad.diaSemana !== diaSemana) {
@@ -322,10 +328,11 @@ export class TurnosServiciosService {
       }
       const inicio = this.aMinutos(disponibilidad.horaInicio);
       const fin = this.aMinutos(disponibilidad.horaFin);
+      const primero = Math.ceil(inicio / PASO_HORARIOS_MINUTOS) * PASO_HORARIOS_MINUTOS;
       for (
-        let minuto = inicio;
+        let minuto = primero;
         minuto + duracionMinutos <= fin;
-        minuto += duracionMinutos
+        minuto += PASO_HORARIOS_MINUTOS
       ) {
         const solapado = ocupados.some(
           (turno) => minuto < turno.fin && minuto + duracionMinutos > turno.inicio,

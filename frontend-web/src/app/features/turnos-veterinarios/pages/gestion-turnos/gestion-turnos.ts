@@ -157,7 +157,12 @@ export class GestionTurnosVeterinariosPage implements OnInit {
 
   protected readonly diasSemana = DIAS_SEMANA;
 
-  protected readonly vista = signal<VistaCalendario>('semana');
+  /** En pantallas angostas la semana no entra (7 columnas): se arranca en la vista Día. */
+  protected readonly vista = signal<VistaCalendario>(
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 700px)').matches
+      ? 'dia'
+      : 'semana',
+  );
   /** Fecha de referencia (YYYY-MM-DD) sobre la que se arma la vista actual. */
   protected readonly fechaFoco = signal(this.claveDeHoy());
   // Por defecto se ve todo menos lo cancelado: así un turno no desaparece de la agenda

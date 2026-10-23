@@ -211,7 +211,7 @@ export class CreateEventoClinicoPage implements OnInit {
             this.createdEventId.set(evento.idEvento);
             this.archivosSubidos.set(evento.archivos);
             this.successMessage.set(
-              `Evento clinico registrado en la historia #${evento.idHistoria}.`,
+              `Evento clínico registrado en la historia #${evento.idHistoria}.`,
             );
             this.uploadError.set(
               error.mensaje ?? 'El evento se registró, pero no se pudieron adjuntar los archivos.',
@@ -392,6 +392,11 @@ export class CreateEventoClinicoPage implements OnInit {
   }
 
   private today(): string {
-    return new Date().toISOString().slice(0, 10);
+    // Fecha local: toISOString() usa UTC y de noche (después de las 21 h en Argentina)
+    // devolvería el día siguiente.
+    const hoy = new Date();
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+    const dia = String(hoy.getDate()).padStart(2, '0');
+    return `${hoy.getFullYear()}-${mes}-${dia}`;
   }
 }

@@ -95,15 +95,22 @@ export class DashboardReportesPage implements OnInit {
     ];
   });
 
+  /**
+   * La barra compara los días entre sí (el más ocupado llena la barra): el
+   * porcentaje sobre toda la capacidad del período es tan chico que no deja ver
+   * cuál es el día fuerte. La capacidad queda como dato aparte.
+   */
   protected readonly itemsOcupacion = computed<PercentBarItem[]>(() => {
     const data = this.data();
     if (!data) {
       return [];
     }
+    const maximo = Math.max(...data.ocupacionPorDia.map((o) => o.ocupados), 0);
     return data.ocupacionPorDia.map((o) => ({
       etiqueta: o.etiqueta,
-      porcentaje: o.porcentaje,
-      detalle: `${o.ocupados}/${o.capacidad} turnos`,
+      porcentaje: maximo > 0 ? Math.round((o.ocupados / maximo) * 100) : 0,
+      valor: o.ocupados === 1 ? '1 turno' : `${o.ocupados} turnos`,
+      detalle: `${o.porcentaje}% de ${o.capacidad} cupos`,
     }));
   });
 
