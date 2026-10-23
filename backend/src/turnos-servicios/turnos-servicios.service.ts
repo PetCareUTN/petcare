@@ -25,12 +25,6 @@ import { TurnoServicioPrestadorResponseDto } from './dto/turno-servicio-prestado
 import { TurnoServicio } from './entities/turno-servicio.entity';
 import { PrestadoresService } from '../prestadores/prestadores.service';
 
-const DURACION_MINUTOS_POR_CATEGORIA: Record<CategoriaServicio, number> = {
-  [CategoriaServicio.PASEADOR]: 30,
-  [CategoriaServicio.PELUQUERIA]: 30,
-  [CategoriaServicio.GUARDERIA]: 60,
-};
-
 /** Texto legible de cada categoría para los mensajes de notificación. */
 const NOMBRE_POR_CATEGORIA: Record<CategoriaServicio, string> = {
   [CategoriaServicio.PASEADOR]: 'paseo',
@@ -159,7 +153,7 @@ export class TurnosServiciosService {
   ): Promise<TurnoServicioPrestadorResponseDto> {
     const inicio = new Date(`${dto.fecha}T${dto.horaInicio}:00-03:00`).getTime();
     if (!Number.isFinite(inicio) || inicio <= Date.now()) throw new BadRequestException('La reserva debe comenzar en el futuro.');
-    const duracionMinutos = DURACION_MINUTOS_POR_CATEGORIA[servicio.categoria];
+    const duracionMinutos = servicio.duracionMinutos;
     const horaFin = this.sumarMinutos(dto.horaInicio, duracionMinutos);
 
     this.verificarDisponibilidad(servicio, dto.fecha, dto.horaInicio, horaFin);
@@ -268,8 +262,13 @@ export class TurnosServiciosService {
       },
     });
 
+    // Las horas llegan con segundos ("10:30:00"): se comparan en minutos.
+    const inicio = this.aMinutos(horaInicio);
+    const fin = this.aMinutos(horaFin);
     const ocupado = turnosDelDia.some(
-      (turno) => horaInicio < turno.horaFin && horaFin > turno.horaInicio,
+      (turno) =>
+        inicio < this.aMinutos(turno.horaFin) &&
+        fin > this.aMinutos(turno.horaInicio),
     );
 
     if (ocupado) {
@@ -300,7 +299,7 @@ export class TurnosServiciosService {
     }
 
     await this.prestadores.exigirAprobado(servicio.usuario.idUsuario, servicio.categoria);
-    const duracionMinutos = DURACION_MINUTOS_POR_CATEGORIA[servicio.categoria];
+    const duracionMinutos = servicio.duracionMinutos;
     const diaSemana = this.obtenerDiaSemana(fecha);
 
     const turnosDelDia = await this.turnosRepository.find({
@@ -310,9 +309,10 @@ export class TurnosServiciosService {
         estado: TurnoServicioEstado.CONFIRMADO,
       },
     });
-    const ocupados = turnosDelDia.map((turno) =>
-      this.deMinutos(this.aMinutos(turno.horaInicio)),
-    );
+    const ocupados = turnosDelDia.map((turno) => ({
+      inicio: this.aMinutos(turno.horaInicio),
+      fin: this.aMinutos(turno.horaFin),
+    }));
 
     const slots = new Set<string>();
     for (const disponibilidad of servicio.disponibilidades ?? []) {
@@ -326,9 +326,11 @@ export class TurnosServiciosService {
         minuto + duracionMinutos <= fin;
         minuto += duracionMinutos
       ) {
-        const hora = this.deMinutos(minuto);
-        if (!ocupados.includes(hora)) {
-          slots.add(hora);
+        const solapado = ocupados.some(
+          (turno) => minuto < turno.fin && minuto + duracionMinutos > turno.inicio,
+        );
+        if (!solapado) {
+          slots.add(this.deMinutos(minuto));
         }
       }
     }

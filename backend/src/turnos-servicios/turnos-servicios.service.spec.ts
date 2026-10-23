@@ -63,6 +63,7 @@ describe('TurnosServiciosService', () => {
     idServicio: 8,
     usuario: prestador,
     categoria: CategoriaServicio.PASEADOR,
+    duracionMinutos: 30,
     disponibilidades: [
       { diaSemana: DiaSemana.LUNES, horaInicio: '09:00', horaFin: '12:00' },
     ],
@@ -202,11 +203,12 @@ describe('TurnosServiciosService', () => {
       );
     });
 
-    it('usa una duracion de 60 minutos para guarderia', async () => {
+    it('usa la duracion configurada en el servicio', async () => {
       mascotasRepository.findOne.mockResolvedValue(mascotaPropia);
       serviciosRepository.findOne.mockResolvedValue({
         ...servicio,
         categoria: CategoriaServicio.GUARDERIA,
+        duracionMinutos: 60,
         disponibilidades: [
           { diaSemana: DiaSemana.LUNES, horaInicio: '09:00', horaFin: '12:00' },
         ],
@@ -226,6 +228,24 @@ describe('TurnosServiciosService', () => {
 
       expect(turnosRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({ horaInicio: '10:00', horaFin: '11:00' }),
+      );
+    });
+
+    it('calcula la hora de fin con una duracion de 45 minutos', async () => {
+      mascotasRepository.findOne.mockResolvedValue(mascotaPropia);
+      serviciosRepository.findOne.mockResolvedValue({
+        ...servicio,
+        duracionMinutos: 45,
+      });
+      turnosRepository.find.mockResolvedValue([]);
+      turnosRepository.create.mockImplementation((entity) => entity);
+      turnosRepository.save.mockResolvedValue({ ...turnoConfirmado, idTurno: 32 });
+      turnosRepository.findOne.mockResolvedValue({ ...turnoConfirmado, idTurno: 32 });
+
+      await service.solicitar(idDueno, dto);
+
+      expect(turnosRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ horaInicio: '10:00', horaFin: '10:45' }),
       );
     });
 
@@ -526,10 +546,14 @@ describe('TurnosServiciosService', () => {
       serviciosRepository.findOne.mockResolvedValue(servicio);
       // Postgres devuelve las columnas TIME con segundos (ej. "09:30:00").
       turnosRepository.find.mockResolvedValue([
-        { horaInicio: '09:30:00', estado: TurnoServicioEstado.CONFIRMADO },
+        {
+          horaInicio: '09:30:00',
+          horaFin: '10:00:00',
+          estado: TurnoServicioEstado.CONFIRMADO,
+        },
       ]);
 
-      // 2026-09-07 es lunes; el servicio dura 30 min (paseador).
+      // 2026-09-07 es lunes; el servicio dura 30 min.
       const result = await service.horariosDisponibles(8, '2026-09-07');
 
       expect(serviciosRepository.findOne).toHaveBeenCalledWith({
@@ -537,6 +561,40 @@ describe('TurnosServiciosService', () => {
         relations: ['usuario', 'disponibilidades'],
       });
       expect(result).toEqual(['09:00', '10:00', '10:30', '11:00', '11:30']);
+    });
+
+    it('con otra duracion, descarta los horarios que pisan un turno existente', async () => {
+      serviciosRepository.findOne.mockResolvedValue({
+        ...servicio,
+        duracionMinutos: 60,
+      });
+      turnosRepository.find.mockResolvedValue([
+        {
+          horaInicio: '10:00:00',
+          horaFin: '10:30:00',
+          estado: TurnoServicioEstado.CONFIRMADO,
+        },
+      ]);
+
+      const result = await service.horariosDisponibles(8, '2026-09-07');
+
+      expect(result).toEqual(['09:00', '11:00']);
+    });
+
+    it('un horario pegado al final de otro turno sigue disponible', async () => {
+      turnosRepository.find.mockResolvedValue([
+        {
+          horaInicio: '09:00:00',
+          horaFin: '09:30:00',
+          estado: TurnoServicioEstado.CONFIRMADO,
+        },
+      ]);
+      serviciosRepository.findOne.mockResolvedValue(servicio);
+
+      const result = await service.horariosDisponibles(8, '2026-09-07');
+
+      expect(result).toContain('09:30');
+      expect(result).not.toContain('09:00');
     });
 
     it('rechaza cuando el servicio no existe', async () => {

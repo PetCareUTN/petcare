@@ -49,6 +49,8 @@ export class ServicioFormPage implements OnInit {
 
   protected readonly descripcionMax = DESCRIPCION_MAX;
 
+  private readonly duracionesBase = [15, 30, 45, 60, 90, 120];
+
   protected readonly idServicio = signal<number | null>(null);
   protected readonly isEditMode = signal(false);
   protected readonly isLoading = signal(false);
@@ -57,6 +59,17 @@ export class ServicioFormPage implements OnInit {
 
   /** La categoría no se puede cambiar al editar: es lo que el prestador tiene aprobado. */
   protected readonly categoria = signal<CategoriaServicio>('paseador');
+
+  /** Minutos de cada turno. Si el prestador no la toca, sigue a la categoría elegida. */
+  protected readonly duracion = signal(30);
+  private duracionElegida = false;
+
+  protected readonly opcionesDuracion = computed(() => {
+    const actual = this.duracion();
+    return this.duracionesBase.includes(actual)
+      ? this.duracionesBase
+      : [...this.duracionesBase, actual].sort((a, b) => a - b);
+  });
 
   protected readonly form = this.formBuilder.group({
     descripcion: ['', [Validators.maxLength(DESCRIPCION_MAX)]],
@@ -89,6 +102,8 @@ export class ServicioFormPage implements OnInit {
       next: (servicio) => {
         this.isLoading.set(false);
         this.categoria.set(servicio.categoria);
+        this.duracion.set(servicio.duracionMinutos);
+        this.duracionElegida = true;
         this.form.patchValue({ descripcion: servicio.descripcion ?? '' });
         this.reglas.set(this.agruparPorFranja(servicio.disponibilidades));
       },
@@ -102,7 +117,24 @@ export class ServicioFormPage implements OnInit {
   protected elegirCategoria(categoria: CategoriaServicio): void {
     if (!this.isEditMode()) {
       this.categoria.set(categoria);
+      if (!this.duracionElegida) {
+        this.duracion.set(categoria === 'guarderia' ? 60 : 30);
+      }
     }
+  }
+
+  protected elegirDuracion(minutos: number): void {
+    this.duracion.set(minutos);
+    this.duracionElegida = true;
+  }
+
+  protected etiquetaDuracion(minutos: number): string {
+    if (minutos < 60) {
+      return `${minutos} min`;
+    }
+    const horas = Math.floor(minutos / 60);
+    const resto = minutos % 60;
+    return resto === 0 ? `${horas} h` : `${horas} h ${resto} min`;
   }
 
   protected toggleDia(dia: DiaSemana): void {
@@ -140,6 +172,12 @@ export class ServicioFormPage implements OnInit {
     }
     if (this.horaInicio() >= this.horaFin()) {
       this.formError.set('El horario "hasta" tiene que ser posterior al "desde".');
+      return;
+    }
+    if (this.minutosEntre(this.horaInicio(), this.horaFin()) < this.duracion()) {
+      this.formError.set(
+        `El horario tiene que alcanzar para al menos un turno de ${this.etiquetaDuracion(this.duracion())}.`,
+      );
       return;
     }
 
@@ -199,6 +237,7 @@ export class ServicioFormPage implements OnInit {
     const payload = {
       categoria: this.categoria(),
       descripcion: this.form.controls.descripcion.value?.trim() || undefined,
+      duracionMinutos: this.duracion(),
       disponibilidades,
     };
 
@@ -249,5 +288,13 @@ export class ServicioFormPage implements OnInit {
   private ordenarDias(dias: DiaSemana[]): DiaSemana[] {
     const orden = this.dias.map((d) => d.value);
     return [...dias].sort((a, b) => orden.indexOf(a) - orden.indexOf(b));
+  }
+
+  private minutosEntre(desde: string, hasta: string): number {
+    const aMinutos = (hora: string) => {
+      const [h, m] = hora.split(':').map(Number);
+      return h * 60 + m;
+    };
+    return aMinutos(hasta) - aMinutos(desde);
   }
 }
