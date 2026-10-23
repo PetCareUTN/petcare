@@ -51,6 +51,8 @@ export interface ReporteDashboardVeterinarioDto {
   rangoDesde: string;
   rangoHasta: string;
   resumen: ResumenReporteDto;
+  /** Mismo resumen para el período de igual duración inmediatamente anterior. */
+  resumenAnterior: ResumenReporteDto;
   turnosPorMes: TurnosPorMesDto[];
   ocupacionPorDia: OcupacionPorDiaDto[];
   horariosPico: HorarioPicoDto[];

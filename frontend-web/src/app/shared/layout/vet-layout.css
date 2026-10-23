@@ -271,3 +271,24 @@
     border-top: none;
   }
 }
+
+/* Al imprimir (o guardar como PDF) queda solo el contenido de la pantalla. */
+@media print {
+  .vet-sidebar,
+  .vet-topbar {
+    display: none !important;
+  }
+
+  .vet-shell {
+    display: block;
+    height: auto;
+    min-height: 0;
+  }
+
+  .vet-content {
+    height: auto;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+  }
+}

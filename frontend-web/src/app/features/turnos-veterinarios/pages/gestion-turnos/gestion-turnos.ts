@@ -55,6 +55,9 @@ interface EventoTurno {
 /** Estados en los que un turno sigue ocupando su lugar en la agenda. */
 const ESTADOS_QUE_OCUPAN: EstadoTurno[] = ['confirmado', 'asistio', 'ausente'];
 
+/** Cantidad máxima de coincidencias que muestra la búsqueda. */
+const MAX_RESULTADOS_BUSQUEDA = 8;
+
 type EstadoFranja = 'libre' | 'completo';
 
 /** Capacidad de una franja de 30 minutos de la agenda, lista para mostrar. */
@@ -201,6 +204,33 @@ export class GestionTurnosVeterinariosPage implements OnInit {
     ...this.turnos().map((turno) => this.desdeVeterinario(turno)),
     ...this.turnosServicios().map((turno) => this.desdeServicio(turno)),
   ]);
+
+  /** Texto de la búsqueda de turnos por cliente o mascota. */
+  protected readonly busqueda = signal('');
+
+  /**
+   * Turnos que coinciden con la búsqueda, en cualquier fecha y estado: primero
+   * los que vienen, del más cercano al más lejano, y después los pasados, del
+   * más reciente al más viejo.
+   */
+  protected readonly resultadosBusqueda = computed(() => {
+    const texto = this.normalizar(this.busqueda());
+    if (texto.length < 2) {
+      return { items: [] as EventoTurno[], total: 0 };
+    }
+    const hoy = this.claveDeHoy();
+    const coincidencias = this.todosLosTurnos().filter((turno) =>
+      [turno.nombreMascota, turno.nombreDuenio, turno.emailDuenio].some((campo) =>
+        this.normalizar(campo ?? '').includes(texto),
+      ),
+    );
+    const porFecha = (a: EventoTurno, b: EventoTurno) =>
+      `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`);
+    const proximos = coincidencias.filter((turno) => turno.fecha >= hoy).sort(porFecha);
+    const pasados = coincidencias.filter((turno) => turno.fecha < hoy).sort((a, b) => porFecha(b, a));
+    const todos = [...proximos, ...pasados];
+    return { items: todos.slice(0, MAX_RESULTADOS_BUSQUEDA), total: todos.length };
+  });
 
   protected readonly turnosVisibles = computed(() => {
     const estados = this.estadosVisibles();
@@ -514,6 +544,30 @@ export class GestionTurnosVeterinariosPage implements OnInit {
 
   protected esTipoVisible(tipo: TipoTurno): boolean {
     return this.tiposVisibles().includes(tipo);
+  }
+
+  protected limpiarBusqueda(): void {
+    this.busqueda.set('');
+  }
+
+  /** Lleva la agenda a la fecha del turno encontrado y abre su detalle. */
+  protected abrirResultado(turno: EventoTurno): void {
+    this.fechaFoco.set(turno.fecha);
+    this.busqueda.set('');
+    this.seleccionarTurno(turno);
+  }
+
+  /** "22/10 · 10:00" */
+  protected fechaHoraCorta(turno: EventoTurno): string {
+    return `${turno.fecha.slice(8, 10)}/${turno.fecha.slice(5, 7)} · ${this.formatTime(turno.hora)}`;
+  }
+
+  private normalizar(texto: string): string {
+    return texto
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
   }
 
   protected seleccionarTurno(turno: EventoTurno): void {

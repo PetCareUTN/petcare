@@ -5,6 +5,7 @@
       <p>Un vistazo a cómo viene tu agenda y tus pacientes.</p>
     </div>
 
+    <div class="encabezado-acciones no-imprimir">
     <div class="ap-segmented" role="group" aria-label="Período del reporte">
       @for (opcion of opcionesRango; track opcion.value) {
         <button
@@ -17,7 +18,19 @@
         </button>
       }
     </div>
+
+    @if (data()) {
+      <div class="exportar">
+        <button type="button" class="ap-btn ap-btn-soft ap-btn-sm" (click)="exportarCsv()">Exportar CSV</button>
+        <button type="button" class="ap-btn ap-btn-soft ap-btn-sm" (click)="exportarPdf()">Exportar PDF</button>
+      </div>
+    }
+    </div>
   </header>
+
+  @if (data()) {
+    <p class="periodo-impreso">Período: {{ periodoImpreso() }}</p>
+  }
 
   @if (isLoading() && !data()) {
     <p class="estado-texto">Cargando reportes...</p>
@@ -32,6 +45,9 @@
       <div class="ap-stat">
         <span class="ap-stat-label">Turnos del período</span>
         <span class="ap-stat-value">{{ reporte.resumen.totalTurnos }}</span>
+        @if (comparaciones(); as c) {
+          <span class="delta" [class]="'delta ' + c.turnos.clase">{{ c.turnos.texto }}</span>
+        }
         <span class="stat-sub">
           {{ reporte.resumen.confirmados }} confirmados
           @if (reporte.resumen.sobreturnos > 0) {
@@ -46,6 +62,9 @@
       <div class="ap-stat">
         <span class="ap-stat-label">Pacientes atendidos</span>
         <span class="ap-stat-value">{{ reporte.resumen.pacientesAtendidos }}</span>
+        @if (comparaciones(); as c) {
+          <span class="delta" [class]="'delta ' + c.pacientes.clase">{{ c.pacientes.texto }}</span>
+        }
         <span class="stat-sub">{{ reporte.resumen.asistidos }} asistieron</span>
       </div>
 
@@ -54,6 +73,9 @@
         <span class="ap-stat-value" [class]="estadoTasaCancelacion()">
           {{ reporte.resumen.tasaCancelacion }}<small>%</small>
         </span>
+        @if (comparaciones(); as c) {
+          <span class="delta" [class]="'delta ' + c.cancelacion.clase">{{ c.cancelacion.texto }}</span>
+        }
         <span class="stat-sub">{{ reporte.resumen.cancelados }} cancelados</span>
       </div>
 
@@ -62,6 +84,9 @@
         <span class="ap-stat-value" [class]="estadoTasaAusentismo()">
           {{ reporte.resumen.tasaAusentismo }}<small>%</small>
         </span>
+        @if (comparaciones(); as c) {
+          <span class="delta" [class]="'delta ' + c.ausentismo.clase">{{ c.ausentismo.texto }}</span>
+        }
         <span class="stat-sub">
           {{ reporte.resumen.ausentes }} no se presentaron
           @if (reporte.resumen.sinRegistrar > 0) {
