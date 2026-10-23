@@ -2,6 +2,29 @@
   <section class="appointments-panel">
     <header class="agenda-top">
       <h1>Turnos</h1>
+    </header>
+
+    <div class="agenda-nav">
+      <div class="period-nav">
+        <button
+          type="button"
+          class="nav-button"
+          aria-label="Período anterior"
+          (click)="desplazar(-1)"
+        >
+          ‹
+        </button>
+        <button
+          type="button"
+          class="nav-button"
+          aria-label="Período siguiente"
+          (click)="desplazar(1)"
+        >
+          ›
+        </button>
+        <button type="button" class="today-button" (click)="irAHoy()">Hoy</button>
+        <h2 class="period-title">{{ tituloPeriodo() }}</h2>
+      </div>
 
       <div class="busqueda">
         <svg class="busqueda-icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -45,27 +68,6 @@
       </div>
 
       <button type="button" class="btn-new" (click)="abrirNuevoTurno()">+ Nuevo turno</button>
-    </header>
-
-    <div class="period-nav">
-      <button
-        type="button"
-        class="nav-button"
-        aria-label="Período anterior"
-        (click)="desplazar(-1)"
-      >
-        ‹
-      </button>
-      <button
-        type="button"
-        class="nav-button"
-        aria-label="Período siguiente"
-        (click)="desplazar(1)"
-      >
-        ›
-      </button>
-      <button type="button" class="today-button" (click)="irAHoy()">Hoy</button>
-      <h2 class="period-title">{{ tituloPeriodo() }}</h2>
     </div>
 
     <div class="agenda-controls">
