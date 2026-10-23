@@ -158,7 +158,7 @@ export class TurnosServiciosService {
 
     this.verificarDisponibilidad(servicio, dto.fecha, dto.horaInicio, horaFin);
     await this.verificarSinSolapamiento(
-      servicio.usuario.idUsuario,
+      servicio.idServicio,
       dto.fecha,
       dto.horaInicio,
       horaFin,
@@ -248,15 +248,16 @@ export class TurnosServiciosService {
     }
   }
 
+  /** Cada servicio tiene su propia agenda: un turno solo ocupa el horario de su servicio. */
   private async verificarSinSolapamiento(
-    idPrestador: number,
+    idServicio: number,
     fecha: string,
     horaInicio: string,
     horaFin: string,
   ): Promise<void> {
     const turnosDelDia = await this.turnosRepository.find({
       where: {
-        servicio: { usuario: { idUsuario: idPrestador } },
+        servicio: { idServicio },
         fecha,
         estado: TurnoServicioEstado.CONFIRMADO,
       },
@@ -304,7 +305,7 @@ export class TurnosServiciosService {
 
     const turnosDelDia = await this.turnosRepository.find({
       where: {
-        servicio: { usuario: { idUsuario: servicio.usuario.idUsuario } },
+        servicio: { idServicio },
         fecha,
         estado: TurnoServicioEstado.CONFIRMADO,
       },

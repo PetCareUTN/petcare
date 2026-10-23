@@ -581,6 +581,17 @@ describe('TurnosServiciosService', () => {
       expect(result).toEqual(['09:00', '11:00']);
     });
 
+    it('solo considera los turnos del mismo servicio, no los de otros servicios del prestador', async () => {
+      serviciosRepository.findOne.mockResolvedValue(servicio);
+      turnosRepository.find.mockResolvedValue([]);
+
+      await service.horariosDisponibles(8, '2026-09-07');
+
+      expect(turnosRepository.find).toHaveBeenCalledWith({
+        where: expect.objectContaining({ servicio: { idServicio: 8 } }),
+      });
+    });
+
     it('un horario pegado al final de otro turno sigue disponible', async () => {
       turnosRepository.find.mockResolvedValue([
         {
