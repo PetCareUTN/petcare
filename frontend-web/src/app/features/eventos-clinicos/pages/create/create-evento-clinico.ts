@@ -261,12 +261,13 @@ export class CreateEventoClinicoPage implements OnInit {
   }
 
   /**
-   * Al registrar el evento se vuelve a "Atención veterinaria" con el cliente y la
-   * mascota ya elegidos, listo para el siguiente paso, y allá se avisa el éxito.
+   * Al registrar el evento se vuelve a "Atención veterinaria" sin cliente ni
+   * mascota elegidos, lista para cargar al siguiente paciente, y allá se avisa
+   * el éxito.
    */
   private volverALaAtencion(): void {
     this.router.navigate(['/eventos-clinicos'], {
-      queryParams: { ...this.buildBackQueryParams(), eventoRegistrado: 1 },
+      queryParams: { eventoRegistrado: 1 },
     });
   }
 
