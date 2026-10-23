@@ -11,6 +11,8 @@ describe('NotificacionesTurnosService', () => {
   let notificacionesService: { crear: jest.Mock };
 
   const turno: DatosTurno = {
+    idTurno: 7,
+    tipoTurno: 'turno_veterinario',
     idDuenio: 12,
     idPrestador: 99,
     nombreDuenio: 'Ana Gomez',
@@ -46,12 +48,16 @@ describe('NotificacionesTurnosService', () => {
         NotificationType.TURNO_CONFIRMADO,
         'Turno confirmado',
         expect.stringContaining('Luna'),
+        7,
+        'turno_veterinario',
       );
       expect(notificacionesService.crear).toHaveBeenCalledWith(
         99,
         NotificationType.TURNO_CONFIRMADO,
         'Nuevo turno reservado',
         expect.stringContaining('Ana Gomez'),
+        7,
+        'turno_veterinario',
       );
     });
 
@@ -68,6 +74,42 @@ describe('NotificacionesTurnosService', () => {
       const [, , , cuerpo] = notificacionesService.crear.mock.calls[0];
       expect(cuerpo).toContain('a las 09:30.');
       expect(cuerpo).not.toContain('09:30:00');
+    });
+  });
+
+  describe('turno agendado por la veterinaria', () => {
+    const turnoDeLaVeterinaria: DatosTurno = {
+      ...turno,
+      creadoPor: 'veterinario',
+      duenios: [
+        { idUsuario: 12, nombre: 'Ana Gomez' },
+        { idUsuario: 13, nombre: 'Marta Paz' },
+      ],
+    };
+
+    it('avisa a todos los dueños que se les agendó un turno', async () => {
+      await service.notificarTurnoConfirmado(turnoDeLaVeterinaria);
+
+      expect(notificacionesService.crear).toHaveBeenCalledTimes(2);
+      for (const idDuenio of [12, 13]) {
+        expect(notificacionesService.crear).toHaveBeenCalledWith(
+          idDuenio,
+          NotificationType.TURNO_CONFIRMADO,
+          'Turno confirmado',
+          expect.stringContaining('te agendó un turno'),
+          7,
+          'turno_veterinario',
+        );
+      }
+    });
+
+    it('no le avisa a la veterinaria de un turno que cargó ella', async () => {
+      await service.notificarTurnoConfirmado(turnoDeLaVeterinaria);
+
+      const destinatarios = notificacionesService.crear.mock.calls.map(
+        ([idUsuario]: [number]) => idUsuario,
+      );
+      expect(destinatarios).not.toContain(99);
     });
   });
 
@@ -90,6 +132,8 @@ describe('NotificacionesTurnosService', () => {
         NotificationType.TURNO_CONFIRMADO,
         'Turno confirmado',
         expect.stringContaining('Tu turno'),
+        7,
+        'turno_veterinario',
       );
       // El otro dueño: quién lo reservó.
       expect(notificacionesService.crear).toHaveBeenCalledWith(
@@ -97,12 +141,16 @@ describe('NotificacionesTurnosService', () => {
         NotificationType.TURNO_CONFIRMADO,
         'Turno confirmado',
         expect.stringContaining('Ana Gomez reservó'),
+        7,
+        'turno_veterinario',
       );
       expect(notificacionesService.crear).toHaveBeenCalledWith(
         99,
         NotificationType.TURNO_CONFIRMADO,
         'Nuevo turno reservado',
         expect.any(String),
+        7,
+        'turno_veterinario',
       );
     });
 
@@ -164,6 +212,8 @@ describe('NotificacionesTurnosService', () => {
         NotificationType.TURNO_CANCELADO,
         'Turno cancelado',
         expect.stringContaining('Ana Gomez canceló'),
+        7,
+        'turno_veterinario',
       );
       const [, , , cuerpo] = notificacionesService.crear.mock.calls[0];
       expect(cuerpo).toContain('Motivo: Me surgió un viaje');
@@ -178,6 +228,8 @@ describe('NotificacionesTurnosService', () => {
         NotificationType.TURNO_CANCELADO,
         'Turno cancelado',
         expect.stringContaining('Clinica San Roque canceló'),
+        7,
+        'turno_veterinario',
       );
     });
 

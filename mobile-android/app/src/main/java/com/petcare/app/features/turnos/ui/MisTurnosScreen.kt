@@ -1,5 +1,6 @@
 package com.petcare.app.features.turnos.ui
 
+import com.petcare.app.ui.components.LocalEspacioBarraInferior
 import com.petcare.app.ui.components.elevacionTarjeta
 import com.petcare.app.ui.components.elevacionBoton
 import com.petcare.app.ui.components.elevacionBotonContorno
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -84,7 +86,10 @@ fun MisTurnosScreen(
     onRetry: () -> Unit,
     onNuevoTurno: () -> Unit,
     onCancelar: (TurnoUnificado, String?) -> Unit,
-    onResenasClick: () -> Unit
+    onResenasClick: () -> Unit,
+    /** (es veterinario, id) del turno al que llevó una notificación, si hubo. */
+    turnoDestacado: Pair<Boolean, Int>? = null,
+    onVerTodosLosTurnos: () -> Unit = {}
 ) {
     var rango by rememberSaveable { mutableStateOf(RangoFecha.TODOS) }
     // Prefijo ISO: "2026-08-26" filtra un dia y "2026-08" un mes completo.
@@ -95,7 +100,14 @@ fun MisTurnosScreen(
     val hoy = hoyIso()
     // Las fechas vienen en formato ISO (yyyy-MM-dd), asi que se pueden
     // comparar como texto para saber si son anteriores o posteriores a hoy.
-    val turnosOrdenados = turnos.sortedWith(compareBy({ it.fecha }, { it.horaInicio }))
+    // El turno de la notificación va aparte, arriba de todo, y no se repite en
+    // las listas (las keys de LazyColumn no pueden duplicarse).
+    val destacado = turnoDestacado?.let { (esVet, id) ->
+        turnos.firstOrNull { it.idTurno == id && (it.tipo == TipoTurnoItem.VETERINARIA) == esVet }
+    }
+    val turnosOrdenados = turnos
+        .filter { it !== destacado }
+        .sortedWith(compareBy({ it.fecha }, { it.horaInicio }))
     val turnosFiltrados = turnosOrdenados.filter { turno ->
         val coincideFecha = filtroFecha == null || turno.fecha.startsWith(filtroFecha!!)
         val coincideRango = when (rango) {
@@ -112,27 +124,30 @@ fun MisTurnosScreen(
     val anteriores = turnosFiltrados.filter { it.fecha < hoy }.asReversed()
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
+        // La barra superior ya resuelve los insets: sumarlos de nuevo dejaba un
+        // hueco grande arriba del titulo.
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .padding(innerPadding),
-            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+            contentPadding = PaddingValues(
+                start = 20.dp,
+                top = 12.dp,
+                end = 20.dp,
+                bottom = 12.dp + LocalEspacioBarraInferior.current
+            ),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item(key = "encabezado") {
                 Column {
                     Text(
                         text = "Mis turnos",
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Tus citas con veterinarias y prestadores de servicios.",
-                        color = PetCareMuted,
-                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
             }
@@ -153,6 +168,33 @@ fun MisTurnosScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Nuevo turno")
+                }
+            }
+
+            if (!isLoading && errorMessage == null && destacado != null) {
+                item(key = "destacado") {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Turno de la notificación",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            TextButton(onClick = onVerTodosLosTurnos) {
+                                Text("Ver todos", style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                        TurnoCard(
+                            turno = destacado,
+                            isCancelando = cancelandoId == destacado.idTurno,
+                            onCancelarClick = { turnoACancelar = destacado },
+                            esPasado = destacado.fecha < hoy
+                        )
+                    }
                 }
             }
 
@@ -254,7 +296,7 @@ fun MisTurnosScreen(
                     }
                 }
 
-                turnosFiltrados.isEmpty() -> item(key = "sin-resultados") {
+                turnosFiltrados.isEmpty() && destacado == null -> item(key = "sin-resultados") {
                     InfoCard(titulo = "Sin turnos para ese filtro") {
                         Text(
                             text = "Probá con otra fecha o mostrá todos los turnos.",

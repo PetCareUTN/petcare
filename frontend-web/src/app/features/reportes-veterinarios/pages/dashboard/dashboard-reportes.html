@@ -50,6 +50,29 @@
         <span class="kpi-label">Pacientes atendidos</span>
         <span class="kpi-value">{{ reporte.resumen.pacientesAtendidos }}</span>
       </div>
+
+      <!-- Desenlace de los turnos, a partir de lo que registra el vet (P1-193) -->
+      <div class="kpi-card">
+        <span class="kpi-label">Asistieron</span>
+        <span class="kpi-value kpi-good">{{ reporte.resumen.asistidos }}</span>
+      </div>
+
+      <div class="kpi-card">
+        <span class="kpi-label">No se presentaron</span>
+        <span class="kpi-value kpi-warn">{{ reporte.resumen.ausentes }}</span>
+      </div>
+
+      <div class="kpi-card">
+        <span class="kpi-label">Tasa de ausentismo</span>
+        <span class="kpi-value" [class]="estadoTasaAusentismo()">
+          {{ reporte.resumen.tasaAusentismo }}%
+        </span>
+        @if (reporte.resumen.sinRegistrar > 0) {
+          <span class="kpi-hint">
+            {{ reporte.resumen.sinRegistrar }} turno(s) sin registrar
+          </span>
+        }
+      </div>
     </section>
 
     <section class="charts-grid">

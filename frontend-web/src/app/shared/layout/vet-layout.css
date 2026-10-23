@@ -4,29 +4,44 @@
   background-color: var(--background);
 }
 
+/* Barra lateral estilo macOS: clara, translúcida y sin bordes marcados. */
 .vet-sidebar {
+  position: sticky;
+  top: 0;
   display: flex;
   flex-direction: column;
-  width: 240px;
+  width: 248px;
+  height: 100dvh;
   flex-shrink: 0;
-  padding: var(--spacing-lg) var(--spacing-md);
-  background-color: var(--surface);
-  border-right: 1px solid var(--border);
+  padding: 1.25rem 0.75rem 0.9rem;
+  background-color: rgba(246, 248, 247, 0.82);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  border-right: 1px solid rgba(37, 51, 47, 0.08);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', sans-serif;
 }
 
 .vet-brand {
   display: flex;
   align-items: center;
-  gap: var(--spacing-sm);
-  padding-bottom: var(--spacing-lg);
-  margin-bottom: var(--spacing-lg);
-  border-bottom: 1px solid var(--border);
+  gap: 0.6rem;
+  padding: 0.25rem 0.75rem 1.4rem;
 }
 
 /* Ver app-layout.css: el logo transparente no lleva recorte circular. */
 .vet-brand-logo {
-  width: 36px;
-  height: 36px;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  /* El PNG trae aire propio: se compensa para alinear con el menú. */
+  margin: -8px -4px -8px -8px;
+}
+
+.vet-brand-name {
+  color: var(--text-primary);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 /* Barra fija del contenido: sostiene la campana pegada al borde derecho. */
@@ -36,63 +51,141 @@
   z-index: 20;
   display: flex;
   justify-content: flex-end;
-  padding: var(--spacing-sm) var(--spacing-lg) 0;
+  /* La campanita queda al medio del espacio vacío de arriba (entre el borde y el
+     contenido). El margen negativo evita que ese espacio crezca. */
+  padding: 1.25rem var(--spacing-lg) 0;
+  margin-bottom: -0.75rem;
   background-color: var(--background);
-}
-
-.vet-brand-title {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.vet-brand-subtitle {
-  margin: 0;
-  font-size: 0.75rem;
-  color: var(--text-secondary);
 }
 
 .vet-nav {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-xs);
+  gap: 2px;
   flex: 1;
+  overflow-y: auto;
 }
 
 .vet-nav a {
-  padding: 0.6rem 0.75rem;
-  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 9px;
   color: var(--text-primary);
   text-decoration: none;
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.vet-icon {
+  width: 19px;
+  height: 19px;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  transition: color 0.15s ease;
 }
 
 .vet-nav a:hover {
-  background-color: var(--primary-light);
+  background-color: rgba(37, 51, 47, 0.06);
 }
 
 .vet-nav a.active {
-  background-color: var(--primary);
+  background-color: rgba(79, 127, 115, 0.16);
+  color: #3a6358;
+  font-weight: 600;
+}
+
+.vet-nav a.active .vet-icon {
+  color: var(--primary);
+}
+
+.vet-footer {
+  margin-top: var(--spacing-md);
+  padding-top: 0.6rem;
+  border-top: 1px solid rgba(37, 51, 47, 0.08);
+}
+
+/* Tarjeta del usuario arriba, como el encabezado de cuenta de macOS. */
+.vet-user {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  margin-bottom: 1.1rem;
+  padding: 0.6rem 0.7rem;
+  background-color: #ffffff;
+  border: 1px solid rgba(37, 51, 47, 0.07);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(37, 51, 47, 0.05);
+}
+
+.vet-user-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #6f9c90 0%, #4f7f73 100%);
   color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.vet-user-info {
+  min-width: 0;
+}
+
+.vet-user-name {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vet-user-role {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.25;
 }
 
 .vet-logout {
-  margin-top: var(--spacing-lg);
-  padding: 0.6rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background-color: transparent;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
   color: var(--text-secondary);
   font-family: inherit;
-  font-size: 0.85rem;
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  text-align: left;
   cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .vet-logout:hover {
-  background-color: var(--background);
+  background-color: rgba(217, 108, 108, 0.12);
+  color: var(--danger);
+}
+
+.vet-logout .vet-icon {
+  color: inherit;
 }
 
 .vet-content {
@@ -107,23 +200,60 @@
 
   .vet-sidebar {
     width: auto;
+    height: auto;
     flex-direction: row;
     align-items: center;
+    gap: var(--spacing-sm);
+    padding: 0.5rem var(--spacing-md);
+    overflow-x: auto;
     border-right: none;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid rgba(37, 51, 47, 0.08);
+  }
+
+  .vet-brand,
+  .vet-user,
+  .vet-footer {
+    flex-shrink: 0;
   }
 
   .vet-brand {
-    border-bottom: none;
+    padding: 0;
+  }
+
+  .vet-brand-name,
+  .vet-user-info {
+    display: none;
+  }
+
+  .vet-user {
     margin-bottom: 0;
-    padding-bottom: 0;
+    padding: 0;
+    background: none;
+    border: none;
+    box-shadow: none;
+  }
+
+  .vet-logout span {
+    display: none;
+  }
+
+  .vet-logout {
+    width: 32px;
+    padding: 0.4rem;
   }
 
   .vet-nav {
     flex-direction: row;
+    overflow: visible;
   }
 
-  .vet-logout {
+  .vet-nav a {
+    white-space: nowrap;
+  }
+
+  .vet-footer {
     margin-top: 0;
+    padding: 0;
+    border-top: none;
   }
 }

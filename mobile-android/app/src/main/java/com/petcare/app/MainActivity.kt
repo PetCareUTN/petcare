@@ -1,5 +1,6 @@
 package com.petcare.app
 
+import com.petcare.app.ui.components.LocalEspacioBarraInferior
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
@@ -30,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -71,6 +73,7 @@ import com.petcare.app.features.auth.data.google.GoogleSignInResult
 import com.petcare.app.features.auth.data.remote.RetrofitClient
 import com.petcare.app.features.auth.domain.AuthSessionController
 import com.petcare.app.features.auth.domain.GoogleAuthResult
+import com.petcare.app.features.auth.domain.VeterinarioEnMobileException
 import com.petcare.app.features.auth.ui.CompletarRegistroGoogleScreen
 import com.petcare.app.features.auth.ui.ForgotPasswordScreen
 import com.petcare.app.features.auth.ui.LoginScreen
@@ -97,6 +100,7 @@ import com.petcare.app.features.perdidas.data.remote.ReportePerdidaResponse
 import com.petcare.app.features.perdidas.domain.ReportesPerdidaController
 import com.petcare.app.features.perdidas.data.remote.UltimaDeteccionResponse
 import com.petcare.app.features.perdidas.ui.ReportarMascotaPerdidaScreen
+import com.petcare.app.features.perdidas.ui.LocalizacionScreen
 import com.petcare.app.features.perdidas.ui.UltimaUbicacionScreen
 import com.petcare.app.features.pets.data.remote.CreatePetRequest
 import com.petcare.app.features.pets.data.remote.PetResponse
@@ -657,6 +661,15 @@ class MainActivity : ComponentActivity() {
                 var turnoSuccess by rememberSaveable {
                     mutableStateOf<String?>(null)
                 }
+                // (es veterinario, id) del turno al que llegó una notificación; se
+                // muestra arriba de "Mis turnos" y se limpia al salir de la pantalla.
+                var turnoDestacado by remember { mutableStateOf<Pair<Boolean, Int>?>(null) }
+                var isViewingLocalizacion by rememberSaveable { mutableStateOf(false) }
+                var isLoadingLocalizacion by remember { mutableStateOf(false) }
+                var localizacionError by remember { mutableStateOf<String?>(null) }
+                var reportesLocalizacion by remember {
+                    mutableStateOf<List<ReportePerdidaResponse>>(emptyList())
+                }
                 var isViewingMisTurnos by rememberSaveable {
                     mutableStateOf(false)
                 }
@@ -820,6 +833,8 @@ class MainActivity : ComponentActivity() {
                 }
 
                 fun volverAInicio() {
+                    isViewingLocalizacion = false
+                    turnoDestacado = null
                     vistaPrestadores = null
                     isRegisteringPet = false
                     editingPet = null
@@ -971,6 +986,7 @@ class MainActivity : ComponentActivity() {
                             ultimaUbicacion = null
                             ultimaUbicacionError = null
                         }
+                        isViewingLocalizacion -> isViewingLocalizacion = false
                         isViewingMisTurnos -> isViewingMisTurnos = false
                         isRequestingTurno -> {
                             isRequestingTurno = false
@@ -1490,6 +1506,8 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             }
+                        } catch (exception: VeterinarioEnMobileException) {
+                            googleError = exception.message
                         } catch (exception: HttpException) {
                             googleError = when (exception.code()) {
                                 401 -> "Google rechazo el ingreso. Proba de nuevo"
@@ -1540,6 +1558,30 @@ class MainActivity : ComponentActivity() {
                             googleError = "Ocurrio un error inesperado"
                         } finally {
                             isGoogleLoading = false
+                        }
+                    }
+                }
+
+                fun loadLocalizacion() {
+                    isLoadingLocalizacion = true
+                    localizacionError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            reportesLocalizacion = reportesPerdidaController.getMisReportesActivos()
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                localizacionError = "No se pudieron cargar tus reportes"
+                            }
+                        } catch (exception: IOException) {
+                            localizacionError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            localizacionError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingLocalizacion = false
                         }
                     }
                 }
@@ -1713,6 +1755,7 @@ class MainActivity : ComponentActivity() {
                         isViewingHistoria ||
                         selectedPetId != null ||
                         isViewingSettings ||
+                        isViewingLocalizacion ||
                         isViewingMisTurnos ||
                         isRequestingTurno ||
                         isRegisteringUser ||
@@ -2273,6 +2316,7 @@ class MainActivity : ComponentActivity() {
                     val scope = rememberCoroutineScope()
                     val seccionActual = when {
                         isViewingServicios || isCreatingServicio || editingServicio != null || isViewingSolicitudesServicios -> "Servicios"
+                        isViewingLocalizacion -> "Localización"
                         isViewingMisTurnos || isRequestingTurno -> "Turnos"
                         isViewingAdopciones || isPublishingAdopcion || isViewingAdopcionDetalle || isViewingMisPublicaciones ||
                             isViewingSolicitudesRecibidas || isViewingMisFavoritos || isViewingFiltrosAdopcion ||
@@ -2439,6 +2483,48 @@ class MainActivity : ComponentActivity() {
                                                 isViewingNotificaciones = false
                                                 cerradoEnMs = System.currentTimeMillis()
                                                 isViewingSolicitudesCompartir = true
+                                            },
+                                            onAbrirMisTurnos = {
+                                                isViewingNotificaciones = false
+                                                cerradoEnMs = System.currentTimeMillis()
+                                                volverAInicio()
+                                                misTurnosError = null
+                                                isViewingMisTurnos = true
+                                                loadMisTurnos()
+                                            },
+                                            onAbrirTurno = { tipoRef, idTurno ->
+                                                isViewingNotificaciones = false
+                                                cerradoEnMs = System.currentTimeMillis()
+                                                volverAInicio()
+                                                turnoDestacado = (tipoRef == "turno_veterinario") to idTurno
+                                                misTurnosError = null
+                                                isViewingMisTurnos = true
+                                                loadMisTurnos()
+                                            },
+                                            onAbrirSolicitudesRecibidas = {
+                                                isViewingNotificaciones = false
+                                                cerradoEnMs = System.currentTimeMillis()
+                                                volverAInicio()
+                                                solicitudesRecibidasError = null
+                                                isViewingSolicitudesRecibidas = true
+                                                loadSolicitudesRecibidas()
+                                            },
+                                            onAbrirMisSolicitudes = {
+                                                isViewingNotificaciones = false
+                                                cerradoEnMs = System.currentTimeMillis()
+                                                volverAInicio()
+                                                misSolicitudesError = null
+                                                isViewingMisSolicitudes = true
+                                                loadMisSolicitudes()
+                                            },
+                                            onAbrirMascota = { idMascota ->
+                                                isViewingNotificaciones = false
+                                                cerradoEnMs = System.currentTimeMillis()
+                                                volverAInicio()
+                                                selectedPetId = idMascota
+                                                selectedPet = null
+                                                petProfileError = null
+                                                loadPetProfile(idMascota)
                                             }
                                         )
                                     }
@@ -2465,6 +2551,11 @@ class MainActivity : ComponentActivity() {
                                         loadSolicitudesRecibidas()
                                         loadProfile()
                                     },
+                                    onLocalizacionClick = {
+                                        volverAInicio()
+                                        isViewingLocalizacion = true
+                                        loadLocalizacion()
+                                    },
                                     onPerfilClick = {
                                         volverAInicio()
                                         profileError = null
@@ -2474,7 +2565,14 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                         ) { innerPadding ->
-                        Box(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+                        CompositionLocalProvider(
+                            LocalEspacioBarraInferior provides innerPadding.calculateBottomPadding()
+                        ) {
+                        Box(
+                            modifier = Modifier
+                                .padding(top = innerPadding.calculateTopPadding())
+                                .fillMaxSize()
+                        ) {
                         if (isRegisteringPet) {
                     RegisterPetScreen(
                         isSaving = isSavingPet,
@@ -3253,6 +3351,18 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     )
+                } else if (loggedUserName != null && isViewingLocalizacion) {
+                    LocalizacionScreen(
+                        isLoading = isLoadingLocalizacion,
+                        errorMessage = localizacionError,
+                        reportes = reportesLocalizacion,
+                        onRetry = { loadLocalizacion() },
+                        onVerUltimaUbicacion = { idReporte ->
+                            ultimaUbicacion = null
+                            ultimaUbicacionError = null
+                            ultimaUbicacionIdReporte = idReporte
+                        }
+                    )
                 } else if (loggedUserName != null && isViewingMisTurnos) {
                     MisTurnosScreen(
                         onResenasClick = { vistaPrestadores = "reservas" },
@@ -3260,6 +3370,8 @@ class MainActivity : ComponentActivity() {
                         errorMessage = misTurnosError,
                         turnos = misTurnos.map { TurnoUnificado.fromVeterinario(it) } +
                             misReservasServicios.map { TurnoUnificado.fromServicio(it) },
+                        turnoDestacado = turnoDestacado,
+                        onVerTodosLosTurnos = { turnoDestacado = null },
                         cancelandoId = cancelandoTurnoServicioId,
                         onRetry = { loadMisTurnos() },
                         onNuevoTurno = {
@@ -3481,6 +3593,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         }
+                        }
                     }
                     }
                 } else if (registroGooglePendiente != null) {
@@ -3568,6 +3681,8 @@ class MainActivity : ComponentActivity() {
                                             loggedUserName = session.userName
                                             loadPets()
                                             loadNotificaciones()
+                                        } catch (exception: VeterinarioEnMobileException) {
+                                            serverError = exception.message
                                         } catch (exception: HttpException) {
                                             serverError = when (exception.code()) {
                                                 400, 401 -> "Correo o contraseña incorrectos"

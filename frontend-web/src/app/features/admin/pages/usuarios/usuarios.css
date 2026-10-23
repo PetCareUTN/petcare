@@ -138,6 +138,11 @@
   color: #616161;
 }
 
+.estado-en_prueba {
+  background: #e8eaf6;
+  color: #3949ab;
+}
+
 .btn-detalle {
   color: #6750a4;
   font-weight: 600;

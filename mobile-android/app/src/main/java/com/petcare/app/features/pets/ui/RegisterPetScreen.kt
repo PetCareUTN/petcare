@@ -1,5 +1,6 @@
 package com.petcare.app.features.pets.ui
 
+import com.petcare.app.ui.components.LocalEspacioBarraInferior
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -138,7 +139,8 @@ fun RegisterPetScreen(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+                .padding(horizontal = 20.dp, vertical = 12.dp)
+                .padding(bottom = LocalEspacioBarraInferior.current),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             SeccionFormulario(

@@ -11,6 +11,7 @@ import {
 import { ClinicalEventType } from '../../common/enums/clinical-event-type.enum';
 import { TipoVacuna } from '../../common/enums/tipo-vacuna.enum';
 import { HistoriaClinica } from '../../historias-clinicas/entities/historia-clinica.entity';
+import { TurnoVeterinario } from '../../turnos-veterinarios/entities/turno-veterinario.entity';
 import { Veterinario } from '../../veterinarios/entities/veterinario.entity';
 import { ArchivoMedico } from './archivo-medico.entity';
 
@@ -30,6 +31,17 @@ export class EventoClinico {
   })
   @JoinColumn({ name: 'id_veterinario' })
   veterinario: Veterinario;
+
+  /**
+   * Turno del que salió esta atención, si vino de uno (P1-193).
+   *
+   * Es nullable porque una urgencia puede atenderse sin reserva previa. Cuando
+   * está cargado, es lo que permite dar el turno por asistido sin que el
+   * veterinario tenga que marcarlo aparte.
+   */
+  @ManyToOne(() => TurnoVeterinario, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'id_turno' })
+  turno: TurnoVeterinario | null;
 
   @Column({ type: 'varchar', length: 50 })
   tipo: ClinicalEventType;

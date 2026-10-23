@@ -15,6 +15,7 @@ import { ValidationStatus } from '../common/enums/validation-status.enum';
 import { RoleName } from '../common/enums/role-name.enum';
 import { SuscripcionEstado } from '../common/enums/suscripcion-estado.enum';
 import { Suscripcion } from '../suscripciones/entities/suscripcion.entity';
+import { SuscripcionesService } from '../suscripciones/suscripciones.service';
 import { RegisterVeterinarioDto } from './dto/register-veterinario.dto';
 import { GeocodingService } from '../geocoding/geocoding.service';
 
@@ -42,6 +43,9 @@ describe('VeterinariosService', () => {
   };
   let suscripcionesRepository: {
     findOne: jest.Mock;
+  };
+  let suscripcionesService: {
+    activarPrueba: jest.Mock;
   };
 
   const mockFile = {
@@ -84,6 +88,9 @@ describe('VeterinariosService', () => {
     notificacionesService = { crear: jest.fn() };
     geocodingService = { geocodificar: jest.fn().mockResolvedValue(null) };
     suscripcionesRepository = { findOne: jest.fn().mockResolvedValue(null) };
+    suscripcionesService = {
+      activarPrueba: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -96,6 +103,7 @@ describe('VeterinariosService', () => {
         },
         { provide: UsersService, useValue: usersService },
         { provide: NotificacionesService, useValue: notificacionesService },
+        { provide: SuscripcionesService, useValue: suscripcionesService },
         { provide: GeocodingService, useValue: geocodingService },
       ],
     }).compile();
@@ -272,6 +280,8 @@ describe('VeterinariosService', () => {
 
       expect(veterinario.estadoValidacion).toBe(ValidationStatus.APROBADO);
       expect(repository.save).toHaveBeenCalled();
+      // Al aprobar se activa explícitamente el período de prueba gratuito.
+      expect(suscripcionesService.activarPrueba).toHaveBeenCalledWith(1);
       expect(result.mensaje).toBe('Solicitud aprobada correctamente');
     });
 

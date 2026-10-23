@@ -373,6 +373,8 @@ export class TurnosServiciosService {
   /** Datos del turno que necesitan las notificaciones de la US-22. */
   private aDatosTurno(turno: TurnoServicio): DatosTurno {
     return {
+      idTurno: turno.idTurno,
+      tipoTurno: 'turno_servicio',
       idDuenio: turno.duenio.idUsuario,
       idPrestador: turno.servicio.usuario.idUsuario,
       nombreDuenio: this.nombreCompleto(turno.duenio),

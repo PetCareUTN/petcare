@@ -1,5 +1,6 @@
 package com.petcare.app.features.ble.ui
 
+import com.petcare.app.ui.components.LocalEspacioBarraInferior
 import com.petcare.app.ui.components.elevacionTarjeta
 import com.petcare.app.ui.components.elevacionBoton
 import android.Manifest
@@ -276,6 +277,9 @@ private fun ColumnScope.BuscarTagContent(
 
             LazyColumn(
                 modifier = Modifier.weight(1f, fill = false),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                    bottom = LocalEspacioBarraInferior.current
+                ),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(

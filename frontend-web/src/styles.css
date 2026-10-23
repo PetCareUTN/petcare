@@ -1,6 +1,7 @@
 /* You can add global styles to this file, and also import other style files */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nunito:wght@400;600;700&display=swap');
+@import './styles/formularios.css';
 
 :root {
   /* Paleta */
@@ -15,6 +16,10 @@
 
   /* Tipografía */
   --font-family: 'Inter', 'Nunito', sans-serif;
+
+  /* Ancho máximo del contenido de las pantallas: ocupa la pantalla en notebooks y
+     no se estira de más en monitores muy grandes. */
+  --page-max: 1560px;
 
   /* Radios */
   --radius-sm: 6px;

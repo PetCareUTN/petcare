@@ -1,10 +1,13 @@
-<main class="inicio-page">
-  <header class="inicio-header">
+<main class="ap-page">
+  <header class="ap-header">
     <div>
       <h1>Inicio</h1>
       <p>Un vistazo rápido a tu día.</p>
     </div>
-    <a routerLink="/eventos-clinicos" class="btn-primary">Registrar atención</a>
+    <div class="acciones-rapidas">
+      <button type="button" class="ap-btn ap-btn-soft" (click)="abrirNuevoTurno()">+ Nuevo turno</button>
+      <a class="ap-btn ap-btn-primary" routerLink="/eventos-clinicos">Registrar atención</a>
+    </div>
   </header>
 
   @if (isLoading()) {
@@ -12,81 +15,172 @@
   }
 
   @if (errorMessage()) {
-    <p class="banner banner-error">{{ errorMessage() }}</p>
+    <p class="ap-banner ap-banner-error" role="alert">{{ errorMessage() }}</p>
+  }
+
+  @if (successMessage()) {
+    <p class="ap-banner ap-banner-success" role="status">{{ successMessage() }}</p>
+  }
+
+  @if (accionError()) {
+    <p class="ap-banner ap-banner-error" role="alert">{{ accionError() }}</p>
   }
 
   @if (!isLoading() && !errorMessage()) {
-    <section class="kpi-grid">
-      <div class="kpi-card">
-        <span class="kpi-label">Turnos de hoy</span>
-        <span class="kpi-value">{{ turnosHoy().length }}</span>
+    <section class="ap-stats" aria-label="Resumen del día">
+      <div class="ap-stat">
+        <span class="ap-stat-label">Atendidos hoy</span>
+        <span class="ap-stat-value">{{ atendidosHoy() }} <small>de {{ turnosHoy().length }}</small></span>
       </div>
-      <div class="kpi-card">
-        <span class="kpi-label">Próximos 7 días</span>
-        <span class="kpi-value">{{ cantidadProximos7Dias() }}</span>
+      <div class="ap-stat">
+        <span class="ap-stat-label">Libres hoy</span>
+        <span class="ap-stat-value">{{ libresHoy() }}</span>
       </div>
-      <div class="kpi-card">
-        <span class="kpi-label">Cancelaciones del mes</span>
-        <span class="kpi-value">{{ tasaCancelacionMes() }}%</span>
+      <div class="ap-stat" [class.stat-alerta]="sinRegistrar().length > 0">
+        <span class="ap-stat-label">Sin registrar</span>
+        <span class="ap-stat-value">{{ sinRegistrar().length }}</span>
+      </div>
+      <div class="ap-stat">
+        <span class="ap-stat-label">Próximos 7 días</span>
+        <span class="ap-stat-value">{{ proximos7Dias() }}</span>
       </div>
     </section>
 
-    <section class="agenda-card">
-      <div class="agenda-header">
-        <h2>Agenda de hoy</h2>
-        <a routerLink="/eventos-clinicos/turnos">Ver todos los turnos</a>
-      </div>
+    <div class="ap-grid">
+      <section class="ap-panel" aria-labelledby="agenda-hoy">
+        <div class="ap-panel-head">
+          <h2 id="agenda-hoy">Agenda de hoy</h2>
+          <a class="enlace" routerLink="/eventos-clinicos/turnos">Ver todos los turnos</a>
+        </div>
 
-      @if (cancelarError()) {
-        <p class="banner banner-error">{{ cancelarError() }}</p>
-      }
+        @if (turnosHoy().length === 0) {
+          <div class="vacio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="5" width="18" height="16" rx="3.5" />
+              <path d="M3 10h18M8 3v4M16 3v4" />
+            </svg>
+            <p>No tenés turnos para hoy.</p>
+          </div>
+        } @else {
+          <ul class="lista">
+            @for (turno of turnosHoy(); track turno.idTurno) {
+              <li class="fila" [class.proximo]="proximoId() === turno.idTurno">
+                <span class="fila-hora">{{ formatHora(turno.hora) }}</span>
 
-      @if (turnosHoy().length === 0) {
-        <p class="status-text">No tenés turnos confirmados para hoy.</p>
-      }
-
-      @if (turnosHoy().length > 0) {
-        <ul class="agenda-list">
-          @for (turno of turnosHoy(); track turno.idTurno) {
-            <li class="agenda-row">
-              <span class="agenda-hora">{{ formatHora(turno.hora) }}</span>
-
-              <div class="agenda-info">
-                <span class="agenda-mascota">{{ turno.nombreMascota }}</span>
-                <span class="agenda-duenio">{{ turno.nombreDuenio }}</span>
-                @if (turno.motivoConsulta) {
-                  <span class="agenda-motivo">{{ turno.motivoConsulta }}</span>
-                }
-              </div>
-
-              @if (confirmandoCancelarId() === turno.idTurno) {
-                <div class="confirm-actions">
-                  <span>¿Cancelar?</span>
-                  <button
-                    type="button"
-                    class="btn-danger"
-                    [disabled]="procesandoId() === turno.idTurno"
-                    (click)="confirmarCancelacion(turno)"
-                  >
-                    {{ procesandoId() === turno.idTurno ? 'Cancelando...' : 'Sí' }}
-                  </button>
-                  <button type="button" class="btn-secondary" (click)="cancelarConfirmacion()">
-                    No
-                  </button>
+                <div class="fila-info">
+                  <span class="fila-titulo-fila">
+                    <span class="fila-titulo">{{ turno.nombreMascota }}</span>
+                    @if (turno.estado === 'asistio') {
+                      <span class="chip chip-ok">Asistió</span>
+                    } @else if (turno.estado === 'ausente') {
+                      <span class="chip chip-aviso">No vino</span>
+                    } @else if (sinCerrar(turno)) {
+                      <span class="chip chip-aviso">Sin cerrar</span>
+                    } @else if (proximoId() === turno.idTurno) {
+                      <span class="chip chip-ok">Próximo</span>
+                    }
+                  </span>
+                  <span class="fila-detalle">{{ turno.nombreDuenio }}</span>
+                  @if (turno.motivoConsulta) {
+                    <span class="fila-motivo">{{ turno.motivoConsulta }}</span>
+                  }
                 </div>
-              } @else {
-                <button
-                  type="button"
-                  class="btn-secondary"
-                  (click)="pedirConfirmacion(turno.idTurno)"
-                >
-                  Cancelar
-                </button>
-              }
-            </li>
+
+                <div class="fila-acciones">
+                  @if (confirmandoCancelarId() === turno.idTurno) {
+                    <span class="confirmar">¿Cancelar?</span>
+                    <button
+                      type="button"
+                      class="ap-btn ap-btn-sm btn-peligro"
+                      [disabled]="procesandoId() === turno.idTurno"
+                      (click)="confirmarCancelacion(turno)"
+                    >
+                      {{ procesandoId() === turno.idTurno ? 'Cancelando...' : 'Sí' }}
+                    </button>
+                    <button type="button" class="ap-btn ap-btn-soft ap-btn-sm" (click)="descartarCancelacion()">No</button>
+                  } @else {
+                    <a
+                      class="ap-btn ap-btn-primary ap-btn-sm"
+                      routerLink="/eventos-clinicos/nuevo"
+                      [queryParams]="paramsAtencion(turno)"
+                    >
+                      Registrar atención
+                    </a>
+                    @if (puedeCancelar(turno)) {
+                      <button type="button" class="ap-btn ap-btn-soft ap-btn-sm" (click)="pedirCancelacion(turno.idTurno)">
+                        Cancelar
+                      </button>
+                    }
+                  }
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+
+      <section class="ap-panel" aria-labelledby="pendientes">
+        <div class="ap-panel-head">
+          <h2 id="pendientes">Pendientes</h2>
+          @if (sinRegistrar().length > pendientes().length) {
+            <a class="enlace" routerLink="/eventos-clinicos/turnos">Ver todos</a>
           }
-        </ul>
-      }
-    </section>
+        </div>
+
+        @if (pendientes().length === 0) {
+          <div class="vacio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" />
+              <path d="m8.5 12.5 2.5 2.5 4.5-5" />
+            </svg>
+            <p>Estás al día: no hay turnos sin registrar.</p>
+          </div>
+        } @else {
+          <ul class="lista">
+            @for (turno of pendientes(); track turno.idTurno) {
+              <li class="fila">
+                <span class="fila-fecha">
+                  <span class="fila-hora">{{ formatHora(turno.hora) }}</span>
+                  <span class="fila-dia">{{ fechaCorta(turno.fecha) }}</span>
+                </span>
+
+                <div class="fila-info">
+                  <span class="fila-titulo">{{ turno.nombreMascota }}</span>
+                  <span class="fila-detalle">{{ turno.nombreDuenio }}</span>
+                </div>
+
+                <div class="fila-acciones">
+                  @if (esAsistenciaPendiente(turno.idTurno)) {
+                    <span class="confirmar">
+                      {{ asistenciaPendiente()?.asistio ? '¿Asistió?' : '¿No vino?' }}
+                    </span>
+                    <button
+                      type="button"
+                      class="ap-btn ap-btn-primary ap-btn-sm"
+                      [disabled]="procesandoId() === turno.idTurno"
+                      (click)="confirmarAsistencia(turno)"
+                    >
+                      {{ procesandoId() === turno.idTurno ? 'Guardando...' : 'Sí' }}
+                    </button>
+                    <button type="button" class="ap-btn ap-btn-soft ap-btn-sm" (click)="descartarAsistencia()">No</button>
+                  } @else {
+                    <button type="button" class="ap-btn ap-btn-soft ap-btn-sm" (click)="pedirAsistencia(turno.idTurno, true)">
+                      Asistió
+                    </button>
+                    <button type="button" class="ap-btn ap-btn-sm btn-aviso" (click)="pedirAsistencia(turno.idTurno, false)">
+                      No vino
+                    </button>
+                  }
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    </div>
+  }
+
+  @if (mostrarNuevoTurno()) {
+    <app-nuevo-turno-modal (cerrar)="cerrarNuevoTurno()" (agendado)="turnoAgendado($event)" />
   }
 </main>

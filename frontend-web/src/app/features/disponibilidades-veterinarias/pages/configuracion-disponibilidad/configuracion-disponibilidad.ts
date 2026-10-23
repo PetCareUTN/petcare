@@ -7,7 +7,7 @@ import {
 } from '../../models/disponibilidad-veterinaria';
 import { DisponibilidadesVeterinariasService } from '../../services/disponibilidades-veterinarias-service';
 
-type DiaOption = { value: DiaSemana; letra: string; label: string };
+type DiaOption = { value: DiaSemana; letra: string; corto: string; label: string };
 
 /** Una franja horaria que se ofrece uno o varios días (ej. L-M-M-J-V 09 a 18, 1 turno). */
 interface ReglaDisponibilidad {
@@ -19,14 +19,17 @@ interface ReglaDisponibilidad {
   cantidadTurnos: number;
 }
 
+const MIN_TURNOS = 1;
+const MAX_TURNOS = 20;
+
 const DIAS: DiaOption[] = [
-  { value: 'lunes', letra: 'L', label: 'Lunes' },
-  { value: 'martes', letra: 'M', label: 'Martes' },
-  { value: 'miercoles', letra: 'M', label: 'Miércoles' },
-  { value: 'jueves', letra: 'J', label: 'Jueves' },
-  { value: 'viernes', letra: 'V', label: 'Viernes' },
-  { value: 'sabado', letra: 'S', label: 'Sábado' },
-  { value: 'domingo', letra: 'D', label: 'Domingo' },
+  { value: 'lunes', letra: 'L', corto: 'Lun', label: 'Lunes' },
+  { value: 'martes', letra: 'M', corto: 'Mar', label: 'Martes' },
+  { value: 'miercoles', letra: 'M', corto: 'Mié', label: 'Miércoles' },
+  { value: 'jueves', letra: 'J', corto: 'Jue', label: 'Jueves' },
+  { value: 'viernes', letra: 'V', corto: 'Vie', label: 'Viernes' },
+  { value: 'sabado', letra: 'S', corto: 'Sáb', label: 'Sábado' },
+  { value: 'domingo', letra: 'D', corto: 'Dom', label: 'Domingo' },
 ];
 
 @Component({
@@ -93,6 +96,31 @@ export class ConfiguracionDisponibilidadPage implements OnInit {
 
   protected setCantidadTurnos(value: string): void {
     this.cantidadTurnos.set(Number(value) || 0);
+  }
+
+  protected cambiarCantidad(delta: 1 | -1): void {
+    this.cantidadTurnos.update((actual) =>
+      Math.min(MAX_TURNOS, Math.max(MIN_TURNOS, (actual || MIN_TURNOS) + delta)),
+    );
+  }
+
+  /** "Lun a Vie", "Lun, Mié y Vie" o "Todos los días": resumen corto de los días de una franja. */
+  protected resumenDias(dias: DiaSemana[]): string {
+    const orden = this.dias.map((d) => d.value);
+    const indices = dias.map((dia) => orden.indexOf(dia)).sort((a, b) => a - b);
+    const cortos = indices.map((i) => this.dias[i].corto);
+
+    if (cortos.length === 7) {
+      return 'Todos los días';
+    }
+    const corrido = indices.every((indice, i) => i === 0 || indice === indices[i - 1] + 1);
+    if (cortos.length >= 3 && corrido) {
+      return `${cortos[0]} a ${cortos[cortos.length - 1]}`;
+    }
+    if (cortos.length > 1) {
+      return `${cortos.slice(0, -1).join(', ')} y ${cortos[cortos.length - 1]}`;
+    }
+    return cortos[0] ?? '';
   }
 
   protected agregarRegla(): void {

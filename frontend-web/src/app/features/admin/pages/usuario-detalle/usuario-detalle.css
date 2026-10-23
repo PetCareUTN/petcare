@@ -101,6 +101,11 @@
   color: #616161;
 }
 
+.estado-en_prueba {
+  background: #e8eaf6;
+  color: #3949ab;
+}
+
 .rol-section {
   padding-top: 0.5rem;
 }
