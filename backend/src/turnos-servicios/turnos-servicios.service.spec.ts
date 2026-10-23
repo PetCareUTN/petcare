@@ -267,6 +267,23 @@ describe('TurnosServiciosService', () => {
       expect(turnosRepository.save).not.toHaveBeenCalled();
     });
 
+    it('acepta el primer horario de la franja cuando la base devuelve las horas con segundos', async () => {
+      const servicioConSegundos = {
+        ...servicio,
+        disponibilidades: [
+          { diaSemana: DiaSemana.LUNES, horaInicio: '10:00:00', horaFin: '12:00:00' },
+        ],
+      } as Servicio;
+      mascotasRepository.findOne.mockResolvedValue(mascotaPropia);
+      serviciosRepository.findOne.mockResolvedValue(servicioConSegundos);
+      turnosRepository.find.mockResolvedValue([]);
+      turnosRepository.create.mockReturnValue({});
+      turnosRepository.save.mockResolvedValue({ idTurno: 30 });
+      turnosRepository.findOne.mockResolvedValue({ ...turnoConfirmado, idTurno: 30 });
+
+      await expect(service.solicitar(idDueno, dto)).resolves.toBeDefined();
+    });
+
     it('rechaza un horario que se superpone con otro turno confirmado del mismo prestador', async () => {
       mascotasRepository.findOne.mockResolvedValue(mascotaPropia);
       serviciosRepository.findOne.mockResolvedValue(servicio);

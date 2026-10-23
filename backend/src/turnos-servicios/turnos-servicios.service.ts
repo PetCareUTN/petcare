@@ -235,11 +235,15 @@ export class TurnosServiciosService {
     horaFin: string,
   ): void {
     const diaSemana = this.obtenerDiaSemana(fecha);
+    // La base devuelve las horas con segundos ("10:30:00"): se comparan en
+    // minutos, porque como texto "10:30" quedaría antes que "10:30:00".
+    const inicio = this.aMinutos(horaInicio);
+    const fin = this.aMinutos(horaFin);
     const disponible = (servicio.disponibilidades ?? []).some(
       (disponibilidad) =>
         disponibilidad.diaSemana === diaSemana &&
-        horaInicio >= disponibilidad.horaInicio &&
-        horaFin <= disponibilidad.horaFin,
+        inicio >= this.aMinutos(disponibilidad.horaInicio) &&
+        fin <= this.aMinutos(disponibilidad.horaFin),
     );
 
     if (!disponible) {
