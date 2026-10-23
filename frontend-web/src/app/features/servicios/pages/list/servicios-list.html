@@ -67,6 +67,7 @@
 
                 <div class="servicio-info">
                   <span class="servicio-nombre">{{ categoriaLabel(servicio.categoria) }}</span>
+                  <span class="servicio-horario">Turnos de {{ etiquetaDuracion(servicio.duracionMinutos) }}</span>
                   @if (servicio.descripcion) {
                     <span class="servicio-descripcion">{{ servicio.descripcion }}</span>
                   }

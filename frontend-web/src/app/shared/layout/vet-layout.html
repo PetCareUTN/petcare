@@ -5,13 +5,17 @@
       <span class="vet-brand-name">PetCare</span>
     </div>
 
-    <div class="vet-user">
+    <a
+      class="vet-user"
+      routerLink="/eventos-clinicos/configuracion"
+      [attr.aria-label]="'Configuración de ' + nombreCompleto()"
+    >
       <span class="vet-user-avatar" aria-hidden="true">{{ iniciales() }}</span>
       <div class="vet-user-info">
         <p class="vet-user-name" [title]="nombreCompleto()">{{ nombreCompleto() }}</p>
         <p class="vet-user-role">Veterinario/a</p>
       </div>
-    </div>
+    </a>
 
     <nav class="vet-nav">
       <a routerLink="/eventos-clinicos/inicio" [class.active]="isInicioActive()">

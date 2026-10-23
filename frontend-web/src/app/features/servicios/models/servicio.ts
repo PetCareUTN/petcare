@@ -18,6 +18,7 @@ export interface DisponibilidadRequest {
 export interface CreateServicioRequest {
   categoria: CategoriaServicio;
   descripcion?: string;
+  duracionMinutos?: number;
   disponibilidades: DisponibilidadRequest[];
 }
 
@@ -36,6 +37,8 @@ export interface ServicioResponse {
   idUsuario: number;
   categoria: CategoriaServicio;
   descripcion: string | null;
+  /** Minutos que dura cada turno de este servicio. */
+  duracionMinutos: number;
   disponibilidades: DisponibilidadResponse[];
 }
 

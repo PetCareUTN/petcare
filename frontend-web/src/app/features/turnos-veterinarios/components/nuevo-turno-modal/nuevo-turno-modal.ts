@@ -6,6 +6,10 @@ import { ApiError } from '../../../auth/models/user';
 import { MascotaOwner, MascotaResponse } from '../../../mascotas/models/mascota';
 import { BusquedaClientesService } from '../../../mascotas/services/busqueda-clientes-service';
 import { MascotasService } from '../../../mascotas/services/mascotas-service';
+import { CategoriaServicio, ServicioResponse } from '../../../servicios/models/servicio';
+import { ServiciosService } from '../../../servicios/services/servicios-service';
+import { TurnoServicioResponse } from '../../../turnos-servicios/models/turno-servicio';
+import { TurnosServiciosService } from '../../../turnos-servicios/services/turnos-servicios-service';
 import {
   AgendarTurnoError,
   CapacidadHorario,
@@ -18,6 +22,13 @@ const SEARCH_DEBOUNCE_MS = 300;
 const MOTIVO_MAX_LENGTH = 500;
 
 type EstadoFranja = 'libre' | 'completo';
+type TipoTurno = 'atencion' | 'servicio';
+
+const NOMBRE_CATEGORIA: Record<CategoriaServicio, string> = {
+  paseador: 'Paseador',
+  peluqueria: 'Peluquería',
+  guarderia: 'Guardería',
+};
 
 interface Franja {
   hora: string;
@@ -34,8 +45,10 @@ interface Franja {
  * Alta de un turno por parte de la veterinaria. Se abre desde la agenda, con
  * la fecha y la hora ya elegidas si vino de un doble clic sobre un horario.
  *
- * Solo se puede agendar dentro del horario de atención.
- * En un horario completo se agrega un sobreturno.
+ * Por defecto agenda atención veterinaria, solo dentro del horario de atención:
+ * en un horario completo se agrega un sobreturno. Si el veterinario tiene
+ * servicios publicados, también puede agendar un turno de uno de ellos, que
+ * usa los horarios libres de ese servicio.
  */
 @Component({
   selector: 'app-nuevo-turno-modal',
@@ -47,6 +60,8 @@ export class NuevoTurnoModalComponent implements OnInit {
   private readonly turnosService = inject(TurnosVeterinariosService);
   private readonly mascotasService = inject(MascotasService);
   private readonly busquedaClientes = inject(BusquedaClientesService);
+  private readonly serviciosService = inject(ServiciosService);
+  private readonly turnosServiciosService = inject(TurnosServiciosService);
   private readonly destroyRef = inject(DestroyRef);
 
   /** Fecha (YYYY-MM-DD) con la que arranca el formulario. */
@@ -56,9 +71,16 @@ export class NuevoTurnoModalComponent implements OnInit {
 
   readonly cerrar = output<void>();
   readonly agendado = output<TurnoVeterinarioResponse>();
+  readonly servicioAgendado = output<TurnoServicioResponse>();
 
   protected readonly hoy = this.claveDeHoy();
   protected readonly motivoMaxLength = MOTIVO_MAX_LENGTH;
+
+  protected readonly tipo = signal<TipoTurno>('atencion');
+  protected readonly esServicio = computed(() => this.tipo() === 'servicio');
+  protected readonly servicios = signal<ServicioResponse[]>([]);
+  protected readonly servicio = signal<ServicioResponse | null>(null);
+  private readonly horariosServicio = signal<string[]>([]);
 
   protected readonly busqueda = signal('');
   protected readonly resultados = signal<MascotaOwner[]>([]);
@@ -100,8 +122,24 @@ export class NuevoTurnoModalComponent implements OnInit {
       .sort((a, b) => a.hora.localeCompare(b.hora));
   });
 
+  /** Horarios libres del servicio elegido, con la misma forma que las franjas de atención. */
+  private readonly franjasServicio = computed<Franja[]>(() => {
+    const fecha = this.fecha();
+    return this.horariosServicio().map((hora) => ({
+      hora,
+      libres: 1,
+      total: 1,
+      estado: 'libre' as EstadoFranja,
+      pasada: new Date(`${fecha}T${hora}`).getTime() <= Date.now(),
+    }));
+  });
+
+  protected readonly franjasMostradas = computed(() =>
+    this.esServicio() ? this.franjasServicio() : this.franjas(),
+  );
+
   protected readonly franjaElegida = computed(
-    () => this.franjas().find((franja) => franja.hora === this.hora()) ?? null,
+    () => this.franjasMostradas().find((franja) => franja.hora === this.hora()) ?? null,
   );
 
   protected readonly puedeAgendar = computed(
@@ -111,6 +149,7 @@ export class NuevoTurnoModalComponent implements OnInit {
       !!this.fecha() &&
       !!this.franjaElegida() &&
       !this.franjaElegida()!.pasada &&
+      (!this.esServicio() || !!this.servicio()) &&
       !this.guardando(),
   );
 
@@ -135,6 +174,33 @@ export class NuevoTurnoModalComponent implements OnInit {
   ngOnInit(): void {
     this.fecha.set(this.fechaInicial() ?? this.hoy);
     this.cargarFranjas(this.horaInicial());
+    this.cargarServicios();
+  }
+
+  protected nombreCategoria(servicio: ServicioResponse): string {
+    return NOMBRE_CATEGORIA[servicio.categoria] ?? servicio.categoria;
+  }
+
+  protected elegirTipo(tipo: TipoTurno): void {
+    if (this.tipo() === tipo) {
+      return;
+    }
+    this.tipo.set(tipo);
+    this.hora.set(null);
+    this.errorMessage.set(null);
+    this.confirmarForzar.set(null);
+    // Con un solo servicio no hay nada que elegir.
+    if (tipo === 'servicio' && this.servicios().length === 1) {
+      this.servicio.set(this.servicios()[0]);
+    }
+    this.recargarHorarios();
+  }
+
+  protected elegirServicio(servicio: ServicioResponse): void {
+    this.servicio.set(servicio);
+    this.hora.set(null);
+    this.errorMessage.set(null);
+    this.cargarHorariosServicio();
   }
 
   protected buscar(texto: string): void {
@@ -198,7 +264,7 @@ export class NuevoTurnoModalComponent implements OnInit {
     this.hora.set(null);
     this.confirmarForzar.set(null);
     if (fecha) {
-      this.cargarFranjas(null);
+      this.recargarHorarios();
     }
   }
 
@@ -213,16 +279,22 @@ export class NuevoTurnoModalComponent implements OnInit {
 
   /** Los sobreturnos se distinguen solo por el color, sin texto. */
   protected etiquetaFranja(franja: Franja): string | null {
-    if (franja.estado !== 'libre') {
+    if (this.esServicio() || franja.estado !== 'libre') {
       return null;
     }
     return franja.libres === 1 ? '1 cupo' : `${franja.libres} cupos`;
   }
 
   /** El turno que se va a cargar queda como sobreturno (hay que aclararlo en la pantalla). */
-  protected readonly esSobreturno = computed(() => this.franjaElegida()?.estado === 'completo');
+  protected readonly esSobreturno = computed(
+    () => !this.esServicio() && this.franjaElegida()?.estado === 'completo',
+  );
 
   protected agendar(): void {
+    if (this.esServicio()) {
+      this.enviarServicio();
+      return;
+    }
     this.enviar(this.franjaElegida()?.estado === 'completo');
   }
 
@@ -235,6 +307,42 @@ export class NuevoTurnoModalComponent implements OnInit {
     this.confirmarForzar.set(null);
     this.hora.set(null);
     this.cargarFranjas(null);
+  }
+
+  private enviarServicio(): void {
+    const cliente = this.cliente();
+    const mascota = this.mascota();
+    const servicio = this.servicio();
+    const hora = this.hora();
+    if (!cliente || !mascota || !servicio || !hora || !this.fecha()) {
+      return;
+    }
+
+    this.guardando.set(true);
+    this.errorMessage.set(null);
+
+    this.turnosServiciosService
+      .agendar({
+        idMascota: mascota.idMascota,
+        idDuenio: cliente.id_usuario,
+        idServicio: servicio.idServicio,
+        fecha: this.fecha(),
+        horaInicio: hora,
+        notas: this.motivo().trim() || undefined,
+      })
+      .subscribe({
+        next: (turno) => {
+          this.guardando.set(false);
+          this.servicioAgendado.emit(turno);
+        },
+        error: (error: ApiError) => {
+          this.guardando.set(false);
+          this.errorMessage.set(error.mensaje ?? 'No se pudo agendar el turno.');
+          // El horario pudo ocuparse mientras tanto: se vuelve a pedir la lista.
+          this.hora.set(null);
+          this.cargarHorariosServicio();
+        },
+      });
   }
 
   private enviar(forzar: boolean): void {
@@ -271,6 +379,44 @@ export class NuevoTurnoModalComponent implements OnInit {
           this.errorMessage.set(error.mensaje ?? 'No se pudo agendar el turno.');
         },
       });
+  }
+
+  private recargarHorarios(): void {
+    if (this.esServicio()) {
+      this.cargarHorariosServicio();
+    } else {
+      this.cargarFranjas(null);
+    }
+  }
+
+  /** Los servicios publicados por el veterinario; sin ninguno, el modal solo agenda atención. */
+  private cargarServicios(): void {
+    this.serviciosService.getMine().subscribe({
+      next: (servicios) => this.servicios.set(servicios),
+      error: () => this.servicios.set([]),
+    });
+  }
+
+  private cargarHorariosServicio(): void {
+    const servicio = this.servicio();
+    const fecha = this.fecha();
+    if (!servicio || !fecha) {
+      this.horariosServicio.set([]);
+      return;
+    }
+
+    this.cargandoFranjas.set(true);
+    this.turnosServiciosService.getHorariosDisponibles(servicio.idServicio, fecha).subscribe({
+      next: (horas) => {
+        this.cargandoFranjas.set(false);
+        this.horariosServicio.set(horas);
+      },
+      error: (error: ApiError) => {
+        this.cargandoFranjas.set(false);
+        this.horariosServicio.set([]);
+        this.errorMessage.set(error.mensaje ?? 'No se pudieron cargar los horarios.');
+      },
+    });
   }
 
   private cargarFranjas(horaPreferida: string | null): void {

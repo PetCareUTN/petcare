@@ -33,6 +33,7 @@ export class ServicioResponseDto {
   nombrePrestador: string;
   categoria: CategoriaServicio;
   descripcion: string | null;
+  duracionMinutos: number;
   direccion: string | null;
   latitud: number | null;
   longitud: number | null;
@@ -50,6 +51,7 @@ export class ServicioResponseDto {
         .join(' '),
       categoria: servicio.categoria,
       descripcion: servicio.descripcion,
+      duracionMinutos: servicio.duracionMinutos,
       direccion: ubicacion?.direccion ?? null,
       latitud: ubicacion?.latitud ?? null,
       longitud: ubicacion?.longitud ?? null,

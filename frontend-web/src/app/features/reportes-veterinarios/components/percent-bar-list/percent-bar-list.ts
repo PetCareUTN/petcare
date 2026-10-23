@@ -2,7 +2,10 @@ import { Component, input } from '@angular/core';
 
 export interface PercentBarItem {
   etiqueta: string;
+  /** Largo de la barra (0-100). */
   porcentaje: number;
+  /** Texto de la derecha; si falta, se muestra el porcentaje. */
+  valor?: string;
   detalle?: string;
 }
 

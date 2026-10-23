@@ -92,6 +92,7 @@ describe('ReportesVeterinariosService', () => {
     ];
     turnosRepository.find
       .mockResolvedValueOnce(turnos)
+      .mockResolvedValueOnce([]) // período anterior
       .mockResolvedValueOnce(turnos);
 
     const result = await service.obtenerDashboard(
@@ -108,6 +109,7 @@ describe('ReportesVeterinariosService', () => {
       asistidos: 0,
       ausentes: 0,
       sinRegistrar: 3,
+      sobreturnos: 0,
       tasaAusentismo: 0,
       cancelados: 1,
       tasaCancelacion: 25,
@@ -149,6 +151,7 @@ describe('ReportesVeterinariosService', () => {
     ];
     turnosRepository.find
       .mockResolvedValueOnce(turnos)
+      .mockResolvedValueOnce([]) // período anterior
       .mockResolvedValueOnce(turnos);
 
     const result = await service.obtenerDashboard(
@@ -163,6 +166,7 @@ describe('ReportesVeterinariosService', () => {
       asistidos: 1,
       ausentes: 1,
       sinRegistrar: 1,
+      sobreturnos: 0,
       // 1 ausente sobre los 2 turnos ya cerrados.
       tasaAusentismo: 50,
       cancelados: 1,
@@ -195,6 +199,7 @@ describe('ReportesVeterinariosService', () => {
     ];
     turnosRepository.find
       .mockResolvedValueOnce(turnos)
+      .mockResolvedValueOnce([]) // período anterior
       .mockResolvedValueOnce(turnos);
 
     const result = await service.obtenerDashboard(
@@ -237,6 +242,7 @@ describe('ReportesVeterinariosService', () => {
     ];
     turnosRepository.find
       .mockResolvedValueOnce(turnos)
+      .mockResolvedValueOnce([]) // período anterior
       .mockResolvedValueOnce(turnos);
 
     const result = await service.obtenerDashboard(
@@ -276,6 +282,7 @@ describe('ReportesVeterinariosService', () => {
     ];
     turnosRepository.find
       .mockResolvedValueOnce(enRango) // turnos en rango
+      .mockResolvedValueOnce([]) // período anterior
       .mockResolvedValueOnce(historicoCompleto); // todos los confirmados
 
     const result = await service.obtenerDashboard(
@@ -295,5 +302,35 @@ describe('ReportesVeterinariosService', () => {
     const result = await service.obtenerDashboard(1);
 
     expect(result.turnosPorMes).toHaveLength(6);
+  });
+
+  it('calcula el resumen del período anterior de igual duración para comparar', async () => {
+    const actual = [
+      turno({ fecha: '2026-09-05', hora: '10:00', mascota: { idMascota: 1 } as any }),
+      turno({ fecha: '2026-09-06', hora: '11:00', mascota: { idMascota: 2 } as any }),
+    ];
+    const anterior = [
+      turno({ fecha: '2026-08-05', hora: '10:00', mascota: { idMascota: 1 } as any }),
+      turno({
+        fecha: '2026-08-06',
+        hora: '11:00',
+        estado: AppointmentStatus.CANCELADO,
+        mascota: { idMascota: 2 } as any,
+      }),
+    ];
+    turnosRepository.find
+      .mockResolvedValueOnce(actual)
+      .mockResolvedValueOnce(anterior)
+      .mockResolvedValueOnce(actual);
+
+    const result = await service.obtenerDashboard(1, '2026-09-01', '2026-09-30');
+
+    // Los 30 días anteriores a septiembre: del 2 al 31 de agosto.
+    const rangoAnterior = (turnosRepository.find.mock.calls[1][0] as any).where.fecha;
+    expect(rangoAnterior.value).toEqual(['2026-08-02', '2026-08-31']);
+    expect(result.resumen.totalTurnos).toBe(2);
+    expect(result.resumenAnterior.totalTurnos).toBe(2);
+    expect(result.resumenAnterior.cancelados).toBe(1);
+    expect(result.resumenAnterior.tasaCancelacion).toBe(50);
   });
 });

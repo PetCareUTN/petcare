@@ -49,6 +49,24 @@
           </div>
         </div>
 
+        <div class="field">
+          <span class="field-label" id="duracion-label">Duración de cada turno</span>
+          <div class="duraciones" role="radiogroup" aria-labelledby="duracion-label">
+            @for (minutos of opcionesDuracion(); track minutos) {
+              <button
+                type="button"
+                role="radio"
+                class="duracion"
+                [class.selected]="duracion() === minutos"
+                [attr.aria-checked]="duracion() === minutos"
+                (click)="elegirDuracion(minutos)"
+              >
+                {{ etiquetaDuracion(minutos) }}
+              </button>
+            }
+          </div>
+        </div>
+
         <div class="field field-grow">
           <label class="field-label" for="descripcion">Descripción</label>
           <textarea

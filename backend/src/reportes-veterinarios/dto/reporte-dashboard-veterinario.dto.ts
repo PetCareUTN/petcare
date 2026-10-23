@@ -38,6 +38,8 @@ export interface ResumenReporteDto {
   ausentes: number;
   /** Turnos ya pasados que el veterinario todavia no cerro. */
   sinRegistrar: number;
+  /** Turnos que el veterinario agendo sobre un horario ya completo. */
+  sobreturnos: number;
   cancelados: number;
   tasaCancelacion: number;
   /** Ausentes sobre los turnos ya cerrados. */
@@ -49,6 +51,8 @@ export interface ReporteDashboardVeterinarioDto {
   rangoDesde: string;
   rangoHasta: string;
   resumen: ResumenReporteDto;
+  /** Mismo resumen para el período de igual duración inmediatamente anterior. */
+  resumenAnterior: ResumenReporteDto;
   turnosPorMes: TurnosPorMesDto[];
   ocupacionPorDia: OcupacionPorDiaDto[];
   horariosPico: HorarioPicoDto[];

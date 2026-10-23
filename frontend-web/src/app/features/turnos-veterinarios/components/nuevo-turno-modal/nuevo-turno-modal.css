@@ -451,3 +451,61 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Atención veterinaria / Servicio */
+.tipos {
+  display: flex;
+  align-self: flex-start;
+  width: fit-content;
+  margin-bottom: 1.15rem;
+  padding: 0.2rem;
+  border-radius: 999px;
+  background-color: var(--fill);
+}
+
+.tipos button {
+  padding: 0.4rem 1.1rem;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.tipos button.active {
+  background-color: var(--surface);
+  color: var(--primary);
+  box-shadow: 0 1px 3px rgb(37 51 47 / 15%);
+}
+
+.servicios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.servicio {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background-color: var(--surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.servicio.elegida {
+  border-color: var(--primary);
+  background-color: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}

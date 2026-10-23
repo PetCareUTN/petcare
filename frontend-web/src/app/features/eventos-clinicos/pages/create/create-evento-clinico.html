@@ -1,8 +1,8 @@
 <main class="ap-page">
   <header class="ap-header">
     <div>
-      <h1>Registrar evento clinico</h1>
-      <p>Carga de eventos asociados a la historia clinica de una mascota.</p>
+      <h1>Registrar evento clínico</h1>
+      <p>Carga de eventos asociados a la historia clínica de una mascota.</p>
     </div>
     <a class="ap-btn ap-btn-soft" routerLink="/eventos-clinicos" [queryParams]="backQueryParams()">Volver</a>
   </header>
@@ -70,7 +70,7 @@
             </div>
 
             <div class="ap-field">
-              <label for="proximaAplicacion">Proxima aplicacion</label>
+              <label for="proximaAplicacion">Próxima aplicación</label>
               @if (!form.controls.ultimaDosis.value) {
                 <input
                   id="proximaAplicacion"
@@ -80,7 +80,7 @@
                 />
               }
               @if (form.controls.proximaAplicacion.invalid && form.controls.proximaAplicacion.touched) {
-                <p class="ap-error">Debe indicar cuando corresponde la proxima dosis.</p>
+                <p class="ap-error">Debe indicar cuándo corresponde la próxima dosis.</p>
               }
             </div>
 
@@ -104,7 +104,7 @@
 
         <div class="ap-field ap-field-grow">
           <div class="ap-label-row">
-            <label for="descripcion">Descripcion</label>
+            <label for="descripcion">Descripción</label>
             <app-boton-dictado campo="descripcion" etiqueta="descripcion" (texto)="agregarTexto('descripcion', $event)" />
           </div>
           <app-rich-text-editor
@@ -113,7 +113,7 @@
             [maxLength]="descripcionMaxLength"
           />
           @if (form.controls.descripcion.invalid && form.controls.descripcion.touched) {
-            <p class="ap-error">La descripcion es obligatoria.</p>
+            <p class="ap-error">La descripción es obligatoria.</p>
           }
         </div>
 
@@ -162,7 +162,7 @@
 
         <div class="ap-field ap-field-grow">
           <div class="ap-label-row">
-            <label for="diagnostico">Diagnostico</label>
+            <label for="diagnostico">Diagnóstico</label>
             <app-boton-dictado campo="diagnostico" etiqueta="diagnostico" (texto)="agregarTexto('diagnostico', $event)" />
           </div>
           <app-rich-text-editor
