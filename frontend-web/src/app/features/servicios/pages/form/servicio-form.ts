@@ -49,7 +49,7 @@ export class ServicioFormPage implements OnInit {
 
   protected readonly descripcionMax = DESCRIPCION_MAX;
 
-  private readonly duracionesBase = [15, 30, 45, 60, 90, 120];
+  private readonly duracionesBase = [30, 60];
 
   protected readonly idServicio = signal<number | null>(null);
   protected readonly isEditMode = signal(false);
