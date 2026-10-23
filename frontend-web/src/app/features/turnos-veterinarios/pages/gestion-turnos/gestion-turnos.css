@@ -51,6 +51,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: 0.6rem 1rem;
   margin-bottom: var(--spacing-md);
 }
@@ -80,7 +81,7 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
-  margin-left: auto;
+  margin-bottom: 0.7rem;
 }
 
 .period-title {
@@ -1013,6 +1014,7 @@
   position: relative;
   flex: 1 1 220px;
   max-width: 320px;
+  margin-left: auto;
 }
 
 .busqueda input {
@@ -1120,26 +1122,15 @@
   font-size: 0.85rem;
 }
 
-/* Si la fecha no entra al lado, baja a su propio renglón, alineada a la izquierda. */
-@media (max-width: 1360px) {
-  .agenda-top .period-nav {
-    flex-basis: 100%;
-    margin-left: 0;
-  }
-}
-
 @media (max-width: 900px) {
   .busqueda {
     order: 3;
     flex-basis: 100%;
     max-width: none;
+    margin-left: 0;
   }
 
   .busqueda-resultados {
     width: 100%;
-  }
-
-  .agenda-top .period-nav {
-    margin-left: 0;
   }
 }

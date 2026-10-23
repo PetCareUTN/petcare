@@ -45,30 +45,72 @@
       </div>
 
       <button type="button" class="btn-new" (click)="abrirNuevoTurno()">+ Nuevo turno</button>
-
-      <div class="period-nav">
-        <button
-          type="button"
-          class="nav-button"
-          aria-label="Período anterior"
-          (click)="desplazar(-1)"
-        >
-          ‹
-        </button>
-        <button
-          type="button"
-          class="nav-button"
-          aria-label="Período siguiente"
-          (click)="desplazar(1)"
-        >
-          ›
-        </button>
-        <button type="button" class="today-button" (click)="irAHoy()">Hoy</button>
-        <h2 class="period-title">{{ tituloPeriodo() }}</h2>
-      </div>
     </header>
 
+    <div class="period-nav">
+      <button
+        type="button"
+        class="nav-button"
+        aria-label="Período anterior"
+        (click)="desplazar(-1)"
+      >
+        ‹
+      </button>
+      <button
+        type="button"
+        class="nav-button"
+        aria-label="Período siguiente"
+        (click)="desplazar(1)"
+      >
+        ›
+      </button>
+      <button type="button" class="today-button" (click)="irAHoy()">Hoy</button>
+      <h2 class="period-title">{{ tituloPeriodo() }}</h2>
+    </div>
+
     <div class="agenda-controls">
+      <div class="filters">
+        <nav class="filter-group" aria-label="Tipo de turno">
+          @for (tipo of tipos; track tipo.value) {
+            <button
+              type="button"
+              class="status-filter"
+              [class.active]="esTipoVisible(tipo.value)"
+              [attr.aria-pressed]="esTipoVisible(tipo.value)"
+              (click)="toggleTipo(tipo.value)"
+            >
+              <span class="tipo-dot" [class]="tipo.value"></span>
+              {{ tipo.label }}
+            </button>
+          }
+          <button
+            type="button"
+            class="status-filter"
+            [class.active]="sobreturnosVisibles()"
+            [attr.aria-pressed]="sobreturnosVisibles()"
+            (click)="toggleSobreturnos()"
+          >
+            <span class="tipo-dot sobreturno"></span>
+            Sobreturnos
+          </button>
+        </nav>
+
+        <nav class="filter-group" aria-label="Estados visibles en el calendario">
+          @for (estado of estados; track estado.value) {
+            <button
+              type="button"
+              class="status-filter"
+              [class.active]="esEstadoVisible(estado.value)"
+              [attr.aria-pressed]="esEstadoVisible(estado.value)"
+              (click)="toggleEstado(estado.value)"
+            >
+              <span class="status-dot" [class]="estado.value"></span>
+              {{ estado.label }}
+            </button>
+          }
+        </nav>
+      </div>
+
       <nav class="view-switch" aria-label="Nivel de detalle del calendario">
         @for (opcion of vistas; track opcion.value) {
           <button
@@ -81,48 +123,6 @@
           </button>
         }
       </nav>
-
-    <div class="filters">
-      <nav class="filter-group" aria-label="Tipo de turno">
-        @for (tipo of tipos; track tipo.value) {
-          <button
-            type="button"
-            class="status-filter"
-            [class.active]="esTipoVisible(tipo.value)"
-            [attr.aria-pressed]="esTipoVisible(tipo.value)"
-            (click)="toggleTipo(tipo.value)"
-          >
-            <span class="tipo-dot" [class]="tipo.value"></span>
-            {{ tipo.label }}
-          </button>
-        }
-        <button
-          type="button"
-          class="status-filter"
-          [class.active]="sobreturnosVisibles()"
-          [attr.aria-pressed]="sobreturnosVisibles()"
-          (click)="toggleSobreturnos()"
-        >
-          <span class="tipo-dot sobreturno"></span>
-          Sobreturnos
-        </button>
-      </nav>
-
-      <nav class="filter-group" aria-label="Estados visibles en el calendario">
-        @for (estado of estados; track estado.value) {
-          <button
-            type="button"
-            class="status-filter"
-            [class.active]="esEstadoVisible(estado.value)"
-            [attr.aria-pressed]="esEstadoVisible(estado.value)"
-            (click)="toggleEstado(estado.value)"
-          >
-            <span class="status-dot" [class]="estado.value"></span>
-            {{ estado.label }}
-          </button>
-        }
-      </nav>
-    </div>
     </div>
 
     @if (successMessage()) {
