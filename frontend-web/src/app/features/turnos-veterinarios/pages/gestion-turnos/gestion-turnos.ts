@@ -142,6 +142,7 @@ export class GestionTurnosVeterinariosPage implements OnInit {
 
   protected readonly estados: EstadoOption[] = [
     { value: 'confirmado', label: 'Confirmados' },
+    { value: 'ausente', label: 'Ausentes' },
     { value: 'cancelado', label: 'Cancelados' },
   ];
 
@@ -515,11 +516,11 @@ export class GestionTurnosVeterinariosPage implements OnInit {
   }
 
   /**
-   * "Confirmados" controla todos los turnos que siguen ocupando su lugar:
-   * confirmados, asistidos y ausentes. "Cancelados" se maneja aparte.
+   * "Confirmados" controla también a los turnos ya cerrados como asistidos.
+   * "Ausentes" y "Cancelados" se muestran u ocultan por separado.
    */
   protected toggleEstado(estado: EstadoTurno): void {
-    const grupo: EstadoTurno[] = estado === 'confirmado' ? ESTADOS_QUE_OCUPAN : [estado];
+    const grupo: EstadoTurno[] = estado === 'confirmado' ? ['confirmado', 'asistio'] : [estado];
     const visibles = this.estadosVisibles();
     this.estadosVisibles.set(
       visibles.includes(estado)
