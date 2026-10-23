@@ -992,6 +992,14 @@
   color: #24557f;
 }
 
+/* Turnos de servicios: el violeta del filtro, salvo cancelados y ausentes, que conservan su estado. */
+.event-chip.tipo-servicio:not(.cancelado):not(.ausente),
+.event-block.tipo-servicio:not(.cancelado):not(.ausente) {
+  border-left-color: var(--tipo-servicio);
+  background-color: color-mix(in srgb, var(--tipo-servicio) 18%, white);
+  color: #4a4086;
+}
+
 .tipo-dot.sobreturno {
   background-color: var(--tipo-sobreturno);
 }
