@@ -26,47 +26,6 @@
         <h2 class="period-title">{{ tituloPeriodo() }}</h2>
       </div>
 
-      <div class="busqueda">
-        <svg class="busqueda-icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <circle cx="11" cy="11" r="7" />
-          <path d="m20 20-3.5-3.5" />
-        </svg>
-        <input
-          type="search"
-          autocomplete="off"
-          placeholder="Buscar turno por cliente o mascota"
-          aria-label="Buscar turno por cliente o mascota"
-          [ngModel]="busqueda()"
-          (ngModelChange)="busqueda.set($event)"
-          (keydown.escape)="limpiarBusqueda()"
-        />
-
-        @if (busqueda().trim().length >= 2) {
-          <div class="busqueda-resultados" role="listbox" aria-label="Turnos encontrados">
-            @for (turno of resultadosBusqueda().items; track turno.clave) {
-              <button type="button" class="busqueda-resultado" role="option" (click)="abrirResultado(turno)">
-                <span class="tipo-dot" [class]="turno.tipo"></span>
-                <span class="resultado-cuando">{{ fechaHoraCorta(turno) }}</span>
-                <span class="resultado-quien">
-                  <strong>{{ turno.nombreMascota }}</strong>
-                  <span>{{ turno.nombreDuenio }}</span>
-                </span>
-                @if (turno.estado === 'cancelado') {
-                  <span class="resultado-estado">Cancelado</span>
-                }
-              </button>
-            } @empty {
-              <p class="busqueda-vacia">No encontramos turnos con “{{ busqueda().trim() }}”.</p>
-            }
-            @if (resultadosBusqueda().total > resultadosBusqueda().items.length) {
-              <p class="busqueda-vacia">
-                Y {{ resultadosBusqueda().total - resultadosBusqueda().items.length }} más. Escribí más letras para acotar.
-              </p>
-            }
-          </div>
-        }
-      </div>
-
       <button type="button" class="btn-new" (click)="abrirNuevoTurno()">+ Nuevo turno</button>
     </div>
 

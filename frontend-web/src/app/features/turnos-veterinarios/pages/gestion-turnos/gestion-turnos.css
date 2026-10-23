@@ -35,11 +35,12 @@
   margin-bottom: 0.5rem;
 }
 
-/* Fila de la fecha: a la izquierda el período, a la derecha buscar y agendar. */
+/* Fila de la fecha: a la izquierda el período, a la derecha "Nuevo turno". */
 .agenda-nav {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: 0.6rem 1rem;
   margin-bottom: 0.7rem;
 }
@@ -69,17 +70,6 @@
 .status-text,
 .detail-placeholder {
   color: var(--text-secondary);
-}
-
-/* Barra de navegación del período */
-
-.calendar-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-md);
 }
 
 .period-nav {
@@ -786,11 +776,6 @@
   border-radius: var(--radius-sm);
 }
 
-.banner-success {
-  background-color: color-mix(in srgb, var(--primary) 14%, white);
-  color: var(--primary);
-}
-
 .banner-error {
   background-color: color-mix(in srgb, var(--danger) 14%, white);
   color: var(--danger);
@@ -799,10 +784,6 @@
 @media (max-width: 720px) {
   .appointments-panel {
     padding: var(--spacing-lg);
-  }
-
-  .calendar-toolbar {
-    align-items: flex-start;
   }
 
   .period-title {
@@ -1011,135 +992,4 @@
 
 .tipo-dot.sobreturno {
   background-color: var(--tipo-sobreturno);
-}
-
-/* ---------- Búsqueda de turnos ---------- */
-.busqueda {
-  position: relative;
-  flex: 1 1 220px;
-  max-width: 320px;
-  margin-left: auto;
-}
-
-.busqueda input {
-  width: 100%;
-  height: 38px;
-  padding: 0 1rem 0 2.6rem;
-  box-sizing: border-box;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background-color: var(--fill);
-  font: inherit;
-  font-size: 0.92rem;
-}
-
-.busqueda input:focus {
-  outline: none;
-  background-color: var(--surface);
-  border-color: var(--primary);
-  box-shadow: 0 0 0 4px var(--primary-soft);
-}
-
-.busqueda-icono {
-  position: absolute;
-  top: 50%;
-  left: 0.95rem;
-  width: 18px;
-  height: 18px;
-  color: var(--text-secondary);
-  transform: translateY(-50%);
-  pointer-events: none;
-}
-
-.busqueda-resultados {
-  position: absolute;
-  top: calc(100% + 0.4rem);
-  left: 0;
-  z-index: 20;
-  width: max(100%, 380px);
-  display: flex;
-  flex-direction: column;
-  padding: 0.4rem;
-  border: 1px solid var(--hairline);
-  border-radius: 16px;
-  background-color: var(--surface);
-  box-shadow: 0 12px 36px rgba(37, 51, 47, 0.16);
-}
-
-.busqueda-resultado {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  width: 100%;
-  padding: 0.55rem 0.65rem;
-  border: none;
-  border-radius: 12px;
-  background: transparent;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.busqueda-resultado:hover,
-.busqueda-resultado:focus-visible {
-  outline: none;
-  background-color: var(--fill);
-}
-
-.resultado-cuando {
-  flex-shrink: 0;
-  color: var(--text-secondary);
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.resultado-quien {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  flex-direction: column;
-  font-size: 0.88rem;
-}
-
-.resultado-quien span {
-  overflow: hidden;
-  color: var(--text-secondary);
-  font-size: 0.78rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.resultado-estado {
-  flex-shrink: 0;
-  padding: 0.15rem 0.55rem;
-  border-radius: 999px;
-  background-color: var(--fill);
-  color: var(--text-secondary);
-  font-size: 0.72rem;
-  font-weight: 600;
-}
-
-.busqueda-vacia {
-  margin: 0;
-  padding: 0.6rem 0.7rem;
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-}
-
-@media (max-width: 900px) {
-  .agenda-nav .btn-new {
-    order: 2;
-    margin-left: auto;
-  }
-
-  .busqueda {
-    order: 3;
-    flex-basis: 100%;
-    max-width: none;
-    margin-left: 0;
-  }
-
-  .busqueda-resultados {
-    width: 100%;
-  }
 }
