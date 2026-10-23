@@ -56,7 +56,7 @@ export class InicioVeterinarioPage implements OnInit {
       .reduce((total, franja) => total + Math.max(franja.cupos - franja.ocupados, 0), 0),
   );
 
-  /** Turnos que ya empezaron y el veterinario no cerró como asistió o no vino. */
+  /** Turnos que ya empezaron y el veterinario no cerró como asistió o no asistió. */
   protected readonly sinRegistrar = computed(() =>
     this.turnos()
       .filter((turno) => turno.estado === 'confirmado' && this.yaEmpezo(turno.fecha, turno.hora))
@@ -142,10 +142,10 @@ export class InicioVeterinarioPage implements OnInit {
     });
   }
 
-  /** Los dos botones quedan juntos: se pide confirmar para que un clic no registre algo de más. */
-  protected pedirAsistencia(idTurno: number, asistio: boolean): void {
+  /** "Asistió" se registra directo; "No asistió" pide confirmar porque pesa en el ausentismo. */
+  protected pedirNoAsistio(idTurno: number): void {
     this.accionError.set(null);
-    this.asistenciaPendiente.set({ idTurno, asistio });
+    this.asistenciaPendiente.set({ idTurno, asistio: false });
   }
 
   protected descartarAsistencia(): void {
@@ -156,16 +156,22 @@ export class InicioVeterinarioPage implements OnInit {
     return this.asistenciaPendiente()?.idTurno === idTurno;
   }
 
-  protected confirmarAsistencia(turno: TurnoVeterinarioResponse): void {
-    const pendiente = this.asistenciaPendiente();
-    if (!pendiente || pendiente.idTurno !== turno.idTurno) {
+  protected registrarAsistio(turno: TurnoVeterinarioResponse): void {
+    this.registrarAsistencia(turno, true);
+  }
+
+  protected confirmarNoAsistio(turno: TurnoVeterinarioResponse): void {
+    if (!this.esAsistenciaPendiente(turno.idTurno)) {
       return;
     }
+    this.registrarAsistencia(turno, false);
+  }
 
+  private registrarAsistencia(turno: TurnoVeterinarioResponse, asistio: boolean): void {
     this.accionError.set(null);
     this.procesandoId.set(turno.idTurno);
 
-    this.turnosService.registrarAsistencia(turno.idTurno, { asistio: pendiente.asistio }).subscribe({
+    this.turnosService.registrarAsistencia(turno.idTurno, { asistio }).subscribe({
       next: () => {
         this.procesandoId.set(null);
         this.asistenciaPendiente.set(null);

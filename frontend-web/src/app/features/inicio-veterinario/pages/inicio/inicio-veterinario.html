@@ -73,7 +73,7 @@
                     @if (turno.estado === 'asistio') {
                       <span class="chip chip-ok">Asistió</span>
                     } @else if (turno.estado === 'ausente') {
-                      <span class="chip chip-aviso">No vino</span>
+                      <span class="chip chip-aviso">No asistió</span>
                     } @else if (sinCerrar(turno)) {
                       <span class="chip chip-aviso">Sin cerrar</span>
                     } @else if (proximoId() === turno.idTurno) {
@@ -151,24 +151,27 @@
 
                 <div class="fila-acciones">
                   @if (esAsistenciaPendiente(turno.idTurno)) {
-                    <span class="confirmar">
-                      {{ asistenciaPendiente()?.asistio ? '¿Asistió?' : '¿No vino?' }}
-                    </span>
+                    <span class="confirmar">¿Confirmar?</span>
                     <button
                       type="button"
                       class="ap-btn ap-btn-primary ap-btn-sm"
                       [disabled]="procesandoId() === turno.idTurno"
-                      (click)="confirmarAsistencia(turno)"
+                      (click)="confirmarNoAsistio(turno)"
                     >
                       {{ procesandoId() === turno.idTurno ? 'Guardando...' : 'Sí' }}
                     </button>
                     <button type="button" class="ap-btn ap-btn-soft ap-btn-sm" (click)="descartarAsistencia()">No</button>
                   } @else {
-                    <button type="button" class="ap-btn ap-btn-soft ap-btn-sm" (click)="pedirAsistencia(turno.idTurno, true)">
-                      Asistió
+                    <button
+                      type="button"
+                      class="ap-btn ap-btn-soft ap-btn-sm"
+                      [disabled]="procesandoId() === turno.idTurno"
+                      (click)="registrarAsistio(turno)"
+                    >
+                      {{ procesandoId() === turno.idTurno ? 'Guardando...' : 'Asistió' }}
                     </button>
-                    <button type="button" class="ap-btn ap-btn-sm btn-aviso" (click)="pedirAsistencia(turno.idTurno, false)">
-                      No vino
+                    <button type="button" class="ap-btn ap-btn-sm btn-aviso" (click)="pedirNoAsistio(turno.idTurno)">
+                      No asistió
                     </button>
                   }
                 </div>
