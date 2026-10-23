@@ -442,6 +442,13 @@ export class GestionTurnosVeterinariosPage implements OnInit {
     this.recargarAgenda();
   }
 
+  protected servicioAgendado(turno: TurnoServicioResponse): void {
+    this.nuevoTurno.set(null);
+    this.fechaFoco.set(turno.fecha);
+    this.successMessage.set('Turno de servicio agendado. Le avisamos al cliente.');
+    this.loadTurnosServicios();
+  }
+
   /** Doble clic en un día del mes (no sobre un turno): agenda ese día. */
   protected dobleClickDia(evento: MouseEvent, fecha: string): void {
     if ((evento.target as HTMLElement).closest('button') || fecha < this.claveDeHoy()) {

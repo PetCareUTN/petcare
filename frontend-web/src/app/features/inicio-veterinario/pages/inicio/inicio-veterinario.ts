@@ -204,6 +204,12 @@ export class InicioVeterinarioPage implements OnInit {
     this.cargar();
   }
 
+  /** Los turnos de servicio no se listan en Inicio: alcanza con avisar que quedó agendado. */
+  protected servicioAgendado(): void {
+    this.mostrarNuevoTurno.set(false);
+    this.successMessage.set('Turno de servicio agendado. Le avisamos al cliente.');
+  }
+
   private recargarTurnos(): void {
     this.turnosService.getMine().subscribe({
       next: (turnos) => this.turnos.set(turnos),

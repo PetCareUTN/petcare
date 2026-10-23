@@ -184,6 +184,10 @@
   }
 
   @if (mostrarNuevoTurno()) {
-    <app-nuevo-turno-modal (cerrar)="cerrarNuevoTurno()" (agendado)="turnoAgendado($event)" />
+    <app-nuevo-turno-modal
+      (cerrar)="cerrarNuevoTurno()"
+      (agendado)="turnoAgendado($event)"
+      (servicioAgendado)="servicioAgendado()"
+    />
   }
 </main>

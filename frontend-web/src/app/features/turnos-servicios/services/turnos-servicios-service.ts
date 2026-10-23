@@ -5,6 +5,7 @@ import { environment } from '../../../../environments/environment';
 import { ApiError } from '../../auth/models/user';
 import { AuthService } from '../../auth/services/auth-service';
 import {
+  AgendarTurnoServicioRequest,
   CancelarTurnoServicioRequest,
   TurnoServicioEstado,
   TurnoServicioResponse,
@@ -21,6 +22,23 @@ export class TurnosServiciosService {
       .get<TurnoServicioResponse[]>(`${this.baseUrl}/mias`, {
         headers: this.authHeaders(),
         params: estado ? { estado } : {},
+      })
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
+  /** El prestador agenda un turno de uno de sus servicios para un cliente. */
+  agendar(data: AgendarTurnoServicioRequest): Observable<TurnoServicioResponse> {
+    return this.http
+      .post<TurnoServicioResponse>(`${this.baseUrl}/mia`, data, { headers: this.authHeaders() })
+      .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
+  }
+
+  /** Horarios de inicio (HH:MM) todavía libres de un servicio en una fecha. */
+  getHorariosDisponibles(idServicio: number, fecha: string): Observable<string[]> {
+    return this.http
+      .get<string[]>(`${this.baseUrl}/horarios-disponibles`, {
+        headers: this.authHeaders(),
+        params: { idServicio, fecha },
       })
       .pipe(catchError((error: HttpErrorResponse) => this.mapError(error)));
   }

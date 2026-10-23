@@ -17,6 +17,7 @@ import {
 } from '../notificaciones/notificaciones-turnos.service';
 import { Servicio } from '../servicios/entities/servicio.entity';
 import { User } from '../users/entities/user.entity';
+import { AgendarTurnoServicioDto } from './dto/agendar-turno-servicio.dto';
 import { CancelarTurnoServicioDto } from './dto/cancelar-turno-servicio.dto';
 import { CreateTurnoServicioDto } from './dto/create-turno-servicio.dto';
 import { TurnoServicioDuenioResponseDto } from './dto/turno-servicio-duenio-response.dto';
@@ -97,6 +98,65 @@ export class TurnosServiciosService {
 
     await this.prestadores.exigirAprobado(servicio.usuario.idUsuario, servicio.categoria);
     if (servicio.usuario.idUsuario === idDueno) throw new BadRequestException('No podés reservar tu propio servicio.');
+
+    return this.reservar(servicio, mascota, { idUsuario: idDueno } as User, dto, 'dueño');
+  }
+
+  /**
+   * Reserva cargada por el prestador (web) para un cliente: mismas reglas de
+   * horario que la reserva del dueño, pero sobre un servicio propio y con la
+   * mascota que elija. El cliente recibe el aviso de que se le agendó el turno.
+   */
+  async agendarComoPrestador(
+    idPrestador: number,
+    dto: AgendarTurnoServicioDto,
+  ): Promise<TurnoServicioPrestadorResponseDto> {
+    const servicio = await this.serviciosRepository.findOne({
+      where: { idServicio: dto.idServicio },
+      relations: ['usuario', 'disponibilidades'],
+    });
+
+    if (!servicio) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'No se encontró el servicio',
+      });
+    }
+
+    if (servicio.usuario.idUsuario !== idPrestador) {
+      throw new ForbiddenException({
+        codigoEstado: 403,
+        mensaje: 'Solo podés agendar turnos de tus propios servicios',
+      });
+    }
+
+    const mascota = await this.mascotasRepository.findOne({
+      where: { idMascota: dto.idMascota },
+      relations: ['usuarios'],
+    });
+
+    if (!mascota) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'No se encontró la mascota',
+      });
+    }
+
+    const duenio = this.elegirDuenio(mascota, dto.idDuenio);
+
+    await this.prestadores.exigirAprobado(idPrestador, servicio.categoria);
+
+    return this.reservar(servicio, mascota, duenio, dto, 'veterinario');
+  }
+
+  /** Validaciones de horario y alta del turno, comunes a las dos formas de reservar. */
+  private async reservar(
+    servicio: Servicio,
+    mascota: Mascota,
+    duenio: User,
+    dto: CreateTurnoServicioDto,
+    creadoPor: 'dueño' | 'veterinario',
+  ): Promise<TurnoServicioPrestadorResponseDto> {
     const inicio = new Date(`${dto.fecha}T${dto.horaInicio}:00-03:00`).getTime();
     if (!Number.isFinite(inicio) || inicio <= Date.now()) throw new BadRequestException('La reserva debe comenzar en el futuro.');
     const duracionMinutos = DURACION_MINUTOS_POR_CATEGORIA[servicio.categoria];
@@ -113,7 +173,7 @@ export class TurnosServiciosService {
     const turno = this.turnosRepository.create({
       servicio,
       mascota,
-      duenio: { idUsuario: idDueno } as User,
+      duenio: { idUsuario: duenio.idUsuario } as User,
       fecha: dto.fecha,
       horaInicio: dto.horaInicio,
       horaFin,
@@ -133,11 +193,39 @@ export class TurnosServiciosService {
       ],
     });
 
-    await this.notificacionesTurnosService.notificarTurnoConfirmado(
-      this.aDatosTurno(turnoCompleto!),
-    );
+    await this.notificacionesTurnosService.notificarTurnoConfirmado({
+      ...this.aDatosTurno(turnoCompleto!),
+      creadoPor,
+    });
 
     return TurnoServicioPrestadorResponseDto.fromEntity(turnoCompleto!);
+  }
+
+  /** Dueño al que se asocia el turno: el pedido, o el principal. */
+  private elegirDuenio(mascota: Mascota, idDuenio?: number): User {
+    const duenios = mascota.usuarios ?? [];
+
+    if (idDuenio !== undefined) {
+      const elegido = duenios.find((usuario) => usuario.idUsuario === idDuenio);
+      if (!elegido) {
+        throw new BadRequestException({
+          codigoEstado: 400,
+          mensaje: 'El cliente indicado no es dueño de la mascota',
+        });
+      }
+      return elegido;
+    }
+
+    const elegido =
+      duenios.find((usuario) => usuario.idUsuario === mascota.idDuenioPrincipal) ??
+      duenios[0];
+    if (!elegido) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje: 'La mascota no tiene un dueño asociado',
+      });
+    }
+    return elegido;
   }
 
   private verificarDisponibilidad(
