@@ -293,6 +293,7 @@ label.ap-field,
 
 .ap-segmented button {
   padding: 0.4rem 1.1rem;
+  white-space: nowrap;
   border: none;
   border-radius: 999px;
   background: transparent;

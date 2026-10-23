@@ -21,8 +21,30 @@
 
     @if (data()) {
       <div class="exportar">
-        <button type="button" class="ap-btn ap-btn-soft ap-btn-sm" (click)="exportarCsv()">Exportar CSV</button>
-        <button type="button" class="ap-btn ap-btn-soft ap-btn-sm" (click)="exportarPdf()">Exportar PDF</button>
+        <button
+          type="button"
+          class="exportar-boton"
+          aria-haspopup="menu"
+          [attr.aria-expanded]="menuExportar()"
+          (click)="alternarMenuExportar()"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14" /></svg>
+          Exportar
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+        </button>
+
+        @if (menuExportar()) {
+          <div class="exportar-menu" role="menu">
+            <button type="button" role="menuitem" (click)="exportarCsv()">
+              <strong>Planilla</strong>
+              <span>CSV, para abrir en Excel</span>
+            </button>
+            <button type="button" role="menuitem" (click)="exportarPdf()">
+              <strong>Documento</strong>
+              <span>PDF de una sola hoja</span>
+            </button>
+          </div>
+        }
       </div>
     }
     </div>

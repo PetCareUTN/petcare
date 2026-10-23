@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
 import { ApiError } from '../../../auth/models/user';
 import { BarChartComponent, BarChartSerie } from '../../components/bar-chart/bar-chart';
 import {
@@ -171,7 +171,26 @@ export class DashboardReportesPage implements OnInit {
     return data ? `${fechaLegible(data.rangoDesde)} al ${fechaLegible(data.rangoHasta)}` : '';
   });
 
+  protected readonly menuExportar = signal(false);
+
+  protected alternarMenuExportar(): void {
+    this.menuExportar.update((abierto) => !abierto);
+  }
+
+  @HostListener('document:click', ['$event'])
+  protected cerrarMenuAlHacerClicAfuera(evento: MouseEvent): void {
+    if (this.menuExportar() && !(evento.target as HTMLElement).closest('.exportar')) {
+      this.menuExportar.set(false);
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  protected cerrarMenuConEscape(): void {
+    this.menuExportar.set(false);
+  }
+
   protected exportarCsv(): void {
+    this.menuExportar.set(false);
     const data = this.data();
     if (!data) {
       return;
@@ -188,7 +207,9 @@ export class DashboardReportesPage implements OnInit {
 
   /** El PDF se guarda desde el diálogo de impresión; la hoja de impresión deja solo el reporte. */
   protected exportarPdf(): void {
-    window.print();
+    this.menuExportar.set(false);
+    // Se espera un ciclo para que el menú ya esté cerrado cuando se arma la hoja.
+    setTimeout(() => window.print());
   }
 
   ngOnInit(): void {

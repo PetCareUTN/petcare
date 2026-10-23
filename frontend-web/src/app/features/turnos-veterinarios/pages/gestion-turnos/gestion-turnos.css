@@ -1004,16 +1004,17 @@
   align-items: center;
 }
 
+/* Va en la barra del calendario, entre el período y el nivel de detalle. */
 .busqueda {
   position: relative;
-  flex: 1;
-  max-width: 380px;
-  margin-left: auto;
+  flex: 1 1 240px;
+  max-width: 340px;
+  margin: 0 auto;
 }
 
 .busqueda input {
   width: 100%;
-  height: 44px;
+  height: 38px;
   padding: 0 1rem 0 2.6rem;
   box-sizing: border-box;
   border: 1px solid transparent;
@@ -1044,9 +1045,9 @@
 .busqueda-resultados {
   position: absolute;
   top: calc(100% + 0.4rem);
-  right: 0;
   left: 0;
   z-index: 20;
+  width: max(100%, 380px);
   display: flex;
   flex-direction: column;
   padding: 0.4rem;
@@ -1116,6 +1117,24 @@
   font-size: 0.85rem;
 }
 
+/* Cuando la barra no entra en una fila, el buscador pasa abajo y ocupa todo el ancho. */
+@media (max-width: 1200px) {
+  .calendar-toolbar .view-switch {
+    order: 2;
+  }
+
+  .busqueda {
+    order: 3;
+    flex-basis: 100%;
+    max-width: none;
+    margin: 0;
+  }
+
+  .busqueda-resultados {
+    width: 100%;
+  }
+}
+
 @media (max-width: 700px) {
   .appointments-header {
     flex-wrap: wrap;
@@ -1125,5 +1144,10 @@
     order: 3;
     flex-basis: 100%;
     max-width: none;
+    margin: 0;
+  }
+
+  .busqueda-resultados {
+    width: 100%;
   }
 }

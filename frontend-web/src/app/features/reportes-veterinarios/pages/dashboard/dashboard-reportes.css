@@ -94,11 +94,6 @@
   gap: 0.75rem;
 }
 
-.exportar {
-  display: flex;
-  gap: 0.5rem;
-}
-
 .delta {
   font-size: 0.8rem;
   font-weight: 600;
@@ -117,28 +112,6 @@
   display: none;
 }
 
-@media print {
-  .no-imprimir {
-    display: none !important;
-  }
-
-  .periodo-impreso {
-    display: block;
-    margin: 0 0 1rem;
-    color: var(--text-secondary);
-  }
-
-  .ap-stat,
-  .ap-panel {
-    break-inside: avoid;
-    box-shadow: none;
-  }
-
-  .ap-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 @media (max-width: 900px) {
   .ap-grid {
     grid-template-columns: minmax(0, 1fr);
@@ -148,6 +121,184 @@
 @media (max-width: 640px) {
   .ap-header {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
+  }
+
+  .encabezado-acciones {
+    justify-content: space-between;
+  }
+
+  .exportar-menu {
+    min-width: 13rem;
+  }
+}
+
+/* ---------- Menú de exportación ---------- */
+.exportar {
+  position: relative;
+}
+
+.exportar-boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 40px;
+  padding: 0 1rem;
+  border: none;
+  border-radius: 999px;
+  background-color: var(--ap-primary-soft);
+  color: #3a6358;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.exportar-boton:hover {
+  background-color: rgba(79, 127, 115, 0.22);
+}
+
+.exportar-boton svg {
+  width: 16px;
+  height: 16px;
+}
+
+.exportar-boton .chevron {
+  width: 14px;
+  height: 14px;
+  opacity: 0.7;
+}
+
+.exportar-menu {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  min-width: 15rem;
+  flex-direction: column;
+  padding: 0.35rem;
+  border: 1px solid var(--ap-hairline);
+  border-radius: 14px;
+  background-color: var(--surface);
+  box-shadow: 0 12px 36px rgba(37, 51, 47, 0.16);
+}
+
+.exportar-menu button {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.55rem 0.75rem;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.exportar-menu button:hover,
+.exportar-menu button:focus-visible {
+  outline: none;
+  background-color: var(--ap-fill);
+}
+
+.exportar-menu strong {
+  font-size: 0.88rem;
+}
+
+.exportar-menu span {
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+}
+
+/* ---------- Hoja de impresión (PDF): todo el reporte en una sola página A4 ---------- */
+@media print {
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .no-imprimir {
+    display: none !important;
+  }
+
+  .ap-page {
+    width: 100%;
+    max-width: none;
+    padding: 0;
+  }
+
+  .ap-header {
+    margin-bottom: 0.4rem;
+  }
+
+  .ap-header h1 {
+    font-size: 1.35rem;
+  }
+
+  .ap-header p {
+    margin-top: 0.1rem;
+    font-size: 0.78rem;
+  }
+
+  .periodo-impreso {
+    display: block;
+    margin: 0 0 0.6rem;
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+  }
+
+  .ap-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+  }
+
+  .ap-stat {
+    gap: 0.1rem;
+    padding: 0.5rem 0.7rem;
+    border-radius: 10px;
+    box-shadow: none;
+  }
+
+  .ap-stat-label {
+    font-size: 0.62rem;
+  }
+
+  .ap-stats .ap-stat-value {
+    font-size: 1.35rem;
+  }
+
+  .stat-sub,
+  .delta {
+    font-size: 0.62rem;
+  }
+
+  .ap-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.5rem;
+  }
+
+  .ap-panel {
+    gap: 0.35rem;
+    padding: 0.6rem 0.7rem;
+    border-radius: 10px;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+
+  .ap-panel > h2 {
+    font-size: 0.85rem;
+  }
+
+  .ap-panel-sub {
+    margin-top: -0.2rem;
+    font-size: 0.64rem;
+  }
+
+  .vacio {
+    min-height: 5rem;
   }
 }
