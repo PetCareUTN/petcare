@@ -199,12 +199,7 @@
                                     [attr.aria-label]="formatTime(turno.hora) + ' ' + etiquetaCorta(turno)"
                                     (click)="seleccionarTurno(turno)"
                                   >
-                                    <span class="event-time">
-                                      {{ formatTime(turno.hora) }}
-                                      @if (turno.horaFin) {
-                                        <span class="event-time-end">– {{ formatTime(turno.horaFin) }}</span>
-                                      }
-                                    </span>
+                                    <span class="event-time">{{ formatTime(turno.hora) }}</span>
                                     <span class="event-pet">{{ etiquetaCorta(turno) }}</span>
                                   </button>
                                   @if (ultimo && puedeAgregar) {

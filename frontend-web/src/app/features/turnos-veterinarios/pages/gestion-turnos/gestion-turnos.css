@@ -336,11 +336,6 @@
   white-space: nowrap;
 }
 
-.event-time-end {
-  font-weight: 600;
-  opacity: 0.75;
-}
-
 .event-pet {
   overflow: hidden;
   text-overflow: ellipsis;

@@ -695,9 +695,7 @@ export class GestionTurnosVeterinariosPage implements OnInit {
 
   /** Texto corto que acompaña a la hora en el chip del calendario. */
   protected etiquetaCorta(turno: EventoTurno): string {
-    return turno.categoria
-      ? `${turno.nombreMascota} · ${this.categoriaLabel(turno.categoria)}`
-      : turno.nombreMascota;
+    return turno.nombreMascota;
   }
 
   private desdeVeterinario(turno: TurnoVeterinarioResponse): EventoTurno {
