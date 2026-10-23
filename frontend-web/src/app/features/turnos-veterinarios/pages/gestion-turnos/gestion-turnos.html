@@ -1,32 +1,7 @@
 <main class="appointments-page">
   <section class="appointments-panel">
-    <header class="appointments-header">
+    <header class="agenda-top">
       <h1>Turnos</h1>
-
-      <button type="button" class="btn-new" (click)="abrirNuevoTurno()">+ Nuevo turno</button>
-    </header>
-
-    <div class="calendar-toolbar">
-      <div class="period-nav">
-        <button
-          type="button"
-          class="nav-button"
-          aria-label="Período anterior"
-          (click)="desplazar(-1)"
-        >
-          ‹
-        </button>
-        <button
-          type="button"
-          class="nav-button"
-          aria-label="Período siguiente"
-          (click)="desplazar(1)"
-        >
-          ›
-        </button>
-        <button type="button" class="today-button" (click)="irAHoy()">Hoy</button>
-        <h2 class="period-title">{{ tituloPeriodo() }}</h2>
-      </div>
 
       <div class="busqueda">
         <svg class="busqueda-icono" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -69,6 +44,31 @@
         }
       </div>
 
+      <button type="button" class="btn-new" (click)="abrirNuevoTurno()">+ Nuevo turno</button>
+
+      <div class="period-nav">
+        <button
+          type="button"
+          class="nav-button"
+          aria-label="Período anterior"
+          (click)="desplazar(-1)"
+        >
+          ‹
+        </button>
+        <button
+          type="button"
+          class="nav-button"
+          aria-label="Período siguiente"
+          (click)="desplazar(1)"
+        >
+          ›
+        </button>
+        <button type="button" class="today-button" (click)="irAHoy()">Hoy</button>
+        <h2 class="period-title">{{ tituloPeriodo() }}</h2>
+      </div>
+    </header>
+
+    <div class="agenda-controls">
       <nav class="view-switch" aria-label="Nivel de detalle del calendario">
         @for (opcion of vistas; track opcion.value) {
           <button
@@ -81,7 +81,6 @@
           </button>
         }
       </nav>
-    </div>
 
     <div class="filters">
       <nav class="filter-group" aria-label="Tipo de turno">
@@ -123,6 +122,7 @@
           </button>
         }
       </nav>
+    </div>
     </div>
 
     @if (successMessage()) {

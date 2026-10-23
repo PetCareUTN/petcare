@@ -129,7 +129,7 @@
   }
 
   .exportar-menu {
-    min-width: 13rem;
+    min-width: 12rem;
   }
 }
 
@@ -176,7 +176,7 @@
   right: 0;
   z-index: 20;
   display: flex;
-  min-width: 15rem;
+  min-width: 12rem;
   flex-direction: column;
   padding: 0.35rem;
   border: 1px solid var(--ap-hairline);
@@ -186,10 +186,10 @@
 }
 
 .exportar-menu button {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  padding: 0.55rem 0.75rem;
+  padding: 0.6rem 0.85rem;
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  font-weight: 600;
   border: none;
   border-radius: 10px;
   background: transparent;
@@ -202,15 +202,6 @@
 .exportar-menu button:focus-visible {
   outline: none;
   background-color: var(--ap-fill);
-}
-
-.exportar-menu strong {
-  font-size: 0.88rem;
-}
-
-.exportar-menu span {
-  color: var(--text-secondary);
-  font-size: 0.76rem;
 }
 
 /* ---------- Hoja de impresión (PDF): todo el reporte en una sola página A4 ---------- */

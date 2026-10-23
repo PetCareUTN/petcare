@@ -31,30 +31,38 @@
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', sans-serif;
 }
 
-.appointments-header {
+.agenda-top {
   display: flex;
-  justify-content: space-between;
-  gap: var(--spacing-md);
-  align-items: flex-start;
-  margin-bottom: var(--spacing-lg);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin-bottom: 0.9rem;
 }
 
-.appointments-header h1 {
+.agenda-top h1 {
   margin: 0;
   font-size: 2rem;
   font-weight: 700;
   letter-spacing: -0.03em;
 }
 
-.appointments-header p,
+/* Segunda fila: nivel de detalle y filtros en una sola línea. */
+.agenda-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+  margin-bottom: var(--spacing-md);
+}
+
+.agenda-controls .filters {
+  margin: 0;
+}
+
 .appointment-owner,
 .status-text,
 .detail-placeholder {
   color: var(--text-secondary);
-}
-
-.appointments-header p {
-  margin: var(--spacing-xs) 0 0;
 }
 
 /* Barra de navegación del período */
@@ -72,13 +80,14 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
+  margin-left: auto;
 }
 
 .period-title {
   margin: 0 0 0 var(--spacing-sm);
-  font-size: 1.35rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .nav-button,
@@ -1000,16 +1009,10 @@
 }
 
 /* ---------- Búsqueda de turnos ---------- */
-.appointments-header {
-  align-items: center;
-}
-
-/* Va en la barra del calendario, entre el período y el nivel de detalle. */
 .busqueda {
   position: relative;
-  flex: 1 1 240px;
-  max-width: 340px;
-  margin: 0 auto;
+  flex: 1 1 220px;
+  max-width: 320px;
 }
 
 .busqueda input {
@@ -1117,37 +1120,26 @@
   font-size: 0.85rem;
 }
 
-/* Cuando la barra no entra en una fila, el buscador pasa abajo y ocupa todo el ancho. */
-@media (max-width: 1200px) {
-  .calendar-toolbar .view-switch {
-    order: 2;
-  }
-
-  .busqueda {
-    order: 3;
+/* Si la fecha no entra al lado, baja a su propio renglón, alineada a la izquierda. */
+@media (max-width: 1360px) {
+  .agenda-top .period-nav {
     flex-basis: 100%;
-    max-width: none;
-    margin: 0;
-  }
-
-  .busqueda-resultados {
-    width: 100%;
+    margin-left: 0;
   }
 }
 
-@media (max-width: 700px) {
-  .appointments-header {
-    flex-wrap: wrap;
-  }
-
+@media (max-width: 900px) {
   .busqueda {
     order: 3;
     flex-basis: 100%;
     max-width: none;
-    margin: 0;
   }
 
   .busqueda-resultados {
     width: 100%;
+  }
+
+  .agenda-top .period-nav {
+    margin-left: 0;
   }
 }
