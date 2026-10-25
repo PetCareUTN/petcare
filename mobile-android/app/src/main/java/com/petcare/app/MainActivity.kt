@@ -1,12 +1,16 @@
 package com.petcare.app
 
 import com.petcare.app.ui.components.LocalEspacioBarraInferior
+import android.Manifest
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -90,6 +94,9 @@ import com.petcare.app.features.historiaclinica.export.MedicalFilesDownloader
 import com.petcare.app.features.historiaclinica.ui.HistoriaClinicaScreen
 import com.petcare.app.features.notificaciones.data.remote.NotificacionResponse
 import com.petcare.app.features.notificaciones.domain.NotificacionesController
+import com.petcare.app.features.notificaciones.domain.PushTokenController
+import com.petcare.app.features.notificaciones.service.DestinoPush
+import com.petcare.app.features.notificaciones.service.ServicioMensajeriaPetCare
 import com.petcare.app.features.notificaciones.ui.NotificacionesDropdown
 import com.petcare.app.features.ble.data.remote.TagBleResponse
 import com.petcare.app.features.ble.domain.TagsBleController
@@ -260,6 +267,11 @@ class MainActivity : ComponentActivity() {
                 // Necesita el contexto de la Activity para mostrar el selector de cuentas.
                 val googleSignInClient = remember {
                     GoogleSignInClient(this@MainActivity)
+                }
+                val pushTokenController = remember {
+                    PushTokenController(
+                        notificacionesApi = RetrofitClient.notificacionesApi(sessionStore)
+                    )
                 }
                 val notificacionesController = remember {
                     NotificacionesController(
@@ -729,7 +741,15 @@ class MainActivity : ComponentActivity() {
                 }
 
                 fun logout() {
-                    sessionController.logout()
+                    // La baja del dispositivo necesita la sesión todavía viva: el
+                    // endpoint va autenticado y sin token el backend no sabría de
+                    // quién dar de baja el dispositivo. Por eso la sesión se borra
+                    // recién cuando la baja terminó, mientras la pantalla ya volvió
+                    // al login con el estado que se limpia abajo.
+                    lifecycleScope.launch {
+                        pushTokenController.darDeBaja()
+                        sessionController.logout()
+                    }
                     loggedUserName = null
                     pets = emptyList()
                     serverError = null
@@ -1765,6 +1785,36 @@ class MainActivity : ComponentActivity() {
                     navigateBackInApp()
                 }
 
+                /**
+                 * Abre la pantalla del aviso que se tocó.
+                 *
+                 * Los tipos sin pantalla propia (recordatorio de vacuna, por
+                 * ejemplo, que no lleva referencia) dejan la app en el inicio: el
+                 * aviso igual quedó en la campanita.
+                 */
+                fun abrirDestinoPush(destino: DestinoPush) {
+                    when (destino.tipo) {
+                        "mascota_detectada" -> destino.idReferencia?.let { idReporte ->
+                            ultimaUbicacion = null
+                            ultimaUbicacionError = null
+                            ultimaUbicacionIdReporte = idReporte
+                        }
+
+                        "turno_confirmado", "turno_cancelado" -> {
+                            isViewingMisTurnos = true
+                        }
+
+                        else -> Unit
+                    }
+                }
+
+                // Android 13+ exige permiso para mostrar notificaciones. Si lo
+                // rechaza no se insiste: las notificaciones internas se siguen
+                // viendo en la campanita, que es lo que pide el criterio.
+                val permisoNotificaciones = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.RequestPermission()
+                ) { /* concedido o no, la app sigue igual */ }
+
                 LaunchedEffect(Unit) {
                     val restoredSession = sessionController.restoreSession()
                     loggedUserName = restoredSession?.userName
@@ -1775,6 +1825,30 @@ class MainActivity : ComponentActivity() {
                         // Para que el menú lateral ya muestre el contador de no leídas.
                         loadNotificaciones()
                     }
+                }
+
+                // El token se registra cada vez que hay sesión y no solo al
+                // iniciarla: FCM lo rota por su cuenta y la sesión también se
+                // restaura al abrir la app.
+                LaunchedEffect(loggedUserName) {
+                    if (loggedUserName == null) return@LaunchedEffect
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        permisoNotificaciones.launch(
+                            Manifest.permission.POST_NOTIFICATIONS
+                        )
+                    }
+                    pushTokenController.registrar()
+                }
+
+                // La app se abrió tocando un push: se va a la pantalla del aviso.
+                LaunchedEffect(loggedUserName) {
+                    if (loggedUserName == null) return@LaunchedEffect
+
+                    val destino = ServicioMensajeriaPetCare.destinoDe(intent) ?: return@LaunchedEffect
+                    // Se limpia para que no vuelva a navegar si se recrea la Activity.
+                    ServicioMensajeriaPetCare.limpiarDestino(intent)
+                    abrirDestinoPush(destino)
                 }
 
                 @Composable
