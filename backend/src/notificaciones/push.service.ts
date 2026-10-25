@@ -67,8 +67,17 @@ export class PushService {
         data: {
           message: {
             token: mensaje.token,
-            notification: { title: mensaje.titulo, body: mensaje.cuerpo },
-            data: mensaje.datos,
+            // Mensaje **solo de datos**, sin bloque `notification`: si lo
+            // llevara, con la app en segundo plano FCM dibujaría la
+            // notificación por su cuenta y el toque abriría la actividad
+            // de arranque en vez de la pantalla del aviso. Sin él, siempre
+            // llega a ServicioMensajeriaPetCare, que la arma y le pone el
+            // destino correcto.
+            data: {
+              ...mensaje.datos,
+              titulo: mensaje.titulo,
+              cuerpo: mensaje.cuerpo,
+            },
             android: { priority: 'high' },
           },
         },

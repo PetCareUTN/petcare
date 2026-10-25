@@ -2,6 +2,7 @@ package com.petcare.app
 
 import com.petcare.app.ui.components.LocalEspacioBarraInferior
 import android.Manifest
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -37,6 +38,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -181,9 +183,26 @@ private fun mensajeErrorBackend(exception: HttpException, fallback: String): Str
 
 class MainActivity : ComponentActivity() {
 
+    /**
+     * Pantalla pedida por un push que todavía no se abrió.
+     *
+     * Vive en la Activity y no en el composable porque el aviso puede llegar
+     * con la app ya abierta: ahí Android no crea una Activity nueva, manda el
+     * Intent por [onNewIntent], y leer `intent` desde el composable devolvería
+     * el de la apertura anterior.
+     */
+    private val destinoPushPendiente = mutableStateOf<DestinoPush?>(null)
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        ServicioMensajeriaPetCare.destinoDe(intent)?.let { destinoPushPendiente.value = it }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        destinoPushPendiente.value = ServicioMensajeriaPetCare.destinoDe(intent)
 
         setContent {
             val themePreferences = remember {
@@ -1841,12 +1860,16 @@ class MainActivity : ComponentActivity() {
                     pushTokenController.registrar()
                 }
 
-                // La app se abrió tocando un push: se va a la pantalla del aviso.
-                LaunchedEffect(loggedUserName) {
+                // Se tocó un push: se va a la pantalla del aviso. Espera a que
+                // haya sesión, porque si la app estaba cerrada primero hay que
+                // restaurarla.
+                val destinoPush by destinoPushPendiente
+                LaunchedEffect(destinoPush, loggedUserName) {
+                    val destino = destinoPush ?: return@LaunchedEffect
                     if (loggedUserName == null) return@LaunchedEffect
 
-                    val destino = ServicioMensajeriaPetCare.destinoDe(intent) ?: return@LaunchedEffect
-                    // Se limpia para que no vuelva a navegar si se recrea la Activity.
+                    // Se limpia para no volver a navegar si se recompone.
+                    destinoPushPendiente.value = null
                     ServicioMensajeriaPetCare.limpiarDestino(intent)
                     abrirDestinoPush(destino)
                 }

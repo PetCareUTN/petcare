@@ -22,6 +22,7 @@ import { Mascota } from './mascotas/entities/mascota.entity';
 import { Veterinario } from './veterinarios/entities/veterinario.entity';
 import { VeterinariosModule } from './veterinarios/veterinarios.module';
 import { Notificacion } from './notificaciones/entities/notificacion.entity';
+import { DispositivoPush } from './notificaciones/entities/dispositivo-push.entity';
 import { NotificacionesModule } from './notificaciones/notificaciones.module';
 import { MailModule } from './mail/mail.module';
 import { EventoClinico } from './eventos-clinicos/entities/evento-clinico.entity';
@@ -87,6 +88,7 @@ dotenv.config();
         Mascota,
         Veterinario,
         Notificacion,
+        DispositivoPush,
         HistoriaClinica,
         EventoClinico,
         ArchivoMedico,
