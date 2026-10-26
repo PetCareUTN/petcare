@@ -111,6 +111,15 @@ export class ServiciosListPage implements OnInit {
   }
 
   /** Horarios de un servicio agrupados: "Lun a Vie · 09:00 – 18:00". */
+  protected etiquetaDuracion(minutos: number): string {
+    if (minutos < 60) {
+      return `${minutos} min`;
+    }
+    const horas = Math.floor(minutos / 60);
+    const resto = minutos % 60;
+    return resto === 0 ? `${horas} h` : `${horas} h ${resto} min`;
+  }
+
   protected horarios(servicio: ServicioResponse): string[] {
     const grupos = new Map<string, number[]>();
     for (const disponibilidad of servicio.disponibilidades) {

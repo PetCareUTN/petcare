@@ -157,3 +157,9 @@ textarea {
 .rich-text-content u {
   text-decoration: underline;
 }
+
+/* Hoja A4 con margen chico al imprimir o guardar como PDF. */
+@page {
+  size: A4;
+  margin: 10mm;
+}

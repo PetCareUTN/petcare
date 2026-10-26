@@ -27,6 +27,10 @@ export class Servicio {
   @Column({ type: 'text', nullable: true })
   descripcion: string | null;
 
+  /** Minutos que dura cada turno de este servicio. */
+  @Column({ name: 'duracion_minutos', type: 'int' })
+  duracionMinutos: number;
+
   @OneToMany(
     () => DisponibilidadServicio,
     (disponibilidad) => disponibilidad.servicio,

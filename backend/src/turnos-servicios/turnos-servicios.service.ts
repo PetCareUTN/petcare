@@ -17,6 +17,7 @@ import {
 } from '../notificaciones/notificaciones-turnos.service';
 import { Servicio } from '../servicios/entities/servicio.entity';
 import { User } from '../users/entities/user.entity';
+import { AgendarTurnoServicioDto } from './dto/agendar-turno-servicio.dto';
 import { CancelarTurnoServicioDto } from './dto/cancelar-turno-servicio.dto';
 import { CreateTurnoServicioDto } from './dto/create-turno-servicio.dto';
 import { TurnoServicioDuenioResponseDto } from './dto/turno-servicio-duenio-response.dto';
@@ -24,11 +25,8 @@ import { TurnoServicioPrestadorResponseDto } from './dto/turno-servicio-prestado
 import { TurnoServicio } from './entities/turno-servicio.entity';
 import { PrestadoresService } from '../prestadores/prestadores.service';
 
-const DURACION_MINUTOS_POR_CATEGORIA: Record<CategoriaServicio, number> = {
-  [CategoriaServicio.PASEADOR]: 30,
-  [CategoriaServicio.PELUQUERIA]: 30,
-  [CategoriaServicio.GUARDERIA]: 60,
-};
+/** Cada cuántos minutos puede empezar un turno dentro de la franja de un servicio. */
+const PASO_HORARIOS_MINUTOS = 30;
 
 /** Texto legible de cada categoría para los mensajes de notificación. */
 const NOMBRE_POR_CATEGORIA: Record<CategoriaServicio, string> = {
@@ -97,14 +95,73 @@ export class TurnosServiciosService {
 
     await this.prestadores.exigirAprobado(servicio.usuario.idUsuario, servicio.categoria);
     if (servicio.usuario.idUsuario === idDueno) throw new BadRequestException('No podés reservar tu propio servicio.');
+
+    return this.reservar(servicio, mascota, { idUsuario: idDueno } as User, dto, 'dueño');
+  }
+
+  /**
+   * Reserva cargada por el prestador (web) para un cliente: mismas reglas de
+   * horario que la reserva del dueño, pero sobre un servicio propio y con la
+   * mascota que elija. El cliente recibe el aviso de que se le agendó el turno.
+   */
+  async agendarComoPrestador(
+    idPrestador: number,
+    dto: AgendarTurnoServicioDto,
+  ): Promise<TurnoServicioPrestadorResponseDto> {
+    const servicio = await this.serviciosRepository.findOne({
+      where: { idServicio: dto.idServicio },
+      relations: ['usuario', 'disponibilidades'],
+    });
+
+    if (!servicio) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'No se encontró el servicio',
+      });
+    }
+
+    if (servicio.usuario.idUsuario !== idPrestador) {
+      throw new ForbiddenException({
+        codigoEstado: 403,
+        mensaje: 'Solo podés agendar turnos de tus propios servicios',
+      });
+    }
+
+    const mascota = await this.mascotasRepository.findOne({
+      where: { idMascota: dto.idMascota },
+      relations: ['usuarios'],
+    });
+
+    if (!mascota) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'No se encontró la mascota',
+      });
+    }
+
+    const duenio = this.elegirDuenio(mascota, dto.idDuenio);
+
+    await this.prestadores.exigirAprobado(idPrestador, servicio.categoria);
+
+    return this.reservar(servicio, mascota, duenio, dto, 'veterinario');
+  }
+
+  /** Validaciones de horario y alta del turno, comunes a las dos formas de reservar. */
+  private async reservar(
+    servicio: Servicio,
+    mascota: Mascota,
+    duenio: User,
+    dto: CreateTurnoServicioDto,
+    creadoPor: 'dueño' | 'veterinario',
+  ): Promise<TurnoServicioPrestadorResponseDto> {
     const inicio = new Date(`${dto.fecha}T${dto.horaInicio}:00-03:00`).getTime();
     if (!Number.isFinite(inicio) || inicio <= Date.now()) throw new BadRequestException('La reserva debe comenzar en el futuro.');
-    const duracionMinutos = DURACION_MINUTOS_POR_CATEGORIA[servicio.categoria];
+    const duracionMinutos = servicio.duracionMinutos;
     const horaFin = this.sumarMinutos(dto.horaInicio, duracionMinutos);
 
     this.verificarDisponibilidad(servicio, dto.fecha, dto.horaInicio, horaFin);
     await this.verificarSinSolapamiento(
-      servicio.usuario.idUsuario,
+      servicio.idServicio,
       dto.fecha,
       dto.horaInicio,
       horaFin,
@@ -113,7 +170,7 @@ export class TurnosServiciosService {
     const turno = this.turnosRepository.create({
       servicio,
       mascota,
-      duenio: { idUsuario: idDueno } as User,
+      duenio: { idUsuario: duenio.idUsuario } as User,
       fecha: dto.fecha,
       horaInicio: dto.horaInicio,
       horaFin,
@@ -133,11 +190,39 @@ export class TurnosServiciosService {
       ],
     });
 
-    await this.notificacionesTurnosService.notificarTurnoConfirmado(
-      this.aDatosTurno(turnoCompleto!),
-    );
+    await this.notificacionesTurnosService.notificarTurnoConfirmado({
+      ...this.aDatosTurno(turnoCompleto!),
+      creadoPor,
+    });
 
     return TurnoServicioPrestadorResponseDto.fromEntity(turnoCompleto!);
+  }
+
+  /** Dueño al que se asocia el turno: el pedido, o el principal. */
+  private elegirDuenio(mascota: Mascota, idDuenio?: number): User {
+    const duenios = mascota.usuarios ?? [];
+
+    if (idDuenio !== undefined) {
+      const elegido = duenios.find((usuario) => usuario.idUsuario === idDuenio);
+      if (!elegido) {
+        throw new BadRequestException({
+          codigoEstado: 400,
+          mensaje: 'El cliente indicado no es dueño de la mascota',
+        });
+      }
+      return elegido;
+    }
+
+    const elegido =
+      duenios.find((usuario) => usuario.idUsuario === mascota.idDuenioPrincipal) ??
+      duenios[0];
+    if (!elegido) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje: 'La mascota no tiene un dueño asociado',
+      });
+    }
+    return elegido;
   }
 
   private verificarDisponibilidad(
@@ -147,11 +232,15 @@ export class TurnosServiciosService {
     horaFin: string,
   ): void {
     const diaSemana = this.obtenerDiaSemana(fecha);
+    // La base devuelve las horas con segundos ("10:30:00"): se comparan en
+    // minutos, porque como texto "10:30" quedaría antes que "10:30:00".
+    const inicio = this.aMinutos(horaInicio);
+    const fin = this.aMinutos(horaFin);
     const disponible = (servicio.disponibilidades ?? []).some(
       (disponibilidad) =>
         disponibilidad.diaSemana === diaSemana &&
-        horaInicio >= disponibilidad.horaInicio &&
-        horaFin <= disponibilidad.horaFin,
+        inicio >= this.aMinutos(disponibilidad.horaInicio) &&
+        fin <= this.aMinutos(disponibilidad.horaFin),
     );
 
     if (!disponible) {
@@ -162,22 +251,28 @@ export class TurnosServiciosService {
     }
   }
 
+  /** Cada servicio tiene su propia agenda: un turno solo ocupa el horario de su servicio. */
   private async verificarSinSolapamiento(
-    idPrestador: number,
+    idServicio: number,
     fecha: string,
     horaInicio: string,
     horaFin: string,
   ): Promise<void> {
     const turnosDelDia = await this.turnosRepository.find({
       where: {
-        servicio: { usuario: { idUsuario: idPrestador } },
+        servicio: { idServicio },
         fecha,
         estado: TurnoServicioEstado.CONFIRMADO,
       },
     });
 
+    // Las horas llegan con segundos ("10:30:00"): se comparan en minutos.
+    const inicio = this.aMinutos(horaInicio);
+    const fin = this.aMinutos(horaFin);
     const ocupado = turnosDelDia.some(
-      (turno) => horaInicio < turno.horaFin && horaFin > turno.horaInicio,
+      (turno) =>
+        inicio < this.aMinutos(turno.horaFin) &&
+        fin > this.aMinutos(turno.horaInicio),
     );
 
     if (ocupado) {
@@ -208,20 +303,24 @@ export class TurnosServiciosService {
     }
 
     await this.prestadores.exigirAprobado(servicio.usuario.idUsuario, servicio.categoria);
-    const duracionMinutos = DURACION_MINUTOS_POR_CATEGORIA[servicio.categoria];
+    const duracionMinutos = servicio.duracionMinutos;
     const diaSemana = this.obtenerDiaSemana(fecha);
 
     const turnosDelDia = await this.turnosRepository.find({
       where: {
-        servicio: { usuario: { idUsuario: servicio.usuario.idUsuario } },
+        servicio: { idServicio },
         fecha,
         estado: TurnoServicioEstado.CONFIRMADO,
       },
     });
-    const ocupados = turnosDelDia.map((turno) =>
-      this.deMinutos(this.aMinutos(turno.horaInicio)),
-    );
+    const ocupados = turnosDelDia.map((turno) => ({
+      inicio: this.aMinutos(turno.horaInicio),
+      fin: this.aMinutos(turno.horaFin),
+    }));
 
+    // Los turnos pueden empezar en cualquier media hora de la franja (no solo en
+    // múltiplos de la duración desde el inicio), así no quedan huecos sin ofrecer
+    // después de un turno que termina a mitad de franja.
     const slots = new Set<string>();
     for (const disponibilidad of servicio.disponibilidades ?? []) {
       if (disponibilidad.diaSemana !== diaSemana) {
@@ -229,14 +328,17 @@ export class TurnosServiciosService {
       }
       const inicio = this.aMinutos(disponibilidad.horaInicio);
       const fin = this.aMinutos(disponibilidad.horaFin);
+      const primero = Math.ceil(inicio / PASO_HORARIOS_MINUTOS) * PASO_HORARIOS_MINUTOS;
       for (
-        let minuto = inicio;
+        let minuto = primero;
         minuto + duracionMinutos <= fin;
-        minuto += duracionMinutos
+        minuto += PASO_HORARIOS_MINUTOS
       ) {
-        const hora = this.deMinutos(minuto);
-        if (!ocupados.includes(hora)) {
-          slots.add(hora);
+        const solapado = ocupados.some(
+          (turno) => minuto < turno.fin && minuto + duracionMinutos > turno.inicio,
+        );
+        if (!solapado) {
+          slots.add(this.deMinutos(minuto));
         }
       }
     }

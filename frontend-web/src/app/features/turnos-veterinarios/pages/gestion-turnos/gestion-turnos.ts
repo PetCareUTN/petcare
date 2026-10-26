@@ -139,7 +139,6 @@ export class GestionTurnosVeterinariosPage implements OnInit {
 
   protected readonly estados: EstadoOption[] = [
     { value: 'confirmado', label: 'Confirmados' },
-    { value: 'asistio', label: 'Asistieron' },
     { value: 'ausente', label: 'Ausentes' },
     { value: 'cancelado', label: 'Cancelados' },
   ];
@@ -157,7 +156,12 @@ export class GestionTurnosVeterinariosPage implements OnInit {
 
   protected readonly diasSemana = DIAS_SEMANA;
 
-  protected readonly vista = signal<VistaCalendario>('semana');
+  /** En pantallas angostas la semana no entra (7 columnas): se arranca en la vista Día. */
+  protected readonly vista = signal<VistaCalendario>(
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 700px)').matches
+      ? 'dia'
+      : 'semana',
+  );
   /** Fecha de referencia (YYYY-MM-DD) sobre la que se arma la vista actual. */
   protected readonly fechaFoco = signal(this.claveDeHoy());
   // Por defecto se ve todo menos lo cancelado: así un turno no desaparece de la agenda
@@ -442,6 +446,13 @@ export class GestionTurnosVeterinariosPage implements OnInit {
     this.recargarAgenda();
   }
 
+  protected servicioAgendado(turno: TurnoServicioResponse): void {
+    this.nuevoTurno.set(null);
+    this.fechaFoco.set(turno.fecha);
+    this.successMessage.set('Turno de servicio agendado. Le avisamos al cliente.');
+    this.loadTurnosServicios();
+  }
+
   /** Doble clic en un día del mes (no sobre un turno): agenda ese día. */
   protected dobleClickDia(evento: MouseEvent, fecha: string): void {
     if ((evento.target as HTMLElement).closest('button') || fecha < this.claveDeHoy()) {
@@ -474,12 +485,17 @@ export class GestionTurnosVeterinariosPage implements OnInit {
     this.fechaFoco.set(this.toClave(this.sumarDias(foco, dias * direccion)));
   }
 
+  /**
+   * "Confirmados" controla también a los turnos ya cerrados como asistidos.
+   * "Ausentes" y "Cancelados" se muestran u ocultan por separado.
+   */
   protected toggleEstado(estado: EstadoTurno): void {
+    const grupo: EstadoTurno[] = estado === 'confirmado' ? ['confirmado', 'asistio'] : [estado];
     const visibles = this.estadosVisibles();
     this.estadosVisibles.set(
       visibles.includes(estado)
-        ? visibles.filter((value) => value !== estado)
-        : [...visibles, estado],
+        ? visibles.filter((value) => !grupo.includes(value))
+        : [...visibles, ...grupo.filter((value) => !visibles.includes(value))],
     );
   }
 
@@ -688,9 +704,7 @@ export class GestionTurnosVeterinariosPage implements OnInit {
 
   /** Texto corto que acompaña a la hora en el chip del calendario. */
   protected etiquetaCorta(turno: EventoTurno): string {
-    return turno.categoria
-      ? `${turno.nombreMascota} · ${this.categoriaLabel(turno.categoria)}`
-      : turno.nombreMascota;
+    return turno.nombreMascota;
   }
 
   private desdeVeterinario(turno: TurnoVeterinarioResponse): EventoTurno {

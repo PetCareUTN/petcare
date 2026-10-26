@@ -31,41 +31,45 @@
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', sans-serif;
 }
 
-.appointments-header {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--spacing-md);
-  align-items: flex-start;
-  margin-bottom: var(--spacing-lg);
+.agenda-top {
+  margin-bottom: 0.5rem;
 }
 
-.appointments-header h1 {
+/* Fila de la fecha: a la izquierda el período, a la derecha "Nuevo turno". */
+.agenda-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  margin-bottom: 0.7rem;
+}
+
+.agenda-top h1 {
   margin: 0;
   font-size: 2rem;
   font-weight: 700;
   letter-spacing: -0.03em;
 }
 
-.appointments-header p,
+/* Segunda fila: nivel de detalle y filtros en una sola línea. */
+.agenda-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  margin-bottom: var(--spacing-md);
+}
+
+.agenda-controls .filters {
+  margin: 0;
+}
+
 .appointment-owner,
 .status-text,
 .detail-placeholder {
   color: var(--text-secondary);
-}
-
-.appointments-header p {
-  margin: var(--spacing-xs) 0 0;
-}
-
-/* Barra de navegación del período */
-
-.calendar-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-md);
 }
 
 .period-nav {
@@ -76,9 +80,9 @@
 
 .period-title {
   margin: 0 0 0 var(--spacing-sm);
-  font-size: 1.35rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .nav-button,
@@ -334,11 +338,6 @@
 .event-time {
   font-weight: 800;
   white-space: nowrap;
-}
-
-.event-time-end {
-  font-weight: 600;
-  opacity: 0.75;
 }
 
 .event-pet {
@@ -777,11 +776,6 @@
   border-radius: var(--radius-sm);
 }
 
-.banner-success {
-  background-color: color-mix(in srgb, var(--primary) 14%, white);
-  color: var(--primary);
-}
-
 .banner-error {
   background-color: color-mix(in srgb, var(--danger) 14%, white);
   color: var(--danger);
@@ -790,10 +784,6 @@
 @media (max-width: 720px) {
   .appointments-panel {
     padding: var(--spacing-lg);
-  }
-
-  .calendar-toolbar {
-    align-items: flex-start;
   }
 
   .period-title {
@@ -990,6 +980,14 @@
   border-left-color: var(--tipo-sobreturno);
   background-color: color-mix(in srgb, var(--tipo-sobreturno) 20%, white);
   color: #24557f;
+}
+
+/* Turnos de servicios: el violeta del filtro, salvo cancelados y ausentes, que conservan su estado. */
+.event-chip.tipo-servicio:not(.cancelado):not(.ausente),
+.event-block.tipo-servicio:not(.cancelado):not(.ausente) {
+  border-left-color: var(--tipo-servicio);
+  background-color: color-mix(in srgb, var(--tipo-servicio) 18%, white);
+  color: #4a4086;
 }
 
 .tipo-dot.sobreturno {

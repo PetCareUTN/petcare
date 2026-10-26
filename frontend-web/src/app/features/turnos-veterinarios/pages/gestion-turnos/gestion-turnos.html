@@ -1,11 +1,10 @@
 <main class="appointments-page">
   <section class="appointments-panel">
-    <header class="appointments-header">
+    <header class="agenda-top">
       <h1>Turnos</h1>
-      <button type="button" class="btn-new" (click)="abrirNuevoTurno()">+ Nuevo turno</button>
     </header>
 
-    <div class="calendar-toolbar">
+    <div class="agenda-nav">
       <div class="period-nav">
         <button
           type="button"
@@ -27,6 +26,52 @@
         <h2 class="period-title">{{ tituloPeriodo() }}</h2>
       </div>
 
+      <button type="button" class="btn-new" (click)="abrirNuevoTurno()">+ Nuevo turno</button>
+    </div>
+
+    <div class="agenda-controls">
+      <div class="filters">
+        <nav class="filter-group" aria-label="Tipo de turno">
+          @for (tipo of tipos; track tipo.value) {
+            <button
+              type="button"
+              class="status-filter"
+              [class.active]="esTipoVisible(tipo.value)"
+              [attr.aria-pressed]="esTipoVisible(tipo.value)"
+              (click)="toggleTipo(tipo.value)"
+            >
+              <span class="tipo-dot" [class]="tipo.value"></span>
+              {{ tipo.label }}
+            </button>
+          }
+          <button
+            type="button"
+            class="status-filter"
+            [class.active]="sobreturnosVisibles()"
+            [attr.aria-pressed]="sobreturnosVisibles()"
+            (click)="toggleSobreturnos()"
+          >
+            <span class="tipo-dot sobreturno"></span>
+            Sobreturnos
+          </button>
+        </nav>
+
+        <nav class="filter-group" aria-label="Estados visibles en el calendario">
+          @for (estado of estados; track estado.value) {
+            <button
+              type="button"
+              class="status-filter"
+              [class.active]="esEstadoVisible(estado.value)"
+              [attr.aria-pressed]="esEstadoVisible(estado.value)"
+              (click)="toggleEstado(estado.value)"
+            >
+              <span class="status-dot" [class]="estado.value"></span>
+              {{ estado.label }}
+            </button>
+          }
+        </nav>
+      </div>
+
       <nav class="view-switch" aria-label="Nivel de detalle del calendario">
         @for (opcion of vistas; track opcion.value) {
           <button
@@ -41,50 +86,13 @@
       </nav>
     </div>
 
-    <div class="filters">
-      <nav class="filter-group" aria-label="Tipo de turno">
-        @for (tipo of tipos; track tipo.value) {
-          <button
-            type="button"
-            class="status-filter"
-            [class.active]="esTipoVisible(tipo.value)"
-            [attr.aria-pressed]="esTipoVisible(tipo.value)"
-            (click)="toggleTipo(tipo.value)"
-          >
-            <span class="tipo-dot" [class]="tipo.value"></span>
-            {{ tipo.label }}
-          </button>
-        }
-        <button
-          type="button"
-          class="status-filter"
-          [class.active]="sobreturnosVisibles()"
-          [attr.aria-pressed]="sobreturnosVisibles()"
-          (click)="toggleSobreturnos()"
-        >
-          <span class="tipo-dot sobreturno"></span>
-          Sobreturnos
-        </button>
-      </nav>
-
-      <nav class="filter-group" aria-label="Estados visibles en el calendario">
-        @for (estado of estados; track estado.value) {
-          <button
-            type="button"
-            class="status-filter"
-            [class.active]="esEstadoVisible(estado.value)"
-            [attr.aria-pressed]="esEstadoVisible(estado.value)"
-            (click)="toggleEstado(estado.value)"
-          >
-            <span class="status-dot" [class]="estado.value"></span>
-            {{ estado.label }}
-          </button>
-        }
-      </nav>
-    </div>
-
     @if (successMessage()) {
-      <p class="banner banner-success">{{ successMessage() }}</p>
+      <p class="ap-toast" role="status">
+        <span class="ap-toast-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5" /></svg>
+      </span>
+        {{ successMessage() }}
+      </p>
     }
 
     @if (errorMessage()) {
@@ -199,12 +207,7 @@
                                     [attr.aria-label]="formatTime(turno.hora) + ' ' + etiquetaCorta(turno)"
                                     (click)="seleccionarTurno(turno)"
                                   >
-                                    <span class="event-time">
-                                      {{ formatTime(turno.hora) }}
-                                      @if (turno.horaFin) {
-                                        <span class="event-time-end">– {{ formatTime(turno.horaFin) }}</span>
-                                      }
-                                    </span>
+                                    <span class="event-time">{{ formatTime(turno.hora) }}</span>
                                     <span class="event-pet">{{ etiquetaCorta(turno) }}</span>
                                   </button>
                                   @if (ultimo && puedeAgregar) {
@@ -415,6 +418,7 @@
       [horaInicial]="alta.hora"
       (cerrar)="cerrarNuevoTurno()"
       (agendado)="turnoAgendado($event)"
+      (servicioAgendado)="servicioAgendado($event)"
     />
   }
 </main>
