@@ -1,8 +1,9 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter, map, startWith } from 'rxjs';
 import { AuthService } from '../../features/auth/services/auth-service';
+import { ProfileService } from '../../features/profile/services/profile-service';
 import { NotificationBellComponent } from '../../features/notificaciones/components/notification-bell/notification-bell';
 
 @Component({
@@ -14,6 +15,32 @@ import { NotificationBellComponent } from '../../features/notificaciones/compone
 export class VetLayout {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly profileService = inject(ProfileService);
+
+  private readonly nombre = signal('');
+  private readonly apellido = signal('');
+
+  protected readonly nombreCompleto = computed(
+    () => `${this.nombre()} ${this.apellido()}`.trim() || 'Mi cuenta',
+  );
+
+  protected readonly iniciales = computed(() => {
+    const letras = [this.nombre(), this.apellido()]
+      .filter((parte) => parte.length > 0)
+      .map((parte) => parte.charAt(0).toUpperCase());
+    return letras.join('') || 'V';
+  });
+
+  constructor() {
+    this.profileService.getMe().subscribe({
+      next: (perfil) => {
+        this.nombre.set(perfil.nombre ?? '');
+        this.apellido.set(perfil.apellido ?? '');
+      },
+      // Sin el nombre el panel sigue funcionando: queda el texto genérico.
+      error: () => undefined,
+    });
+  }
 
   private readonly currentUrl = toSignal(
     this.router.events.pipe(

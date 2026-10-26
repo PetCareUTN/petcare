@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { WebhookSignatureValidator } from 'mercadopago';
+import { MercadoPagoError, WebhookSignatureValidator } from 'mercadopago';
 import { NotificationType } from '../common/enums/notification-type.enum';
 import { SuscripcionEstado } from '../common/enums/suscripcion-estado.enum';
 import { ValidationStatus } from '../common/enums/validation-status.enum';
@@ -18,13 +18,22 @@ import { SuscripcionesService } from './suscripciones.service';
 
 const preApprovalCreate = jest.fn();
 const preApprovalGet = jest.fn();
+const preApprovalUpdate = jest.fn();
 const paymentGet = jest.fn();
 
 jest.mock('mercadopago', () => ({
   MercadoPagoConfig: jest.fn(),
+  MercadoPagoError: class extends Error {
+    status: number;
+    constructor(body: { status?: number; message?: string }) {
+      super(body.message ?? 'mp error');
+      this.status = body.status ?? 0;
+    }
+  },
   PreApproval: jest.fn().mockImplementation(() => ({
     create: preApprovalCreate,
     get: preApprovalGet,
+    update: preApprovalUpdate,
   })),
   Payment: jest.fn().mockImplementation(() => ({ get: paymentGet })),
   WebhookSignatureValidator: { validate: jest.fn() },
@@ -371,6 +380,22 @@ describe('SuscripcionesService', () => {
       );
     });
 
+    it('rechaza pagar durante el período de prueba vigente', async () => {
+      veterinariosRepository.findOne.mockResolvedValue(veterinarioAprobado);
+      suscripcionesRepository.findOne.mockResolvedValue({
+        ...suscripcionPendiente,
+        estado: SuscripcionEstado.EN_PRUEBA,
+        fechaPruebaFin: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        fechaVencimiento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        pruebaUsada: true,
+      });
+
+      await expect(service.suscribirme(ID_VETERINARIO)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(preApprovalCreate).not.toHaveBeenCalled();
+    });
+
     it('reintenta desde CANCELADA creando un preapproval nuevo', async () => {
       veterinariosRepository.findOne.mockResolvedValue(veterinarioAprobado);
       suscripcionesRepository.findOne.mockResolvedValue({
@@ -530,6 +555,214 @@ describe('SuscripcionesService', () => {
     });
   });
 
+  describe('cancelarSuscripcion', () => {
+    it('cancela en Mercado Pago y pasa la suscripción a CANCELADA', async () => {
+      suscripcionesRepository.findOne.mockResolvedValue({
+        ...suscripcionPendiente,
+        estado: SuscripcionEstado.ACTIVA,
+        mpPreapprovalId: 'mp-pre-1',
+        fechaInicio: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+      });
+      preApprovalUpdate.mockResolvedValue({
+        id: 'mp-pre-1',
+        status: 'cancelled',
+      });
+
+      const resultado = await service.cancelarSuscripcion(ID_VETERINARIO);
+
+      expect(preApprovalUpdate).toHaveBeenCalledWith({
+        id: 'mp-pre-1',
+        body: { status: 'cancelled' },
+      });
+      expect(suscripcionesRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          estado: SuscripcionEstado.CANCELADA,
+          fechaGraciaInicio: null,
+        }),
+      );
+      expect(notificacionesService.crear).toHaveBeenCalledWith(
+        ID_VETERINARIO,
+        NotificationType.SUSCRIPCION_CANCELADA,
+        expect.any(String),
+        expect.any(String),
+      );
+      expect(resultado.estado).toBe('cancelada');
+      expect(resultado.accesoPermitido).toBe(false);
+      expect(resultado.codigoBloqueo).toBe('SUSCRIPCION_CANCELADA');
+    });
+
+    it('durante el período de prueba cancela solo local, sin tocar MP', async () => {
+      suscripcionesRepository.findOne.mockResolvedValue({
+        ...suscripcionPendiente,
+        estado: SuscripcionEstado.EN_PRUEBA,
+        fechaPruebaFin: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        fechaVencimiento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        pruebaUsada: true,
+      });
+
+      const resultado = await service.cancelarSuscripcion(ID_VETERINARIO);
+
+      // No hay preapproval en MP: no hay cobros que frenar.
+      expect(preApprovalUpdate).not.toHaveBeenCalled();
+      expect(suscripcionesRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ estado: SuscripcionEstado.CANCELADA }),
+      );
+      expect(resultado.estado).toBe('cancelada');
+    });
+
+    it('permite cancelar una suscripción SUSPENDIDA', async () => {
+      suscripcionesRepository.findOne.mockResolvedValue({
+        ...suscripcionPendiente,
+        estado: SuscripcionEstado.SUSPENDIDA,
+        mpPreapprovalId: 'mp-pre-1',
+      });
+      preApprovalUpdate.mockResolvedValue({ id: 'mp-pre-1' });
+
+      const resultado = await service.cancelarSuscripcion(ID_VETERINARIO);
+
+      expect(preApprovalUpdate).toHaveBeenCalledTimes(1);
+      expect(resultado.estado).toBe('cancelada');
+    });
+
+    it('rechaza con 409 si ya está cancelada, sin llamar a MP', async () => {
+      suscripcionesRepository.findOne.mockResolvedValue({
+        ...suscripcionPendiente,
+        estado: SuscripcionEstado.CANCELADA,
+        mpPreapprovalId: 'mp-pre-1',
+      });
+
+      await expect(service.cancelarSuscripcion(ID_VETERINARIO)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(preApprovalUpdate).not.toHaveBeenCalled();
+      expect(suscripcionesRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('rechaza con 409 si está PENDIENTE_PAGO (nunca pagó)', async () => {
+      suscripcionesRepository.findOne.mockResolvedValue({
+        ...suscripcionPendiente,
+      });
+
+      await expect(service.cancelarSuscripcion(ID_VETERINARIO)).rejects.toThrow(
+        ConflictException,
+      );
+      expect(preApprovalUpdate).not.toHaveBeenCalled();
+      expect(suscripcionesRepository.save).not.toHaveBeenCalled();
+      expect(notificacionesService.crear).not.toHaveBeenCalled();
+    });
+
+    it('si MP falla, devuelve 409 sin cambiar el estado local', async () => {
+      const suscripcion = {
+        ...suscripcionPendiente,
+        estado: SuscripcionEstado.ACTIVA,
+        mpPreapprovalId: 'mp-pre-1',
+      };
+      suscripcionesRepository.findOne.mockResolvedValue(suscripcion);
+      preApprovalUpdate.mockRejectedValue(new Error('network timeout'));
+
+      await expect(service.cancelarSuscripcion(ID_VETERINARIO)).rejects.toThrow(
+        ConflictException,
+      );
+      // Nada de local: ni save ni notificación (para poder reintentar).
+      expect(suscripcionesRepository.save).not.toHaveBeenCalled();
+      expect(notificacionesService.crear).not.toHaveBeenCalled();
+      expect(suscripcion.estado).toBe(SuscripcionEstado.ACTIVA);
+    });
+
+    it('tolera un 404 de MP (ya no existe el preapproval) y cancela igual', async () => {
+      suscripcionesRepository.findOne.mockResolvedValue({
+        ...suscripcionPendiente,
+        estado: SuscripcionEstado.ACTIVA,
+        mpPreapprovalId: 'mp-pre-1',
+      });
+      preApprovalUpdate.mockRejectedValue(
+        new MercadoPagoError({ status: 404, message: 'not found' }),
+      );
+
+      const resultado = await service.cancelarSuscripcion(ID_VETERINARIO);
+
+      expect(suscripcionesRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ estado: SuscripcionEstado.CANCELADA }),
+      );
+      expect(resultado.estado).toBe('cancelada');
+    });
+  });
+
+  describe('activarPrueba', () => {
+    it('crea la suscripción EN_PRUEBA cuando todavía no existe', async () => {
+      const ahora = Date.now();
+      suscripcionesRepository.findOne.mockResolvedValue(null);
+      suscripcionesRepository.create.mockReturnValue({
+        idSuscripcion: 7,
+      });
+
+      await service.activarPrueba(ID_VETERINARIO);
+
+      expect(suscripcionesRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ usuario: { idUsuario: ID_VETERINARIO } }),
+      );
+      const [args] = suscripcionesRepository.save.mock.calls as Array<
+        [Suscripcion]
+      >;
+      const guardada = args[0];
+      expect(guardada.estado).toBe(SuscripcionEstado.EN_PRUEBA);
+      expect(guardada.pruebaUsada).toBe(true);
+      expect(guardada.fechaInicio).toBeUndefined();
+      const dias =
+        (guardada.fechaPruebaFin!.getTime() - ahora) / (24 * 60 * 60 * 1000);
+      expect(dias).toBeGreaterThan(89);
+      expect(dias).toBeLessThan(91);
+      expect(notificacionesService.crear).toHaveBeenCalledWith(
+        ID_VETERINARIO,
+        NotificationType.SUSCRIPCION_PRUEBA_INICIADA,
+        expect.any(String),
+        expect.stringContaining('prueba gratis'),
+      );
+    });
+
+    it('activa la prueba de una suscripción PENDIENTE_PAGO sin tocar fechaInicio', async () => {
+      suscripcionesRepository.findOne.mockResolvedValue({
+        ...suscripcionPendiente,
+      });
+
+      await service.activarPrueba(ID_VETERINARIO);
+
+      expect(suscripcionesRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          estado: SuscripcionEstado.EN_PRUEBA,
+          fechaInicio: null,
+          pruebaUsada: true,
+          fechaPruebaFin: expect.any(Date) as Date,
+        }),
+      );
+    });
+
+    it('no reactiva el trial si ya se usó', async () => {
+      suscripcionesRepository.findOne.mockResolvedValue({
+        ...suscripcionPendiente,
+        estado: SuscripcionEstado.CANCELADA,
+        pruebaUsada: true,
+      });
+
+      await service.activarPrueba(ID_VETERINARIO);
+
+      expect(suscripcionesRepository.save).not.toHaveBeenCalled();
+      expect(notificacionesService.crear).not.toHaveBeenCalled();
+    });
+
+    it('no activa si la suscripción ya pagó (estado ACTIVA)', async () => {
+      suscripcionesRepository.findOne.mockResolvedValue({
+        ...suscripcionPendiente,
+        estado: SuscripcionEstado.ACTIVA,
+      });
+
+      await service.activarPrueba(ID_VETERINARIO);
+
+      expect(suscripcionesRepository.save).not.toHaveBeenCalled();
+      expect(notificacionesService.crear).not.toHaveBeenCalled();
+    });
+  });
+
   describe('manejarWebhook', () => {
     const headers = { 'x-signature': 'ts=1,v1=abc', 'x-request-id': 'req-1' };
 
@@ -603,6 +836,67 @@ describe('SuscripcionesService', () => {
         expect.any(String),
         expect.any(String),
       );
+    });
+
+    it('calcula el vencimiento con mes calendario (18/01 → 18/02)', async () => {
+      permitirFirma();
+      preApprovalGet.mockResolvedValue({
+        id: 'mp-pre-123',
+        status: 'authorized',
+      });
+      suscripcionesRepository.findOne.mockResolvedValue({
+        ...suscripcionPendiente,
+        mpPreapprovalId: 'mp-pre-123',
+      });
+
+      await service.manejarWebhook(
+        headers,
+        { type: 'preapproval', 'data.id': 'mp-pre-123' },
+        { type: 'preapproval', data: { id: 'mp-pre-123' } },
+      );
+
+      const [guardada] = suscripcionesRepository.save.mock.calls[0] as [Suscripcion];
+      const ahora = new Date();
+      const esperado = new Date(ahora.getFullYear(), ahora.getMonth() + 1, ahora.getDate());
+      // Compara solo día, mes y año (ignora hora/minuto/segundo)
+      expect(guardada.fechaFin!.getDate()).toBe(esperado.getDate());
+      expect(guardada.fechaFin!.getMonth()).toBe(esperado.getMonth());
+      expect(guardada.fechaFin!.getFullYear()).toBe(esperado.getFullYear());
+    });
+
+    it('ajusta a fin de mes cuando el día no existe (31 oct → 30 nov)', async () => {
+      permitirFirma();
+      // Renovación: pago aprobado de una suscripción ACTIVA que vence el 31/10
+      paymentGet.mockResolvedValue({
+        id: '998',
+        status: 'approved',
+        external_reference: '5',
+        transaction_amount: 1000,
+        currency_id: 'ARS',
+        date_approved: new Date().toISOString(),
+      });
+      pagosRepository.findOne.mockResolvedValue(null);
+      // 31/10/2026 (futuro): + 1 mes = 31/11 (no existe) → 30/11/2026
+      const finOctubre = new Date(2026, 9, 31, 12, 0, 0);
+      suscripcionesRepository.findOne.mockResolvedValue({
+        ...suscripcionPendiente,
+        estado: SuscripcionEstado.ACTIVA,
+        mpPreapprovalId: 'mp-pre-123',
+        fechaInicio: new Date(2026, 9, 1, 12, 0, 0), // 01/10/2026
+        fechaFin: finOctubre,
+      });
+
+      await service.manejarWebhook(
+        headers,
+        { type: 'payment', 'data.id': '998' },
+        { type: 'payment', data: { id: '998' } },
+      );
+
+      const [guardada] = suscripcionesRepository.save.mock.calls[0] as [Suscripcion];
+      // 31/10 + 1 mes = 31/11 (no existe) → 30/11/2026
+      expect(guardada.fechaFin!.getDate()).toBe(30);
+      expect(guardada.fechaFin!.getMonth()).toBe(10); // Noviembre
+      expect(guardada.fechaFin!.getFullYear()).toBe(2026);
     });
 
     it('ignora pagos ya procesados (idempotencia)', async () => {
@@ -795,6 +1089,39 @@ describe('SuscripcionesService', () => {
         }),
       );
     });
+
+    it('no resucita una suscripción CANCELADA con un pago aprobado tardío', async () => {
+      permitirFirma();
+      paymentGet.mockResolvedValue({
+        id: '885',
+        status: 'approved',
+        external_reference: '5',
+        transaction_amount: 1000,
+        currency_id: 'ARS',
+        date_approved: new Date().toISOString(),
+      });
+      pagosRepository.findOne.mockResolvedValue(null);
+      suscripcionesRepository.findOne.mockResolvedValue({
+        ...suscripcionPendiente,
+        estado: SuscripcionEstado.CANCELADA,
+        fechaInicio: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000),
+        mpPreapprovalId: 'mp-pre-1',
+      });
+
+      await service.manejarWebhook(
+        headers,
+        { type: 'payment', 'data.id': '885' },
+        { type: 'payment', data: { id: '885' } },
+      );
+
+      // El pago queda registrado en el historial...
+      expect(pagosRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ mpPaymentId: '885', estado: 'aprobado' }),
+      );
+      // ...pero la suscripción cancelada no vuelve a activarse.
+      expect(suscripcionesRepository.save).not.toHaveBeenCalled();
+      expect(notificacionesService.crear).not.toHaveBeenCalled();
+    });
   });
 
   describe('revisarVencimientos (cron)', () => {
@@ -846,6 +1173,7 @@ describe('SuscripcionesService', () => {
       const hace4Dias = new Date(Date.now() - 4 * 24 * 60 * 60 * 1000);
       suscripcionesRepository.find
         .mockResolvedValueOnce([]) // consulta de ACTIVAS
+        .mockResolvedValueOnce([]) // consulta de EN_PRUEBA (expirar trials)
         .mockResolvedValueOnce([
           {
             ...suscripcionPendiente,
@@ -871,7 +1199,8 @@ describe('SuscripcionesService', () => {
     it('no suspende las VENCidas que todavía están en gracia', async () => {
       const hace1Dia = new Date(Date.now() - 24 * 60 * 60 * 1000);
       suscripcionesRepository.find
-        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]) // consulta de ACTIVAS
+        .mockResolvedValueOnce([]) // consulta de EN_PRUEBA (expirar trials)
         .mockResolvedValueOnce([
           {
             ...suscripcionPendiente,
@@ -879,7 +1208,92 @@ describe('SuscripcionesService', () => {
             fechaGraciaInicio: hace1Dia,
           },
         ])
-        .mockResolvedValueOnce([]);
+        .mockResolvedValueOnce([]); // consulta de VENCIDAS para avisar por gracia
+
+      await service.revisarVencimientos();
+
+      expect(suscripcionesRepository.save).not.toHaveBeenCalled();
+      expect(notificacionesService.crear).not.toHaveBeenCalled();
+    });
+
+    it('expira el trial terminado: pasa a PENDIENTE_PAGO y avisa', async () => {
+      const ayer = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      suscripcionesRepository.find
+        .mockResolvedValueOnce([]) // consulta de ACTIVAS
+        .mockResolvedValueOnce([
+          {
+            ...suscripcionPendiente,
+            estado: SuscripcionEstado.EN_PRUEBA,
+            fechaPruebaFin: ayer,
+            fechaVencimiento: ayer,
+            pruebaUsada: true,
+          },
+        ]) // consulta de EN_PRUEBA (expirar trials)
+        .mockResolvedValueOnce([]) // suspender
+        .mockResolvedValueOnce([]) // avisar por gracia
+        .mockResolvedValueOnce([]); // avisar trial por vencer
+
+      await service.revisarVencimientos();
+
+      expect(suscripcionesRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ estado: SuscripcionEstado.PENDIENTE_PAGO }),
+      );
+      expect(notificacionesService.crear).toHaveBeenCalledWith(
+        ID_VETERINARIO,
+        NotificationType.SUSCRIPCION_PRUEBA_FINALIZADA,
+        expect.any(String),
+        expect.any(String),
+      );
+    });
+
+    it('avisa una sola vez cuando al trial le quedan 30 días o menos', async () => {
+      const finEn25Dias = new Date(Date.now() + 25 * 24 * 60 * 60 * 1000);
+      suscripcionesRepository.find
+        .mockResolvedValueOnce([]) // consulta de ACTIVAS
+        .mockResolvedValueOnce([]) // consulta de EN_PRUEBA (expirar trials)
+        .mockResolvedValueOnce([]) // suspender
+        .mockResolvedValueOnce([]) // avisar por gracia
+        .mockResolvedValueOnce([
+          {
+            ...suscripcionPendiente,
+            estado: SuscripcionEstado.EN_PRUEBA,
+            fechaPruebaFin: finEn25Dias,
+            fechaVencimiento: finEn25Dias,
+            pruebaUsada: true,
+            pruebaNotificada: false,
+          },
+        ]); // consulta de EN_PRUEBA para avisar
+
+      await service.revisarVencimientos();
+
+      expect(suscripcionesRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ pruebaNotificada: true }),
+      );
+      expect(notificacionesService.crear).toHaveBeenCalledWith(
+        ID_VETERINARIO,
+        NotificationType.SUSCRIPCION_PRUEBA_POR_VENCER,
+        expect.any(String),
+        expect.any(String),
+      );
+    });
+
+    it('no avisa si al trial le quedan más de 30 días', async () => {
+      const finEn60Dias = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
+      suscripcionesRepository.find
+        .mockResolvedValueOnce([]) // consulta de ACTIVAS
+        .mockResolvedValueOnce([]) // consulta de EN_PRUEBA (expirar trials)
+        .mockResolvedValueOnce([]) // suspender
+        .mockResolvedValueOnce([]) // avisar por gracia
+        .mockResolvedValueOnce([
+          {
+            ...suscripcionPendiente,
+            estado: SuscripcionEstado.EN_PRUEBA,
+            fechaPruebaFin: finEn60Dias,
+            fechaVencimiento: finEn60Dias,
+            pruebaUsada: true,
+            pruebaNotificada: false,
+          },
+        ]); // consulta de EN_PRUEBA para avisar
 
       await service.revisarVencimientos();
 
@@ -948,6 +1362,26 @@ describe('SuscripcionesService', () => {
       });
       expect(acceso.accesoPermitido).toBe(false);
       expect(acceso.codigo).toBe('SUSCRIPCION_CANCELADA');
+    });
+
+    it('permite si está EN_PRUEBA con el trial vigente', () => {
+      const acceso = service.evaluarAccesoDe({
+        ...suscripcionPendiente,
+        estado: SuscripcionEstado.EN_PRUEBA,
+        fechaPruebaFin: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+      });
+      expect(acceso.accesoPermitido).toBe(true);
+      expect(acceso.codigo).toBeNull();
+    });
+
+    it('bloquea si está EN_PRUEBA con el trial ya expirado', () => {
+      const acceso = service.evaluarAccesoDe({
+        ...suscripcionPendiente,
+        estado: SuscripcionEstado.EN_PRUEBA,
+        fechaPruebaFin: new Date(Date.now() - 60 * 1000),
+      });
+      expect(acceso.accesoPermitido).toBe(false);
+      expect(acceso.codigo).toBe('SUSCRIPCION_PENDIENTE');
     });
   });
 

@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Param,
   ParseIntPipe,
+  Delete,
   Patch,
   Post,
   UseGuards,
@@ -21,6 +22,8 @@ import {
 } from '../common/decorators/api-protegido.decorator';
 import { TagsBleService } from '../tags-ble/tags-ble.service';
 import { AvisarSeparacionDto } from './dto/avisar-separacion.dto';
+import { RegistrarDispositivoDto } from './dto/registrar-dispositivo.dto';
+import { DispositivosPushService } from './dispositivos-push.service';
 import { NotificacionesSeparacionService } from './notificaciones-separacion.service';
 import { NotificacionesService } from './notificaciones.service';
 
@@ -31,6 +34,7 @@ export class NotificacionesController {
   constructor(
     private readonly notificacionesService: NotificacionesService,
     private readonly notificacionesSeparacionService: NotificacionesSeparacionService,
+    private readonly dispositivosPushService: DispositivosPushService,
     private readonly tagsBleService: TagsBleService,
   ) {}
 
@@ -71,13 +75,61 @@ export class NotificacionesController {
     return { creada };
   }
 
+  /**
+   * Registra el dispositivo para recibir push. La app lo llama al iniciar
+   * sesión, cada vez: el token de FCM se renueva solo y hay que guardar el
+   * último.
+   */
+  @Post('dispositivos')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Registrar este dispositivo para notificaciones push',
+    description:
+      'Guarda el token de FCM del dispositivo para la sesión actual. Si el token ya estaba registrado por otra cuenta, pasa a esta: es el mismo teléfono cambiando de usuario.',
+  })
+  @ApiResponse({ status: 204, description: 'Dispositivo registrado.' })
+  async registrarDispositivo(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: RegistrarDispositivoDto,
+  ): Promise<void> {
+    await this.dispositivosPushService.registrar(
+      user.sub,
+      dto.token,
+      dto.plataforma,
+    );
+  }
+
+  /**
+   * Da de baja el dispositivo al cerrar sesión, para que no le sigan llegando
+   * avisos de una cuenta que ya no tiene la sesión abierta.
+   */
+  @Delete('dispositivos')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Dar de baja este dispositivo',
+    description:
+      'La app lo llama al cerrar sesión. Solo da de baja dispositivos de la propia sesión.',
+  })
+  @ApiResponse({ status: 204, description: 'Dispositivo dado de baja.' })
+  async eliminarDispositivo(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: RegistrarDispositivoDto,
+  ): Promise<void> {
+    await this.dispositivosPushService.eliminar(user.sub, dto.token);
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
     summary: 'Listar mis notificaciones',
     description: 'Las más nuevas primero, con su marca de leída o no leída.',
   })
-  @ApiResponse({ status: 200, description: 'Notificaciones de la sesión actual.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Notificaciones de la sesión actual.',
+  })
   listar(@CurrentUser() user: JwtPayload) {
     return this.notificacionesService.listarPorUsuario(user.sub);
   }
@@ -87,7 +139,10 @@ export class NotificacionesController {
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Marcar todas mis notificaciones como leídas' })
-  @ApiResponse({ status: 200, description: 'Notificaciones marcadas como leídas.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Notificaciones marcadas como leídas.',
+  })
   marcarTodasLeidas(@CurrentUser() user: JwtPayload) {
     return this.notificacionesService.marcarTodasLeidas(user.sub);
   }

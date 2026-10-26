@@ -1,5 +1,6 @@
 package com.petcare.app.features.servicios.ui
 
+import com.petcare.app.ui.components.LocalEspacioBarraInferior
 import com.petcare.app.ui.components.elevacionTarjeta
 import com.petcare.app.ui.components.elevacionBoton
 import com.petcare.app.ui.components.elevacionBotonContorno
@@ -139,7 +140,8 @@ fun PrestadoresScreen(api: ServiciosApi, onBack: () -> Unit, inicial: String = "
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+                .padding(horizontal = 20.dp, vertical = 12.dp)
+                .padding(bottom = LocalEspacioBarraInferior.current),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             error?.let { AvisoFormulario(texto = it) }

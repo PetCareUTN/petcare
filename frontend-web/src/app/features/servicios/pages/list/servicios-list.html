@@ -1,6 +1,6 @@
-<div class="page">
-  <header class="list-header">
-    <h1>Mis servicios</h1>
+<main class="servicios-page">
+  <header class="page-header">
+    <h1>Servicios</h1>
     <a class="btn-primary" routerLink="nuevo">+ Publicar servicio</a>
   </header>
 
@@ -9,49 +9,144 @@
   }
 
   @if (errorMessage()) {
-    <p class="banner banner-error">{{ errorMessage() }}</p>
+    <p class="banner banner-error" role="alert">{{ errorMessage() }}</p>
   }
 
   @if (!isLoading() && !errorMessage()) {
-    @if (servicios().length === 0) {
-      <div class="empty-state">
-        <p>Todavía no publicaste ningún servicio.</p>
-        <p>Publicá tu primer servicio para que los dueños de mascotas puedan encontrarte.</p>
+    <section class="stats" aria-label="Resumen">
+      <div class="stat">
+        <span class="stat-label">Servicios publicados</span>
+        <span class="stat-value">{{ servicios().length }}</span>
       </div>
-    } @else {
-      <div class="servicio-grid">
-        @for (servicio of servicios(); track servicio.idServicio) {
-          <article class="servicio-card">
-            <div class="servicio-card-body">
-              <h2 class="servicio-card-categoria">{{ categoriaLabel(servicio.categoria) }}</h2>
-              @if (servicio.descripcion) {
-                <p class="servicio-card-meta">{{ servicio.descripcion }}</p>
-              }
+      <div class="stat">
+        <span class="stat-label">Calificación</span>
+        <span class="stat-value">
+          @if (promedio(); as valor) {
+            {{ formatPromedio(valor) }}<span class="stat-estrella" aria-hidden="true">★</span>
+          } @else {
+            —
+          }
+        </span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Servicios completados</span>
+        <span class="stat-value">{{ serviciosCompletados() }}</span>
+      </div>
+    </section>
 
-              <ul class="servicio-card-disponibilidades">
-                @for (disponibilidad of servicio.disponibilidades; track disponibilidad.idDisponibilidad) {
-                  <li>
-                    {{ diaLabel(disponibilidad.diaSemana) }}: {{ formatHora(disponibilidad.horaInicio) }} a
-                    {{ formatHora(disponibilidad.horaFin) }}
-                  </li>
-                }
-              </ul>
-            </div>
+    <div class="servicios-grid">
+      <section class="panel" aria-labelledby="mis-servicios">
+        <h2 id="mis-servicios">Mis servicios</h2>
 
-            <div class="servicio-card-actions">
-              <a class="btn-secondary" [routerLink]="[servicio.idServicio, 'editar']">Editar</a>
-              <button
-                type="button"
-                class="btn-danger"
-                [disabled]="deletingId() === servicio.idServicio"
-                (click)="eliminar(servicio)"
-              >
-                {{ deletingId() === servicio.idServicio ? 'Eliminando...' : 'Eliminar' }}
-              </button>
-            </div>
-          </article>
+        @if (servicios().length === 0) {
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="3" y="7" width="18" height="13" rx="3" />
+              <path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M3 13h18" />
+            </svg>
+            <p>Todavía no publicaste ningún servicio.</p>
+            <a class="btn-secondary" routerLink="nuevo">Publicar servicio</a>
+          </div>
+        } @else {
+          <ul class="lista">
+            @for (servicio of servicios(); track servicio.idServicio) {
+              <li class="servicio">
+                <span class="servicio-icono" aria-hidden="true">
+                  @switch (servicio.categoria) {
+                    @case ('paseador') {
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="10" r="2" /><circle cx="9.5" cy="5.5" r="2" /><circle cx="14.5" cy="5.5" r="2" /><circle cx="18.5" cy="10" r="2" /><path d="M12 11c-3 0-5.5 3-5.5 5.5 0 1.8 1.4 2.5 3 2.5 1 0 1.6-.4 2.5-.4s1.5.4 2.5.4c1.6 0 3-.7 3-2.5C17.5 14 15 11 12 11Z" /></svg>
+                    }
+                    @case ('guarderia') {
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5" /><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9" /></svg>
+                    }
+                    @default {
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12" /></svg>
+                    }
+                  }
+                </span>
+
+                <div class="servicio-info">
+                  <span class="servicio-nombre">{{ categoriaLabel(servicio.categoria) }}</span>
+                  <span class="servicio-horario">Turnos de {{ etiquetaDuracion(servicio.duracionMinutos) }}</span>
+                  @if (servicio.descripcion) {
+                    <span class="servicio-descripcion">{{ servicio.descripcion }}</span>
+                  }
+                  @for (linea of horarios(servicio); track linea) {
+                    <span class="servicio-horario">{{ linea }}</span>
+                  }
+                </div>
+
+                <div class="servicio-acciones">
+                  <a class="btn-secondary" [routerLink]="[servicio.idServicio, 'editar']">Editar</a>
+                  <button
+                    type="button"
+                    class="btn-danger"
+                    [disabled]="deletingId() === servicio.idServicio"
+                    (click)="eliminar(servicio)"
+                  >
+                    {{ deletingId() === servicio.idServicio ? 'Eliminando...' : 'Eliminar' }}
+                  </button>
+                </div>
+              </li>
+            }
+          </ul>
         }
-      </div>
-    }
+      </section>
+
+      <section class="panel" aria-labelledby="resenas">
+        <div class="panel-head">
+          <h2 id="resenas">Reseñas</h2>
+          @if (totalResenas() > 0) {
+            <span class="panel-resumen">
+              {{ totalResenas() }} {{ totalResenas() === 1 ? 'reseña' : 'reseñas' }}
+            </span>
+          }
+        </div>
+
+        @if (ultimasResenas().length === 0) {
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m12 2.8 2.8 5.7 6.3.9-4.6 4.4 1.1 6.3L12 17.1l-5.6 3 1.1-6.3L2.9 9.4l6.3-.9Z" />
+            </svg>
+            <p>Todavía no tenés reseñas.</p>
+          </div>
+        } @else {
+          @if (puntajePorCategoria().length > 0) {
+            <ul class="puntajes">
+              @for (item of puntajePorCategoria(); track item.categoria) {
+                <li class="puntaje">
+                  <span class="puntaje-nombre">{{ categoriaLabel(item.categoria) }}</span>
+                  <span class="puntaje-valor">{{ formatPromedio(item.promedio) }}</span>
+                  <span class="estrellas" aria-hidden="true">
+                    @for (n of estrellas; track n) {
+                      <svg class="estrella" [class.llena]="n <= estrellasLlenas(item.promedio)" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.8 2.8 5.7 6.3.9-4.6 4.4 1.1 6.3L12 17.1l-5.6 3 1.1-6.3L2.9 9.4l6.3-.9Z" /></svg>
+                    }
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+
+          <ul class="lista">
+            @for (resena of ultimasResenas(); track resena.id) {
+              <li class="resena">
+                <div class="resena-cabecera">
+                  <span class="estrellas" [attr.aria-label]="resena.puntuacion + ' de 5 estrellas'">
+                    @for (n of estrellas; track n) {
+                      <svg class="estrella" [class.llena]="n <= estrellasLlenas(resena.puntuacion)" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2.8 2.8 5.7 6.3.9-4.6 4.4 1.1 6.3L12 17.1l-5.6 3 1.1-6.3L2.9 9.4l6.3-.9Z" /></svg>
+                    }
+                  </span>
+                  <span class="resena-meta">
+                    {{ categoriaLabel(resena.categoria) }} · {{ resena.fecha | date: 'dd/MM/yyyy' }}
+                  </span>
+                </div>
+                <p class="resena-comentario">{{ resena.comentario }}</p>
+                <span class="resena-autor">{{ resena.autor }}</span>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+    </div>
   }
-</div>
+</main>

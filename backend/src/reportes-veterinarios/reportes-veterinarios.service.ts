@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, Repository } from 'typeorm';
+import { Between, In, Repository } from 'typeorm';
 import { AppointmentStatus } from '../common/enums/appointment-status.enum';
 import { DiaSemana } from '../common/enums/dia-semana.enum';
 import { ValidationStatus } from '../common/enums/validation-status.enum';
@@ -12,13 +12,42 @@ import {
   OcupacionPorDiaDto,
   PacientesPorMesDto,
   ReporteDashboardVeterinarioDto,
+  ResumenReporteDto,
   TurnosPorMesDto,
 } from './dto/reporte-dashboard-veterinario.dto';
 
 const DURACION_TURNO_MINUTOS = 30;
+/**
+ * Turnos que ocuparon la agenda, pasara lo que pasara despues.
+ *
+ * Mismo criterio que ESTADOS_QUE_OCUPAN_HORARIO en turnos-veterinarios: lo que
+ * saca un turno de la agenda es cancelarlo, no su desenlace. Sin esto, cada
+ * turno que el veterinario cierra desaparecia del reporte y la tasa de
+ * cancelacion se inflaba sola (P1-193).
+ */
+const ESTADOS_OCURRIDOS = [
+  AppointmentStatus.CONFIRMADO,
+  AppointmentStatus.ASISTIO,
+  AppointmentStatus.AUSENTE,
+];
+/** Los ausentes ocuparon el cupo, pero no son pacientes atendidos. */
+const ESTADOS_CON_ATENCION = [
+  AppointmentStatus.CONFIRMADO,
+  AppointmentStatus.ASISTIO,
+];
 const MESES_CORTOS = [
-  'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-  'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+  'Ene',
+  'Feb',
+  'Mar',
+  'Abr',
+  'May',
+  'Jun',
+  'Jul',
+  'Ago',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dic',
 ];
 const DIAS_POR_INDICE: DiaSemana[] = [
   DiaSemana.DOMINGO,
@@ -67,64 +96,131 @@ export class ReportesVeterinariosService {
     const veterinario = await this.findVeterinarioValidado(idUsuario);
     const { rangoDesde, rangoHasta } = this.resolverRango(desde, hasta);
 
-    const [turnosEnRango, disponibilidades, todosConfirmados] = await Promise.all([
-      this.turnosRepository.find({
-        where: {
-          veterinario: { idVeterinario: veterinario.idVeterinario },
-          fecha: Between(rangoDesde, rangoHasta),
-        },
-        relations: ['mascota'],
-      }),
-      this.disponibilidadesRepository.find({
-        where: { veterinario: { idVeterinario: veterinario.idVeterinario } },
-      }),
-      this.turnosRepository.find({
-        where: {
-          veterinario: { idVeterinario: veterinario.idVeterinario },
-          estado: AppointmentStatus.CONFIRMADO,
-        },
-        relations: ['mascota'],
-      }),
-    ]);
+    const anterior = this.resolverRangoAnterior(rangoDesde, rangoHasta);
 
-    const confirmadosEnRango = turnosEnRango.filter(
-      (turno) => turno.estado === AppointmentStatus.CONFIRMADO,
+    const [turnosEnRango, turnosAnterior, disponibilidades, todosConfirmados] =
+      await Promise.all([
+        this.turnosRepository.find({
+          where: {
+            veterinario: { idVeterinario: veterinario.idVeterinario },
+            fecha: Between(rangoDesde, rangoHasta),
+          },
+          relations: ['mascota'],
+        }),
+        this.turnosRepository.find({
+          where: {
+            veterinario: { idVeterinario: veterinario.idVeterinario },
+            fecha: Between(anterior.desde, anterior.hasta),
+          },
+          relations: ['mascota'],
+        }),
+        this.disponibilidadesRepository.find({
+          where: { veterinario: { idVeterinario: veterinario.idVeterinario } },
+        }),
+        this.turnosRepository.find({
+          where: {
+            veterinario: { idVeterinario: veterinario.idVeterinario },
+            estado: In(ESTADOS_CON_ATENCION),
+          },
+          relations: ['mascota'],
+        }),
+      ]);
+
+    const ocurridosEnRango = turnosEnRango.filter((turno) =>
+      ESTADOS_OCURRIDOS.includes(turno.estado),
     );
-    const canceladosEnRango = turnosEnRango.filter(
-      (turno) => turno.estado === AppointmentStatus.CANCELADO,
+    const atendidosEnRango = turnosEnRango.filter((turno) =>
+      ESTADOS_CON_ATENCION.includes(turno.estado),
     );
-    const pacientesAtendidos = new Set(
-      confirmadosEnRango.map((turno) => turno.mascota.idMascota),
-    ).size;
 
     return {
       rangoDesde,
       rangoHasta,
-      resumen: {
-        totalTurnos: confirmadosEnRango.length + canceladosEnRango.length,
-        confirmados: confirmadosEnRango.length,
-        cancelados: canceladosEnRango.length,
-        tasaCancelacion: this.calcularPorcentaje(
-          canceladosEnRango.length,
-          confirmadosEnRango.length + canceladosEnRango.length,
-        ),
-        pacientesAtendidos,
-      },
-      turnosPorMes: this.agruparTurnosPorMes(turnosEnRango, rangoDesde, rangoHasta),
+      resumen: this.calcularResumen(turnosEnRango),
+      resumenAnterior: this.calcularResumen(turnosAnterior),
+      turnosPorMes: this.agruparTurnosPorMes(
+        turnosEnRango,
+        rangoDesde,
+        rangoHasta,
+      ),
       ocupacionPorDia: this.calcularOcupacionPorDia(
-        confirmadosEnRango,
+        ocurridosEnRango,
         disponibilidades,
         rangoDesde,
         rangoHasta,
       ),
       horariosPico: this.calcularHorariosPico(turnosEnRango),
       pacientesPorMes: this.calcularPacientesPorMes(
-        confirmadosEnRango,
+        atendidosEnRango,
         todosConfirmados,
         rangoDesde,
         rangoHasta,
       ),
     };
+  }
+
+  /** Resumen de un conjunto de turnos; se usa para el período elegido y para el anterior. */
+  private calcularResumen(turnos: TurnoVeterinario[]): ResumenReporteDto {
+    const ocurridos = turnos.filter((turno) =>
+      ESTADOS_OCURRIDOS.includes(turno.estado),
+    );
+    const cancelados = turnos.filter(
+      (turno) => turno.estado === AppointmentStatus.CANCELADO,
+    );
+    const asistidos = turnos.filter(
+      (turno) => turno.estado === AppointmentStatus.ASISTIO,
+    );
+    const ausentes = turnos.filter(
+      (turno) => turno.estado === AppointmentStatus.AUSENTE,
+    );
+    // Turnos que ya pasaron y el veterinario todavia no cerro.
+    const sinRegistrar = turnos.filter(
+      (turno) => turno.estado === AppointmentStatus.CONFIRMADO,
+    );
+    // Turnos que el veterinario agendo sobre un horario ya completo.
+    const sobreturnos = ocurridos.filter((turno) => turno.sobrecupo);
+    const pacientesAtendidos = new Set(
+      turnos
+        .filter((turno) => ESTADOS_CON_ATENCION.includes(turno.estado))
+        .map((turno) => turno.mascota.idMascota),
+    ).size;
+
+    return {
+      totalTurnos: ocurridos.length + cancelados.length,
+      confirmados: ocurridos.length,
+      asistidos: asistidos.length,
+      ausentes: ausentes.length,
+      sinRegistrar: sinRegistrar.length,
+      sobreturnos: sobreturnos.length,
+      cancelados: cancelados.length,
+      tasaCancelacion: this.calcularPorcentaje(
+        cancelados.length,
+        ocurridos.length + cancelados.length,
+      ),
+      // Sobre los turnos ya cerrados: mezclar los que faltan registrar
+      // dibujaria un ausentismo falso mientras el vet no los cierre.
+      tasaAusentismo: this.calcularPorcentaje(
+        ausentes.length,
+        asistidos.length + ausentes.length,
+      ),
+      pacientesAtendidos,
+    };
+  }
+
+  /** Período de la misma cantidad de días que termina el día anterior al elegido. */
+  private resolverRangoAnterior(
+    rangoDesde: string,
+    rangoHasta: string,
+  ): { desde: string; hasta: string } {
+    const desde = this.parseFecha(rangoDesde);
+    const hasta = this.parseFecha(rangoHasta);
+    const dias =
+      Math.round((hasta.getTime() - desde.getTime()) / 86_400_000) + 1;
+    const finAnterior = new Date(desde);
+    finAnterior.setDate(finAnterior.getDate() - 1);
+    const inicioAnterior = new Date(finAnterior);
+    inicioAnterior.setDate(inicioAnterior.getDate() - (dias - 1));
+    return { desde: this.toIso(inicioAnterior), hasta: this.toIso(finAnterior) };
   }
 
   private agruparTurnosPorMes(
@@ -133,7 +229,10 @@ export class ReportesVeterinariosService {
     rangoHasta: string,
   ): TurnosPorMesDto[] {
     const meses = this.generarClavesDeMes(rangoDesde, rangoHasta);
-    const contadores = new Map<string, { confirmados: number; cancelados: number }>();
+    const contadores = new Map<
+      string,
+      { confirmados: number; cancelados: number }
+    >();
     for (const mes of meses) {
       contadores.set(mes, { confirmados: 0, cancelados: 0 });
     }
@@ -144,7 +243,7 @@ export class ReportesVeterinariosService {
       if (!contador) {
         continue;
       }
-      if (turno.estado === AppointmentStatus.CONFIRMADO) {
+      if (ESTADOS_OCURRIDOS.includes(turno.estado)) {
         contador.confirmados++;
       } else if (turno.estado === AppointmentStatus.CANCELADO) {
         contador.cancelados++;
@@ -171,11 +270,17 @@ export class ReportesVeterinariosService {
     rangoDesde: string,
     rangoHasta: string,
   ): OcupacionPorDiaDto[] {
-    const ocurrenciasPorDia = this.contarOcurrenciasPorDiaSemana(rangoDesde, rangoHasta);
+    const ocurrenciasPorDia = this.contarOcurrenciasPorDiaSemana(
+      rangoDesde,
+      rangoHasta,
+    );
 
     const capacidadSemanalPorDia = new Map<DiaSemana, number>();
     for (const disponibilidad of disponibilidades) {
-      const slots = this.contarSlots(disponibilidad.horaInicio, disponibilidad.horaFin);
+      const slots = this.contarSlots(
+        disponibilidad.horaInicio,
+        disponibilidad.horaFin,
+      );
       const actual = capacidadSemanalPorDia.get(disponibilidad.diaSemana) ?? 0;
       capacidadSemanalPorDia.set(
         disponibilidad.diaSemana,
@@ -189,18 +294,21 @@ export class ReportesVeterinariosService {
       ocupadosPorDia.set(dia, (ocupadosPorDia.get(dia) ?? 0) + 1);
     }
 
-    return DIAS_ORDENADOS.filter((dia) => capacidadSemanalPorDia.has(dia)).map((dia) => {
-      const capacidad =
-        (capacidadSemanalPorDia.get(dia) ?? 0) * (ocurrenciasPorDia.get(dia) ?? 0);
-      const ocupados = ocupadosPorDia.get(dia) ?? 0;
-      return {
-        diaSemana: dia,
-        etiqueta: ETIQUETAS_DIA[dia],
-        ocupados,
-        capacidad,
-        porcentaje: this.calcularPorcentaje(ocupados, capacidad, true),
-      };
-    });
+    return DIAS_ORDENADOS.filter((dia) => capacidadSemanalPorDia.has(dia)).map(
+      (dia) => {
+        const capacidad =
+          (capacidadSemanalPorDia.get(dia) ?? 0) *
+          (ocurrenciasPorDia.get(dia) ?? 0);
+        const ocupados = ocupadosPorDia.get(dia) ?? 0;
+        return {
+          diaSemana: dia,
+          etiqueta: ETIQUETAS_DIA[dia],
+          ocupados,
+          capacidad,
+          porcentaje: this.calcularPorcentaje(ocupados, capacidad, true),
+        };
+      },
+    );
   }
 
   /** Cantidad de turnos (confirmados y cancelados) agrupados por hora del día, para ver la demanda real. */
@@ -268,10 +376,19 @@ export class ReportesVeterinariosService {
   }
 
   /** Sin fechas explícitas, el dashboard muestra los últimos 6 meses (incluyendo el actual). */
-  private resolverRango(desde?: string, hasta?: string): { rangoDesde: string; rangoHasta: string } {
+  private resolverRango(
+    desde?: string,
+    hasta?: string,
+  ): { rangoDesde: string; rangoHasta: string } {
     const hastaFecha = hasta ? this.parseFecha(hasta) : new Date();
-    const desdeFecha = desde ? this.parseFecha(desde) : this.sumarMeses(hastaFecha, -5);
-    const desdeInicioMes = new Date(desdeFecha.getFullYear(), desdeFecha.getMonth(), 1);
+    const desdeFecha = desde
+      ? this.parseFecha(desde)
+      : this.sumarMeses(hastaFecha, -5);
+    const desdeInicioMes = new Date(
+      desdeFecha.getFullYear(),
+      desdeFecha.getMonth(),
+      1,
+    );
 
     return {
       rangoDesde: this.toIso(desdeInicioMes),
@@ -288,7 +405,9 @@ export class ReportesVeterinariosService {
     const limite = new Date(anioHasta, mesHasta - 1, 1);
 
     while (cursor <= limite) {
-      claves.push(`${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`);
+      claves.push(
+        `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`,
+      );
       cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
     }
 
@@ -306,7 +425,11 @@ export class ReportesVeterinariosService {
     for (
       let cursor = new Date(desde);
       cursor <= hasta;
-      cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + 1)
+      cursor = new Date(
+        cursor.getFullYear(),
+        cursor.getMonth(),
+        cursor.getDate() + 1,
+      )
     ) {
       const dia = DIAS_POR_INDICE[cursor.getDay()];
       ocurrencias.set(dia, (ocurrencias.get(dia) ?? 0) + 1);
@@ -331,7 +454,11 @@ export class ReportesVeterinariosService {
     return DIAS_POR_INDICE[new Date(Date.UTC(anio, mes - 1, dia)).getUTCDay()];
   }
 
-  private calcularPorcentaje(parte: number, total: number, capAt100 = false): number {
+  private calcularPorcentaje(
+    parte: number,
+    total: number,
+    capAt100 = false,
+  ): number {
     if (total <= 0) {
       return 0;
     }
@@ -351,7 +478,11 @@ export class ReportesVeterinariosService {
   }
 
   private sumarMeses(fecha: Date, delta: number): Date {
-    return new Date(fecha.getFullYear(), fecha.getMonth() + delta, fecha.getDate());
+    return new Date(
+      fecha.getFullYear(),
+      fecha.getMonth() + delta,
+      fecha.getDate(),
+    );
   }
 
   private toIso(fecha: Date): string {
@@ -360,12 +491,17 @@ export class ReportesVeterinariosService {
     return `${fecha.getFullYear()}-${mes}-${dia}`;
   }
 
-  private async findVeterinarioValidado(idUsuario: number): Promise<Veterinario> {
+  private async findVeterinarioValidado(
+    idUsuario: number,
+  ): Promise<Veterinario> {
     const veterinario = await this.veterinariosRepository.findOne({
       where: { usuario: { idUsuario } },
     });
 
-    if (!veterinario || veterinario.estadoValidacion !== ValidationStatus.APROBADO) {
+    if (
+      !veterinario ||
+      veterinario.estadoValidacion !== ValidationStatus.APROBADO
+    ) {
       throw new ForbiddenException({
         codigoEstado: 403,
         mensaje: 'Su cuenta de veterinario no esta validada',

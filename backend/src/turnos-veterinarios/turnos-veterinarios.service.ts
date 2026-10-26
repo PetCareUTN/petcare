@@ -1,11 +1,12 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Between, Repository } from 'typeorm';
 import { AppointmentStatus } from '../common/enums/appointment-status.enum';
 import { DiaSemana } from '../common/enums/dia-semana.enum';
 import { ValidationStatus } from '../common/enums/validation-status.enum';
@@ -15,17 +16,33 @@ import {
   DatosTurno,
   NotificacionesTurnosService,
 } from '../notificaciones/notificaciones-turnos.service';
-import { SobreturnosVeterinariosService } from '../sobreturnos-veterinarios/sobreturnos-veterinarios.service';
 import { User } from '../users/entities/user.entity';
 import { Veterinario } from '../veterinarios/entities/veterinario.entity';
+import { AgendarTurnoVeterinarioDto } from './dto/agendar-turno-veterinario.dto';
 import { CancelarTurnoVeterinarioDto } from './dto/cancelar-turno-veterinario.dto';
+import { CapacidadHorarioResponseDto } from './dto/capacidad-horario-response.dto';
 import { CreateTurnoVeterinarioDto } from './dto/create-turno-veterinario.dto';
+import { RegistrarAsistenciaDto } from './dto/registrar-asistencia.dto';
 import { TurnoDuenioResponseDto } from './dto/turno-duenio-response.dto';
 import { TurnoVeterinarioResponseDto } from './dto/turno-veterinario-response.dto';
 import { TurnoVeterinario } from './entities/turno-veterinario.entity';
 
 const DURACION_TURNO_MINUTOS = 30;
-const ESTADOS_QUE_OCUPAN_HORARIO = [AppointmentStatus.CONFIRMADO];
+/** Tope de días que se pueden pedir de una vez para armar la agenda. */
+const MAX_DIAS_AGENDA = 62;
+/**
+ * Estados en los que el turno sigue ocupando su lugar en la agenda.
+ *
+ * Incluye los terminales a propósito: lo que libera el horario es cancelar,
+ * no que el turno ya haya ocurrido. Si ASISTIO o AUSENTE quedaran afuera, un
+ * turno ya cerrado liberaría su cupo y otra persona podría reservar encima
+ * (P1-193).
+ */
+const ESTADOS_QUE_OCUPAN_HORARIO = [
+  AppointmentStatus.CONFIRMADO,
+  AppointmentStatus.ASISTIO,
+  AppointmentStatus.AUSENTE,
+];
 const DIAS_POR_INDICE: DiaSemana[] = [
   DiaSemana.DOMINGO,
   DiaSemana.LUNES,
@@ -48,7 +65,6 @@ export class TurnosVeterinariosService {
     @InjectRepository(DisponibilidadVeterinaria)
     private readonly disponibilidadesRepository: Repository<DisponibilidadVeterinaria>,
     private readonly notificacionesTurnosService: NotificacionesTurnosService,
-    private readonly sobreturnosVeterinariosService: SobreturnosVeterinariosService,
   ) {}
 
   async solicitar(
@@ -89,33 +105,49 @@ export class TurnosVeterinariosService {
     }
 
     const horaFin = this.sumarMinutos(dto.hora, DURACION_TURNO_MINUTOS);
-    const franja = await this.buscarFranjaDisponible(dto.idVeterinario, dto.fecha, dto.hora, horaFin);
-    const cuposExtra = await this.sobreturnosVeterinariosService.obtenerCuposExtraPorHora(
+    const cuposPorTurno = await this.cuposDelHorario(
       dto.idVeterinario,
       dto.fecha,
+      dto.hora,
+      horaFin,
     );
-    const cuposPorTurno = (franja?.cuposPorTurno ?? 0) + (cuposExtra.get(dto.hora) ?? 0);
 
     if (cuposPorTurno === 0) {
       throw new BadRequestException({
         codigoEstado: 400,
-        mensaje: 'El horario solicitado no está disponible para esa veterinaria',
+        mensaje:
+          'El horario solicitado no está disponible para esa veterinaria',
       });
     }
 
-    await this.verificarCupoDisponible(dto.idVeterinario, dto.fecha, dto.hora, horaFin, cuposPorTurno);
+    // El dueño nunca puede pasarse del cupo: se chequea y se guarda bajo el
+    // mismo bloqueo para que dos reservas simultáneas no ocupen el último lugar.
+    const guardado = await this.conAgendaBloqueada(
+      dto.idVeterinario,
+      dto.fecha,
+      async () => {
+        await this.verificarCupoDisponible(
+          dto.idVeterinario,
+          dto.fecha,
+          dto.hora,
+          horaFin,
+          cuposPorTurno,
+        );
 
-    const turno = this.turnosRepository.create({
-      veterinario,
-      mascota,
-      duenio: { idUsuario: idDueno } as User,
-      fecha: dto.fecha,
-      hora: dto.hora,
-      motivoConsulta: dto.motivoConsulta ?? null,
-      estado: AppointmentStatus.CONFIRMADO,
-    });
-
-    const guardado = await this.turnosRepository.save(turno);
+        const turno = this.turnosRepository.create({
+          veterinario,
+          mascota,
+          duenio: { idUsuario: idDueno } as User,
+          fecha: dto.fecha,
+          hora: dto.hora,
+          motivoConsulta: dto.motivoConsulta ?? null,
+          estado: AppointmentStatus.CONFIRMADO,
+          creadoPor: 'dueño',
+          sobrecupo: false,
+        });
+        return this.turnosRepository.save(turno);
+      },
+    );
     const turnoCompleto = await this.turnosRepository.findOne({
       where: { idTurno: guardado.idTurno },
       relations: ['veterinario', 'mascota', 'mascota.usuarios', 'duenio'],
@@ -128,12 +160,17 @@ export class TurnosVeterinariosService {
     return TurnoVeterinarioResponseDto.fromEntity(turnoCompleto!);
   }
 
-  private async buscarFranjaDisponible(
+  /**
+   * Cupos de atención que tiene un horario para esa fecha: la suma de las
+   * franjas semanales que lo contienen entero. Los sobreturnos no cuentan: los
+   * dueños no los reservan, los agrega la veterinaria encima de un horario lleno.
+   */
+  private async cuposDelHorario(
     idVeterinario: number,
     fecha: string,
     horaInicio: string,
     horaFin: string,
-  ): Promise<DisponibilidadVeterinaria | null> {
+  ): Promise<number> {
     const diaSemana = this.obtenerDiaSemana(fecha);
     const disponibilidades = await this.disponibilidadesRepository.find({
       where: { veterinario: { idVeterinario }, diaSemana },
@@ -141,20 +178,47 @@ export class TurnosVeterinariosService {
 
     const inicioMinutos = this.aMinutos(horaInicio);
     const finMinutos = this.aMinutos(horaFin);
-    return (
-      disponibilidades.find(
+    return disponibilidades
+      .filter(
         (disponibilidad) =>
           inicioMinutos >= this.aMinutos(disponibilidad.horaInicio) &&
           finMinutos <= this.aMinutos(disponibilidad.horaFin),
-      ) ?? null
-    );
+      )
+      .reduce(
+        (total, disponibilidad) => total + disponibilidad.cuposPorTurno,
+        0,
+      );
+  }
+
+  /** Turnos que ocupan su lugar y se solapan con el horario pedido. */
+  private async contarOcupados(
+    idVeterinario: number,
+    fecha: string,
+    horaInicio: string,
+    horaFin: string,
+  ): Promise<number> {
+    const turnosDelDia = await this.turnosRepository.find({
+      where: { veterinario: { idVeterinario }, fecha },
+    });
+
+    const inicioMinutos = this.aMinutos(horaInicio);
+    const finMinutos = this.aMinutos(horaFin);
+    return turnosDelDia.filter((turno) => {
+      if (!ESTADOS_QUE_OCUPAN_HORARIO.includes(turno.estado)) {
+        return false;
+      }
+      const inicioTurnoExistente = this.aMinutos(turno.hora);
+      const finTurnoExistente = inicioTurnoExistente + DURACION_TURNO_MINUTOS;
+      return (
+        inicioMinutos < finTurnoExistente && finMinutos > inicioTurnoExistente
+      );
+    }).length;
   }
 
   /**
-   * Cuenta los turnos confirmados que se solapan con el horario pedido y
-   * rechaza la reserva si ya se alcanzó la cantidad de cupos configurada
-   * para esa franja (ej. dos veterinarios de la misma veterinaria atendiendo
-   * a la misma hora).
+   * Rechaza la reserva si ya se alcanzó la cantidad de cupos configurada para
+   * esa franja (ej. dos veterinarios de la misma veterinaria atendiendo a la
+   * misma hora).
    */
   private async verificarCupoDisponible(
     idVeterinario: number,
@@ -163,20 +227,12 @@ export class TurnosVeterinariosService {
     horaFin: string,
     cuposPorTurno: number,
   ): Promise<void> {
-    const turnosDelDia = await this.turnosRepository.find({
-      where: { veterinario: { idVeterinario }, fecha },
-    });
-
-    const inicioMinutos = this.aMinutos(horaInicio);
-    const finMinutos = this.aMinutos(horaFin);
-    const ocupados = turnosDelDia.filter((turno) => {
-      if (!ESTADOS_QUE_OCUPAN_HORARIO.includes(turno.estado)) {
-        return false;
-      }
-      const inicioTurnoExistente = this.aMinutos(turno.hora);
-      const finTurnoExistente = inicioTurnoExistente + DURACION_TURNO_MINUTOS;
-      return inicioMinutos < finTurnoExistente && finMinutos > inicioTurnoExistente;
-    }).length;
+    const ocupados = await this.contarOcupados(
+      idVeterinario,
+      fecha,
+      horaInicio,
+      horaFin,
+    );
 
     if (ocupados >= cuposPorTurno) {
       throw new BadRequestException({
@@ -184,6 +240,244 @@ export class TurnosVeterinariosService {
         mensaje: 'Ese horario ya no tiene cupos disponibles',
       });
     }
+  }
+
+  /**
+   * Serializa las reservas de una veterinaria en una fecha con un bloqueo de
+   * Postgres que dura hasta que termina `accion`. Sin esto, dos reservas
+   * simultáneas pueden leer el mismo cupo libre y ocuparlo las dos.
+   */
+  private conAgendaBloqueada<T>(
+    idVeterinario: number,
+    fecha: string,
+    accion: () => Promise<T>,
+  ): Promise<T> {
+    return this.turnosRepository.manager.transaction(async (manager) => {
+      await manager.query('SELECT pg_advisory_xact_lock($1, hashtext($2))', [
+        idVeterinario,
+        fecha,
+      ]);
+      return accion();
+    });
+  }
+
+  /**
+   * Carga de un turno por parte de la veterinaria (web). Usa los mismos
+   * horarios y cupos que la reserva del dueño, pero el veterinario puede
+   * agendar aunque el horario esté lleno: en ese caso la primera llamada
+   * responde 409 `CUPO_LLENO` y, si confirma, se repite con `forzar: true` y
+   * el turno queda marcado como sobrecupo (un sobreturno). Fuera de su horario
+   * de atención no se puede agendar.
+   */
+  async agendarComoVeterinario(
+    idUsuario: number,
+    dto: AgendarTurnoVeterinarioDto,
+  ): Promise<TurnoVeterinarioResponseDto> {
+    const veterinario = await this.findVeterinarioValidado(idUsuario);
+
+    const mascota = await this.mascotasRepository.findOne({
+      where: { idMascota: dto.idMascota },
+      relations: ['usuarios'],
+    });
+    if (!mascota) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'No se encontró la mascota',
+      });
+    }
+
+    const duenio = this.elegirDuenio(mascota, dto.idDuenio);
+
+    if (new Date(`${dto.fecha}T${dto.hora}`).getTime() <= Date.now()) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje: 'No se puede agendar un turno en un horario que ya pasó',
+      });
+    }
+
+    const horaFin = this.sumarMinutos(dto.hora, DURACION_TURNO_MINUTOS);
+    const cupos = await this.cuposDelHorario(
+      veterinario.idVeterinario,
+      dto.fecha,
+      dto.hora,
+      horaFin,
+    );
+    if (cupos === 0) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje:
+          'Ese horario está fuera de tu horario de atención. Configuralo en Disponibilidad.',
+      });
+    }
+
+    const guardado = await this.conAgendaBloqueada(
+      veterinario.idVeterinario,
+      dto.fecha,
+      async () => {
+        const ocupados = await this.contarOcupados(
+          veterinario.idVeterinario,
+          dto.fecha,
+          dto.hora,
+          horaFin,
+        );
+        const lleno = ocupados >= cupos;
+
+        if (lleno && !dto.forzar) {
+          throw new ConflictException({
+            codigoEstado: 409,
+            codigo: 'CUPO_LLENO',
+            mensaje:
+              'Ese horario ya no tiene cupos disponibles. Podés agendar el turno igual.',
+            cupos,
+            ocupados,
+          });
+        }
+
+        const turno = this.turnosRepository.create({
+          veterinario,
+          mascota,
+          duenio,
+          fecha: dto.fecha,
+          hora: dto.hora,
+          motivoConsulta: dto.motivoConsulta ?? null,
+          estado: AppointmentStatus.CONFIRMADO,
+          creadoPor: 'veterinario',
+          sobrecupo: lleno,
+        });
+        return this.turnosRepository.save(turno);
+      },
+    );
+
+    const turnoCompleto = await this.turnosRepository.findOne({
+      where: { idTurno: guardado.idTurno },
+      relations: ['veterinario', 'mascota', 'mascota.usuarios', 'duenio'],
+    });
+
+    await this.notificacionesTurnosService.notificarTurnoConfirmado(
+      this.aDatosTurno(turnoCompleto!),
+    );
+
+    return TurnoVeterinarioResponseDto.fromEntity(turnoCompleto!);
+  }
+
+  /** Dueño al que se asocia el turno: el pedido, o el principal. */
+  private elegirDuenio(mascota: Mascota, idDuenio?: number): User {
+    const duenios = mascota.usuarios ?? [];
+
+    if (idDuenio !== undefined) {
+      const elegido = duenios.find((usuario) => usuario.idUsuario === idDuenio);
+      if (!elegido) {
+        throw new BadRequestException({
+          codigoEstado: 400,
+          mensaje: 'El cliente indicado no es dueño de la mascota',
+        });
+      }
+      return elegido;
+    }
+
+    const principal = duenios.find(
+      (usuario) => usuario.idUsuario === mascota.idDuenioPrincipal,
+    );
+    const elegido = principal ?? duenios[0];
+    if (!elegido) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje: 'La mascota no tiene un dueño asociado',
+      });
+    }
+    return elegido;
+  }
+
+  /**
+   * Capacidad y ocupación de la agenda de la veterinaria en un rango de
+   * fechas, franja por franja, para que la web muestre los huecos libres.
+   * Solo devuelve las franjas que tienen cupos o turnos.
+   */
+  async capacidadAgenda(
+    idUsuario: number,
+    desde: string,
+    hasta: string,
+  ): Promise<CapacidadHorarioResponseDto[]> {
+    const veterinario = await this.findVeterinarioValidado(idUsuario);
+    const { idVeterinario } = veterinario;
+
+    const fechas = this.fechasEntre(desde, hasta);
+    if (fechas.length === 0 || fechas.length > MAX_DIAS_AGENDA) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje: `El rango de fechas debe tener entre 1 y ${MAX_DIAS_AGENDA} días`,
+      });
+    }
+
+    const [disponibilidades, turnos] = await Promise.all([
+      this.disponibilidadesRepository.find({
+        where: { veterinario: { idVeterinario } },
+      }),
+      this.turnosRepository.find({
+        where: { veterinario: { idVeterinario }, fecha: Between(desde, hasta) },
+      }),
+    ]);
+
+    const resultado: CapacidadHorarioResponseDto[] = [];
+    for (const fecha of fechas) {
+      const diaSemana = this.obtenerDiaSemana(fecha);
+      const franjas = new Map<string, { cupos: number; ocupados: number }>();
+      const franja = (hora: string) => {
+        const existente = franjas.get(hora);
+        if (existente) {
+          return existente;
+        }
+        const nueva = { cupos: 0, ocupados: 0 };
+        franjas.set(hora, nueva);
+        return nueva;
+      };
+
+      for (const disponibilidad of disponibilidades) {
+        if (disponibilidad.diaSemana !== diaSemana) {
+          continue;
+        }
+        const fin = this.aMinutos(disponibilidad.horaFin);
+        for (
+          let minuto = this.aMinutos(disponibilidad.horaInicio);
+          minuto + DURACION_TURNO_MINUTOS <= fin;
+          minuto += DURACION_TURNO_MINUTOS
+        ) {
+          franja(this.deMinutos(minuto)).cupos += disponibilidad.cuposPorTurno;
+        }
+      }
+
+      for (const turno of turnos) {
+        if (
+          turno.fecha === fecha &&
+          ESTADOS_QUE_OCUPAN_HORARIO.includes(turno.estado)
+        ) {
+          franja(this.deMinutos(this.aMinutos(turno.hora))).ocupados += 1;
+        }
+      }
+
+      for (const hora of [...franjas.keys()].sort()) {
+        const { cupos, ocupados } = franjas.get(hora)!;
+        resultado.push({ fecha, hora, cupos, ocupados });
+      }
+    }
+
+    return resultado;
+  }
+
+  /** Fechas (YYYY-MM-DD) de `desde` a `hasta`, ambas incluidas. */
+  private fechasEntre(desde: string, hasta: string): string[] {
+    const [a1, m1, d1] = desde.split('-').map(Number);
+    const [a2, m2, d2] = hasta.split('-').map(Number);
+    const inicio = Date.UTC(a1, m1 - 1, d1);
+    const fin = Date.UTC(a2, m2 - 1, d2);
+    const fechas: string[] = [];
+    for (let dia = inicio; dia <= fin; dia += 24 * 60 * 60 * 1000) {
+      fechas.push(new Date(dia).toISOString().slice(0, 10));
+      if (fechas.length > MAX_DIAS_AGENDA) {
+        break;
+      }
+    }
+    return fechas;
   }
 
   /**
@@ -230,14 +524,6 @@ export class TurnosVeterinariosService {
           (capacidadPorHora.get(hora) ?? 0) + disponibilidad.cuposPorTurno,
         );
       }
-    }
-
-    const cuposExtra = await this.sobreturnosVeterinariosService.obtenerCuposExtraPorHora(
-      idVeterinario,
-      fecha,
-    );
-    for (const [hora, cupoExtra] of cuposExtra) {
-      capacidadPorHora.set(hora, (capacidadPorHora.get(hora) ?? 0) + cupoExtra);
     }
 
     const slots = new Set<string>();
@@ -371,9 +657,132 @@ export class TurnosVeterinariosService {
     return TurnoVeterinarioResponseDto.fromEntity(guardado);
   }
 
+  /**
+   * Cierra el turno indicando si el cliente se presentó o no (P1-193).
+   *
+   * Solo lo puede hacer el veterinario del turno: la asistencia la constata
+   * quien atiende, no quien reservó.
+   */
+  async registrarAsistencia(
+    idUsuario: number,
+    idTurno: number,
+    dto: RegistrarAsistenciaDto,
+  ): Promise<TurnoVeterinarioResponseDto> {
+    const turno = await this.buscarTurnoDelVeterinario(idUsuario, idTurno);
+
+    if (turno.estado !== AppointmentStatus.CONFIRMADO) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje: 'Solo se puede registrar la asistencia de turnos confirmados',
+      });
+    }
+
+    // Marcar antes de que el turno empiece no significa nada: el cliente
+    // todavía está a tiempo de llegar.
+    if (!this.yaEmpezo(turno)) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje:
+          'Todavía no se puede registrar la asistencia: el turno no empezó',
+      });
+    }
+
+    turno.estado = dto.asistio
+      ? AppointmentStatus.ASISTIO
+      : AppointmentStatus.AUSENTE;
+
+    const guardado = await this.turnosRepository.save(turno);
+
+    return TurnoVeterinarioResponseDto.fromEntity(guardado);
+  }
+
+  /**
+   * Vuelve el turno a CONFIRMADO para corregir una marca equivocada.
+   *
+   * Solo el mismo día del turno: equivocarse de fila en la agenda es fácil y
+   * tiene que poder corregirse, pero reabrir turnos viejos distorsionaría las
+   * métricas de ausentismo mucho después de los hechos.
+   */
+  async revertirAsistencia(
+    idUsuario: number,
+    idTurno: number,
+  ): Promise<TurnoVeterinarioResponseDto> {
+    const turno = await this.buscarTurnoDelVeterinario(idUsuario, idTurno);
+
+    const terminales: AppointmentStatus[] = [
+      AppointmentStatus.ASISTIO,
+      AppointmentStatus.AUSENTE,
+    ];
+    if (!terminales.includes(turno.estado)) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje: 'Este turno no tiene una asistencia registrada',
+      });
+    }
+
+    if (turno.fecha !== this.hoy()) {
+      throw new BadRequestException({
+        codigoEstado: 400,
+        mensaje: 'La asistencia solo se puede corregir el mismo día del turno',
+      });
+    }
+
+    turno.estado = AppointmentStatus.CONFIRMADO;
+
+    const guardado = await this.turnosRepository.save(turno);
+
+    return TurnoVeterinarioResponseDto.fromEntity(guardado);
+  }
+
+  /** Turno existente que pertenece al veterinario de esta sesión. */
+  private async buscarTurnoDelVeterinario(
+    idUsuario: number,
+    idTurno: number,
+  ): Promise<TurnoVeterinario> {
+    const turno = await this.turnosRepository.findOne({
+      where: { idTurno },
+      relations: ['veterinario', 'veterinario.usuario', 'mascota', 'duenio'],
+    });
+
+    if (!turno) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Turno veterinario no encontrado',
+      });
+    }
+
+    if (turno.veterinario.usuario.idUsuario !== idUsuario) {
+      throw new ForbiddenException({
+        codigoEstado: 403,
+        mensaje: 'No tiene permisos para registrar la asistencia de este turno',
+      });
+    }
+
+    return turno;
+  }
+
+  /** `true` si ya pasó la hora de inicio del turno. */
+  private yaEmpezo(turno: TurnoVeterinario): boolean {
+    // `fecha` y `hora` se guardan sin zona horaria y representan la hora local
+    // de la veterinaria: se arma la fecha en local y no con toISOString, que
+    // correría el día al pasar a UTC.
+    const inicio = new Date(`${turno.fecha}T${turno.hora}`);
+    return inicio.getTime() <= Date.now();
+  }
+
+  /** Fecha de hoy en formato YYYY-MM-DD, en hora local. */
+  private hoy(): string {
+    const ahora = new Date();
+    const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+    const dia = String(ahora.getDate()).padStart(2, '0');
+    return `${ahora.getFullYear()}-${mes}-${dia}`;
+  }
+
   /** Datos del turno que necesitan las notificaciones de la US-22. */
   private aDatosTurno(turno: TurnoVeterinario): DatosTurno {
     return {
+      idTurno: turno.idTurno,
+      tipoTurno: 'turno_veterinario',
       idDuenio: turno.duenio.idUsuario,
       idPrestador: turno.veterinario.usuario.idUsuario,
       nombreDuenio: this.nombreCompleto(turno.duenio),
@@ -386,6 +795,7 @@ export class TurnosVeterinariosService {
       fecha: turno.fecha,
       hora: turno.hora,
       servicio: 'consulta veterinaria',
+      creadoPor: turno.creadoPor ?? 'dueño',
     };
   }
 

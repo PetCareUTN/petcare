@@ -1,11 +1,12 @@
-<main class="reportes-page">
-  <header class="reportes-header">
+<main class="ap-page">
+  <header class="ap-header">
     <div>
       <h1>Reportes</h1>
       <p>Un vistazo a cómo viene tu agenda y tus pacientes.</p>
     </div>
 
-    <nav class="rango-switch" aria-label="Período del reporte">
+    <div class="encabezado-acciones no-imprimir">
+    <div class="ap-segmented" role="group" aria-label="Período del reporte">
       @for (opcion of opcionesRango; track opcion.value) {
         <button
           type="button"
@@ -16,84 +17,155 @@
           {{ opcion.label }}
         </button>
       }
-    </nav>
+    </div>
+
+    @if (data()) {
+      <div class="exportar">
+        <button
+          type="button"
+          class="exportar-boton"
+          aria-haspopup="menu"
+          [attr.aria-expanded]="menuExportar()"
+          (click)="alternarMenuExportar()"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14" /></svg>
+          Exportar
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+        </button>
+
+        @if (menuExportar()) {
+          <div class="exportar-menu" role="menu">
+            <button type="button" role="menuitem" (click)="exportarCsv()">
+              Planilla CSV
+            </button>
+            <button type="button" role="menuitem" (click)="exportarPdf()">
+              Documento PDF
+            </button>
+          </div>
+        }
+      </div>
+    }
+    </div>
   </header>
 
-  @if (isLoading()) {
-    <p class="status-text">Cargando reportes...</p>
+  @if (data()) {
+    <p class="periodo-impreso">Período: {{ periodoImpreso() }}</p>
+  }
+
+  @if (isLoading() && !data()) {
+    <p class="estado-texto">Cargando reportes...</p>
   }
 
   @if (errorMessage()) {
-    <p class="banner banner-error">{{ errorMessage() }}</p>
+    <p class="ap-banner ap-banner-error" role="alert">{{ errorMessage() }}</p>
   }
 
-  @if (!isLoading() && data(); as reporte) {
-    <section class="kpi-grid">
-      <div class="kpi-card">
-        <span class="kpi-label">Turnos en el período</span>
-        <span class="kpi-value">{{ reporte.resumen.totalTurnos }}</span>
-      </div>
-
-      <div class="kpi-card">
-        <span class="kpi-label">Confirmados</span>
-        <span class="kpi-value kpi-good">{{ reporte.resumen.confirmados }}</span>
-      </div>
-
-      <div class="kpi-card">
-        <span class="kpi-label">Tasa de cancelación</span>
-        <span class="kpi-value" [class]="estadoTasaCancelacion()">
-          {{ reporte.resumen.tasaCancelacion }}%
+  @if (data(); as reporte) {
+    <section class="ap-stats" [class.cargando]="isLoading()" aria-label="Resumen del período">
+      <div class="ap-stat">
+        <span class="ap-stat-label">Turnos del período</span>
+        <span class="ap-stat-value">{{ reporte.resumen.totalTurnos }}</span>
+        @if (comparaciones(); as c) {
+          <span class="delta" [class]="'delta ' + c.turnos.clase">{{ c.turnos.texto }}</span>
+        }
+        <span class="stat-sub">
+          {{ reporte.resumen.confirmados }} confirmados
+          @if (reporte.resumen.sobreturnos > 0) {
+            <span class="sobreturnos">
+              <i aria-hidden="true"></i>{{ reporte.resumen.sobreturnos }}
+              {{ reporte.resumen.sobreturnos === 1 ? 'sobreturno' : 'sobreturnos' }}
+            </span>
+          }
         </span>
       </div>
 
-      <div class="kpi-card">
-        <span class="kpi-label">Pacientes atendidos</span>
-        <span class="kpi-value">{{ reporte.resumen.pacientesAtendidos }}</span>
+      <div class="ap-stat">
+        <span class="ap-stat-label">Pacientes atendidos</span>
+        <span class="ap-stat-value">{{ reporte.resumen.pacientesAtendidos }}</span>
+        @if (comparaciones(); as c) {
+          <span class="delta" [class]="'delta ' + c.pacientes.clase">{{ c.pacientes.texto }}</span>
+        }
+        <span class="stat-sub">{{ reporte.resumen.asistidos }} asistieron</span>
+      </div>
+
+      <div class="ap-stat">
+        <span class="ap-stat-label">Tasa de cancelación</span>
+        <span class="ap-stat-value" [class]="estadoTasaCancelacion()">
+          {{ reporte.resumen.tasaCancelacion }}<small>%</small>
+        </span>
+        @if (comparaciones(); as c) {
+          <span class="delta" [class]="'delta ' + c.cancelacion.clase">{{ c.cancelacion.texto }}</span>
+        }
+        <span class="stat-sub">{{ reporte.resumen.cancelados }} cancelados</span>
+      </div>
+
+      <div class="ap-stat">
+        <span class="ap-stat-label">Tasa de ausentismo</span>
+        <span class="ap-stat-value" [class]="estadoTasaAusentismo()">
+          {{ reporte.resumen.tasaAusentismo }}<small>%</small>
+        </span>
+        @if (comparaciones(); as c) {
+          <span class="delta" [class]="'delta ' + c.ausentismo.clase">{{ c.ausentismo.texto }}</span>
+        }
+        <span class="stat-sub">
+          {{ reporte.resumen.ausentes }} no se presentaron
+          @if (reporte.resumen.sinRegistrar > 0) {
+            · {{ reporte.resumen.sinRegistrar }} sin registrar
+          }
+        </span>
       </div>
     </section>
 
-    <section class="charts-grid">
-      <div class="chart-card">
+    <section class="ap-grid" [class.cargando]="isLoading()">
+      <article class="ap-panel">
         <h2>Turnos por mes</h2>
-        <p class="chart-subtitle">Confirmados vs. cancelados</p>
+        <p class="ap-panel-sub">Confirmados vs. cancelados</p>
         <app-bar-chart
           [categorias]="categoriasTurnos()"
           [series]="serieTurnos()"
           modo="agrupado"
         />
-      </div>
+      </article>
 
-      <div class="chart-card">
+      <article class="ap-panel">
         <h2>Ocupación por día</h2>
-        <p class="chart-subtitle">% de cupos usados según tu disponibilidad configurada</p>
-        <app-percent-bar-list [items]="itemsOcupacion()" color="var(--chart-confirmados)" />
+        <p class="ap-panel-sub">Turnos por día de la semana; la barra compara un día con otro</p>
         @if (itemsOcupacion().length === 0) {
-          <p class="status-text">Configurá tu disponibilidad para ver este reporte.</p>
+          <div class="vacio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+            <p>Configurá tu disponibilidad para ver este reporte.</p>
+          </div>
+        } @else {
+          <app-percent-bar-list [items]="itemsOcupacion()" color="var(--chart-confirmados)" />
         }
-      </div>
+      </article>
 
-      <div class="chart-card">
+      <article class="ap-panel">
         <h2>Horarios más solicitados</h2>
-        <p class="chart-subtitle">Cantidad de turnos pedidos por hora del día</p>
-        <app-bar-chart
-          [categorias]="categoriasHorarios()"
-          [series]="serieHorarios()"
-          modo="agrupado"
-        />
+        <p class="ap-panel-sub">Cantidad de turnos pedidos por hora del día</p>
         @if (categoriasHorarios().length === 0) {
-          <p class="status-text">Todavía no hay turnos en este período.</p>
+          <div class="vacio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3.5" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
+            <p>Todavía no hay turnos en este período.</p>
+          </div>
+        } @else {
+          <app-bar-chart
+            [categorias]="categoriasHorarios()"
+            [series]="serieHorarios()"
+            modo="agrupado"
+          />
         }
-      </div>
+      </article>
 
-      <div class="chart-card">
+      <article class="ap-panel">
         <h2>Pacientes atendidos por mes</h2>
-        <p class="chart-subtitle">Nuevos vs. recurrentes</p>
+        <p class="ap-panel-sub">Nuevos vs. recurrentes</p>
         <app-bar-chart
           [categorias]="categoriasPacientes()"
           [series]="seriePacientes()"
           modo="apilado"
         />
-      </div>
+      </article>
     </section>
   }
 </main>

@@ -1,4 +1,7 @@
 :host {
+  --hairline: rgba(37, 51, 47, 0.08);
+  --fill: #f1f4f3;
+  --primary-soft: rgba(79, 127, 115, 0.12);
   /* --success no está definido en styles.css, así que los estados se resuelven acá. */
   --estado-pendiente: #c9862e;
   --estado-confirmado: #3f8f6b;
@@ -18,48 +21,55 @@
 }
 
 .appointments-panel {
-  width: min(100%, 1240px);
+  width: min(100%, var(--page-max));
   margin: 0 auto;
   padding: var(--spacing-xl);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border: 1px solid var(--hairline);
+  border-radius: 20px;
   background-color: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 1px 2px rgba(37, 51, 47, 0.04), 0 8px 28px rgba(37, 51, 47, 0.06);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', sans-serif;
 }
 
-.appointments-header {
+.agenda-top {
+  margin-bottom: 0.5rem;
+}
+
+/* Fila de la fecha: a la izquierda el período, a la derecha "Nuevo turno". */
+.agenda-nav {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
-  gap: var(--spacing-md);
-  align-items: flex-start;
-  margin-bottom: var(--spacing-lg);
+  gap: 0.6rem 1rem;
+  margin-bottom: 0.7rem;
 }
 
-.appointments-header h1 {
+.agenda-top h1 {
   margin: 0;
-  font-size: 1.6rem;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
 }
 
-.appointments-header p,
+/* Segunda fila: nivel de detalle y filtros en una sola línea. */
+.agenda-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+  margin-bottom: var(--spacing-md);
+}
+
+.agenda-controls .filters {
+  margin: 0;
+}
+
 .appointment-owner,
 .status-text,
 .detail-placeholder {
   color: var(--text-secondary);
-}
-
-.appointments-header p {
-  margin: var(--spacing-xs) 0 0;
-}
-
-/* Barra de navegación del período */
-
-.calendar-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-md);
 }
 
 .period-nav {
@@ -70,7 +80,9 @@
 
 .period-title {
   margin: 0 0 0 var(--spacing-sm);
-  font-size: 1.15rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .nav-button,
@@ -79,18 +91,20 @@
 .status-filter,
 .btn-primary,
 .btn-secondary,
-.btn-danger {
-  border-radius: var(--radius-sm);
+.btn-danger,
+.btn-warning {
+  border-radius: 999px;
   font: inherit;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
+  transition: background-color 0.15s ease;
 }
 
 .nav-button,
 .today-button,
 .view-switch button {
-  border: 1px solid var(--border);
-  background-color: var(--surface);
+  border: none;
+  background-color: var(--fill);
   color: var(--text-primary);
 }
 
@@ -98,33 +112,39 @@
   width: 2rem;
   height: 2rem;
   padding: 0;
+  border-radius: 50%;
   font-size: 1.1rem;
   line-height: 1;
 }
 
 .today-button {
-  padding: 0.4rem 0.8rem;
+  padding: 0.4rem 0.95rem;
+  border-radius: 999px;
 }
 
 .view-switch {
   display: flex;
-  gap: var(--spacing-xs);
+  padding: 0.2rem;
+  border-radius: 999px;
+  background-color: var(--fill);
 }
 
 .view-switch button {
-  padding: 0.45rem 0.9rem;
+  padding: 0.4rem 1rem;
+  border-radius: 999px;
+  background-color: transparent;
 }
 
 .view-switch button.active {
-  border-color: var(--primary);
-  background-color: var(--primary);
-  color: #ffffff;
+  background-color: var(--surface);
+  color: var(--primary);
+  box-shadow: 0 1px 3px rgb(37 51 47 / 15%);
 }
 
 .nav-button:hover,
 .today-button:hover,
 .view-switch button:not(.active):hover {
-  border-color: var(--primary);
+  background-color: var(--primary-soft);
   color: var(--primary);
 }
 
@@ -132,44 +152,43 @@
 
 .filters {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
-  gap: var(--spacing-md);
-  margin-bottom: var(--spacing-lg);
+  gap: 0.35rem 0.4rem;
+  margin-bottom: var(--spacing-md);
 }
 
 .filter-group {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-xs);
+  flex-wrap: nowrap;
+  gap: 0.1rem;
 }
 
 .filter-group + .filter-group {
-  padding-left: var(--spacing-md);
-  border-left: 1px solid var(--border);
+  padding-left: 0.4rem;
+  border-left: 1px solid var(--hairline);
 }
 
 .status-filter {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.7rem;
-  border: 1px solid var(--border);
-  background-color: var(--surface);
+  gap: 0.3rem;
+  padding: 0.25rem 0.5rem;
+  border: none;
+  background-color: transparent;
   color: var(--text-secondary);
-  font-size: 0.85rem;
-  opacity: 0.55;
+  font-size: 0.78rem;
+  font-weight: 600;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.status-filter:hover {
+  background-color: var(--fill);
 }
 
 .status-filter.active {
-  color: var(--text-primary);
-  opacity: 1;
-}
-
-.status-count {
-  padding: 0 0.35rem;
-  border-radius: 999px;
-  background-color: var(--background);
-  font-size: 0.78rem;
+  background-color: var(--primary-soft);
+  color: #3a6358;
 }
 
 .status-dot,
@@ -205,17 +224,9 @@
 /* Layout calendario + panel de detalle */
 
 .calendar-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--spacing-lg);
+  display: block;
 }
 
-@media (min-width: 1100px) {
-  .calendar-layout {
-    grid-template-columns: minmax(0, 1fr) 320px;
-    align-items: start;
-  }
-}
 
 .calendar-area {
   min-width: 0;
@@ -311,10 +322,11 @@
 }
 
 .event-block {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.1rem;
-  padding: 0.35rem 0.5rem;
+  flex: 1;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.45rem;
 }
 
 /* El borde punteado marca los turnos de servicios sin depender del color. */
@@ -326,11 +338,6 @@
 .event-time {
   font-weight: 800;
   white-space: nowrap;
-}
-
-.event-time-end {
-  font-weight: 600;
-  opacity: 0.75;
 }
 
 .event-pet {
@@ -369,14 +376,31 @@
   text-decoration: line-through;
 }
 
-/* Sobreturno: cupo extra cargado por el veterinario, no un turno reservado. */
-.event-chip.sobreturno,
-.event-block.sobreturno {
-  border-left-style: dotted;
-  border-left-color: var(--tipo-sobreturno);
-  background-color: color-mix(in srgb, var(--tipo-sobreturno) 14%, white);
-  color: var(--tipo-sobreturno);
+/* Estados de asistencia (P1-193). Asistio usa el verde de marca; ausente un
+   gris apagado, porque es informacion neutra y no un error. */
+.event-chip.asistio,
+.event-block.asistio {
+  border-left-color: var(--primary);
+  background-color: color-mix(in srgb, var(--primary) 14%, white);
+  color: var(--primary);
 }
+
+.event-chip.ausente,
+.event-block.ausente {
+  border-left-color: var(--estado-pendiente);
+  background-color: color-mix(in srgb, var(--estado-pendiente) 14%, white);
+  color: var(--estado-pendiente);
+}
+
+/* Turno que ya paso y el veterinario todavia no cerro: se destaca para que no
+   quede sin registrar. */
+.event-chip.espera-registro,
+.event-block.espera-registro {
+  border-left-style: dashed;
+  border-left-width: 4px;
+  font-weight: 600;
+}
+
 
 .event-chip.selected,
 .event-block.selected {
@@ -389,8 +413,8 @@
 .time-grid {
   --hour-gutter-width: 3.5rem;
   min-width: 42rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
   overflow: hidden;
 }
 
@@ -412,8 +436,8 @@
 .time-grid-head {
   position: sticky;
   top: 0;
-  background-color: var(--background);
-  border-bottom: 1px solid var(--border);
+  background-color: var(--surface);
+  border-bottom: 1px solid var(--hairline);
 }
 
 .time-day-head {
@@ -423,7 +447,7 @@
   gap: 0.1rem;
   padding: 0.45rem 0.25rem;
   border: none;
-  border-left: 1px solid var(--border);
+  border-left: 1px solid var(--hairline);
   background-color: transparent;
   font: inherit;
   cursor: pointer;
@@ -451,7 +475,7 @@
 }
 
 .time-row {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--hairline);
 }
 
 .time-row:first-of-type {
@@ -466,23 +490,67 @@
 }
 
 .time-cell {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
-  min-height: 3rem;
+  min-height: 3.4rem;
   min-width: 0;
   padding: 0.2rem;
-  border-left: 1px solid var(--border);
+  border-left: 1px solid var(--hairline);
   background-color: var(--surface);
+}
+
+.time-cell.today {
+  background-color: color-mix(in srgb, var(--primary) 4%, white);
+}
+
+/* Línea roja de "ahora", como en Apple Calendar. */
+.now-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  height: 2px;
+  background-color: #e5484d;
+  pointer-events: none;
+}
+
+.now-line::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #e5484d;
 }
 
 /* Panel de detalle */
 
-.detail-panel {
+.detail-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: var(--spacing-lg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background-color: var(--background);
+  background-color: rgb(0 0 0 / 35%);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+
+.detail-panel {
+  width: min(100%, 440px);
+  max-height: min(90vh, 720px);
+  overflow-y: auto;
+  padding: 1.5rem;
+  box-sizing: border-box;
+  border-radius: 20px;
+  background-color: var(--surface);
+  box-shadow: 0 20px 60px rgb(0 0 0 / 22%);
 }
 
 .detail-head {
@@ -614,8 +682,28 @@
 
 .btn-primary,
 .btn-secondary,
-.btn-danger {
+.btn-danger,
+.btn-warning {
   padding: 0.65rem 1rem;
+}
+
+/* "No se presentó": ambar, para que se distinga del verde de "Se presentó" sin
+   usar el rojo, que en este panel significa cancelar el turno (P1-193). */
+.btn-warning {
+  border: none;
+  background-color: var(--estado-pendiente);
+  color: #ffffff;
+}
+
+.btn-warning:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.confirm-question {
+  margin: 0 0 var(--spacing-sm);
+  font-size: 0.95rem;
+  line-height: 1.45;
 }
 
 .btn-primary {
@@ -625,15 +713,24 @@
 }
 
 .btn-secondary {
-  border: 1px solid var(--border);
-  background-color: var(--surface);
-  color: var(--primary);
+  border: none;
+  background-color: var(--primary-soft);
+  color: #3a6358;
 }
 
+.btn-secondary:hover:not(:disabled) {
+  background-color: rgba(79, 127, 115, 0.2);
+}
+
+/* Lo destructivo va en rojo suave: el rojo macizo queda para confirmar. */
 .btn-danger {
   border: none;
-  background-color: var(--danger);
-  color: #ffffff;
+  background-color: color-mix(in srgb, var(--danger) 13%, white);
+  color: #b84a4a;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--danger) 22%, white);
 }
 
 .btn-primary:disabled,
@@ -679,11 +776,6 @@
   border-radius: var(--radius-sm);
 }
 
-.banner-success {
-  background-color: color-mix(in srgb, var(--primary) 14%, white);
-  color: var(--primary);
-}
-
 .banner-error {
   background-color: color-mix(in srgb, var(--danger) 14%, white);
   color: var(--danger);
@@ -692,10 +784,6 @@
 @media (max-width: 720px) {
   .appointments-panel {
     padding: var(--spacing-lg);
-  }
-
-  .calendar-toolbar {
-    align-items: flex-start;
   }
 
   .period-title {
@@ -719,4 +807,189 @@
   .btn-danger {
     width: 100%;
   }
+}
+
+/* Agenda única: botón de alta, leyenda y huecos de disponibilidad */
+
+.btn-new {
+  flex-shrink: 0;
+  padding: 0.65rem 1.3rem;
+  border: none;
+  border-radius: 999px;
+  background-color: var(--primary);
+  box-shadow: 0 2px 6px rgba(79, 127, 115, 0.28);
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.btn-new:hover {
+  background-color: #446f64;
+}
+
+/* Hueco de la agenda: media hora con cupos. Doble clic para agendar. */
+/* Una media hora: sus turnos en una línea cada uno y el "+" para agregar. */
+.half {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.event-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.event-row .event-block {
+  min-width: 0;
+}
+
+/* "+" de agregar al final del grupo de turnos, siempre a la vista: verde si queda
+   cupo de atención y azul si el turno que se agregue es un sobreturno. */
+.add-mini {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 1.3rem;
+  height: 1.3rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background-color: color-mix(in srgb, var(--primary) 18%, white);
+  color: var(--primary);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.add-mini:hover {
+  background-color: var(--primary);
+  color: #ffffff;
+}
+
+.add-mini.sobreturno {
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 28%, white);
+  color: var(--tipo-sobreturno);
+}
+
+.add-mini.sobreturno:hover {
+  background-color: var(--tipo-sobreturno);
+  color: #ffffff;
+}
+
+/* Hueco sin turnos: siempre a la vista, con la hora y el "+" (10:00 +, 10:30 +...). */
+.slot-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  width: 100%;
+  min-height: 1.7rem;
+  padding: 0.15rem 0.4rem 0.15rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background-color: color-mix(in srgb, var(--primary) 6%, white);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.slot-empty:hover,
+.slot-empty:focus-visible {
+  border-color: color-mix(in srgb, var(--primary) 50%, white);
+  background-color: color-mix(in srgb, var(--primary) 16%, white);
+}
+
+.slot-hora {
+  font-weight: 700;
+}
+
+.slot-plus {
+  display: grid;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  background-color: color-mix(in srgb, var(--primary) 18%, white);
+  color: var(--primary);
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.slot-empty:hover .slot-plus,
+.slot-empty:focus-visible .slot-plus {
+  background-color: var(--primary);
+  color: #ffffff;
+}
+
+/* Sobreturno con lugar: en azul. */
+.slot-empty.sobreturno {
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 12%, white);
+}
+
+.slot-empty.sobreturno .slot-hora {
+  color: var(--tipo-sobreturno);
+}
+
+.slot-empty.sobreturno .slot-plus {
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 28%, white);
+  color: var(--tipo-sobreturno);
+}
+
+.slot-empty.sobreturno:hover,
+.slot-empty.sobreturno:focus-visible {
+  border-color: color-mix(in srgb, var(--tipo-sobreturno) 50%, white);
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 20%, white);
+}
+
+.slot-empty.sobreturno:hover .slot-plus,
+.slot-empty.sobreturno:focus-visible .slot-plus {
+  background-color: var(--tipo-sobreturno);
+  color: #ffffff;
+}
+
+.origin-badge {
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background-color: color-mix(in srgb, var(--text-primary) 8%, white);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.origin-badge.sobreturno {
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 14%, white);
+  color: var(--tipo-sobreturno);
+}
+
+/* Sobreturnos: azul, para distinguirlos de un turno normal sin perder el estado. */
+.event-chip.confirmado.sobreturno,
+.event-block.confirmado.sobreturno {
+  border-left-color: var(--tipo-sobreturno);
+  background-color: color-mix(in srgb, var(--tipo-sobreturno) 20%, white);
+  color: #24557f;
+}
+
+/* Turnos de servicios: el violeta del filtro, salvo cancelados y ausentes, que conservan su estado. */
+.event-chip.tipo-servicio:not(.cancelado):not(.ausente),
+.event-block.tipo-servicio:not(.cancelado):not(.ausente) {
+  border-left-color: var(--tipo-servicio);
+  background-color: color-mix(in srgb, var(--tipo-servicio) 18%, white);
+  color: #4a4086;
+}
+
+.tipo-dot.sobreturno {
+  background-color: var(--tipo-sobreturno);
 }

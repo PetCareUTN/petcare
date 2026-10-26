@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiError } from '../../../auth/models/user';
 import {
@@ -7,11 +7,10 @@ import {
   TurnoServicioResponse,
 } from '../../../turnos-servicios/models/turno-servicio';
 import { TurnosServiciosService } from '../../../turnos-servicios/services/turnos-servicios-service';
-import { SobreturnoVeterinarioResponse } from '../../../sobreturnos-veterinarios/models/sobreturno-veterinario';
-import { SobreturnosVeterinariosService } from '../../../sobreturnos-veterinarios/services/sobreturnos-veterinarios-service';
-import { SobreturnosModalComponent } from '../../components/sobreturnos-modal/sobreturnos-modal';
+import { NuevoTurnoModalComponent } from '../../components/nuevo-turno-modal/nuevo-turno-modal';
 import {
   AppointmentStatus,
+  CapacidadHorario,
   TurnoVeterinarioResponse,
 } from '../../models/turno-veterinario';
 import { TurnosVeterinariosService } from '../../services/turnos-veterinarios-service';
@@ -49,6 +48,29 @@ interface EventoTurno {
   canceladoPor: CanceladoPor | null;
   veterinario: TurnoVeterinarioResponse | null;
   servicio: TurnoServicioResponse | null;
+  /** Ocupa un cupo de sobreturno o se cargó con el horario lleno. */
+  esSobreturno: boolean;
+}
+
+/** Estados en los que un turno sigue ocupando su lugar en la agenda. */
+const ESTADOS_QUE_OCUPAN: EstadoTurno[] = ['confirmado', 'asistio', 'ausente'];
+
+type EstadoFranja = 'libre' | 'completo';
+
+/** Capacidad de una franja de 30 minutos de la agenda, lista para mostrar. */
+interface FranjaAgenda {
+  total: number;
+  libres: number;
+  estado: EstadoFranja;
+  /** Ya pasó: no se puede agendar. */
+  pasada: boolean;
+}
+
+/** Media hora de una celda horaria: su disponibilidad y los turnos que caen en ella. */
+interface MitadDeHora {
+  hora: string;
+  franja: FranjaAgenda | null;
+  turnos: EventoTurno[];
 }
 
 interface DiaCalendario {
@@ -57,7 +79,6 @@ interface DiaCalendario {
   esDelMesActual: boolean;
   esHoy: boolean;
   turnos: EventoTurno[];
-  sobreturnos: SobreturnoVeterinarioResponse[];
 }
 
 interface FilaHoraria {
@@ -65,8 +86,10 @@ interface FilaHoraria {
   etiqueta: string;
   celdas: {
     fecha: string;
-    turnos: EventoTurno[];
-    sobreturnos: SobreturnoVeterinarioResponse[];
+    esHoy: boolean;
+    /** Posición (0-100 %) de la línea de "ahora" dentro de la celda, si cae en esta hora. */
+    lineaAhora: number | null;
+    mitades: MitadDeHora[];
   }[];
 }
 
@@ -103,25 +126,26 @@ const HORA_FIN_POR_DEFECTO = 20;
 
 @Component({
   selector: 'app-gestion-turnos-veterinarios',
-  imports: [FormsModule, SobreturnosModalComponent],
+  imports: [FormsModule, NuevoTurnoModalComponent],
   templateUrl: './gestion-turnos.html',
   styleUrl: './gestion-turnos.css',
 })
 export class GestionTurnosVeterinariosPage implements OnInit {
   private readonly turnosService = inject(TurnosVeterinariosService);
   private readonly turnosServiciosService = inject(TurnosServiciosService);
-  private readonly sobreturnosService = inject(SobreturnosVeterinariosService);
 
-  protected readonly mostrarSobreturnos = signal(false);
+  /** Alta de turno abierta: con la fecha y hora del doble clic, si las hubo. */
+  protected readonly nuevoTurno = signal<{ fecha: string | null; hora: string | null } | null>(null);
 
   protected readonly estados: EstadoOption[] = [
     { value: 'confirmado', label: 'Confirmados' },
+    { value: 'ausente', label: 'Ausentes' },
     { value: 'cancelado', label: 'Cancelados' },
   ];
 
   protected readonly tipos: TipoOption[] = [
     { value: 'veterinaria', label: 'Veterinaria' },
-    { value: 'servicio', label: 'Mis servicios' },
+    { value: 'servicio', label: 'Servicios' },
   ];
 
   protected readonly vistas: VistaOption[] = [
@@ -132,29 +156,43 @@ export class GestionTurnosVeterinariosPage implements OnInit {
 
   protected readonly diasSemana = DIAS_SEMANA;
 
-  protected readonly vista = signal<VistaCalendario>('mes');
+  /** En pantallas angostas la semana no entra (7 columnas): se arranca en la vista Día. */
+  protected readonly vista = signal<VistaCalendario>(
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 700px)').matches
+      ? 'dia'
+      : 'semana',
+  );
   /** Fecha de referencia (YYYY-MM-DD) sobre la que se arma la vista actual. */
   protected readonly fechaFoco = signal(this.claveDeHoy());
-  protected readonly estadosVisibles = signal<EstadoTurno[]>(['confirmado']);
+  // Por defecto se ve todo menos lo cancelado: así un turno no desaparece de la agenda
+  // apenas se marca como asistido o ausente.
+  protected readonly estadosVisibles = signal<EstadoTurno[]>(['confirmado', 'asistio', 'ausente']);
   protected readonly tiposVisibles = signal<TipoTurno[]>(['veterinaria', 'servicio']);
+  protected readonly sobreturnosVisibles = signal(true);
 
   protected readonly turnos = signal<TurnoVeterinarioResponse[]>([]);
   protected readonly turnosServicios = signal<TurnoServicioResponse[]>([]);
-  protected readonly sobreturnos = signal<SobreturnoVeterinarioResponse[]>([]);
+  /** Capacidad de la agenda en el rango visible (huecos libres y completos). */
+  protected readonly capacidad = signal<CapacidadHorario[]>([]);
   protected readonly turnoSeleccionadoClave = signal<string | null>(null);
-  protected readonly sobreturnoSeleccionadoId = signal<number | null>(null);
   protected readonly isLoading = signal(true);
   protected readonly isLoadingServicios = signal(true);
-  protected readonly isLoadingSobreturnos = signal(true);
   protected readonly processingClave = signal<string | null>(null);
-  protected readonly processingSobreturnoId = signal<number | null>(null);
   protected readonly isCancelling = signal(false);
+  /**
+   * Asistencia que el veterinario eligio y todavia no confirmo (P1-193).
+   *
+   * `null` = no hay confirmacion abierta. Los dos botones quedan pegados en el
+   * panel, asi que un click equivocado tiene que poder frenarse antes de
+   * registrar algo sobre el cliente.
+   */
+  protected readonly asistenciaPendiente = signal<boolean | null>(null);
   protected readonly motivoCancelacion = signal('');
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly successMessage = signal<string | null>(null);
 
   protected readonly cargando = computed(
-    () => this.isLoading() || this.isLoadingServicios() || this.isLoadingSobreturnos(),
+    () => this.isLoading() || this.isLoadingServicios(),
   );
 
   /** Turnos de ambos origenes normalizados a un unico formato. */
@@ -166,8 +204,12 @@ export class GestionTurnosVeterinariosPage implements OnInit {
   protected readonly turnosVisibles = computed(() => {
     const estados = this.estadosVisibles();
     const tipos = this.tiposVisibles();
+    const verSobreturnos = this.sobreturnosVisibles();
     return this.todosLosTurnos().filter(
-      (turno) => estados.includes(turno.estado) && tipos.includes(turno.tipo),
+      (turno) =>
+        estados.includes(turno.estado) &&
+        tipos.includes(turno.tipo) &&
+        (verSobreturnos || !turno.esSobreturno),
     );
   });
 
@@ -188,21 +230,59 @@ export class GestionTurnosVeterinariosPage implements OnInit {
     return agrupados;
   });
 
-  /** Sobreturnos agrupados por fecha y ordenados por hora. */
-  private readonly sobreturnosPorFecha = computed(() => {
-    const agrupados = new Map<string, SobreturnoVeterinarioResponse[]>();
-    for (const sobreturno of this.sobreturnos()) {
-      const delDia = agrupados.get(sobreturno.fecha);
-      if (delDia) {
-        delDia.push(sobreturno);
-      } else {
-        agrupados.set(sobreturno.fecha, [sobreturno]);
+  /** Capacidad agrupada por fecha y hora, para buscar la franja de cada celda. */
+  private readonly capacidadPorFranja = computed(() => {
+    const porClave = new Map<string, CapacidadHorario>();
+    for (const franja of this.capacidad()) {
+      porClave.set(`${franja.fecha}|${franja.hora}`, franja);
+    }
+    return porClave;
+  });
+
+  /**
+   * Turnos veterinarios que son sobreturnos: los cargados con el horario lleno y
+   * los que ocupan un cupo de sobreturno. En cada franja, los primeros turnos
+   * (por orden de carga) usan los cupos de atención y el resto son sobreturnos.
+   */
+  private readonly idsSobreturno = computed(() => {
+    const porFranja = new Map<string, TurnoVeterinarioResponse[]>();
+    for (const turno of this.turnos()) {
+      if (!ESTADOS_QUE_OCUPAN.includes(turno.estado)) {
+        continue;
       }
+      const clave = `${turno.fecha}|${turno.hora.slice(0, 5)}`;
+      porFranja.set(clave, [...(porFranja.get(clave) ?? []), turno]);
     }
-    for (const delDia of agrupados.values()) {
-      delDia.sort((a, b) => a.hora.localeCompare(b.hora));
+
+    const ids = new Set<number>();
+    for (const [clave, turnos] of porFranja) {
+      const capacidad = this.capacidadPorFranja().get(clave);
+      if (!capacidad) {
+        continue;
+      }
+      [...turnos]
+        .sort((a, b) => a.idTurno - b.idTurno)
+        .forEach((turno, indice) => {
+          if (indice >= capacidad.cupos) {
+            ids.add(turno.idTurno);
+          }
+        });
     }
-    return agrupados;
+    return ids;
+  });
+
+  /** Rango de fechas que muestra la vista actual, para pedir su capacidad. */
+  private readonly rangoVisible = computed(() => {
+    const foco = this.parseClave(this.fechaFoco());
+    if (this.vista() === 'dia') {
+      return { desde: this.toClave(foco), hasta: this.toClave(foco) };
+    }
+    if (this.vista() === 'semana') {
+      const inicio = this.inicioDeSemana(foco);
+      return { desde: this.toClave(inicio), hasta: this.toClave(this.sumarDias(inicio, 6)) };
+    }
+    const inicio = this.inicioDeSemana(new Date(foco.getFullYear(), foco.getMonth(), 1));
+    return { desde: this.toClave(inicio), hasta: this.toClave(this.sumarDias(inicio, 41)) };
   });
 
   protected readonly turnoSeleccionado = computed(() => {
@@ -210,33 +290,6 @@ export class GestionTurnosVeterinariosPage implements OnInit {
     return clave === null
       ? null
       : (this.todosLosTurnos().find((turno) => turno.clave === clave) ?? null);
-  });
-
-  protected readonly sobreturnoSeleccionado = computed(() => {
-    const id = this.sobreturnoSeleccionadoId();
-    return id === null
-      ? null
-      : (this.sobreturnos().find((sobreturno) => sobreturno.idSobreturno === id) ?? null);
-  });
-
-  protected readonly conteoPorEstado = computed(() => {
-    const conteo = new Map<EstadoTurno, number>();
-    const tipos = this.tiposVisibles();
-    for (const turno of this.todosLosTurnos()) {
-      if (!tipos.includes(turno.tipo)) {
-        continue;
-      }
-      conteo.set(turno.estado, (conteo.get(turno.estado) ?? 0) + 1);
-    }
-    return conteo;
-  });
-
-  protected readonly conteoPorTipo = computed(() => {
-    const conteo = new Map<TipoTurno, number>();
-    for (const turno of this.todosLosTurnos()) {
-      conteo.set(turno.tipo, (conteo.get(turno.tipo) ?? 0) + 1);
-    }
-    return conteo;
   });
 
   /** Grilla de 6 semanas del mes en foco, empezando siempre en lunes. */
@@ -271,11 +324,13 @@ export class GestionTurnosVeterinariosPage implements OnInit {
 
   protected readonly filasHorarias = computed<FilaHoraria[]>(() => {
     const dias = this.diasDeGrillaHoraria();
+    const porFranja = this.capacidadPorFranja();
+    const fechas = new Set(dias.map((dia) => dia.fecha));
     const horasConEventos = [
       ...dias.flatMap((dia) => dia.turnos).map((turno) => Number(turno.hora.slice(0, 2))),
-      ...dias
-        .flatMap((dia) => dia.sobreturnos)
-        .map((sobreturno) => Number(sobreturno.hora.slice(0, 2))),
+      ...this.capacidad()
+        .filter((franja) => fechas.has(franja.fecha))
+        .map((franja) => Number(franja.hora.slice(0, 2))),
     ];
 
     const desde = Math.min(HORA_INICIO_POR_DEFECTO, ...horasConEventos);
@@ -283,16 +338,35 @@ export class GestionTurnosVeterinariosPage implements OnInit {
 
     const filas: FilaHoraria[] = [];
     for (let hora = desde; hora <= hasta; hora++) {
+      const prefijo = String(hora).padStart(2, '0');
       filas.push({
         hora,
-        etiqueta: `${String(hora).padStart(2, '0')}:00`,
-        celdas: dias.map((dia) => ({
-          fecha: dia.fecha,
-          turnos: dia.turnos.filter((turno) => Number(turno.hora.slice(0, 2)) === hora),
-          sobreturnos: dia.sobreturnos.filter(
-            (sobreturno) => Number(sobreturno.hora.slice(0, 2)) === hora,
-          ),
-        })),
+        etiqueta: `${prefijo}:00`,
+        celdas: dias.map((dia) => {
+          const mitades: MitadDeHora[] = [];
+          for (const minutos of ['00', '30']) {
+            const horaMitad = `${prefijo}:${minutos}`;
+            const capacidad = porFranja.get(`${dia.fecha}|${horaMitad}`) ?? null;
+            const turnos = dia.turnos.filter(
+              (turno) =>
+                Number(turno.hora.slice(0, 2)) === hora &&
+                (Number(turno.hora.slice(3, 5)) < 30) === (minutos === '00'),
+            );
+            if (capacidad || turnos.length > 0) {
+              mitades.push({
+                hora: horaMitad,
+                franja: capacidad ? this.aFranjaAgenda(capacidad) : null,
+                turnos,
+              });
+            }
+          }
+          const ahora = new Date();
+          const lineaAhora =
+            dia.esHoy && ahora.getHours() === hora
+              ? Math.round((ahora.getMinutes() / 60) * 100)
+              : null;
+          return { fecha: dia.fecha, esHoy: dia.esHoy, lineaAhora, mitades };
+        }),
       });
     }
     return filas;
@@ -322,24 +396,69 @@ export class GestionTurnosVeterinariosPage implements OnInit {
     );
   });
 
+  constructor() {
+    // La capacidad se vuelve a pedir cada vez que cambia el rango que se ve.
+    effect(() => {
+      const { desde, hasta } = this.rangoVisible();
+      this.cargarAgenda(desde, hasta);
+    });
+  }
+
   ngOnInit(): void {
     this.loadTurnos();
     this.loadTurnosServicios();
-    this.loadSobreturnos();
+  }
+
+  @HostListener('document:keydown.escape')
+  protected cerrarConEscape(): void {
+    if (this.turnoSeleccionadoClave() !== null && this.nuevoTurno() === null) {
+      this.cerrarPanel();
+    }
   }
 
   protected setVista(vista: VistaCalendario): void {
     this.vista.set(vista);
   }
 
-  protected abrirSobreturnos(): void {
-    this.mostrarSobreturnos.set(true);
+  /**
+   * Abre el alta de turno. Con fecha y hora viene de un doble clic sobre un
+   * horario; sin ellas, del botón "Nuevo turno".
+   */
+  protected abrirNuevoTurno(fecha: string | null = null, hora: string | null = null): void {
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    this.nuevoTurno.set({ fecha, hora });
   }
 
-  /** El modal pudo haber agregado o eliminado sobreturnos: se refresca la agenda. */
-  protected cerrarSobreturnos(): void {
-    this.mostrarSobreturnos.set(false);
-    this.loadSobreturnos();
+  protected cerrarNuevoTurno(): void {
+    this.nuevoTurno.set(null);
+  }
+
+  protected turnoAgendado(turno: TurnoVeterinarioResponse): void {
+    this.nuevoTurno.set(null);
+    this.fechaFoco.set(turno.fecha);
+    this.successMessage.set(
+      turno.sobrecupo
+        ? 'Sobreturno agregado. Le avisamos al cliente.'
+        : 'Turno agendado. Le avisamos al cliente.',
+    );
+    this.loadTurnos();
+    this.recargarAgenda();
+  }
+
+  protected servicioAgendado(turno: TurnoServicioResponse): void {
+    this.nuevoTurno.set(null);
+    this.fechaFoco.set(turno.fecha);
+    this.successMessage.set('Turno de servicio agendado. Le avisamos al cliente.');
+    this.loadTurnosServicios();
+  }
+
+  /** Doble clic en un día del mes (no sobre un turno): agenda ese día. */
+  protected dobleClickDia(evento: MouseEvent, fecha: string): void {
+    if ((evento.target as HTMLElement).closest('button') || fecha < this.claveDeHoy()) {
+      return;
+    }
+    this.abrirNuevoTurno(fecha);
   }
 
   /** Abre el día indicado en la vista de detalle (zoom desde mes o semana). */
@@ -366,12 +485,17 @@ export class GestionTurnosVeterinariosPage implements OnInit {
     this.fechaFoco.set(this.toClave(this.sumarDias(foco, dias * direccion)));
   }
 
+  /**
+   * "Confirmados" controla también a los turnos ya cerrados como asistidos.
+   * "Ausentes" y "Cancelados" se muestran u ocultan por separado.
+   */
   protected toggleEstado(estado: EstadoTurno): void {
+    const grupo: EstadoTurno[] = estado === 'confirmado' ? ['confirmado', 'asistio'] : [estado];
     const visibles = this.estadosVisibles();
     this.estadosVisibles.set(
       visibles.includes(estado)
-        ? visibles.filter((value) => value !== estado)
-        : [...visibles, estado],
+        ? visibles.filter((value) => !grupo.includes(value))
+        : [...visibles, ...grupo.filter((value) => !visibles.includes(value))],
     );
   }
 
@@ -388,58 +512,24 @@ export class GestionTurnosVeterinariosPage implements OnInit {
     );
   }
 
+  protected toggleSobreturnos(): void {
+    this.sobreturnosVisibles.update((visible) => !visible);
+  }
+
   protected esTipoVisible(tipo: TipoTurno): boolean {
     return this.tiposVisibles().includes(tipo);
   }
 
-  protected conteo(estado: EstadoTurno): number {
-    return this.conteoPorEstado().get(estado) ?? 0;
-  }
-
-  protected conteoTipo(tipo: TipoTurno): number {
-    return this.conteoPorTipo().get(tipo) ?? 0;
-  }
-
   protected seleccionarTurno(turno: EventoTurno): void {
     this.turnoSeleccionadoClave.set(turno.clave);
-    this.sobreturnoSeleccionadoId.set(null);
     this.cancelCancelacion();
+    this.cancelarConfirmacionAsistencia();
     this.errorMessage.set(null);
     this.successMessage.set(null);
-  }
-
-  protected seleccionarSobreturno(sobreturno: SobreturnoVeterinarioResponse): void {
-    this.sobreturnoSeleccionadoId.set(sobreturno.idSobreturno);
-    this.turnoSeleccionadoClave.set(null);
-    this.cancelCancelacion();
-    this.errorMessage.set(null);
-    this.successMessage.set(null);
-  }
-
-  protected eliminarSobreturno(sobreturno: SobreturnoVeterinarioResponse): void {
-    this.errorMessage.set(null);
-    this.successMessage.set(null);
-    this.processingSobreturnoId.set(sobreturno.idSobreturno);
-
-    this.sobreturnosService.remove(sobreturno.idSobreturno).subscribe({
-      next: () => {
-        this.processingSobreturnoId.set(null);
-        this.sobreturnoSeleccionadoId.set(null);
-        this.sobreturnos.set(
-          this.sobreturnos().filter((s) => s.idSobreturno !== sobreturno.idSobreturno),
-        );
-        this.successMessage.set('Sobreturno eliminado.');
-      },
-      error: (error: ApiError) => {
-        this.processingSobreturnoId.set(null);
-        this.errorMessage.set(error.mensaje ?? 'No se pudo eliminar el sobreturno.');
-      },
-    });
   }
 
   protected cerrarPanel(): void {
     this.turnoSeleccionadoClave.set(null);
-    this.sobreturnoSeleccionadoId.set(null);
     this.cancelCancelacion();
   }
 
@@ -477,6 +567,7 @@ export class GestionTurnosVeterinariosPage implements OnInit {
         next: () => {
           onSuccess();
           this.loadTurnos();
+          this.recargarAgenda();
         },
         error: onError,
       });
@@ -503,6 +594,86 @@ export class GestionTurnosVeterinariosPage implements OnInit {
   /** Nombre corto del día ("Lun", "Mar"...) para una fecha YYYY-MM-DD. */
   protected nombreCortoDia(fecha: string): string {
     return DIAS_SEMANA[this.indiceDesdeLunes(this.parseClave(fecha))];
+  }
+
+  /**
+   * `true` si el turno ya empezo y sigue sin cerrarse.
+   *
+   * Es lo que habilita las acciones de asistencia: antes de la hora el cliente
+   * todavia esta a tiempo de llegar, y el backend rechaza marcarlo (P1-193).
+   */
+  protected puedeRegistrarAsistencia(turno: EventoTurno): boolean {
+    return (
+      turno.tipo === 'veterinaria' &&
+      turno.estado === 'confirmado' &&
+      new Date(`${turno.fecha}T${turno.hora}`).getTime() <= Date.now()
+    );
+  }
+
+  /** `true` si el turno ya tiene asistencia registrada. */
+  protected tieneAsistencia(turno: EventoTurno): boolean {
+    return turno.estado === 'asistio' || turno.estado === 'ausente';
+  }
+
+  /** Solo el mismo dia, que es lo unico que acepta el backend. */
+  protected puedeCorregirAsistencia(turno: EventoTurno): boolean {
+    return this.tieneAsistencia(turno) && turno.fecha === this.claveDeHoy();
+  }
+
+  /** Turno pasado que el veterinario todavia no cerro. */
+  protected esperaRegistro(turno: EventoTurno): boolean {
+    return this.puedeRegistrarAsistencia(turno);
+  }
+
+  /** Abre el paso de confirmacion para la opcion elegida. */
+  protected pedirConfirmacionAsistencia(asistio: boolean): void {
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    this.asistenciaPendiente.set(asistio);
+  }
+
+  protected cancelarConfirmacionAsistencia(): void {
+    this.asistenciaPendiente.set(null);
+  }
+
+  protected registrarAsistencia(turno: EventoTurno, asistio: boolean): void {
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    this.processingClave.set(turno.clave);
+
+    this.turnosService.registrarAsistencia(turno.idTurno, { asistio }).subscribe({
+      next: () => {
+        this.processingClave.set(null);
+        this.cancelarConfirmacionAsistencia();
+        this.successMessage.set(
+          asistio ? 'Turno marcado como asistido.' : 'Turno marcado como ausente.',
+        );
+        this.loadTurnos();
+      },
+      error: (error: ApiError) => {
+        this.processingClave.set(null);
+        this.cancelarConfirmacionAsistencia();
+        this.errorMessage.set(error.mensaje ?? 'No se pudo registrar la asistencia.');
+      },
+    });
+  }
+
+  protected revertirAsistencia(turno: EventoTurno): void {
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    this.processingClave.set(turno.clave);
+
+    this.turnosService.revertirAsistencia(turno.idTurno).subscribe({
+      next: () => {
+        this.processingClave.set(null);
+        this.successMessage.set('Se deshizo el registro de asistencia.');
+        this.loadTurnos();
+      },
+      error: (error: ApiError) => {
+        this.processingClave.set(null);
+        this.errorMessage.set(error.mensaje ?? 'No se pudo corregir la asistencia.');
+      },
+    });
   }
 
   protected estadoLabel(estado: EstadoTurno): string {
@@ -533,13 +704,7 @@ export class GestionTurnosVeterinariosPage implements OnInit {
 
   /** Texto corto que acompaña a la hora en el chip del calendario. */
   protected etiquetaCorta(turno: EventoTurno): string {
-    return turno.categoria
-      ? `${turno.nombreMascota} · ${this.categoriaLabel(turno.categoria)}`
-      : turno.nombreMascota;
-  }
-
-  protected etiquetaCupos(cupos: number): string {
-    return `${cupos} ${cupos === 1 ? 'cupo' : 'cupos'}`;
+    return turno.nombreMascota;
   }
 
   private desdeVeterinario(turno: TurnoVeterinarioResponse): EventoTurno {
@@ -561,6 +726,7 @@ export class GestionTurnosVeterinariosPage implements OnInit {
       canceladoPor: turno.canceladoPor,
       veterinario: turno,
       servicio: null,
+      esSobreturno: turno.sobrecupo || this.idsSobreturno().has(turno.idTurno),
     };
   }
 
@@ -583,6 +749,7 @@ export class GestionTurnosVeterinariosPage implements OnInit {
       canceladoPor: turno.canceladoPor,
       veterinario: null,
       servicio: turno,
+      esSobreturno: false,
     };
   }
 
@@ -620,20 +787,30 @@ export class GestionTurnosVeterinariosPage implements OnInit {
     });
   }
 
-  private loadSobreturnos(): void {
-    this.isLoadingSobreturnos.set(true);
-
-    this.sobreturnosService.getMine().subscribe({
-      next: (sobreturnos) => {
-        this.sobreturnos.set(sobreturnos);
-        this.isLoadingSobreturnos.set(false);
-      },
-      error: (error: ApiError) => {
-        this.sobreturnos.set([]);
-        this.isLoadingSobreturnos.set(false);
-        this.errorMessage.set(error.mensaje ?? 'No se pudieron cargar los sobreturnos.');
-      },
+  private cargarAgenda(desde: string, hasta: string): void {
+    this.turnosService.getAgenda(desde, hasta).subscribe({
+      next: (capacidad) => this.capacidad.set(capacidad),
+      error: () => this.capacidad.set([]),
     });
+  }
+
+  private recargarAgenda(): void {
+    const { desde, hasta } = this.rangoVisible();
+    this.cargarAgenda(desde, hasta);
+  }
+
+  private aFranjaAgenda(capacidad: CapacidadHorario): FranjaAgenda {
+    const libres = capacidad.cupos - capacidad.ocupados;
+    return {
+      total: capacidad.cupos,
+      libres,
+      estado: libres <= 0 ? 'completo' : 'libre',
+      pasada: this.yaPaso(capacidad.fecha, capacidad.hora),
+    };
+  }
+
+  private yaPaso(fecha: string, hora: string): boolean {
+    return new Date(`${fecha}T${hora}`).getTime() <= Date.now();
   }
 
   private armarDia(fecha: Date, esDelMesActual: boolean): DiaCalendario {
@@ -644,7 +821,6 @@ export class GestionTurnosVeterinariosPage implements OnInit {
       esDelMesActual,
       esHoy: clave === this.claveDeHoy(),
       turnos: this.turnosPorFecha().get(clave) ?? [],
-      sobreturnos: this.sobreturnosPorFecha().get(clave) ?? [],
     };
   }
 

@@ -3,6 +3,8 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    // Lee app/google-services.json para configurar Firebase Cloud Messaging.
+    alias(libs.plugins.google.services)
 }
 
 // La API key de Maps SDK for Android no se commitea: se lee de local.properties
@@ -184,4 +186,6 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.maps.compose)
     implementation(libs.accompanist.permissions)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
 }

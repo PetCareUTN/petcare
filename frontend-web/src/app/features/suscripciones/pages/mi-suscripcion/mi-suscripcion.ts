@@ -25,6 +25,8 @@ export class MiSuscripcionPage implements OnInit, OnDestroy {
 
   protected readonly isLoading = signal(true);
   protected readonly isPaying = signal(false);
+  protected readonly isCancelling = signal(false);
+  protected readonly confirmandoCancelacion = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly successMessage = signal<string | null>(null);
   protected readonly suscripcion = signal<SuscripcionResponse | null>(null);
@@ -63,6 +65,8 @@ export class MiSuscripcionPage implements OnInit, OnDestroy {
 
   protected getEstadoClass(estado: string): string {
     switch (estado) {
+      case 'en_prueba':
+        return 'estado-en_prueba';
       case 'activa':
         return 'estado-activa';
       case 'vencida':
@@ -80,6 +84,8 @@ export class MiSuscripcionPage implements OnInit, OnDestroy {
     switch (estado) {
       case 'pendiente_pago':
         return 'Pendiente de pago';
+      case 'en_prueba':
+        return 'En prueba';
       case 'activa':
         return 'Activa';
       case 'vencida':
@@ -88,6 +94,21 @@ export class MiSuscripcionPage implements OnInit, OnDestroy {
         return 'Suspendida';
       case 'cancelada':
         return 'Cancelada';
+      default:
+        return estado;
+    }
+  }
+
+  protected etiquetaPago(estado: string): string {
+    switch (estado) {
+      case 'aprobado':
+        return 'Aprobado';
+      case 'pendiente':
+        return 'Pendiente';
+      case 'rechazado':
+        return 'Rechazado';
+      case 'cancelado':
+        return 'Cancelado';
       default:
         return estado;
     }
@@ -104,6 +125,10 @@ export class MiSuscripcionPage implements OnInit, OnDestroy {
     switch (sub.estado) {
       case 'pendiente_pago':
         return 'Completá el pago para activar tu suscripción y usar la plataforma.';
+      case 'en_prueba':
+        return sub.esPrueba
+          ? 'Estás usando la plataforma gratis durante tu período de prueba. Cuando termine, vas a poder activar tu suscripción desde acá.'
+          : 'Tu período de prueba terminó. Suscribite desde acá para usar la plataforma.';
       case 'vencida':
         return sub.accesoPermitido
           ? 'Tu suscripción venció y estás en el período de gracia. Regularizá el pago para no perder el acceso.'
@@ -127,7 +152,64 @@ export class MiSuscripcionPage implements OnInit, OnDestroy {
     if (sub.codigoBloqueo === 'CUENTA_NO_APROBADA') {
       return false;
     }
-    return sub.estado !== 'activa';
+    // Durante el trial no hay nada que pagar todavía.
+    return sub.estado !== 'activa' && sub.estado !== 'en_prueba';
+  }
+
+  /**
+   * Estados que se pueden cancelar desde esta pantalla: todos salvo
+   * PENDIENTE_PAGO (nunca pagó) y CANCELADA (ya cancelada).
+   */
+  protected puedeCancelar(sub: SuscripcionResponse): boolean {
+    return (
+      sub.estado === 'en_prueba' ||
+      sub.estado === 'activa' ||
+      sub.estado === 'vencida' ||
+      sub.estado === 'suspendida'
+    );
+  }
+
+  /** Días que faltan para el fin del trial, o null si no está en prueba. */
+  protected diasRestantesPrueba(sub: SuscripcionResponse): number | null {
+    if (sub.estado !== 'en_prueba' || !sub.fechaPruebaFin) {
+      return null;
+    }
+    const restantes = Math.ceil(
+      (new Date(sub.fechaPruebaFin).getTime() - Date.now()) / (24 * 60 * 60 * 1000),
+    );
+    return restantes > 0 ? restantes : null;
+  }
+
+  /** Cancela la suscripción (primero en Mercado Pago, si tiene preapproval). */
+  protected cancelar(): void {
+    const sub = this.suscripcion();
+    if (!sub || !this.puedeCancelar(sub) || this.isCancelling()) {
+      return;
+    }
+
+    // Primer click: muestra la confirmación inline.
+    if (!this.confirmandoCancelacion()) {
+      this.confirmandoCancelacion.set(true);
+      return;
+    }
+
+    // Segundo click: ejecuta la cancelación real.
+    this.confirmandoCancelacion.set(false);
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    this.isCancelling.set(true);
+
+    this.suscripcionesService.cancelar().subscribe({
+      next: (suscripcion) => {
+        this.suscripcion.set(suscripcion);
+        this.isCancelling.set(false);
+        this.successMessage.set('Tu suscripción fue cancelada.');
+      },
+      error: (error: ApiError) => {
+        this.errorMessage.set(error.mensaje);
+        this.isCancelling.set(false);
+      },
+    });
   }
 
   private cargar(): void {

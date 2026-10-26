@@ -14,6 +14,7 @@ import {
   ServicioResponseDto,
   UbicacionServicio,
 } from './dto/servicio-response.dto';
+import { DURACION_POR_DEFECTO_MINUTOS } from './duracion-servicio';
 import { UpdateServicioDto } from './dto/update-servicio.dto';
 import { DisponibilidadServicio } from './entities/disponibilidad-servicio.entity';
 import { Servicio } from './entities/servicio.entity';
@@ -56,6 +57,8 @@ export class ServiciosService {
       usuario,
       categoria: dto.categoria,
       descripcion: dto.descripcion ?? null,
+      duracionMinutos:
+        dto.duracionMinutos ?? DURACION_POR_DEFECTO_MINUTOS[dto.categoria],
       disponibilidades: dto.disponibilidades.map((d) =>
         this.buildDisponibilidad(d),
       ),
@@ -122,6 +125,9 @@ export class ServiciosService {
     }
     if (dto.descripcion !== undefined) {
       servicio.descripcion = dto.descripcion;
+    }
+    if (dto.duracionMinutos !== undefined) {
+      servicio.duracionMinutos = dto.duracionMinutos;
     }
     if (dto.disponibilidades !== undefined) {
       this.validarDisponibilidades(dto.disponibilidades);

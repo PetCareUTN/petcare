@@ -1,5 +1,6 @@
 package com.petcare.app.features.servicios.ui
 
+import com.petcare.app.ui.components.LocalEspacioBarraInferior
 import com.petcare.app.ui.components.elevacionTarjeta
 import com.petcare.app.ui.components.elevacionBotonContorno
 import androidx.compose.foundation.BorderStroke
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -186,7 +188,10 @@ fun SolicitudesServiciosRecibidasScreen(
             }
 
             else -> {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                LazyColumn(
+                    contentPadding = PaddingValues(bottom = LocalEspacioBarraInferior.current),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     items(turnosFiltrados, key = { it.idTurno }) { turno ->
                         TurnoRow(
                             turno = turno,

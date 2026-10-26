@@ -1,84 +1,169 @@
 <main class="servicio-page">
-  <form class="servicio-form" [formGroup]="form" (ngSubmit)="submit()">
-    <header class="servicio-header">
-      <div>
-        <h1>{{ isEditMode() ? 'Editar servicio' : 'Publicar servicio' }}</h1>
-        <p>Definí el servicio que ofrecés y tu disponibilidad horaria.</p>
-      </div>
-      <a routerLink="/servicios">Volver</a>
-    </header>
+  <header class="servicio-header">
+    <h1>{{ isEditMode() ? 'Editar servicio' : 'Publicar servicio' }}</h1>
+    <a class="btn-secondary" routerLink="/servicios">Volver</a>
+  </header>
 
-    @if (isLoading()) {
-      <p class="status-text">Cargando...</p>
-    }
+  @if (isLoading()) {
+    <p class="status-text">Cargando...</p>
+  }
 
-    @if (errorMessage()) {
-      <p class="banner banner-error">{{ errorMessage() }}</p>
-    }
+  @if (errorMessage()) {
+    <p class="banner banner-error" role="alert">{{ errorMessage() }}</p>
+  }
 
-    @if (!isLoading()) {
-      <section class="form-grid">
+  @if (!isLoading()) {
+    <form class="servicio-grid" [formGroup]="form" (ngSubmit)="submit()">
+      <section class="panel" aria-labelledby="datos-servicio">
+        <h2 id="datos-servicio">Servicio</h2>
+
         <div class="field">
-          <label for="categoria">Categoría</label>
-          <select id="categoria" formControlName="categoria">
-            @for (categoria of categorias; track categoria.value) {
-              <option [value]="categoria.value">{{ categoria.label }}</option>
-            }
-          </select>
-        </div>
-
-        <div class="field field-wide">
-          <label for="descripcion">Descripción</label>
-          <textarea id="descripcion" rows="3" formControlName="descripcion"></textarea>
-        </div>
-      </section>
-
-      <section class="disponibilidades">
-        <div class="disponibilidades-header">
-          <h2>Disponibilidad</h2>
-          <button type="button" class="btn-secondary" (click)="agregarDisponibilidad()">
-            + Agregar franja horaria
-          </button>
-        </div>
-
-        <div class="disponibilidad-list" formArrayName="disponibilidades">
-          @for (grupo of disponibilidades.controls; track $index; let i = $index) {
-            <div class="disponibilidad-row" [formGroupName]="i">
-              <div class="field">
-                <label [for]="'dia-' + i">Día</label>
-                <select [id]="'dia-' + i" formControlName="diaSemana">
-                  @for (dia of dias; track dia.value) {
-                    <option [value]="dia.value">{{ dia.label }}</option>
-                  }
-                </select>
-              </div>
-
-              <div class="field">
-                <label [for]="'inicio-' + i">Desde</label>
-                <input [id]="'inicio-' + i" type="time" formControlName="horaInicio" />
-              </div>
-
-              <div class="field">
-                <label [for]="'fin-' + i">Hasta</label>
-                <input [id]="'fin-' + i" type="time" formControlName="horaFin" />
-              </div>
-
+          <span class="field-label" id="categoria-label">Categoría</span>
+          <div class="categorias" role="radiogroup" aria-labelledby="categoria-label">
+            @for (opcion of categorias; track opcion.value) {
               <button
                 type="button"
-                class="btn-remove"
-                [disabled]="disponibilidades.length <= 1"
-                (click)="quitarDisponibilidad(i)"
+                role="radio"
+                class="categoria"
+                [class.selected]="categoria() === opcion.value"
+                [attr.aria-checked]="categoria() === opcion.value"
+                [disabled]="isEditMode() && categoria() !== opcion.value"
+                (click)="elegirCategoria(opcion.value)"
               >
-                Quitar
+                <span class="categoria-icono" aria-hidden="true">
+                  @switch (opcion.value) {
+                    @case ('paseador') {
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="10" r="2" /><circle cx="9.5" cy="5.5" r="2" /><circle cx="14.5" cy="5.5" r="2" /><circle cx="18.5" cy="10" r="2" /><path d="M12 11c-3 0-5.5 3-5.5 5.5 0 1.8 1.4 2.5 3 2.5 1 0 1.6-.4 2.5-.4s1.5.4 2.5.4c1.6 0 3-.7 3-2.5C17.5 14 15 11 12 11Z" /></svg>
+                    }
+                    @case ('guarderia') {
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5" /><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9" /></svg>
+                    }
+                    @default {
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12" /></svg>
+                    }
+                  }
+                </span>
+                <span class="categoria-nombre">{{ opcion.label }}</span>
               </button>
+            }
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="field-label" id="duracion-label">Duración de cada turno</span>
+          <div class="duraciones" role="radiogroup" aria-labelledby="duracion-label">
+            @for (minutos of opcionesDuracion(); track minutos) {
+              <button
+                type="button"
+                role="radio"
+                class="duracion"
+                [class.selected]="duracion() === minutos"
+                [attr.aria-checked]="duracion() === minutos"
+                (click)="elegirDuracion(minutos)"
+              >
+                {{ etiquetaDuracion(minutos) }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="field field-grow">
+          <label class="field-label" for="descripcion">Descripción</label>
+          <textarea
+            id="descripcion"
+            formControlName="descripcion"
+            placeholder="Contá en qué consiste tu servicio"
+            [attr.maxlength]="descripcionMax"
+          ></textarea>
+          <span class="contador">{{ cantidadCaracteres() }} / {{ descripcionMax }}</span>
+        </div>
+
+        <button type="submit" class="btn-primary panel-action" [disabled]="isSubmitting()">
+          {{ isSubmitting() ? 'Guardando...' : isEditMode() ? 'Guardar cambios' : 'Publicar servicio' }}
+        </button>
+      </section>
+
+      <section class="panel" aria-labelledby="disponibilidad-servicio">
+        <h2 id="disponibilidad-servicio">Disponibilidad</h2>
+
+        <div class="field">
+          <span class="field-label">Días</span>
+          <div class="dias-grid" role="group" aria-label="Días de la semana">
+            @for (dia of dias; track dia.value) {
+              <button
+                type="button"
+                class="dia-btn"
+                [class.active]="esDiaSeleccionado(dia.value)"
+                [attr.aria-pressed]="esDiaSeleccionado(dia.value)"
+                [attr.aria-label]="dia.label"
+                (click)="toggleDia(dia.value)"
+              >
+                {{ dia.corto }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label" for="hora-inicio">Desde</label>
+            <input
+              id="hora-inicio"
+              type="time"
+              [value]="horaInicio()"
+              (input)="setHoraInicio($any($event.target).value)"
+            />
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="hora-fin">Hasta</label>
+            <input
+              id="hora-fin"
+              type="time"
+              [value]="horaFin()"
+              (input)="setHoraFin($any($event.target).value)"
+            />
+          </div>
+        </div>
+
+        @if (formError()) {
+          <p class="banner banner-error" role="alert">{{ formError() }}</p>
+        }
+
+        <button type="button" class="btn-soft" (click)="agregarRegla()">Agregar horario</button>
+
+        <div class="horarios">
+          <span class="field-label">Horarios configurados</span>
+          @if (reglas().length === 0) {
+            <div class="empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7v5l3 2" />
+              </svg>
+              <p>Todavía no agregaste ningún horario.</p>
             </div>
+          } @else {
+            <ul class="reglas">
+              @for (regla of reglas(); track regla.id) {
+                <li class="regla">
+                  <div class="regla-info">
+                    <span class="regla-horario">{{ regla.horaInicio }} – {{ regla.horaFin }}</span>
+                    <span class="regla-detalle">{{ resumenDias(regla.dias) }}</span>
+                  </div>
+                  <button
+                    type="button"
+                    class="btn-quitar"
+                    [attr.aria-label]="'Quitar el horario de ' + regla.horaInicio + ' a ' + regla.horaFin"
+                    (click)="quitarRegla(regla.id)"
+                  >
+                    Quitar
+                  </button>
+                </li>
+              }
+            </ul>
           }
         </div>
       </section>
-
-      <button type="submit" [disabled]="isSubmitting()">
-        {{ isSubmitting() ? 'Guardando...' : isEditMode() ? 'Guardar cambios' : 'Publicar servicio' }}
-      </button>
-    }
-  </form>
+    </form>
+  }
 </main>

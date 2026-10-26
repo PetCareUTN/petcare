@@ -18,6 +18,7 @@ export interface DisponibilidadRequest {
 export interface CreateServicioRequest {
   categoria: CategoriaServicio;
   descripcion?: string;
+  duracionMinutos?: number;
   disponibilidades: DisponibilidadRequest[];
 }
 
@@ -36,5 +37,26 @@ export interface ServicioResponse {
   idUsuario: number;
   categoria: CategoriaServicio;
   descripcion: string | null;
+  /** Minutos que dura cada turno de este servicio. */
+  duracionMinutos: number;
   disponibilidades: DisponibilidadResponse[];
 }
+
+export interface ResenaServicio {
+  id: number;
+  puntuacion: number;
+  comentario: string;
+  /** Fecha ISO. */
+  fecha: string;
+  /** Nombre del dueño que la escribió. */
+  autor: string;
+}
+
+/** Perfil de un prestador en una categoría: su puntaje y las reseñas recibidas. */
+export interface PerfilPrestadorResponse {
+  serviciosCompletados: number;
+  /** Promedio de 1 a 5, o `null` si todavía no tiene reseñas. */
+  promedio: number | null;
+  resenas: ResenaServicio[];
+}
+

@@ -20,7 +20,15 @@ data class UserResponse(
     val id: Int,
 
     val nombre: String,
-    val apellido: String,
+
+    /**
+     * Null en las cuentas creadas con Google, que llegan sin apellido. El
+     * backend lo declara `string | null` en UserPublicDto; acá tiene que
+     * coincidir, porque Gson no valida los tipos de Kotlin y un null metido
+     * en un campo "no nulo" revienta recien donde se lo dibuja.
+     */
+    val apellido: String?,
+
     val email: String,
 
     @SerializedName("id_rol")
@@ -60,7 +68,10 @@ data class RegisterResponse(
     val id: Int,
 
     val nombre: String,
-    val apellido: String,
+
+    /** Null por el mismo motivo que en UserResponse. */
+    val apellido: String?,
+
     val email: String,
 
     @SerializedName("id_rol")

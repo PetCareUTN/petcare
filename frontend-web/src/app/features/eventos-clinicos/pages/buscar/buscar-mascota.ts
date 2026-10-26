@@ -1,15 +1,19 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Subject, debounceTime, distinctUntilChanged, of, switchMap, tap } from 'rxjs';
 import { ApiError } from '../../../auth/models/user';
 import { MascotaOwner, MascotaResponse } from '../../../mascotas/models/mascota';
+import { BusquedaClientesService } from '../../../mascotas/services/busqueda-clientes-service';
 import { MascotasService } from '../../../mascotas/services/mascotas-service';
 import { ListaClientesModal } from '../../components/lista-clientes/lista-clientes';
 
 type AttentionStep = 'cliente' | 'mascota' | 'evento';
-type OwnerSearchMode = 'documento' | 'email';
 
-/** Cuánto queda visible el cartel temporal de "mascota registrada". */
+/** Espera tras la última tecla antes de consultar al backend. */
+const SEARCH_DEBOUNCE_MS = 300;
+/** Cuánto queda visible el cartel temporal de "registrado con éxito". */
 const TOAST_DURATION_MS = 4000;
 
 @Component({
@@ -22,20 +26,23 @@ export class BuscarMascotaPage implements OnInit {
   protected readonly mascotasService = inject(MascotasService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly busquedaClientes = inject(BusquedaClientesService);
 
   protected readonly toastMessage = signal<string | null>(null);
   protected readonly isListaClientesOpen = signal(false);
 
+  protected readonly searchQuery = signal('');
+  protected readonly searchResults = signal<MascotaOwner[]>([]);
+  protected readonly activeResultIndex = signal(0);
   protected readonly isSearchingOwner = signal(false);
+  protected readonly hasSearched = signal(false);
   protected readonly isLoadingOwnerPets = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
-  protected readonly ownerSearchMessage = signal<string | null>(null);
   protected readonly ownerPets = signal<MascotaResponse[]>([]);
   protected readonly selectedOwner = signal<MascotaOwner | null>(null);
   protected readonly selectedPet = signal<MascotaResponse | null>(null);
-  protected readonly ownerDocument = signal('');
-  protected readonly ownerEmail = signal('');
-  protected readonly ownerSearchMode = signal<OwnerSearchMode>('documento');
+  private readonly searchInput$ = new Subject<string>();
   private readonly petIdToRestore = signal<number | null>(null);
 
   protected readonly currentStep = computed<AttentionStep>(() => {
@@ -48,8 +55,40 @@ export class BuscarMascotaPage implements OnInit {
     return 'evento';
   });
 
+  protected readonly searchHint = computed(() => this.busquedaClientes.pista(this.searchQuery()));
+
+  constructor() {
+    this.searchInput$
+      .pipe(
+        debounceTime(SEARCH_DEBOUNCE_MS),
+        distinctUntilChanged(),
+        tap((query) => {
+          this.isSearchingOwner.set(this.busquedaClientes.puedeBuscar(query));
+        }),
+        switchMap((query) =>
+          this.busquedaClientes.puedeBuscar(query) ? this.busquedaClientes.buscar(query) : of(null),
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((resultados) => {
+        this.isSearchingOwner.set(false);
+        this.activeResultIndex.set(0);
+        this.hasSearched.set(resultados !== null);
+        this.searchResults.set(resultados ?? []);
+      });
+  }
+
   protected ownerDisplayName(owner: MascotaOwner): string {
     return [owner.nombre, owner.apellido].filter(Boolean).join(' ');
+  }
+
+  protected ownerInitials(owner: MascotaOwner): string {
+    return (
+      [owner.nombre, owner.apellido]
+        .filter((parte): parte is string => !!parte)
+        .map((parte) => parte.charAt(0).toUpperCase())
+        .join('') || '?'
+    );
   }
 
   private mostrarToast(mensaje: string): void {
@@ -62,94 +101,73 @@ export class BuscarMascotaPage implements OnInit {
     const ownerEmail = this.route.snapshot.queryParamMap.get('ownerEmail')?.trim() ?? '';
     const selectedPetId = Number(this.route.snapshot.queryParamMap.get('selectedPetId'));
     const mascotaCreada = this.route.snapshot.queryParamMap.get('mascotaCreada');
+    const eventoRegistrado = this.route.snapshot.queryParamMap.get('eventoRegistrado');
 
     if (Number.isInteger(selectedPetId) && selectedPetId > 0) {
       this.petIdToRestore.set(selectedPetId);
     }
 
-    if (mascotaCreada) {
-      this.mostrarToast(`Mascota ${mascotaCreada} registrada con éxito.`);
+    if (mascotaCreada || eventoRegistrado) {
+      this.mostrarToast(
+        eventoRegistrado
+          ? 'Evento clínico registrado con éxito.'
+          : `Mascota ${mascotaCreada} registrada con éxito.`,
+      );
       // Se saca de la URL para que un refresh no vuelva a mostrar el cartel.
       this.router.navigate([], {
         relativeTo: this.route,
-        queryParams: { mascotaCreada: null },
+        queryParams: { mascotaCreada: null, eventoRegistrado: null },
         queryParamsHandling: 'merge',
         replaceUrl: true,
       });
     }
 
-    if (ownerDocument) {
-      this.ownerSearchMode.set('documento');
-      this.ownerDocument.set(ownerDocument);
-      this.searchOwner();
-      return;
-    }
-
-    if (ownerEmail) {
-      this.ownerSearchMode.set('email');
-      this.ownerEmail.set(ownerEmail);
-      this.searchOwner();
+    const restoreQuery = ownerDocument || ownerEmail;
+    if (restoreQuery) {
+      this.restaurarCliente(restoreQuery);
     }
   }
 
-  protected setOwnerSearchMode(mode: OwnerSearchMode): void {
-    this.ownerSearchMode.set(mode);
-    this.ownerSearchMessage.set(null);
-    if (mode === 'documento') {
-      this.ownerEmail.set('');
-      return;
+  protected onSearchInput(value: string): void {
+    this.searchQuery.set(value);
+    this.hasSearched.set(false);
+    this.searchResults.set([]);
+    this.searchInput$.next(value.trim());
+  }
+
+  protected onSearchKeydown(event: KeyboardEvent): void {
+    const total = this.searchResults().length;
+    if (event.key === 'ArrowDown' && total > 0) {
+      event.preventDefault();
+      this.activeResultIndex.update((index) => (index + 1) % total);
+    } else if (event.key === 'ArrowUp' && total > 0) {
+      event.preventDefault();
+      this.activeResultIndex.update((index) => (index - 1 + total) % total);
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      const elegido = this.searchResults()[this.activeResultIndex()];
+      if (elegido) {
+        this.seleccionarCliente(elegido);
+      }
+    } else if (event.key === 'Escape') {
+      this.limpiarBusqueda();
     }
-    this.ownerDocument.set('');
+  }
+
+  protected limpiarBusqueda(): void {
+    this.searchQuery.set('');
+    this.searchResults.set([]);
+    this.hasSearched.set(false);
+    this.isSearchingOwner.set(false);
+    this.searchInput$.next('');
   }
 
   protected clearOwnerSelection(): void {
     this.selectedOwner.set(null);
     this.selectedPet.set(null);
     this.ownerPets.set([]);
-    this.ownerSearchMessage.set(null);
-    this.petIdToRestore.set(null);
-  }
-
-  protected searchOwner(): void {
-    const mode = this.ownerSearchMode();
-    const documento = mode === 'documento' ? this.ownerDocument().trim() : '';
-    const email = mode === 'email' ? this.ownerEmail().trim().toLowerCase() : '';
-
-    this.ownerSearchMessage.set(null);
     this.errorMessage.set(null);
-    this.selectedOwner.set(null);
-    this.selectedPet.set(null);
-    this.ownerPets.set([]);
-
-    if (mode === 'documento' && !documento) {
-      this.ownerSearchMessage.set('Ingresá el DNI para buscar al cliente.');
-      return;
-    }
-
-    if (mode === 'email' && !email) {
-      this.ownerSearchMessage.set('Ingresá el email para buscar al cliente.');
-      return;
-    }
-
-    if (documento && !/^[0-9]+$/.test(documento)) {
-      this.ownerSearchMessage.set('El DNI solo puede contener números.');
-      return;
-    }
-
-    this.isSearchingOwner.set(true);
-    this.mascotasService
-      .findOwner({ documento: documento || undefined, email: email || undefined })
-      .subscribe({
-        next: (owner) => {
-          this.isSearchingOwner.set(false);
-          this.selectedOwner.set(owner);
-          this.loadOwnerPets(owner.id_usuario);
-        },
-        error: (error: ApiError) => {
-          this.isSearchingOwner.set(false);
-          this.ownerSearchMessage.set(error.mensaje ?? 'No se encontró un cliente con esos datos.');
-        },
-      });
+    this.petIdToRestore.set(null);
   }
 
   protected abrirListaClientes(): void {
@@ -158,7 +176,11 @@ export class BuscarMascotaPage implements OnInit {
 
   protected seleccionarClienteDeLista(owner: MascotaOwner): void {
     this.isListaClientesOpen.set(false);
-    this.ownerSearchMessage.set(null);
+    this.seleccionarCliente(owner);
+  }
+
+  protected seleccionarCliente(owner: MascotaOwner): void {
+    this.limpiarBusqueda();
     this.errorMessage.set(null);
     this.selectedPet.set(null);
     this.petIdToRestore.set(null);
@@ -195,6 +217,22 @@ export class BuscarMascotaPage implements OnInit {
       idMascota: pet.idMascota,
       selectedPetId: pet.idMascota,
     };
+  }
+
+  /** Vuelve a seleccionar al cliente cuando se regresa desde otra pantalla. */
+  private restaurarCliente(valor: string): void {
+    this.isSearchingOwner.set(true);
+    const consulta = valor.includes('@')
+      ? this.mascotasService.findOwner({ email: valor.toLowerCase() })
+      : this.mascotasService.findOwner({ documento: valor });
+    consulta.subscribe({
+      next: (owner) => {
+        this.isSearchingOwner.set(false);
+        this.selectedOwner.set(owner);
+        this.loadOwnerPets(owner.id_usuario);
+      },
+      error: () => this.isSearchingOwner.set(false),
+    });
   }
 
   private loadOwnerPets(ownerId: number): void {

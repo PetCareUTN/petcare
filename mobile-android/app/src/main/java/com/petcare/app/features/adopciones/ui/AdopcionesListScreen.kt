@@ -1,5 +1,6 @@
 package com.petcare.app.features.adopciones.ui
 
+import com.petcare.app.ui.components.LocalEspacioBarraInferior
 import com.petcare.app.ui.components.elevacionTarjeta
 import com.petcare.app.ui.components.elevacionBoton
 import com.petcare.app.ui.components.elevacionBotonContorno
@@ -113,7 +114,10 @@ fun AdopcionesListScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .padding(innerPadding)
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+                .padding(horizontal = 20.dp, vertical = 12.dp)
+                // La barra inferior flota sobre el contenido: sin esto tapa los
+                // botones de Pasar / Me interesa / Guardar.
+                .padding(bottom = LocalEspacioBarraInferior.current),
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.Start
         ) {
@@ -124,19 +128,14 @@ fun AdopcionesListScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Mascotas en adopción",
-                        style = MaterialTheme.typography.headlineSmall,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Encontrá a tu próximo compañero",
-                        color = PetCareMuted,
-                        style = MaterialTheme.typography.bodyMedium
                     )
                 }
                 BotonFiltros(activo = hayFiltrosActivos, onClick = onFiltrosClick)
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // Los accesos van en una fila que se desplaza; el degradado del borde
             // derecho deja claro que hay más opciones y no corta el texto en seco.
