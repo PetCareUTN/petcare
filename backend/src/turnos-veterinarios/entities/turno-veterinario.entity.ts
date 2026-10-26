@@ -13,6 +13,8 @@ import { User } from '../../users/entities/user.entity';
 import { Veterinario } from '../../veterinarios/entities/veterinario.entity';
 
 export type CanceladoPor = 'dueño' | 'veterinario';
+/** Quién cargó el turno: el dueño desde la app o la veterinaria desde la web. */
+export type CreadoPor = 'dueño' | 'veterinario';
 
 @Entity('turnos_veterinarios')
 export class TurnoVeterinario {
@@ -55,6 +57,13 @@ export class TurnoVeterinario {
 
   @Column({ name: 'motivo_cancelacion', type: 'text', nullable: true })
   motivoCancelacion: string | null;
+
+  @Column({ name: 'creado_por', type: 'varchar', length: 20, default: 'dueño' })
+  creadoPor: CreadoPor;
+
+  /** La veterinaria lo cargó con el horario ya lleno, a propósito. */
+  @Column({ name: 'sobrecupo', type: 'boolean', default: false })
+  sobrecupo: boolean;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

@@ -53,6 +53,24 @@ export class Suscripcion {
   @Column({ type: 'timestamptz', name: 'fecha_vencimiento', nullable: true })
   fechaVencimiento: Date | null;
 
+  /** Fin del período de prueba gratuito (null si no hay trial activo). */
+  @Column({ type: 'timestamptz', name: 'fecha_prueba_fin', nullable: true })
+  fechaPruebaFin: Date | null;
+
+  /**
+   * true si ya se usó el período de prueba gratuito.
+   * Evita re-activar el trial después de una cancelación o un pago.
+   */
+  @Column({ name: 'prueba_usada', type: 'boolean', default: false })
+  pruebaUsada: boolean;
+
+  /**
+   * Si ya se avisó que el período de prueba está por vencer (a 30 días).
+   * Igual que graciaNotificada: evita repetir el aviso en cada cron.
+   */
+  @Column({ name: 'prueba_notificada', type: 'boolean', default: false })
+  pruebaNotificada: boolean;
+
   /**
    * Si ya se avisó que el período de gracia está por vencer.
    *

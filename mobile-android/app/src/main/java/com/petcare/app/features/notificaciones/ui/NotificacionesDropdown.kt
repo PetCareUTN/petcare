@@ -50,7 +50,17 @@ fun NotificacionesDropdown(
     /** Abre el reporte de pérdida de la mascota que se alejó (US-34). */
     onReportarPerdida: (Int) -> Unit = {},
     /** Abre las solicitudes que me hicieron para compartir una mascota. */
-    onAbrirSolicitudCompartir: () -> Unit = {}
+    onAbrirSolicitudCompartir: () -> Unit = {},
+    /** Abre "Mis turnos" (turno confirmado/cancelado, recordatorio de vacuna). */
+    onAbrirMisTurnos: () -> Unit = {},
+    /** Abre "Mis turnos" mostrando primero el turno puntual (tipoReferencia, id). */
+    onAbrirTurno: (String, Int) -> Unit = { _, _ -> },
+    /** Abre las solicitudes de adopción que recibí sobre mis publicaciones. */
+    onAbrirSolicitudesRecibidas: () -> Unit = {},
+    /** Abre las solicitudes de adopción que hice yo. */
+    onAbrirMisSolicitudes: () -> Unit = {},
+    /** Abre el perfil de la mascota que indica la notificación. */
+    onAbrirMascota: (Int) -> Unit = {}
 ) {
     val noLeidas = notificaciones.count { !it.leida }
 
@@ -153,7 +163,35 @@ fun NotificacionesDropdown(
                         } ?: if (esSolicitudCompartir(notificacion)) {
                             { onAbrirSolicitudCompartir() }
                         } else {
-                            null
+                            when (notificacion.tipo) {
+                                "turno_confirmado",
+                                "turno_cancelado" -> {
+                                    val tipoRef = notificacion.tipoReferencia
+                                    val idTurno = notificacion.idReferencia
+                                    if (tipoRef != null && idTurno != null) {
+                                        { onAbrirTurno(tipoRef, idTurno) }
+                                    } else {
+                                        { onAbrirMisTurnos() }
+                                    }
+                                }
+
+                                "recordatorio_vacuna" -> ({ onAbrirMisTurnos() })
+
+                                "solicitud_recibida" -> ({ onAbrirSolicitudesRecibidas() })
+
+                                "aprobacion",
+                                "rechazo" -> ({ onAbrirMisSolicitudes() })
+
+                                // El idReferencia es la mascota; en la baja ya no se
+                                // la puede ver, asi que ese tipo no navega.
+                                "compartir_mascota_aceptada",
+                                "compartir_mascota_rechazada" ->
+                                    notificacion.idReferencia?.let { idMascota ->
+                                        { onAbrirMascota(idMascota) }
+                                    }
+
+                                else -> null
+                            }
                         }
                     )
                     if (indice < notificaciones.lastIndex) {
@@ -219,6 +257,9 @@ private fun NotificacionItem(
                 text = when (notificacion.tipo) {
                     "mascota_separada" -> "Reportar como perdida"
                     "solicitud_compartir_mascota" -> "Ver solicitud"
+                    "turno_confirmado", "turno_cancelado", "recordatorio_vacuna" -> "Ver mis turnos"
+                    "solicitud_recibida", "aprobacion", "rechazo" -> "Ver solicitud"
+                    "compartir_mascota_aceptada", "compartir_mascota_rechazada" -> "Ver mascota"
                     else -> "Ver ultima ubicacion"
                 },
                 color = PetCareTealDark,

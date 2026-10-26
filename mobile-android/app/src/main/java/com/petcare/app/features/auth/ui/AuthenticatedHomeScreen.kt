@@ -1,11 +1,16 @@
 package com.petcare.app.features.auth.ui
 
+import com.petcare.app.ui.components.LocalEspacioBarraInferior
 import com.petcare.app.ui.components.elevacionTarjeta
 import com.petcare.app.ui.components.elevacionBoton
 import com.petcare.app.ui.components.elevacionBotonContorno
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -108,7 +113,8 @@ fun AuthenticatedHomeScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .padding(horizontal = 20.dp, vertical = 16.dp)
+            .padding(bottom = LocalEspacioBarraInferior.current),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.Start
     ) {
@@ -611,34 +617,60 @@ private fun iconoTipoTurno(tipo: TipoTurnoItem): Int = when (tipo) {
     TipoTurnoItem.PASEADOR, TipoTurnoItem.GUARDERIA, TipoTurnoItem.PELUQUERIA -> R.drawable.ic_services
 }
 
+/**
+ * Barra inferior flotante con forma de pastilla, semitransparente y solo con
+ * iconos (el nombre queda en la descripcion para TalkBack). La seccion activa
+ * se marca con una pastilla mas clara detras del icono.
+ */
 @Composable
 fun PetCareBottomBar(
     selectedItem: String,
     onInicioClick: () -> Unit = {},
     onTurnosClick: () -> Unit,
     onAdopcionClick: () -> Unit,
-    onPerfilClick: () -> Unit
+    onPerfilClick: () -> Unit,
+    onLocalizacionClick: () -> Unit = {}
 ) {
-    NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 0.dp
+    val forma = RoundedCornerShape(36.dp)
+    val tinta = MaterialTheme.colorScheme.onSurface
+    val items = listOf("Inicio", "Adopción", "Turnos", "Localización", "Perfil")
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
-        val items = listOf("Inicio", "Adopción", "Turnos", "Localización", "Perfil")
-        items.forEach { item ->
-            val isInicio = item == "Inicio"
-            val isTurnos = item == "Turnos"
-            val isAdopcion = item == "Adopción"
-            val isPerfil = item == "Perfil"
-            // La localizacion se agrega para el sprint que viene (BLE); por ahora no hace nada.
-            NavigationBarItem(
-                selected = item == selectedItem,
-                onClick = {
-                    if (isInicio) onInicioClick()
-                    if (isTurnos) onTurnosClick()
-                    if (isAdopcion) onAdopcionClick()
-                    if (isPerfil) onPerfilClick()
-                },
-                icon = {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(elevation = 10.dp, shape = forma, clip = false)
+                .clip(forma)
+                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.82f))
+                .border(1.dp, Color.White.copy(alpha = 0.7f), forma)
+                .padding(6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            items.forEach { item ->
+                val seleccionado = item == selectedItem
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp)
+                        .clip(RoundedCornerShape(30.dp))
+                        .background(if (seleccionado) tinta.copy(alpha = 0.10f) else Color.Transparent)
+                        .clickable(role = Role.Tab) {
+                            when (item) {
+                                "Inicio" -> onInicioClick()
+                                "Turnos" -> onTurnosClick()
+                                "Adopción" -> onAdopcionClick()
+                                "Perfil" -> onPerfilClick()
+                                "Localización" -> onLocalizacionClick()
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
                     val iconRes = when (item) {
                         "Adopción" -> R.drawable.ic_heart
                         "Turnos" -> R.drawable.ic_calendar
@@ -649,19 +681,11 @@ fun PetCareBottomBar(
                     Icon(
                         painter = painterResource(iconRes),
                         contentDescription = item,
-                        modifier = Modifier.size(20.dp)
-                    )
-                },
-                label = {
-                    Text(
-                        text = item,
-                        maxLines = 1,
-                        softWrap = false,
-                        fontSize = 9.sp,
-                        style = MaterialTheme.typography.labelSmall
+                        tint = if (seleccionado) tinta else tinta.copy(alpha = 0.7f),
+                        modifier = Modifier.size(24.dp)
                     )
                 }
-            )
+            }
         }
     }
 }

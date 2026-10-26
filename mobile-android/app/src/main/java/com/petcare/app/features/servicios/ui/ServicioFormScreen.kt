@@ -1,5 +1,6 @@
 package com.petcare.app.features.servicios.ui
 
+import com.petcare.app.ui.components.LocalEspacioBarraInferior
 import com.petcare.app.ui.components.elevacionBotonContorno
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -117,7 +118,8 @@ fun ServicioFormScreen(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+                .padding(horizontal = 20.dp, vertical = 12.dp)
+                .padding(bottom = LocalEspacioBarraInferior.current),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             SeccionFormulario(

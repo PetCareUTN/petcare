@@ -24,3 +24,13 @@ export interface TurnoServicioResponse {
 export interface CancelarTurnoServicioRequest {
   motivoCancelacion?: string;
 }
+
+/** Reserva de un servicio cargada por el propio prestador para un cliente. */
+export interface AgendarTurnoServicioRequest {
+  idMascota: number;
+  idDuenio?: number;
+  idServicio: number;
+  fecha: string;
+  horaInicio: string;
+  notas?: string;
+}

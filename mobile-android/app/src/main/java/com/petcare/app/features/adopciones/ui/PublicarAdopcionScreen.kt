@@ -1,5 +1,6 @@
 package com.petcare.app.features.adopciones.ui
 
+import com.petcare.app.ui.components.LocalEspacioBarraInferior
 import com.petcare.app.ui.components.elevacionTarjeta
 import com.petcare.app.ui.components.elevacionBoton
 import android.net.Uri
@@ -121,7 +122,8 @@ fun PublicarAdopcionScreen(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+                .padding(horizontal = 20.dp, vertical = 12.dp)
+                .padding(bottom = LocalEspacioBarraInferior.current),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             if (pets.isEmpty()) {

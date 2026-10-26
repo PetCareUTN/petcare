@@ -16,9 +16,19 @@ import { NotificacionesService } from './notificaciones.service';
  * accionable: la pantalla de última ubicación siempre muestra la detección más
  * reciente, aunque no se haya notificado.
  */
-const VENTANA_AGRUPACION_MINUTOS = Number(
-  process.env.DETECCIONES_VENTANA_AVISO_MINUTOS ?? 30,
-);
+const VENTANA_AGRUPACION_MINUTOS_POR_DEFECTO = 30;
+
+/**
+ * Se lee en cada uso y no en una constante del módulo porque `dotenv.config()`
+ * corre después de que se importan los services: una constante evaluada arriba
+ * se queda con el valor por defecto aunque la variable esté definida.
+ */
+function ventanaAgrupacionMinutos(): number {
+  const configurada = Number(process.env.DETECCIONES_VENTANA_AVISO_MINUTOS);
+  return Number.isFinite(configurada)
+    ? configurada
+    : VENTANA_AGRUPACION_MINUTOS_POR_DEFECTO;
+}
 
 /** Datos que necesita el aviso, ya resueltos por quien lo dispara. */
 export interface DatosDeteccion {
@@ -95,7 +105,7 @@ export class NotificacionesDeteccionesService {
     idReporte: number,
     idDuenio: number,
   ): Promise<boolean> {
-    const desde = new Date(Date.now() - VENTANA_AGRUPACION_MINUTOS * 60 * 1000);
+    const desde = new Date(Date.now() - ventanaAgrupacionMinutos() * 60 * 1000);
 
     const reciente = await this.notificacionesRepository.findOne({
       where: {

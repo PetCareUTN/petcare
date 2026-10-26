@@ -1,5 +1,6 @@
 package com.petcare.app.features.profile.ui
 
+import com.petcare.app.ui.components.LocalEspacioBarraInferior
 import com.petcare.app.ui.components.elevacionTarjeta
 import com.petcare.app.ui.components.elevacionBotonContorno
 import android.net.Uri
@@ -73,7 +74,8 @@ fun ProfileScreen(
             .background(MaterialTheme.colorScheme.background)
             .systemBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(20.dp),
+            .padding(20.dp)
+            .padding(bottom = LocalEspacioBarraInferior.current),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.Start
     ) {
@@ -238,9 +240,9 @@ private fun ProfileContent(
     onPhotoSelected: (Uri) -> Unit,
     onEdit: () -> Unit
 ) {
-    val nombreCompleto = listOf(profile.nombre, profile.apellido)
-        .filter { it.isNotBlank() }
-        .joinToString(" ")
+    // Sale del modelo porque apellido puede venir en null (cuentas de Google):
+    // armarlo aca con isNotBlank() sobre el apellido rompia la pantalla.
+    val nombreCompleto = profile.nombreCompleto
     val elegirFoto = rememberAdjustedPhotoPicker(onPhotoAdjusted = onPhotoSelected)
 
     // Cabecera: franja de color, avatar (con la foto si la cargó) apoyado en el

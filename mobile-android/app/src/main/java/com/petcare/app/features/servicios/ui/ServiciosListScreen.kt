@@ -1,5 +1,6 @@
 package com.petcare.app.features.servicios.ui
 
+import com.petcare.app.ui.components.LocalEspacioBarraInferior
 import com.petcare.app.ui.components.elevacionTarjeta
 import com.petcare.app.ui.components.elevacionBoton
 import com.petcare.app.ui.components.elevacionBotonContorno
@@ -85,7 +86,12 @@ fun ServiciosListScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .padding(innerPadding),
-            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+            contentPadding = PaddingValues(
+                start = 20.dp,
+                top = 12.dp,
+                end = 20.dp,
+                bottom = 12.dp + LocalEspacioBarraInferior.current
+            ),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item(key = "encabezado") {

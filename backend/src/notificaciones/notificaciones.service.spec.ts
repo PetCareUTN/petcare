@@ -4,6 +4,7 @@ import { NotFoundException } from '@nestjs/common';
 import { NotificacionesService } from './notificaciones.service';
 import { Notificacion } from './entities/notificacion.entity';
 import { NotificationType } from '../common/enums/notification-type.enum';
+import { DispositivosPushService } from './dispositivos-push.service';
 
 describe('NotificacionesService', () => {
   let service: NotificacionesService;
@@ -14,6 +15,7 @@ describe('NotificacionesService', () => {
     save: jest.Mock;
     update: jest.Mock;
   };
+  let dispositivosPushService: { enviarNotificacion: jest.Mock };
 
   beforeEach(async () => {
     repository = {
@@ -28,10 +30,15 @@ describe('NotificacionesService', () => {
       providers: [
         NotificacionesService,
         { provide: getRepositoryToken(Notificacion), useValue: repository },
+        {
+          provide: DispositivosPushService,
+          useValue: { enviarNotificacion: jest.fn().mockResolvedValue(1) },
+        },
       ],
     }).compile();
 
     service = module.get<NotificacionesService>(NotificacionesService);
+    dispositivosPushService = module.get(DispositivosPushService);
   });
 
   it('debería estar definido', () => {
@@ -74,8 +81,16 @@ describe('NotificacionesService', () => {
   describe('listarPorUsuario', () => {
     it('debería listar notificaciones de un usuario ordenadas por fecha', async () => {
       const notificaciones = [
-        { idNotificacion: 2, titulo: 'Segunda', fechaEnvio: new Date('2026-07-23') },
-        { idNotificacion: 1, titulo: 'Primera', fechaEnvio: new Date('2026-07-22') },
+        {
+          idNotificacion: 2,
+          titulo: 'Segunda',
+          fechaEnvio: new Date('2026-07-23'),
+        },
+        {
+          idNotificacion: 1,
+          titulo: 'Primera',
+          fechaEnvio: new Date('2026-07-22'),
+        },
       ];
       repository.find.mockResolvedValue(notificaciones);
 
@@ -106,7 +121,9 @@ describe('NotificacionesService', () => {
     it('debería lanzar NotFoundException si no existe la notificación', async () => {
       repository.findOne.mockResolvedValue(null);
 
-      await expect(service.marcarLeida(999, 1)).rejects.toThrow(NotFoundException);
+      await expect(service.marcarLeida(999, 1)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -129,6 +146,64 @@ describe('NotificacionesService', () => {
       const result = await service.marcarTodasLeidas(7);
 
       expect(result.cantidad).toBe(0);
+    });
+  });
+
+  describe('push (canal adicional)', () => {
+    const notificacionGuardada = {
+      idNotificacion: 9,
+      tipo: NotificationType.TURNO_CONFIRMADO,
+      titulo: 'Turno confirmado',
+      cuerpo: 'Mañana a las 10:00',
+      leida: false,
+      fechaEnvio: new Date('2026-10-25T12:00:00.000Z'),
+      idReferencia: 33,
+      tipoReferencia: 'turno_veterinario',
+    };
+
+    beforeEach(() => {
+      repository.create.mockReturnValue(notificacionGuardada);
+      repository.save.mockResolvedValue(notificacionGuardada);
+    });
+
+    it('manda la notificación al dispositivo del destinatario', async () => {
+      await service.crear(
+        7,
+        NotificationType.TURNO_CONFIRMADO,
+        'Turno confirmado',
+        'Mañana a las 10:00',
+        33,
+        'turno_veterinario',
+      );
+
+      expect(dispositivosPushService.enviarNotificacion).toHaveBeenCalledWith(
+        7,
+        expect.objectContaining({
+          idNotificacion: 9,
+          titulo: 'Turno confirmado',
+          idReferencia: 33,
+          tipoReferencia: 'turno_veterinario',
+        }),
+      );
+    });
+
+    it('guarda la notificación interna aunque el push falle', async () => {
+      dispositivosPushService.enviarNotificacion.mockRejectedValue(
+        new Error('FCM caído'),
+      );
+
+      // El push es un canal extra: si se cae, el aviso tiene que quedar igual
+      // en el historial, que es lo que garantiza que no se pierda.
+      await expect(
+        service.crear(
+          7,
+          NotificationType.TURNO_CONFIRMADO,
+          'Turno confirmado',
+          'Mañana a las 10:00',
+        ),
+      ).resolves.toEqual(expect.objectContaining({ idNotificacion: 9 }));
+
+      expect(repository.save).toHaveBeenCalled();
     });
   });
 });

@@ -21,3 +21,27 @@ fun currentUserId(sessionStore: SessionStore): Int? {
         null
     }
 }
+
+/** Mismo valor que RoleName.VETERINARIO del backend (claim "rol" del JWT). */
+private const val ROL_VETERINARIO = "veterinario"
+
+/**
+ * Los veterinarios trabajan desde la web: la app mobile es para los dueños de
+ * mascotas. El backend deja loguear a ambos por el mismo endpoint, asi que el
+ * rechazo se hace aca mirando el claim "rol" del token antes de abrir sesion.
+ */
+fun esTokenDeVeterinario(token: String): Boolean =
+    try {
+        val payload = token.split(".").getOrNull(1)
+        if (payload == null) {
+            false
+        } else {
+            val decoded = Base64.decode(
+                payload,
+                Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP
+            )
+            JSONObject(String(decoded, Charsets.UTF_8)).optString("rol") == ROL_VETERINARIO
+        }
+    } catch (_: Exception) {
+        false
+    }

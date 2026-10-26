@@ -1,5 +1,6 @@
 package com.petcare.app.features.profile.ui
 
+import com.petcare.app.ui.components.LocalEspacioBarraInferior
 import com.petcare.app.ui.components.elevacionBoton
 import com.petcare.app.ui.components.elevacionBotonContorno
 import androidx.compose.foundation.clickable
@@ -55,7 +56,9 @@ fun EditProfileScreen(
     onChangeEmail: () -> Unit
 ) {
     var nombre by rememberSaveable { mutableStateOf(profile.nombre) }
-    var apellido by rememberSaveable { mutableStateOf(profile.apellido) }
+    // orEmpty() porque las cuentas de Google llegan sin apellido: el campo
+    // arranca vacio y el validador lo pide al guardar, como a cualquier otro.
+    var apellido by rememberSaveable { mutableStateOf(profile.apellido.orEmpty()) }
     val (codigoInicial, numeroInicial) = remember(profile.telefono) {
         separarTelefono(profile.telefono)
     }
@@ -73,7 +76,8 @@ fun EditProfileScreen(
             .fillMaxSize()
             .systemBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .padding(24.dp)
+            .padding(bottom = LocalEspacioBarraInferior.current),
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.Start
     ) {

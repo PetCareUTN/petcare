@@ -152,6 +152,8 @@ la lista completa con sus explicaciones.
 | `GOOGLE_GEOCODING_API_KEY` | la de Google Cloud | conviene ponerle límite de cuota |
 | `ANTHROPIC_API_KEY` | la de platform.claude.com → Claves de API | asistente de voz de la historia clínica (P1-182); sin ella el asistente responde "no disponible" y la carga sigue manual |
 | `ANTHROPIC_MODEL` | `claude-opus-5-5` | opcional; es el valor por defecto |
+| `FIREBASE_SERVICE_ACCOUNT` | el JSON de la cuenta de servicio, en una sola línea | notificaciones push; **sin esto el push queda apagado** y solo quedan las notificaciones internas de la campanita |
+| `FIREBASE_PROJECT_ID` | opcional | por defecto se toma el `project_id` del JSON de arriba |
 
 `PORT` lo inyecta Railway solo: no hay que definirlo.
 

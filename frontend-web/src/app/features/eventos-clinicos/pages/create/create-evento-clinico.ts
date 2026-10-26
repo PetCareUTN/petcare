@@ -78,6 +78,8 @@ export class CreateEventoClinicoPage implements OnInit {
   protected readonly archivosSubidos = signal<ArchivoMedicoResponse[]>([]);
   protected readonly uploadingArchivos = signal(false);
   protected readonly uploadError = signal<string | null>(null);
+  /** Archivos elegidos antes de guardar: se suben solos al registrar el evento. */
+  protected readonly archivosPendientes = signal<File[]>([]);
   protected readonly backQueryParams = signal<Record<string, string | number>>({});
   protected readonly mascotaNombre = signal<string | null>(null);
   protected readonly isLoadingMascota = signal(false);
@@ -193,25 +195,42 @@ export class CreateEventoClinicoPage implements OnInit {
 
     this.eventosClinicosService.create(payload).subscribe({
       next: (evento) => {
-        this.isSubmitting.set(false);
-        this.createdEventId.set(evento.idEvento);
-        this.archivosSubidos.set(evento.archivos);
-        this.successMessage.set(
-          `Evento clinico registrado en la historia #${evento.idHistoria}.`,
-        );
-        this.form.reset({
-          idMascota: evento.idMascota,
-          tipo: 'consulta',
-          fecha: this.today(),
-          descripcion: '',
-          diagnostico: '',
-          tratamiento: '',
-          observaciones: '',
-          vacuna: null,
-          proximaAplicacion: '',
-          ultimaDosis: false,
+        const pendientes = this.archivosPendientes();
+        if (pendientes.length === 0) {
+          this.volverALaAtencion();
+          return;
+        }
+
+        this.eventosClinicosService.agregarArchivos(evento.idEvento, pendientes).subscribe({
+          next: () => this.volverALaAtencion(),
+          // El evento ya está guardado: se queda en esta pantalla para poder
+          // reintentar el adjunto sin duplicar el registro.
+          error: (error: ApiError) => {
+            this.isSubmitting.set(false);
+            this.archivosPendientes.set([]);
+            this.createdEventId.set(evento.idEvento);
+            this.archivosSubidos.set(evento.archivos);
+            this.successMessage.set(
+              `Evento clínico registrado en la historia #${evento.idHistoria}.`,
+            );
+            this.uploadError.set(
+              error.mensaje ?? 'El evento se registró, pero no se pudieron adjuntar los archivos.',
+            );
+            this.form.reset({
+              idMascota: evento.idMascota,
+              tipo: 'consulta',
+              fecha: this.today(),
+              descripcion: '',
+              diagnostico: '',
+              tratamiento: '',
+              observaciones: '',
+              vacuna: null,
+              proximaAplicacion: '',
+              ultimaDosis: false,
+            });
+            this.asistente()?.reiniciar();
+          },
         });
-        this.asistente()?.reiniciar();
       },
       error: (error: ApiError) => {
         this.isSubmitting.set(false);
@@ -226,6 +245,29 @@ export class CreateEventoClinicoPage implements OnInit {
     evento.preventDefault();
     this.eventosClinicosService.abrirArchivo(url).subscribe({
       error: () => this.uploadError.set('No se pudo abrir el archivo.'),
+    });
+  }
+
+  protected elegirArchivos(input: HTMLInputElement): void {
+    const elegidos = input.files ? Array.from(input.files) : [];
+    input.value = '';
+    if (elegidos.length > 0) {
+      this.archivosPendientes.update((actuales) => [...actuales, ...elegidos]);
+    }
+  }
+
+  protected quitarArchivoPendiente(indice: number): void {
+    this.archivosPendientes.update((actuales) => actuales.filter((_, i) => i !== indice));
+  }
+
+  /**
+   * Al registrar el evento se vuelve a "Atención veterinaria" sin cliente ni
+   * mascota elegidos, lista para cargar al siguiente paciente, y allá se avisa
+   * el éxito.
+   */
+  private volverALaAtencion(): void {
+    this.router.navigate(['/eventos-clinicos'], {
+      queryParams: { eventoRegistrado: 1 },
     });
   }
 
@@ -350,6 +392,11 @@ export class CreateEventoClinicoPage implements OnInit {
   }
 
   private today(): string {
-    return new Date().toISOString().slice(0, 10);
+    // Fecha local: toISOString() usa UTC y de noche (después de las 21 h en Argentina)
+    // devolvería el día siguiente.
+    const hoy = new Date();
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+    const dia = String(hoy.getDate()).padStart(2, '0');
+    return `${hoy.getFullYear()}-${mes}-${dia}`;
   }
 }

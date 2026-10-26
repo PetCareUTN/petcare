@@ -31,6 +31,7 @@ import {
 } from '../common/decorators/api-protegido.decorator';
 import { RoleName } from '../common/enums/role-name.enum';
 import { TurnoServicioEstado } from '../common/enums/turno-servicio-estado.enum';
+import { AgendarTurnoServicioDto } from './dto/agendar-turno-servicio.dto';
 import { CancelarTurnoServicioDto } from './dto/cancelar-turno-servicio.dto';
 import { CreateTurnoServicioDto } from './dto/create-turno-servicio.dto';
 import { TurnosServiciosService } from './turnos-servicios.service';
@@ -59,6 +60,26 @@ export class TurnosServiciosController {
     @Body() dto: CreateTurnoServicioDto,
   ) {
     return this.turnosServiciosService.solicitar(user.sub, dto);
+  }
+
+  @Post('mia')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleName.VETERINARIO)
+  @HttpCode(HttpStatus.CREATED)
+  @ApiProtegido(RoleName.VETERINARIO)
+  @ApiOperation({
+    summary: 'Agendar un turno de servicio para un cliente',
+    description:
+      'El prestador carga la reserva sobre uno de sus servicios. El horario tiene que ser uno de los libres que devuelve GET /turnos-servicios/horarios-disponibles; el cliente recibe un aviso.',
+  })
+  @ApiResponse({ status: 201, description: 'Turno agendado.' })
+  @ApiConflicto('Ese horario ya está ocupado o quedó fuera de la disponibilidad.')
+  @ApiNoEncontrado('El servicio o la mascota no existen.')
+  agendarComoPrestador(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: AgendarTurnoServicioDto,
+  ) {
+    return this.turnosServiciosService.agendarComoPrestador(user.sub, dto);
   }
 
   @Get('horarios-disponibles')

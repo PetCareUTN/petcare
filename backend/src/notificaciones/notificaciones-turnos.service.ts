@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { NotificationType } from '../common/enums/notification-type.enum';
+import { TipoReferenciaNotificacion } from './entities/notificacion.entity';
 import { NotificacionesService } from './notificaciones.service';
 
 /** Quién de las dos partes de un turno ejecutó la acción. */
@@ -16,6 +17,9 @@ export interface DuenioTurno {
  * turnos veterinarios y de servicios.
  */
 export interface DatosTurno {
+  /** Id del turno y de qué tabla es: la notificación abre ese turno en la app. */
+  idTurno: number;
+  tipoTurno: TipoReferenciaNotificacion;
   /** Dueño que reservó el turno. */
   idDuenio: number;
   idPrestador: number;
@@ -33,6 +37,12 @@ export interface DatosTurno {
   hora: string;
   /** Texto legible del turno, por ejemplo "consulta veterinaria" o "paseo". */
   servicio: string;
+  /**
+   * Quién cargó el turno. Si fue el prestador (agenda de la web), los dueños
+   * reciben un aviso de que se les agendó un turno y el prestador no recibe
+   * ninguno, porque lo acaba de cargar él.
+   */
+  creadoPor?: 'dueño' | 'veterinario';
 }
 
 /**
@@ -59,9 +69,23 @@ export class NotificacionesTurnosService {
   async notificarTurnoConfirmado(turno: DatosTurno): Promise<void> {
     const cuando = `${this.formatearFecha(turno.fecha)} a las ${this.formatearHora(turno.hora)}`;
 
+    if (turno.creadoPor === 'veterinario') {
+      for (const duenio of this.duenios(turno)) {
+        await this.registrar(
+          turno,
+          duenio.idUsuario,
+          NotificationType.TURNO_CONFIRMADO,
+          'Turno confirmado',
+          `${turno.nombrePrestador} te agendó un turno de ${turno.servicio} para ${turno.nombreMascota} el ${cuando}.`,
+        );
+      }
+      return;
+    }
+
     for (const duenio of this.duenios(turno)) {
       const loReservo = duenio.idUsuario === turno.idDuenio;
       await this.registrar(
+        turno,
         duenio.idUsuario,
         NotificationType.TURNO_CONFIRMADO,
         'Turno confirmado',
@@ -72,6 +96,7 @@ export class NotificacionesTurnosService {
     }
 
     await this.registrar(
+      turno,
       turno.idPrestador,
       NotificationType.TURNO_CONFIRMADO,
       'Nuevo turno reservado',
@@ -114,6 +139,7 @@ export class NotificacionesTurnosService {
 
     for (const destinatario of destinatarios) {
       await this.registrar(
+        turno,
         destinatario,
         NotificationType.TURNO_CANCELADO,
         'Turno cancelado',
@@ -134,13 +160,21 @@ export class NotificacionesTurnosService {
   }
 
   private async registrar(
+    turno: DatosTurno,
     idUsuario: number,
     tipo: NotificationType,
     titulo: string,
     cuerpo: string,
   ): Promise<void> {
     try {
-      await this.notificacionesService.crear(idUsuario, tipo, titulo, cuerpo);
+      await this.notificacionesService.crear(
+        idUsuario,
+        tipo,
+        titulo,
+        cuerpo,
+        turno.idTurno,
+        turno.tipoTurno,
+      );
     } catch (error) {
       this.logger.warn(
         `No se pudo registrar la notificación "${titulo}" para el usuario ${idUsuario}: ${error}`,

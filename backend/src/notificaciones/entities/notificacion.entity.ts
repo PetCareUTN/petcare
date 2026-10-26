@@ -9,6 +9,8 @@ import {
 import { NotificationType } from '../../common/enums/notification-type.enum';
 import { User } from '../../users/entities/user.entity';
 
+export type TipoReferenciaNotificacion = 'turno_veterinario' | 'turno_servicio';
+
 @Entity('notificaciones')
 export class Notificacion {
   @PrimaryGeneratedColumn({ name: 'id_notificacion' })
@@ -37,6 +39,13 @@ export class Notificacion {
    */
   @Column({ name: 'id_referencia', type: 'integer', nullable: true })
   idReferencia: number | null;
+
+  /**
+   * A qué tabla apunta `idReferencia` cuando el `tipo` no alcanza para saberlo:
+   * en las de turnos puede ser un turno veterinario o uno de servicios.
+   */
+  @Column({ name: 'tipo_referencia', type: 'varchar', length: 30, nullable: true })
+  tipoReferencia: TipoReferenciaNotificacion | null;
 
   @CreateDateColumn({ name: 'fecha_envio' })
   fechaEnvio: Date;

@@ -1,18 +1,35 @@
 <div class="bell-container">
-  <button class="bell-button" (click)="toggle(); $event.stopPropagation()">
-    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <button
+    type="button"
+    class="bell-button"
+    [class.open]="isOpen()"
+    [attr.aria-label]="unreadCount > 0 ? 'Notificaciones, ' + unreadCount + ' sin leer' : 'Notificaciones'"
+    [attr.aria-expanded]="isOpen()"
+    (click)="toggle(); $event.stopPropagation()"
+  >
+    <svg
+      class="bell-icon"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.7"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      aria-hidden="true"
+    >
       <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
       <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
     </svg>
     @if (unreadCount > 0) {
-      <span class="badge">{{ unreadCount }}</span>
+      <span class="badge" aria-hidden="true">{{ unreadLabel }}</span>
     }
   </button>
 
   @if (isOpen()) {
-    <div class="dropdown" (click)="$event.stopPropagation()">
+    <div class="dropdown" role="dialog" aria-label="Notificaciones" (click)="$event.stopPropagation()">
       <div class="dropdown-header">
-        <span>Notificaciones</span>
+        <span class="dropdown-title">Notificaciones</span>
         @if (unreadCount > 0) {
           <button
             type="button"
@@ -25,22 +42,43 @@
         }
       </div>
 
-      @if (notificaciones().length === 0) {
-        <div class="dropdown-empty">No tenés notificaciones</div>
-      }
-
-      @for (notificacion of notificaciones(); track notificacion.idNotificacion) {
-        <div class="notification-item" [class.no-leida]="!notificacion.leida">
-          <div class="notification-content">
-            <span class="notification-titulo">{{ notificacion.titulo }}</span>
-            <span class="notification-cuerpo">{{ notificacion.cuerpo }}</span>
-            <span class="notification-fecha">{{ notificacion.fechaEnvio | date:'dd/MM/yyyy HH:mm' }}</span>
+      <div class="dropdown-list">
+        @if (notificaciones().length === 0) {
+          <div class="dropdown-empty">
+            <svg
+              class="empty-icon"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+            </svg>
+            <span>No tenés notificaciones</span>
           </div>
-          @if (!notificacion.leida) {
-            <button class="btn-leer" (click)="marcarLeida(notificacion)">Marcar leída</button>
-          }
-        </div>
-      }
+        }
+
+        @for (notificacion of notificaciones(); track notificacion.idNotificacion) {
+          <div class="notification-item" [class.no-leida]="!notificacion.leida">
+            <span class="unread-dot" aria-hidden="true"></span>
+            <div class="notification-content">
+              <span class="notification-titulo">{{ notificacion.titulo }}</span>
+              <span class="notification-cuerpo">{{ notificacion.cuerpo }}</span>
+              <span class="notification-fecha">{{ notificacion.fechaEnvio | date:'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+            @if (!notificacion.leida) {
+              <button type="button" class="btn-leer" (click)="marcarLeida(notificacion)">
+                Marcar leída
+              </button>
+            }
+          </div>
+        }
+      </div>
     </div>
   }
 </div>
