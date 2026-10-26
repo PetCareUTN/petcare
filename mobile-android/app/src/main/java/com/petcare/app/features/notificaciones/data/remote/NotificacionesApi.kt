@@ -2,6 +2,7 @@ package com.petcare.app.features.notificaciones.data.remote
 
 import retrofit2.http.Body
 import retrofit2.http.GET
+import retrofit2.http.HTTP
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
@@ -35,6 +36,12 @@ data class AvisarSeparacionRequest(val tagId: String)
 /** `creada` en false significa que el backend lo agrupó con un aviso anterior. */
 data class AvisarSeparacionResponse(val creada: Boolean)
 
+/** Token de FCM de este dispositivo, para recibir las notificaciones como push. */
+data class RegistrarDispositivoRequest(
+    val token: String,
+    val plataforma: String = "android"
+)
+
 interface NotificacionesApi {
 
     @GET("notificaciones")
@@ -50,4 +57,16 @@ interface NotificacionesApi {
 
     @PATCH("notificaciones/leer-todas")
     suspend fun marcarTodasLeidas()
+
+    /** Se llama al iniciar sesión: el token de FCM se renueva solo. */
+    @POST("notificaciones/dispositivos")
+    suspend fun registrarDispositivo(
+        @Body request: RegistrarDispositivoRequest
+    )
+
+    /** Se llama al cerrar sesión, para que no lleguen push a un celular sin sesión. */
+    @HTTP(method = "DELETE", path = "notificaciones/dispositivos", hasBody = true)
+    suspend fun eliminarDispositivo(
+        @Body request: RegistrarDispositivoRequest
+    )
 }

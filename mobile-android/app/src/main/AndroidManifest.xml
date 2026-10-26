@@ -65,6 +65,15 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="${mapsApiKey}" />
 
+        <!-- Recibe las notificaciones push de FCM (ver ServicioMensajeriaPetCare). -->
+        <service
+            android:name=".features.notificaciones.service.ServicioMensajeriaPetCare"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
