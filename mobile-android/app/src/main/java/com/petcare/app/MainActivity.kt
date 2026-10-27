@@ -1804,24 +1804,119 @@ class MainActivity : ComponentActivity() {
                     navigateBackInApp()
                 }
 
-                /**
-                 * Abre la pantalla del aviso que se tocó.
+                /*
+                 * Navegación de los avisos, en un solo lugar.
                  *
-                 * Los tipos sin pantalla propia (recordatorio de vacuna, por
-                 * ejemplo, que no lleva referencia) dejan la app en el inicio: el
-                 * aviso igual quedó en la campanita.
+                 * La usan la campanita y el toque de un push. Antes cada una
+                 * tenía la suya y se desincronizaron: los avisos de compartir
+                 * mascota abrían bien desde la campanita y dejaban la app en el
+                 * inicio al tocar la notificación del sistema.
+                 *
+                 * Cierran el desplegable de la campanita aunque el push venga de
+                 * afuera: si no está abierto, no hace nada.
+                 */
+                fun cerrarCampanita() {
+                    isViewingNotificaciones = false
+                }
+
+                fun irAUltimaUbicacion(idReporte: Int) {
+                    cerrarCampanita()
+                    ultimaUbicacion = null
+                    ultimaUbicacionError = null
+                    ultimaUbicacionIdReporte = idReporte
+                }
+
+                fun irAReportarPerdida(idMascota: Int) {
+                    cerrarCampanita()
+                    selectedPetId = idMascota
+                    loadPetProfile(idMascota)
+                    isReportandoPerdidaScreen = true
+                }
+
+                fun irASolicitudesCompartir() {
+                    cerrarCampanita()
+                    isViewingSolicitudesCompartir = true
+                }
+
+                fun irAMisTurnos() {
+                    cerrarCampanita()
+                    volverAInicio()
+                    misTurnosError = null
+                    isViewingMisTurnos = true
+                    loadMisTurnos()
+                }
+
+                fun irATurno(tipoReferencia: String, idTurno: Int) {
+                    cerrarCampanita()
+                    volverAInicio()
+                    turnoDestacado = (tipoReferencia == "turno_veterinario") to idTurno
+                    misTurnosError = null
+                    isViewingMisTurnos = true
+                    loadMisTurnos()
+                }
+
+                fun irASolicitudesRecibidas() {
+                    cerrarCampanita()
+                    volverAInicio()
+                    solicitudesRecibidasError = null
+                    isViewingSolicitudesRecibidas = true
+                    loadSolicitudesRecibidas()
+                }
+
+                fun irAMisSolicitudes() {
+                    cerrarCampanita()
+                    volverAInicio()
+                    misSolicitudesError = null
+                    isViewingMisSolicitudes = true
+                    loadMisSolicitudes()
+                }
+
+                fun irAMascota(idMascota: Int) {
+                    cerrarCampanita()
+                    volverAInicio()
+                    selectedPetId = idMascota
+                    selectedPet = null
+                    petProfileError = null
+                    loadPetProfile(idMascota)
+                }
+
+                /**
+                 * Abre la pantalla del aviso que se tocó en la notificación del
+                 * sistema. Sigue el mismo criterio que la campanita.
+                 *
+                 * Los tipos que no llevan a ningún lado dejan la app en el
+                 * inicio: la baja de una mascota compartida, porque ya no se la
+                 * puede ver, y los avisos de suscripción, que son del panel web
+                 * del veterinario. El aviso igual queda en la campanita.
                  */
                 fun abrirDestinoPush(destino: DestinoPush) {
+                    val idReferencia = destino.idReferencia
                     when (destino.tipo) {
-                        "mascota_detectada" -> destino.idReferencia?.let { idReporte ->
-                            ultimaUbicacion = null
-                            ultimaUbicacionError = null
-                            ultimaUbicacionIdReporte = idReporte
-                        }
+                        "mascota_detectada" ->
+                            idReferencia?.let { irAUltimaUbicacion(it) }
+
+                        "mascota_separada" ->
+                            idReferencia?.let { irAReportarPerdida(it) }
+
+                        "solicitud_compartir_mascota" -> irASolicitudesCompartir()
+
+                        "compartir_mascota_aceptada", "compartir_mascota_rechazada" ->
+                            idReferencia?.let { irAMascota(it) }
 
                         "turno_confirmado", "turno_cancelado" -> {
-                            isViewingMisTurnos = true
+                            val tipoReferencia = destino.tipoReferencia
+                            if (tipoReferencia != null && idReferencia != null) {
+                                irATurno(tipoReferencia, idReferencia)
+                            } else {
+                                irAMisTurnos()
+                            }
                         }
+
+                        "recordatorio_vacuna" -> irAMisTurnos()
+
+                        "solicitud_recibida" -> irASolicitudesRecibidas()
+
+                        "aprobacion", "rechazo" -> irAMisSolicitudes()
 
                         else -> Unit
                     }
@@ -2556,72 +2651,49 @@ class MainActivity : ComponentActivity() {
                                             onMarcarTodasLeidas = { marcarTodasLeidas() },
                                             // El aviso de detección abre la última
                                             // ubicación de ese reporte (US-41).
-                                            onAbrirUltimaUbicacion = { idReporte ->
-                                                isViewingNotificaciones = false
+                                            // Todas estas van a las mismas funciones
+                                            // que usa el toque de un push, para que la
+                                            // campanita y la notificación del sistema
+                                            // no puedan abrir pantallas distintas.
+                                            // cerradoEnMs es del desplegable: evita que
+                                            // el toque que lo cierra lo vuelva a abrir.
+                                            onAbrirUltimaUbicacion = {
                                                 cerradoEnMs = System.currentTimeMillis()
-                                                ultimaUbicacion = null
-                                                ultimaUbicacionError = null
-                                                ultimaUbicacionIdReporte = idReporte
+                                                irAUltimaUbicacion(it)
                                             },
                                             // El aviso de separación abre directo el
                                             // reporte de pérdida de esa mascota (US-34):
                                             // es lo que el dueño va a querer hacer si no
                                             // la encuentra.
-                                            onReportarPerdida = { idMascota ->
-                                                isViewingNotificaciones = false
+                                            onReportarPerdida = {
                                                 cerradoEnMs = System.currentTimeMillis()
-                                                selectedPetId = idMascota
-                                                loadPetProfile(idMascota)
-                                                isReportandoPerdidaScreen = true
+                                                irAReportarPerdida(it)
                                             },
                                             // La solicitud para compartir una mascota
                                             // abre las solicitudes pendientes.
                                             onAbrirSolicitudCompartir = {
-                                                isViewingNotificaciones = false
                                                 cerradoEnMs = System.currentTimeMillis()
-                                                isViewingSolicitudesCompartir = true
+                                                irASolicitudesCompartir()
                                             },
                                             onAbrirMisTurnos = {
-                                                isViewingNotificaciones = false
                                                 cerradoEnMs = System.currentTimeMillis()
-                                                volverAInicio()
-                                                misTurnosError = null
-                                                isViewingMisTurnos = true
-                                                loadMisTurnos()
+                                                irAMisTurnos()
                                             },
                                             onAbrirTurno = { tipoRef, idTurno ->
-                                                isViewingNotificaciones = false
                                                 cerradoEnMs = System.currentTimeMillis()
-                                                volverAInicio()
-                                                turnoDestacado = (tipoRef == "turno_veterinario") to idTurno
-                                                misTurnosError = null
-                                                isViewingMisTurnos = true
-                                                loadMisTurnos()
+                                                irATurno(tipoRef, idTurno)
                                             },
                                             onAbrirSolicitudesRecibidas = {
-                                                isViewingNotificaciones = false
                                                 cerradoEnMs = System.currentTimeMillis()
-                                                volverAInicio()
-                                                solicitudesRecibidasError = null
-                                                isViewingSolicitudesRecibidas = true
-                                                loadSolicitudesRecibidas()
+                                                irASolicitudesRecibidas()
                                             },
                                             onAbrirMisSolicitudes = {
-                                                isViewingNotificaciones = false
                                                 cerradoEnMs = System.currentTimeMillis()
-                                                volverAInicio()
-                                                misSolicitudesError = null
-                                                isViewingMisSolicitudes = true
-                                                loadMisSolicitudes()
+                                                irAMisSolicitudes()
                                             },
-                                            onAbrirMascota = { idMascota ->
-                                                isViewingNotificaciones = false
+                                            onAbrirMascota = {
                                                 cerradoEnMs = System.currentTimeMillis()
-                                                volverAInicio()
-                                                selectedPetId = idMascota
-                                                selectedPet = null
-                                                petProfileError = null
-                                                loadPetProfile(idMascota)
+                                                irAMascota(it)
                                             }
                                         )
                                     }
