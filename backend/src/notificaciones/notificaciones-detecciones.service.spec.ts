@@ -138,4 +138,54 @@ describe('NotificacionesDeteccionesService', () => {
     // La detección ya se guardó: que no se pueda avisar no la invalida.
     await expect(service.notificarDeteccion(datos())).resolves.toBe(false);
   });
+
+  describe('notificarFueraDeCasa (P1-210)', () => {
+    const ID_MASCOTA = 45;
+
+    const datosFueraDeCasa = () => ({
+      idMascota: ID_MASCOTA,
+      idsDuenios: [ID_DUENIO],
+      nombreMascota: 'Firulais',
+      detectadoEn: DETECTADO_EN,
+    });
+
+    it('avisa al dueño referenciando a la mascota', async () => {
+      notificacionesRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.notificarFueraDeCasa(datosFueraDeCasa()),
+      ).resolves.toBe(true);
+
+      const [idUsuario, tipo, titulo, cuerpo, idReferencia] =
+        notificacionesService.crear.mock.calls[0] as [
+          number,
+          NotificationType,
+          string,
+          string,
+          number,
+        ];
+      expect(idUsuario).toBe(ID_DUENIO);
+      expect(tipo).toBe(NotificationType.MASCOTA_FUERA_DE_CASA);
+      expect(titulo).toBe('Detectaron a Firulais fuera de casa');
+      expect(cuerpo).toContain('18:30');
+      // Todavía no hay reporte: la app abre la última detección de la mascota.
+      expect(idReferencia).toBe(ID_MASCOTA);
+    });
+
+    it('agrupa con un aviso preventivo reciente de la misma mascota', async () => {
+      notificacionesRepository.findOne.mockResolvedValue({ idNotificacion: 1 });
+
+      await expect(
+        service.notificarFueraDeCasa(datosFueraDeCasa()),
+      ).resolves.toBe(false);
+
+      expect(notificacionesService.crear).not.toHaveBeenCalled();
+      expect(notificacionesRepository.findOne).toHaveBeenCalledWith({
+        where: expect.objectContaining({
+          tipo: NotificationType.MASCOTA_FUERA_DE_CASA,
+          idReferencia: ID_MASCOTA,
+        }) as unknown,
+      });
+    });
+  });
 });

@@ -18,6 +18,9 @@ const VIOLACION_UNIQUE = '23505';
 const UQ_TAG_ID = 'UQ_tags_ble_tag_id';
 const UQ_MASCOTA = 'UQ_tags_ble_mascota';
 
+/** Cuánto dura el "Está conmigo" del aviso preventivo (P1-210). */
+const HORAS_AVISOS_SILENCIADOS = 3;
+
 const MENSAJE_TAG_EN_USO = 'Ese tag ya está vinculado a otra mascota';
 const MENSAJE_MASCOTA_CON_TAG =
   'Esta mascota ya tiene un tag vinculado. Desvinculalo antes de asociar uno nuevo';
@@ -113,6 +116,34 @@ export class TagsBleService {
     }
 
     await this.tagsBleRepository.remove(tagBle);
+  }
+
+  /**
+   * "Está conmigo" (P1-210): deja de mandar avisos preventivos de la mascota
+   * por un rato, por ejemplo mientras el dueño la saca a pasear. No toca los
+   * avisos de una mascota reportada como perdida.
+   */
+  async silenciarAvisos(
+    idUsuario: number,
+    idMascota: number,
+  ): Promise<{ avisosSilenciadosHasta: Date }> {
+    await this.findMascotaAndVerifyOwner(idMascota, idUsuario);
+
+    const tagBle = await this.tagsBleRepository.findOne({
+      where: { mascota: { idMascota } },
+    });
+    if (!tagBle) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Esta mascota no tiene un tag vinculado',
+      });
+    }
+
+    tagBle.avisosSilenciadosHasta = new Date(
+      Date.now() + HORAS_AVISOS_SILENCIADOS * 60 * 60 * 1000,
+    );
+    await this.tagsBleRepository.save(tagBle);
+    return { avisosSilenciadosHasta: tagBle.avisosSilenciadosHasta };
   }
 
   async obtenerPorMascota(

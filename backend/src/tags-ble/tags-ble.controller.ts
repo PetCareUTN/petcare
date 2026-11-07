@@ -63,6 +63,22 @@ export class TagsBleController {
     return this.tagsBleService.vincular(user.sub, idMascota, dto);
   }
 
+  @Post('silenciar-avisos')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Silenciar los avisos de "fuera de casa" por 3 horas',
+    description:
+      'Es el "Está conmigo" del aviso preventivo: por ejemplo, cuando el dueño saca a pasear a la mascota. No afecta a los avisos de una mascota reportada como perdida.',
+  })
+  @ApiResponse({ status: 200, description: 'Hasta cuándo quedan silenciados.' })
+  @ApiNoEncontrado('La mascota no tiene tag, o no es de esta sesión.')
+  silenciarAvisos(
+    @CurrentUser() user: JwtPayload,
+    @Param('idMascota', ParseIntPipe) idMascota: number,
+  ): Promise<{ avisosSilenciadosHasta: Date }> {
+    return this.tagsBleService.silenciarAvisos(user.sub, idMascota);
+  }
+
   @Delete()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Desvincular el tag de una mascota' })

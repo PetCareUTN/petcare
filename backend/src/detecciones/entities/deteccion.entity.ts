@@ -6,6 +6,7 @@ import {
   ManyToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { Mascota } from '../../mascotas/entities/mascota.entity';
 import { ReportePerdida } from '../../reportes-perdida/entities/reporte-perdida.entity';
 
 /**
@@ -15,9 +16,14 @@ import { ReportePerdida } from '../../reportes-perdida/entities/reporte-perdida.
  * endpoint es anónimo por diseño y cualquier columna que se agregue acá hay que
  * mirarla dos veces (ver docs/spike-escaneo-ble-segundo-plano.md, punto 5).
  *
- * Solo se persisten detecciones de mascotas perdidas, así que cada una cuelga
- * del reporte que estaba abierto al recibirla. Eso deja agrupadas las lecturas
- * de cada pérdida y es lo que consulta US-37 (última ubicación conocida).
+ * Se persisten dos tipos de detecciones:
+ *
+ * - De mascotas perdidas: cuelgan del reporte que estaba abierto al recibirlas.
+ *   Eso deja agrupadas las lecturas de cada pérdida y es lo que consulta US-37
+ *   (última ubicación conocida).
+ * - Preventivas (P1-210): de mascotas sin reporte detectadas fuera de la zona de
+ *   casa de sus dueños. No tienen reporte hasta que el dueño la reporta, y si
+ *   no lo hace se borran a los 7 días (ver DeteccionesService).
  */
 @Entity('detecciones')
 export class Deteccion {
@@ -31,13 +37,22 @@ export class Deteccion {
   @Column({ name: 'deteccion_uuid', type: 'uuid' })
   deteccionUuid: string;
 
+  /** Null en las detecciones preventivas de una mascota que no está perdida. */
   @ManyToOne(() => ReportePerdida, {
+    eager: false,
+    nullable: true,
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'id_reporte' })
+  reporte: ReportePerdida | null;
+
+  @ManyToOne(() => Mascota, {
     eager: false,
     nullable: false,
     onDelete: 'CASCADE',
   })
-  @JoinColumn({ name: 'id_reporte' })
-  reporte: ReportePerdida;
+  @JoinColumn({ name: 'id_mascota' })
+  mascota: Mascota;
 
   /** Instance ID Eddystone-UID que se leyó, tal como llegó. */
   @Column({ name: 'tag_id', type: 'varchar', length: 12 })

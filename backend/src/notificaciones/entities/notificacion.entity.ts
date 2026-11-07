@@ -35,7 +35,8 @@ export class Notificacion {
   /**
    * Registro al que apunta la notificación, para poder abrir la pantalla que
    * corresponde al tocarla (US-41). Qué representa depende de `tipo`: en
-   * `mascota_detectada` es el id del reporte de pérdida.
+   * `mascota_detectada` es el id del reporte de pérdida, y en
+   * `mascota_fuera_de_casa` el de la mascota (todavía no hay reporte).
    */
   @Column({ name: 'id_referencia', type: 'integer', nullable: true })
   idReferencia: number | null;

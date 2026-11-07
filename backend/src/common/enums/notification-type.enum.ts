@@ -7,6 +7,7 @@ export enum NotificationType {
   RECORDATORIO_VACUNA = 'recordatorio_vacuna',
   MASCOTA_DETECTADA = 'mascota_detectada',
   MASCOTA_SEPARADA = 'mascota_separada',
+  MASCOTA_FUERA_DE_CASA = 'mascota_fuera_de_casa',
   SUSCRIPCION_REQUERIDA = 'suscripcion_requerida',
   SUSCRIPCION_VENCIDA = 'suscripcion_vencida',
   SUSCRIPCION_GRACIA_POR_VENCER = 'suscripcion_gracia_por_vencer',

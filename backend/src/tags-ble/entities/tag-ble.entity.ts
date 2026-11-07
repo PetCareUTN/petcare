@@ -28,6 +28,18 @@ export class TagBle {
   @JoinColumn({ name: 'id_mascota' })
   mascota: Mascota;
 
+  /**
+   * Hasta cuándo no se mandan avisos preventivos de esta mascota (P1-210). Lo
+   * pone el dueño con "Está conmigo", por ejemplo si la sacó a pasear. No
+   * afecta a los avisos de una mascota reportada como perdida.
+   */
+  @Column({
+    name: 'avisos_silenciados_hasta',
+    type: 'timestamp',
+    nullable: true,
+  })
+  avisosSilenciadosHasta: Date | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

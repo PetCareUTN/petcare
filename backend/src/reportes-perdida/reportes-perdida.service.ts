@@ -52,7 +52,31 @@ export class ReportesPerdidaService {
     });
 
     const guardado = await this.reportesRepository.save(reporte);
+    await this.asociarDeteccionesPreventivas(guardado);
     return ReportePerdidaResponseDto.fromEntity(guardado);
+  }
+
+  /**
+   * Cuelga del reporte nuevo las detecciones preventivas (P1-210) de la mascota
+   * desde la fecha de pérdida. Así, si el dueño la reporta desde el aviso "fuera
+   * de casa", la última ubicación conocida (US-37) arranca con esa detección en
+   * vez de vacía.
+   *
+   * Va con SQL directo sobre la tabla y no con el repositorio de detecciones
+   * para no hacer depender este módulo del de detecciones, que ya depende de
+   * éste.
+   */
+  private async asociarDeteccionesPreventivas(
+    reporte: ReportePerdida,
+  ): Promise<void> {
+    await this.reportesRepository.manager.query(
+      `UPDATE "detecciones"
+       SET "id_reporte" = $1
+       WHERE "id_mascota" = $2
+         AND "id_reporte" IS NULL
+         AND "detectado_en" >= $3`,
+      [reporte.idReporte, reporte.mascota.idMascota, reporte.fechaPerdida],
+    );
   }
 
   /** Reportes abiertos de todas las mascotas del usuario. */
@@ -161,6 +185,18 @@ export class ReportesPerdidaService {
         estado: ReportePerdidaEstado.ACTIVO,
       },
     });
+  }
+
+  /**
+   * Mascota del dueño autenticado. La usa el aviso preventivo de P1-210 para
+   * mostrar la última detección de una mascota que todavía no tiene reporte,
+   * con el mismo criterio de permiso que los reportes (404 / 403).
+   */
+  buscarMascotaDelDuenio(
+    idMascota: number,
+    idUsuario: number,
+  ): Promise<Mascota> {
+    return this.findMascotaAndVerifyOwner(idMascota, idUsuario);
   }
 
   private async findMascotaAndVerifyOwner(

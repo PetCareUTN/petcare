@@ -19,8 +19,12 @@ describe('DeteccionesService', () => {
   let reportesPerdidaService: {
     buscarReporteActivo: jest.Mock;
     buscarReporteDelDuenio: jest.Mock;
+    buscarMascotaDelDuenio: jest.Mock;
   };
-  let notificacionesDeteccionesService: { notificarDeteccion: jest.Mock };
+  let notificacionesDeteccionesService: {
+    notificarDeteccion: jest.Mock;
+    notificarFueraDeCasa: jest.Mock;
+  };
   let insertBuilder: {
     insert: jest.Mock;
     into: jest.Mock;
@@ -83,13 +87,17 @@ describe('DeteccionesService', () => {
         },
         {
           provide: NotificacionesDeteccionesService,
-          useValue: { notificarDeteccion: jest.fn().mockResolvedValue(true) },
+          useValue: {
+            notificarDeteccion: jest.fn().mockResolvedValue(true),
+            notificarFueraDeCasa: jest.fn().mockResolvedValue(true),
+          },
         },
         {
           provide: ReportesPerdidaService,
           useValue: {
             buscarReporteActivo: jest.fn(),
             buscarReporteDelDuenio: jest.fn(),
+            buscarMascotaDelDuenio: jest.fn(),
           },
         },
       ],
@@ -116,6 +124,7 @@ describe('DeteccionesService', () => {
     expect(insertBuilder.values).toHaveBeenCalledWith({
       deteccionUuid: dto().deteccionId,
       reporte: { idReporte: ID_REPORTE },
+      mascota: { idMascota: ID_MASCOTA },
       tagId: dto().tagId,
       rssi: -67,
       latitud: -31.42,
@@ -140,6 +149,7 @@ describe('DeteccionesService', () => {
         'detectadoEn',
         'latitud',
         'longitud',
+        'mascota',
         'precisionMetros',
         'reporte',
         'rssi',
@@ -157,7 +167,7 @@ describe('DeteccionesService', () => {
     expect(insertBuilder.execute).not.toHaveBeenCalled();
   });
 
-  it('descarta la detección de una mascota que no está perdida', async () => {
+  it('descarta la detección de una mascota que no está perdida si ningún dueño configuró su casa', async () => {
     tagsBleRepository.findOne.mockResolvedValue(tagVinculado);
     reportesPerdidaService.buscarReporteActivo.mockResolvedValue(null);
 
@@ -379,6 +389,242 @@ describe('DeteccionesService', () => {
       expect(
         notificacionesDeteccionesService.notificarDeteccion,
       ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('aviso preventivo fuera de casa (P1-210)', () => {
+    // Casa en el centro de Córdoba con 200 m de radio.
+    const duenioConCasa = {
+      idUsuario: ID_DUENIO,
+      casaLatitud: -31.42,
+      casaLongitud: -64.189,
+      casaRadioMetros: 200,
+    };
+    const duenioSinCasa = {
+      idUsuario: 99,
+      casaLatitud: null,
+      casaLongitud: null,
+      casaRadioMetros: null,
+    };
+
+    const tagSinReporte = (
+      usuarios: object[],
+      avisosSilenciadosHasta: Date | null = null,
+    ) =>
+      ({
+        idTagBle: 1,
+        tagId: 'C3BBDE4B02A1',
+        avisosSilenciadosHasta,
+        mascota: { idMascota: ID_MASCOTA, nombre: 'Firulais', usuarios },
+      }) as unknown as TagBle;
+
+    // ~1,1 km al sur de la casa.
+    const lejosDeCasa = (): RegistrarDeteccionDto => ({
+      ...dto(),
+      detectadoEn: new Date(Date.now() - 60 * 1000).toISOString(),
+      latitud: -31.43,
+      longitud: -64.189,
+    });
+
+    beforeEach(() => {
+      reportesPerdidaService.buscarReporteActivo.mockResolvedValue(null);
+    });
+
+    it('guarda la detección sin reporte y avisa al dueño cuando está lejos de casa', async () => {
+      tagsBleRepository.findOne.mockResolvedValue(
+        tagSinReporte([duenioConCasa]),
+      );
+
+      await expect(service.registrar(lejosDeCasa())).resolves.toBe(
+        'registrada',
+      );
+
+      expect(insertBuilder.values).toHaveBeenCalledWith(
+        expect.objectContaining({
+          reporte: null,
+          mascota: { idMascota: ID_MASCOTA },
+        }),
+      );
+      expect(
+        notificacionesDeteccionesService.notificarFueraDeCasa,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          idMascota: ID_MASCOTA,
+          idsDuenios: [ID_DUENIO],
+          nombreMascota: 'Firulais',
+        }),
+      );
+      expect(
+        notificacionesDeteccionesService.notificarDeteccion,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('no guarda ni avisa nada cuando la detección cae dentro de la zona de casa', async () => {
+      tagsBleRepository.findOne.mockResolvedValue(
+        tagSinReporte([duenioConCasa]),
+      );
+
+      // ~110 m de la casa: dentro de los 200 m.
+      await expect(
+        service.registrar({
+          ...lejosDeCasa(),
+          latitud: -31.421,
+          longitud: -64.189,
+        }),
+      ).resolves.toBe('descartada');
+
+      expect(insertBuilder.execute).not.toHaveBeenCalled();
+      expect(
+        notificacionesDeteccionesService.notificarFueraDeCasa,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('considera en casa a una mascota compartida si está en la casa de cualquiera de sus dueños', async () => {
+      const otroDuenioCercaDeLaDeteccion = {
+        idUsuario: 50,
+        casaLatitud: -31.43,
+        casaLongitud: -64.189,
+        casaRadioMetros: 150,
+      };
+      tagsBleRepository.findOne.mockResolvedValue(
+        tagSinReporte([duenioConCasa, otroDuenioCercaDeLaDeteccion]),
+      );
+
+      await expect(service.registrar(lejosDeCasa())).resolves.toBe(
+        'descartada',
+      );
+
+      expect(insertBuilder.execute).not.toHaveBeenCalled();
+    });
+
+    it('avisa solo a los dueños que configuraron su casa', async () => {
+      tagsBleRepository.findOne.mockResolvedValue(
+        tagSinReporte([duenioConCasa, duenioSinCasa]),
+      );
+
+      await service.registrar(lejosDeCasa());
+
+      expect(
+        notificacionesDeteccionesService.notificarFueraDeCasa,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ idsDuenios: [ID_DUENIO] }),
+      );
+    });
+
+    it('no avisa mientras el dueño tenga los avisos silenciados ("Está conmigo")', async () => {
+      const enUnaHora = new Date(Date.now() + 60 * 60 * 1000);
+      tagsBleRepository.findOne.mockResolvedValue(
+        tagSinReporte([duenioConCasa], enUnaHora),
+      );
+
+      await expect(service.registrar(lejosDeCasa())).resolves.toBe(
+        'descartada',
+      );
+
+      expect(insertBuilder.execute).not.toHaveBeenCalled();
+    });
+
+    it('vuelve a avisar cuando el silencio ya venció', async () => {
+      const haceUnMinuto = new Date(Date.now() - 60 * 1000);
+      tagsBleRepository.findOne.mockResolvedValue(
+        tagSinReporte([duenioConCasa], haceUnMinuto),
+      );
+
+      await expect(service.registrar(lejosDeCasa())).resolves.toBe(
+        'registrada',
+      );
+    });
+
+    it('descarta una detección vieja que llega tarde desde la cola del celular', async () => {
+      tagsBleRepository.findOne.mockResolvedValue(
+        tagSinReporte([duenioConCasa]),
+      );
+      const haceDosHoras = new Date(
+        Date.now() - 2 * 60 * 60 * 1000,
+      ).toISOString();
+
+      await expect(
+        service.registrar({ ...lejosDeCasa(), detectadoEn: haceDosHoras }),
+      ).resolves.toBe('descartada');
+
+      expect(insertBuilder.execute).not.toHaveBeenCalled();
+    });
+
+    it('no avisa cuando el celular reenvía una detección preventiva que ya estaba', async () => {
+      tagsBleRepository.findOne.mockResolvedValue(
+        tagSinReporte([duenioConCasa]),
+      );
+      insertBuilder.execute.mockResolvedValue({ raw: [] });
+
+      await expect(service.registrar(lejosDeCasa())).resolves.toBe('duplicada');
+
+      expect(
+        notificacionesDeteccionesService.notificarFueraDeCasa,
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('buscarUltimaDeLaMascota (P1-210)', () => {
+    it('devuelve la última detección de la mascota aunque no tenga reporte', async () => {
+      reportesPerdidaService.buscarMascotaDelDuenio.mockResolvedValue({
+        idMascota: ID_MASCOTA,
+        nombre: 'Firulais',
+      });
+      deteccionesRepository.findOne.mockResolvedValue({
+        idDeteccion: 20,
+        reporte: null,
+        latitud: -31.43,
+        longitud: -64.189,
+        precisionMetros: 15,
+        detectadoEn: new Date('2026-10-31T12:00:00.000Z'),
+      });
+
+      const resultado = await service.buscarUltimaDeLaMascota(
+        ID_MASCOTA,
+        ID_DUENIO,
+      );
+
+      expect(
+        reportesPerdidaService.buscarMascotaDelDuenio,
+      ).toHaveBeenCalledWith(ID_MASCOTA, ID_DUENIO);
+      expect(resultado.idReporte).toBeNull();
+      expect(resultado.ultimaDeteccion?.latitud).toBe(-31.43);
+    });
+
+    it('no deja consultar la mascota de otro dueño', async () => {
+      reportesPerdidaService.buscarMascotaDelDuenio.mockRejectedValue(
+        new ForbiddenException(),
+      );
+
+      await expect(
+        service.buscarUltimaDeLaMascota(ID_MASCOTA, 99),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+
+      expect(deteccionesRepository.findOne).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('limpieza de detecciones preventivas (P1-210)', () => {
+    it('borra solo las detecciones sin reporte de más de 7 días', async () => {
+      const deleteBuilder = {
+        delete: jest.fn().mockReturnThis(),
+        from: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        execute: jest.fn().mockResolvedValue({ affected: 4 }),
+      };
+      deteccionesRepository.createQueryBuilder.mockReturnValue(deleteBuilder);
+
+      const borradas = await service.limpiarPreventivasViejas(
+        new Date('2026-10-31T03:00:00.000Z'),
+      );
+
+      expect(borradas).toBe(4);
+      expect(deleteBuilder.where).toHaveBeenCalledWith('id_reporte IS NULL');
+      expect(deleteBuilder.andWhere).toHaveBeenCalledWith(
+        'detectado_en < :limite',
+        { limite: new Date('2026-10-24T03:00:00.000Z') },
+      );
     });
   });
 });
