@@ -775,7 +775,29 @@ describe('SuscripcionesService', () => {
 
     afterEach(() => {
       delete process.env.MP_WEBHOOK_SECRET;
+      jest.useRealTimers();
     });
+
+    /**
+     * Fija el "hoy" que ve el servicio. Los vencimientos se calculan desde
+     * `new Date()`, así que sin esto el resultado depende del día en que corre
+     * el test. Solo se falsea `Date`: los timers y las promesas siguen reales.
+     */
+    const fijarHoy = (fecha: Date) => {
+      jest.useFakeTimers({
+        now: fecha,
+        doNotFake: [
+          'nextTick',
+          'queueMicrotask',
+          'setImmediate',
+          'clearImmediate',
+          'setTimeout',
+          'clearTimeout',
+          'setInterval',
+          'clearInterval',
+        ],
+      });
+    };
 
     it('rechaza con 401 si la firma es inválida', async () => {
       process.env.MP_WEBHOOK_SECRET = 'secret-test';
@@ -839,6 +861,7 @@ describe('SuscripcionesService', () => {
     });
 
     it('calcula el vencimiento con mes calendario (18/01 → 18/02)', async () => {
+      fijarHoy(new Date(2026, 0, 18, 10, 0, 0));
       permitirFirma();
       preApprovalGet.mockResolvedValue({
         id: 'mp-pre-123',
@@ -856,15 +879,16 @@ describe('SuscripcionesService', () => {
       );
 
       const [guardada] = suscripcionesRepository.save.mock.calls[0] as [Suscripcion];
-      const ahora = new Date();
-      const esperado = new Date(ahora.getFullYear(), ahora.getMonth() + 1, ahora.getDate());
       // Compara solo día, mes y año (ignora hora/minuto/segundo)
-      expect(guardada.fechaFin!.getDate()).toBe(esperado.getDate());
-      expect(guardada.fechaFin!.getMonth()).toBe(esperado.getMonth());
-      expect(guardada.fechaFin!.getFullYear()).toBe(esperado.getFullYear());
+      expect(guardada.fechaFin!.getDate()).toBe(18);
+      expect(guardada.fechaFin!.getMonth()).toBe(1); // Febrero
+      expect(guardada.fechaFin!.getFullYear()).toBe(2026);
     });
 
     it('ajusta a fin de mes cuando el día no existe (31 oct → 30 nov)', async () => {
+      // Antes del 31/10, para que la renovación arranque desde el fin del
+      // período actual y no desde hoy.
+      fijarHoy(new Date(2026, 9, 15, 10, 0, 0));
       permitirFirma();
       // Renovación: pago aprobado de una suscripción ACTIVA que vence el 31/10
       paymentGet.mockResolvedValue({
@@ -876,7 +900,7 @@ describe('SuscripcionesService', () => {
         date_approved: new Date().toISOString(),
       });
       pagosRepository.findOne.mockResolvedValue(null);
-      // 31/10/2026 (futuro): + 1 mes = 31/11 (no existe) → 30/11/2026
+      // 31/10/2026: + 1 mes = 31/11 (no existe) → 30/11/2026
       const finOctubre = new Date(2026, 9, 31, 12, 0, 0);
       suscripcionesRepository.findOne.mockResolvedValue({
         ...suscripcionPendiente,
