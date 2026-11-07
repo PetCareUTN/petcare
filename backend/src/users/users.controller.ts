@@ -2,8 +2,11 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
+  Get,
   Patch,
   Post,
+  Put,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -35,6 +38,7 @@ import { SolicitarCambioEmailDto } from './dto/solicitar-cambio-email.dto';
 import { UpdatePreferenciasDto } from './dto/update-preferencias.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserPublicDto } from './dto/user-public.dto';
+import { GuardarZonaCasaDto, ZonaCasaResponseDto } from './dto/zona-casa.dto';
 import { UsersService } from './users.service';
 
 @ApiTags(EtiquetasApi.USUARIOS)
@@ -78,6 +82,57 @@ export class UsersController {
       dto,
     );
     return UserPublicDto.fromEntity(updatedUser);
+  }
+
+  /**
+   * Zona de casa del dueño (P1-209). Va en su propio recurso y no en `PATCH me`
+   * porque estas coordenadas no se devuelven en `UserPublicDto`: ese DTO también
+   * se muestra a los otros dueños de una mascota compartida.
+   */
+  @Get('me/casa')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Ver mi zona de casa',
+    description:
+      'Devuelve `configurada: false` si todavía no la cargó, en vez de un 404.',
+  })
+  @ApiResponse({ status: 200, type: ZonaCasaResponseDto })
+  async buscarZonaCasa(
+    @CurrentUser() user: JwtPayload,
+  ): Promise<ZonaCasaResponseDto> {
+    const usuario = await this.usersService.buscarZonaCasa(user.sub);
+    return ZonaCasaResponseDto.fromEntity(usuario);
+  }
+
+  @Put('me/casa')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Guardar mi zona de casa',
+    description:
+      'Centro y radio (100 a 1000 m) dentro del cual se considera que la mascota está en casa: ahí no se guarda su ubicación ni se avisa.',
+  })
+  @ApiResponse({ status: 200, type: ZonaCasaResponseDto })
+  @ApiDatosInvalidos('Coordenadas inválidas o radio fuera de 100–1000 m.')
+  async guardarZonaCasa(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: GuardarZonaCasaDto,
+  ): Promise<ZonaCasaResponseDto> {
+    const usuario = await this.usersService.guardarZonaCasa(user.sub, dto);
+    return ZonaCasaResponseDto.fromEntity(usuario);
+  }
+
+  @Delete('me/casa')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Quitar mi zona de casa',
+    description: 'Sin zona de casa se dejan de recibir los avisos preventivos.',
+  })
+  @ApiResponse({ status: 200, type: ZonaCasaResponseDto })
+  async quitarZonaCasa(
+    @CurrentUser() user: JwtPayload,
+  ): Promise<ZonaCasaResponseDto> {
+    const usuario = await this.usersService.quitarZonaCasa(user.sub);
+    return ZonaCasaResponseDto.fromEntity(usuario);
   }
 
   @Patch('me/foto')

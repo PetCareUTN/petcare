@@ -136,6 +136,23 @@ export class User {
   })
   recordatoriosVacunas: boolean;
 
+  /**
+   * Zona de casa del dueño (P1-209). Mientras una mascota se detecta dentro de
+   * este círculo se la considera en casa: no se guarda la ubicación ni se avisa
+   * (P1-210). Las tres van juntas: o están todas o ninguna.
+   *
+   * Solo las ve el propio dueño: no van en `UserPublicDto`, que también se usa
+   * para mostrar a los otros dueños de una mascota compartida.
+   */
+  @Column({ name: 'casa_latitud', type: 'double precision', nullable: true })
+  casaLatitud: number | null;
+
+  @Column({ name: 'casa_longitud', type: 'double precision', nullable: true })
+  casaLongitud: number | null;
+
+  @Column({ name: 'casa_radio_metros', type: 'integer', nullable: true })
+  casaRadioMetros: number | null;
+
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 }

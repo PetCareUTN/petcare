@@ -13,6 +13,7 @@ import { MailService } from '../mail/mail.service';
 import type { UploadedImageFile } from '../mascotas/types/uploaded-image-file.type';
 import { UpdatePreferenciasDto } from './dto/update-preferencias.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { GuardarZonaCasaDto } from './dto/zona-casa.dto';
 import { User } from './entities/user.entity';
 
 const SALT_ROUNDS = 10;
@@ -147,6 +148,46 @@ export class UsersService {
     }
 
     return this.usersRepository.save(user);
+  }
+
+  /** Zona de casa del usuario (P1-209). */
+  async buscarZonaCasa(idUsuario: number): Promise<User> {
+    return this.buscarOFallar(idUsuario);
+  }
+
+  /** Guarda o reemplaza la zona de casa del usuario (P1-209). */
+  async guardarZonaCasa(
+    idUsuario: number,
+    dto: GuardarZonaCasaDto,
+  ): Promise<User> {
+    const user = await this.buscarOFallar(idUsuario);
+    user.casaLatitud = dto.latitud;
+    user.casaLongitud = dto.longitud;
+    user.casaRadioMetros = dto.radioMetros;
+    return this.usersRepository.save(user);
+  }
+
+  /**
+   * Quita la zona de casa (P1-209). Sin zona, el dueño deja de recibir los
+   * avisos preventivos de P1-210.
+   */
+  async quitarZonaCasa(idUsuario: number): Promise<User> {
+    const user = await this.buscarOFallar(idUsuario);
+    user.casaLatitud = null;
+    user.casaLongitud = null;
+    user.casaRadioMetros = null;
+    return this.usersRepository.save(user);
+  }
+
+  private async buscarOFallar(idUsuario: number): Promise<User> {
+    const user = await this.findById(idUsuario);
+    if (!user) {
+      throw new NotFoundException({
+        codigoEstado: 404,
+        mensaje: 'Usuario no encontrado',
+      });
+    }
+    return user;
   }
 
   /** Guarda la foto de perfil nueva; reemplaza a la anterior. */

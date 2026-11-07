@@ -345,4 +345,49 @@ describe('UsersService', () => {
       }),
     ).rejects.toThrow(NotFoundException);
   });
+
+  describe('zona de casa (P1-209)', () => {
+    it('guarda la zona de casa del usuario', async () => {
+      repository.findOne.mockResolvedValue({ idUsuario: 1 } as User);
+      repository.save.mockImplementation((user: User) => Promise.resolve(user));
+
+      const user = await service.guardarZonaCasa(1, {
+        latitud: -31.42,
+        longitud: -64.189,
+        radioMetros: 200,
+      });
+
+      expect(user.casaLatitud).toBe(-31.42);
+      expect(user.casaLongitud).toBe(-64.189);
+      expect(user.casaRadioMetros).toBe(200);
+    });
+
+    it('quita la zona de casa dejando las tres columnas en null', async () => {
+      repository.findOne.mockResolvedValue({
+        idUsuario: 1,
+        casaLatitud: -31.42,
+        casaLongitud: -64.189,
+        casaRadioMetros: 200,
+      } as User);
+      repository.save.mockImplementation((user: User) => Promise.resolve(user));
+
+      const user = await service.quitarZonaCasa(1);
+
+      expect(user.casaLatitud).toBeNull();
+      expect(user.casaLongitud).toBeNull();
+      expect(user.casaRadioMetros).toBeNull();
+    });
+
+    it('rechaza guardar la zona de un usuario inexistente', async () => {
+      repository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.guardarZonaCasa(1, {
+          latitud: -31.42,
+          longitud: -64.189,
+          radioMetros: 200,
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
 });
