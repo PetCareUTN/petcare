@@ -1,6 +1,7 @@
 package com.petcare.app.features.ble.domain
 
 import com.petcare.app.features.ble.data.remote.MensajeResponse
+import com.petcare.app.features.ble.data.remote.SilenciarAvisosResponse
 import com.petcare.app.features.ble.data.remote.TagBleResponse
 import com.petcare.app.features.ble.data.remote.TagsBleApi
 import com.petcare.app.features.ble.data.remote.VincularTagBleRequest
@@ -16,4 +17,7 @@ class TagsBleController(
 
     suspend fun desvincular(idMascota: Int): MensajeResponse =
         tagsBleApi.desvincular(idMascota)
+
+    suspend fun silenciarAvisos(idMascota: Int): SilenciarAvisosResponse =
+        tagsBleApi.silenciarAvisos(idMascota)
 }

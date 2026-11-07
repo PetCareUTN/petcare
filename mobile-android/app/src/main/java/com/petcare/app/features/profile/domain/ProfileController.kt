@@ -1,12 +1,14 @@
 package com.petcare.app.features.profile.domain
 
 import com.petcare.app.features.profile.data.remote.ConfirmEmailChangeRequest
+import com.petcare.app.features.profile.data.remote.GuardarZonaCasaRequest
 import com.petcare.app.features.profile.data.remote.MessageResponse
 import com.petcare.app.features.profile.data.remote.ProfileApi
 import com.petcare.app.features.profile.data.remote.RequestEmailChangeRequest
 import com.petcare.app.features.profile.data.remote.UpdatePreferenciasRequest
 import com.petcare.app.features.profile.data.remote.UpdateProfileRequest
 import com.petcare.app.features.profile.data.remote.UserProfileResponse
+import com.petcare.app.features.profile.data.remote.ZonaCasaResponse
 import okhttp3.MultipartBody
 
 class ProfileController(
@@ -30,4 +32,16 @@ class ProfileController(
 
     suspend fun confirmEmailChange(codigo: String): MessageResponse =
         profileApi.confirmEmailChange(ConfirmEmailChangeRequest(codigo))
+
+    /** Zona de casa del dueño (P1-209). */
+    suspend fun getZonaCasa(): ZonaCasaResponse = profileApi.getZonaCasa()
+
+    suspend fun guardarZonaCasa(
+        latitud: Double,
+        longitud: Double,
+        radioMetros: Int
+    ): ZonaCasaResponse =
+        profileApi.guardarZonaCasa(GuardarZonaCasaRequest(latitud, longitud, radioMetros))
+
+    suspend fun quitarZonaCasa(): ZonaCasaResponse = profileApi.quitarZonaCasa()
 }

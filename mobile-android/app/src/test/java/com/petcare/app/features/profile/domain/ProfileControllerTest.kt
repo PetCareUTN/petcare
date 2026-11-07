@@ -1,12 +1,14 @@
 package com.petcare.app.features.profile.domain
 
 import com.petcare.app.features.profile.data.remote.ConfirmEmailChangeRequest
+import com.petcare.app.features.profile.data.remote.GuardarZonaCasaRequest
 import com.petcare.app.features.profile.data.remote.MessageResponse
 import com.petcare.app.features.profile.data.remote.ProfileApi
 import com.petcare.app.features.profile.data.remote.RequestEmailChangeRequest
 import com.petcare.app.features.profile.data.remote.UpdatePreferenciasRequest
 import com.petcare.app.features.profile.data.remote.UpdateProfileRequest
 import com.petcare.app.features.profile.data.remote.UserProfileResponse
+import com.petcare.app.features.profile.data.remote.ZonaCasaResponse
 import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -71,6 +73,20 @@ class ProfileControllerTest {
             assertEquals("/uploads/usuarios/usuario-1.jpg", profile.foto)
         }
 
+    @Test
+    fun `guardarZonaCasa manda el centro y el radio, y quitarZonaCasa la deja sin configurar`() =
+        runBlocking {
+            val fakeProfileApi = FakeProfileApi()
+            val controller = ProfileController(fakeProfileApi)
+
+            val guardada = controller.guardarZonaCasa(-31.42, -64.189, 200)
+            assertEquals(true, guardada.configurada)
+            assertEquals(200, guardada.radioMetros)
+
+            val quitada = controller.quitarZonaCasa()
+            assertEquals(false, quitada.configurada)
+        }
+
     private class FakeProfileApi : ProfileApi {
         var updatedRequest: UpdateProfileRequest? = null
         var uploadedPhoto: MultipartBody.Part? = null
@@ -113,5 +129,34 @@ class ProfileControllerTest {
 
         override suspend fun confirmEmailChange(request: ConfirmEmailChangeRequest): MessageResponse =
             throw UnsupportedOperationException("No usado en este test")
+
+        var zonaCasa = ZonaCasaResponse(
+            configurada = false,
+            latitud = null,
+            longitud = null,
+            radioMetros = null
+        )
+
+        override suspend fun getZonaCasa(): ZonaCasaResponse = zonaCasa
+
+        override suspend fun guardarZonaCasa(request: GuardarZonaCasaRequest): ZonaCasaResponse {
+            zonaCasa = ZonaCasaResponse(
+                configurada = true,
+                latitud = request.latitud,
+                longitud = request.longitud,
+                radioMetros = request.radioMetros
+            )
+            return zonaCasa
+        }
+
+        override suspend fun quitarZonaCasa(): ZonaCasaResponse {
+            zonaCasa = ZonaCasaResponse(
+                configurada = false,
+                latitud = null,
+                longitud = null,
+                radioMetros = null
+            )
+            return zonaCasa
+        }
     }
 }

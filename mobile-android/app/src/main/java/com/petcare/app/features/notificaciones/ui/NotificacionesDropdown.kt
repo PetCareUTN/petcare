@@ -49,6 +49,8 @@ fun NotificacionesDropdown(
     onAbrirUltimaUbicacion: (Int) -> Unit = {},
     /** Abre el reporte de pérdida de la mascota que se alejó (US-34). */
     onReportarPerdida: (Int) -> Unit = {},
+    /** Abre el aviso de la mascota detectada fuera de casa (P1-210). */
+    onAbrirFueraDeCasa: (Int) -> Unit = {},
     /** Abre las solicitudes que me hicieron para compartir una mascota. */
     onAbrirSolicitudCompartir: () -> Unit = {},
     /** Abre "Mis turnos" (turno confirmado/cancelado, recordatorio de vacuna). */
@@ -160,6 +162,8 @@ fun NotificacionesDropdown(
                             { onAbrirUltimaUbicacion(idReporte) }
                         } ?: mascotaAReportar(notificacion)?.let { idMascota ->
                             { onReportarPerdida(idMascota) }
+                        } ?: mascotaFueraDeCasa(notificacion)?.let { idMascota ->
+                            { onAbrirFueraDeCasa(idMascota) }
                         } ?: if (esSolicitudCompartir(notificacion)) {
                             { onAbrirSolicitudCompartir() }
                         } else {
@@ -300,6 +304,14 @@ private fun destinoDe(notificacion: NotificacionResponse): Int? =
 private fun mascotaAReportar(notificacion: NotificacionResponse): Int? =
     notificacion.idReferencia?.takeIf { notificacion.tipo == "mascota_separada" }
 
+/**
+ * Id de la mascota detectada fuera de casa, o null si no es ese aviso (P1-210).
+ * Como en [mascotaAReportar], acá `idReferencia` es la mascota: todavía no hay
+ * reporte.
+ */
+private fun mascotaFueraDeCasa(notificacion: NotificacionResponse): Int? =
+    notificacion.idReferencia?.takeIf { notificacion.tipo == "mascota_fuera_de_casa" }
+
 /** La solicitud que me hicieron para compartir una mascota abre sus solicitudes. */
 private fun esSolicitudCompartir(notificacion: NotificacionResponse): Boolean =
     notificacion.tipo == "solicitud_compartir_mascota"
@@ -313,6 +325,7 @@ internal fun tipoLabel(tipo: String): String = when (tipo) {
     "recordatorio_vacuna" -> "Vacunación"
     "mascota_detectada" -> "Mascota detectada"
     "mascota_separada" -> "Se alejó"
+    "mascota_fuera_de_casa" -> "Fuera de casa"
     "solicitud_compartir_mascota",
     "compartir_mascota_aceptada",
     "compartir_mascota_rechazada",

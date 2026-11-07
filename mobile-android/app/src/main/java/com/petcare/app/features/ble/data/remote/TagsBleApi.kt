@@ -49,4 +49,14 @@ interface TagsBleApi {
     suspend fun desvincular(
         @Path("idMascota") idMascota: Int
     ): MensajeResponse
+
+    /** "Está conmigo" del aviso fuera de casa (P1-210): silencia por 3 horas. */
+    @POST("mascotas/{idMascota}/tag-ble/silenciar-avisos")
+    suspend fun silenciarAvisos(
+        @Path("idMascota") idMascota: Int
+    ): SilenciarAvisosResponse
 }
+
+data class SilenciarAvisosResponse(
+    val avisosSilenciadosHasta: String
+)
