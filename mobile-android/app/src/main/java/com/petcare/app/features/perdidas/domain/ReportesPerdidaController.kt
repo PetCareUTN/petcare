@@ -21,4 +21,8 @@ class ReportesPerdidaController(
     /** Última ubicación conocida de la mascota perdida (US-37). */
     suspend fun getUltimaDeteccion(idReporte: Int): UltimaDeteccionResponse =
         reportesPerdidaApi.getUltimaDeteccion(idReporte)
+
+    /** Dónde detectaron a la mascota fuera de casa (P1-210). */
+    suspend fun getUltimaDeteccionDeMascota(idMascota: Int): UltimaDeteccionResponse =
+        reportesPerdidaApi.getUltimaDeteccionDeMascota(idMascota)
 }

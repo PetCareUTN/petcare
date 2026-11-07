@@ -27,13 +27,14 @@ export class DeteccionResponseDto {
  * mostrar el estado vacío con el nombre de la mascota igual.
  */
 export class UltimaDeteccionResponseDto {
-  idReporte: number;
+  /** Null en una detección preventiva de una mascota sin reporte (P1-210). */
+  idReporte: number | null;
   idMascota: number;
   nombreMascota: string | null;
   ultimaDeteccion: DeteccionResponseDto | null;
 
   static fromEntity(
-    idReporte: number,
+    idReporte: number | null,
     idMascota: number,
     nombreMascota: string | null,
     deteccion: Deteccion | null,

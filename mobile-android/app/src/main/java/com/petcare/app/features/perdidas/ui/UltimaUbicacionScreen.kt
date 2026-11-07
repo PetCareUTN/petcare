@@ -128,8 +128,15 @@ fun UltimaUbicacionScreen(
     }
 }
 
+/**
+ * Tarjeta con la hora y el radio de la detección, y el mapa debajo. La usa
+ * también el aviso fuera de casa (P1-210), que suma sus botones en [acciones].
+ */
 @Composable
-private fun MapaDeteccion(deteccion: DeteccionResponse) {
+internal fun MapaDeteccion(
+    deteccion: DeteccionResponse,
+    acciones: @Composable () -> Unit = {}
+) {
     val punto = LatLng(deteccion.latitud, deteccion.longitud)
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(
@@ -167,6 +174,7 @@ private fun MapaDeteccion(deteccion: DeteccionResponse) {
                 color = PetCareMuted,
                 style = MaterialTheme.typography.bodySmall
             )
+            acciones()
         }
     }
 
@@ -228,7 +236,7 @@ private fun EstadoSinDetecciones() {
 }
 
 @Composable
-private fun TarjetaError(detalle: String, onRetry: () -> Unit) {
+internal fun TarjetaError(detalle: String, onRetry: () -> Unit) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -275,8 +283,18 @@ private fun zoomParaRadio(radioMetros: Int): Float = when {
 }
 
 /** El backend manda la fecha en ISO-8601 UTC; se muestra en la zona del celular. */
-private fun String.aFechaHoraLegible(): String =
+internal fun String.aFechaHoraLegible(): String =
     runCatching {
         val iso = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.US)
         SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(iso.parse(this)!!)
     }.getOrDefault(this)
+
+/**
+ * Fecha ISO-8601 del backend en milisegundos, o null si no se puede leer. La usa
+ * el reporte que se abre desde el aviso fuera de casa para arrancar en la hora
+ * de la detección (P1-210).
+ */
+fun isoAMillis(iso: String): Long? =
+    runCatching {
+        SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.US).parse(iso)!!.time
+    }.getOrNull()

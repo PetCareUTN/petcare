@@ -86,4 +86,30 @@ export class DeteccionesController {
   ): Promise<UltimaDeteccionResponseDto> {
     return this.deteccionesService.buscarUltimaDelReporte(idReporte, user.sub);
   }
+
+  /**
+   * Última detección de una mascota, tenga o no reporte (P1-210). La abre el
+   * aviso preventivo "fuera de casa", que todavía no tiene reporte al cual
+   * apuntar. Autenticado por lo mismo que la de arriba.
+   */
+  @Get('mascota/:idMascota/ultima')
+  @UseGuards(JwtAuthGuard)
+  @ApiProtegido()
+  @ApiOperation({
+    summary: 'Ver la última detección de una mascota',
+    description:
+      'Sirve también para mascotas que no están reportadas como perdidas: es lo que muestra el aviso de que la detectaron fuera de casa. `idReporte` es null si la detección no está asociada a un reporte.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Última detección registrada, o null si no hay ninguna.',
+    type: UltimaDeteccionResponseDto,
+  })
+  @ApiNoEncontrado('La mascota no existe o no es de esta sesión.')
+  buscarUltimaDeLaMascota(
+    @CurrentUser() user: JwtPayload,
+    @Param('idMascota', ParseIntPipe) idMascota: number,
+  ): Promise<UltimaDeteccionResponseDto> {
+    return this.deteccionesService.buscarUltimaDeLaMascota(idMascota, user.sub);
+  }
 }

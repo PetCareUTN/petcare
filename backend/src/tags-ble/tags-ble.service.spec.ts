@@ -304,4 +304,46 @@ describe('TagsBleService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
   });
+
+  describe('silenciarAvisos (P1-210)', () => {
+    it('silencia los avisos preventivos por 3 horas', async () => {
+      mascotasRepository.findOne.mockResolvedValue(mascota);
+      tagsBleRepository.findOne.mockResolvedValue({ idTagBle: 1 });
+      tagsBleRepository.save.mockImplementation((tag: TagBle) =>
+        Promise.resolve(tag),
+      );
+      const antes = Date.now();
+
+      const { avisosSilenciadosHasta } = await service.silenciarAvisos(
+        idDuenio,
+        idMascota,
+      );
+
+      const tresHoras = 3 * 60 * 60 * 1000;
+      expect(avisosSilenciadosHasta.getTime()).toBeGreaterThanOrEqual(
+        antes + tresHoras,
+      );
+      expect(tagsBleRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ avisosSilenciadosHasta }),
+      );
+    });
+
+    it('rechaza silenciar una mascota sin tag', async () => {
+      mascotasRepository.findOne.mockResolvedValue(mascota);
+      tagsBleRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.silenciarAvisos(idDuenio, idMascota),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('rechaza silenciar la mascota de otro dueño', async () => {
+      mascotasRepository.findOne.mockResolvedValue(mascota);
+
+      await expect(service.silenciarAvisos(999, idMascota)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(tagsBleRepository.save).not.toHaveBeenCalled();
+    });
+  });
 });

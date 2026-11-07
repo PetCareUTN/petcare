@@ -39,6 +39,15 @@ export interface DatosDeteccion {
   detectadoEn: Date;
 }
 
+/** Datos del aviso preventivo (P1-210): no hay reporte, se referencia la mascota. */
+export interface DatosDeteccionFueraDeCasa {
+  idMascota: number;
+  /** Solo los dueños que configuraron su zona de casa. */
+  idsDuenios: number[];
+  nombreMascota: string | null;
+  detectadoEn: Date;
+}
+
 /**
  * Avisa al dueño cuando la red colaborativa detecta su mascota perdida (US-41).
  *
@@ -68,7 +77,13 @@ export class NotificacionesDeteccionesService {
       // La agrupación se evalúa por dueño: que uno ya haya visto un aviso
       // reciente no le quita el suyo al otro (por ejemplo, si se sumó después).
       for (const idDuenio of datos.idsDuenios) {
-        if (await this.yaSeAviso(datos.idReporte, idDuenio)) {
+        if (
+          await this.yaSeAviso(
+            NotificationType.MASCOTA_DETECTADA,
+            datos.idReporte,
+            idDuenio,
+          )
+        ) {
           continue;
         }
 
@@ -94,15 +109,64 @@ export class NotificacionesDeteccionesService {
   }
 
   /**
-   * Si hay un aviso de este mismo reporte dentro de la ventana, esta detección
-   * se agrupa con aquel.
+   * Aviso preventivo (P1-210): detectaron a una mascota que no está reportada
+   * como perdida fuera de la zona de casa de sus dueños. Puede haberse escapado
+   * mientras nadie estaba, y el dueño decide si reportarla.
+   *
+   * Usa la misma ventana de agrupación que US-41, por mascota en vez de por
+   * reporte porque todavía no hay reporte. Igual que `notificarDeteccion`, no
+   * propaga errores.
+   */
+  async notificarFueraDeCasa(
+    datos: DatosDeteccionFueraDeCasa,
+  ): Promise<boolean> {
+    try {
+      const nombre = datos.nombreMascota ?? 'tu mascota';
+      let seCreoAlguno = false;
+
+      for (const idDuenio of datos.idsDuenios) {
+        if (
+          await this.yaSeAviso(
+            NotificationType.MASCOTA_FUERA_DE_CASA,
+            datos.idMascota,
+            idDuenio,
+          )
+        ) {
+          continue;
+        }
+
+        await this.notificacionesService.crear(
+          idDuenio,
+          NotificationType.MASCOTA_FUERA_DE_CASA,
+          `Detectaron a ${nombre} fuera de casa`,
+          `La red colaborativa la detectó lejos de tu casa a las ${this.hora(datos.detectadoEn)}. ` +
+            'Si no está con vos, abrí el aviso para ver dónde y reportarla como perdida.',
+          datos.idMascota,
+        );
+        seCreoAlguno = true;
+      }
+
+      return seCreoAlguno;
+    } catch (error) {
+      this.logger.error(
+        `No se pudo notificar la detección fuera de casa de la mascota ${datos.idMascota}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Si hay un aviso del mismo tipo y referencia dentro de la ventana, esta
+   * detección se agrupa con aquel.
    *
    * Se mira la tabla de notificaciones y no un contador aparte para que no
    * puedan quedar desincronizados: lo que decide es exactamente lo último que
    * vio el dueño.
    */
   private async yaSeAviso(
-    idReporte: number,
+    tipo: NotificationType,
+    idReferencia: number,
     idDuenio: number,
   ): Promise<boolean> {
     const desde = new Date(Date.now() - ventanaAgrupacionMinutos() * 60 * 1000);
@@ -110,8 +174,8 @@ export class NotificacionesDeteccionesService {
     const reciente = await this.notificacionesRepository.findOne({
       where: {
         usuario: { idUsuario: idDuenio },
-        tipo: NotificationType.MASCOTA_DETECTADA,
-        idReferencia: idReporte,
+        tipo,
+        idReferencia,
         fechaEnvio: MoreThan(desde),
       },
     });

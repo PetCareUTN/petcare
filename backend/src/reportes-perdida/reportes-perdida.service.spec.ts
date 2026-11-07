@@ -18,6 +18,7 @@ describe('ReportesPerdidaService', () => {
     create: jest.Mock;
     save: jest.Mock;
     createQueryBuilder: jest.Mock;
+    manager: { query: jest.Mock };
   };
   let mascotasRepository: {
     findOne: jest.Mock;
@@ -49,6 +50,7 @@ describe('ReportesPerdidaService', () => {
         Promise.resolve({ idReporte: 1, ...datos } as ReportePerdida),
       ),
       createQueryBuilder: jest.fn(),
+      manager: { query: jest.fn().mockResolvedValue(undefined) },
     };
     mascotasRepository = {
       findOne: jest.fn(),
@@ -96,6 +98,19 @@ describe('ReportesPerdidaService', () => {
 
       expect(new Date(reporte.fechaPerdida).getTime()).toBeGreaterThanOrEqual(
         antes,
+      );
+    });
+
+    it('asocia al reporte las detecciones preventivas desde la fecha de pérdida (P1-210)', async () => {
+      mascotasRepository.findOne.mockResolvedValue(mascotaPropia);
+      reportesRepository.findOne.mockResolvedValue(null);
+      const fechaPerdida = '2026-10-31T11:45:00.000Z';
+
+      await service.crear(ID_DUENIO, { ...dto, fechaPerdida });
+
+      expect(reportesRepository.manager.query).toHaveBeenCalledWith(
+        expect.stringContaining('"id_reporte" IS NULL'),
+        [1, mascotaPropia.idMascota, new Date(fechaPerdida)],
       );
     });
 

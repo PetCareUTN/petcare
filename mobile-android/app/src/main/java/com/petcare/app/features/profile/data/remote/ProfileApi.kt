@@ -3,10 +3,12 @@ package com.petcare.app.features.profile.data.remote
 import com.google.gson.annotations.SerializedName
 import okhttp3.MultipartBody
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Multipart
 import retrofit2.http.PATCH
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Part
 
 data class UserProfileResponse(
@@ -73,6 +75,23 @@ data class MessageResponse(
     val mensaje: String
 )
 
+/**
+ * Zona de casa del dueño (P1-209). Viene con `configurada = false` cuando
+ * todavía no la cargó, en vez de un body vacío que Gson no sabría parsear.
+ */
+data class ZonaCasaResponse(
+    val configurada: Boolean,
+    val latitud: Double?,
+    val longitud: Double?,
+    val radioMetros: Int?
+)
+
+data class GuardarZonaCasaRequest(
+    val latitud: Double,
+    val longitud: Double,
+    val radioMetros: Int
+)
+
 interface ProfileApi {
 
     @GET("auth/me")
@@ -103,4 +122,15 @@ interface ProfileApi {
     suspend fun updatePreferencias(
         @Body request: UpdatePreferenciasRequest
     ): UserProfileResponse
+
+    @GET("users/me/casa")
+    suspend fun getZonaCasa(): ZonaCasaResponse
+
+    @PUT("users/me/casa")
+    suspend fun guardarZonaCasa(
+        @Body request: GuardarZonaCasaRequest
+    ): ZonaCasaResponse
+
+    @DELETE("users/me/casa")
+    suspend fun quitarZonaCasa(): ZonaCasaResponse
 }

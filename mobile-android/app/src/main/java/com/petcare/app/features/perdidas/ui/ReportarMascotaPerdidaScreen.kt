@@ -99,6 +99,10 @@ fun ReportarMascotaPerdidaScreen(
     // null mientras se está cargando el tag de la mascota (US-32).
     tieneTagBle: Boolean?,
     onBack: () -> Unit,
+    // Dónde y cuándo la detectaron, si se llega desde el aviso fuera de casa
+    // (P1-210). Con esto el pin y la fecha arrancan ahí y no en el GPS y ahora.
+    ubicacionInicial: LatLng? = null,
+    fechaPerdidaInicialMillis: Long? = null,
     onReportar: (
         fechaPerdida: String,
         latitud: Double,
@@ -121,15 +125,22 @@ fun ReportarMascotaPerdidaScreen(
     var contacto by rememberSaveable { mutableStateOf(contactoInicial) }
     // Por defecto "recién": el caso más común es que el dueño reporte apenas
     // se da cuenta de que la mascota no está.
-    var fechaPerdidaMillis by rememberSaveable { mutableStateOf(System.currentTimeMillis()) }
+    var fechaPerdidaMillis by rememberSaveable {
+        mutableStateOf(fechaPerdidaInicialMillis ?: System.currentTimeMillis())
+    }
     // Dónde quedó el pin. Mientras el dueño no lo mueva arrancamos desde el
-    // GPS; una vez que tocó el mapa, su elección manda.
-    var ubicacion by remember { mutableStateOf(CENTRO_POR_DEFECTO) }
-    var ubicacionElegida by rememberSaveable { mutableStateOf(false) }
+    // GPS; una vez que tocó el mapa, su elección manda. La detección del aviso
+    // fuera de casa cuenta como elegida: es mejor dato que el GPS del dueño.
+    var ubicacion by remember { mutableStateOf(ubicacionInicial ?: CENTRO_POR_DEFECTO) }
+    var ubicacionElegida by rememberSaveable { mutableStateOf(ubicacionInicial != null) }
 
     val markerState = rememberUpdatedMarkerState(position = ubicacion)
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(CENTRO_POR_DEFECTO, 11f)
+        position = if (ubicacionInicial != null) {
+            CameraPosition.fromLatLngZoom(ubicacionInicial, 15f)
+        } else {
+            CameraPosition.fromLatLngZoom(CENTRO_POR_DEFECTO, 11f)
+        }
     }
 
     // El perfil del dueño puede llegar después de abrir la pantalla, así que

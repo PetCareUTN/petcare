@@ -107,8 +107,12 @@ import com.petcare.app.features.ble.ui.VincularTagScreen
 import com.petcare.app.features.perdidas.data.remote.CreateReportePerdidaRequest
 import com.petcare.app.features.perdidas.data.remote.ReportePerdidaResponse
 import com.petcare.app.features.perdidas.domain.ReportesPerdidaController
+import com.google.android.gms.maps.model.LatLng
+import com.petcare.app.features.perdidas.data.remote.DeteccionResponse
 import com.petcare.app.features.perdidas.data.remote.UltimaDeteccionResponse
+import com.petcare.app.features.perdidas.ui.AvisoFueraDeCasaScreen
 import com.petcare.app.features.perdidas.ui.ReportarMascotaPerdidaScreen
+import com.petcare.app.features.perdidas.ui.isoAMillis
 import com.petcare.app.features.perdidas.ui.LocalizacionScreen
 import com.petcare.app.features.perdidas.ui.UltimaUbicacionScreen
 import com.petcare.app.features.pets.data.remote.CreatePetRequest
@@ -130,6 +134,7 @@ import com.petcare.app.features.profile.ui.EditProfileScreen
 import com.petcare.app.features.profile.ui.ProfileScreen
 import com.petcare.app.features.settings.data.local.ThemePreferences
 import com.petcare.app.features.settings.ui.ConfiguracionScreen
+import com.petcare.app.features.settings.ui.ZonaCasaScreen
 import com.petcare.app.features.servicios.data.remote.CreateServicioRequest
 import com.petcare.app.features.servicios.data.remote.DisponibilidadRequest
 import com.petcare.app.features.servicios.data.remote.ServicioResponse
@@ -461,6 +466,35 @@ class MainActivity : ComponentActivity() {
                 }
                 var ultimaUbicacion by remember {
                     mutableStateOf<UltimaDeteccionResponse?>(null)
+                }
+                // Mascota cuyo aviso "fuera de casa" se está mirando (P1-210), o
+                // null. Va por mascota y no por reporte porque todavía no hay uno.
+                var fueraDeCasaIdMascota by rememberSaveable {
+                    mutableStateOf<Int?>(null)
+                }
+                var isLoadingFueraDeCasa by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var fueraDeCasaError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                var fueraDeCasa by remember {
+                    mutableStateOf<UltimaDeteccionResponse?>(null)
+                }
+                var isSilenciandoAvisos by rememberSaveable {
+                    mutableStateOf(false)
+                }
+                var silenciarAvisosError by rememberSaveable {
+                    mutableStateOf<String?>(null)
+                }
+                // Detección con la que arranca el reporte de pérdida cuando se
+                // llega desde el aviso fuera de casa: precarga dónde y cuándo.
+                var reporteDesdeDeteccion by remember {
+                    mutableStateOf<DeteccionResponse?>(null)
+                }
+                // Pantalla "Mi casa" (P1-209), que se abre desde Configuración.
+                var isViewingZonaCasa by rememberSaveable {
+                    mutableStateOf(false)
                 }
                 var isViewingHistoria by rememberSaveable {
                     mutableStateOf(false)
@@ -990,6 +1024,7 @@ class MainActivity : ComponentActivity() {
                             saveProfileError = null
                             isEditingProfile = false
                         }
+                        isViewingZonaCasa -> isViewingZonaCasa = false
                         isViewingSettings -> isViewingSettings = false
                         isViewingProfile -> {
                             isViewingProfile = false
@@ -1013,6 +1048,12 @@ class MainActivity : ComponentActivity() {
                             ultimaUbicacionIdReporte = null
                             ultimaUbicacion = null
                             ultimaUbicacionError = null
+                        }
+                        fueraDeCasaIdMascota != null -> {
+                            fueraDeCasaIdMascota = null
+                            fueraDeCasa = null
+                            fueraDeCasaError = null
+                            silenciarAvisosError = null
                         }
                         selectedPetId != null -> {
                             selectedPetId = null
@@ -1131,6 +1172,74 @@ class MainActivity : ComponentActivity() {
                             ultimaUbicacionError = "Ocurrio un error inesperado"
                         } finally {
                             isLoadingUltimaUbicacion = false
+                        }
+                    }
+                }
+
+                /** Dónde detectaron a la mascota fuera de casa (P1-210). */
+                fun loadFueraDeCasa(idMascota: Int) {
+                    isLoadingFueraDeCasa = true
+                    fueraDeCasaError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            fueraDeCasa = reportesPerdidaController
+                                .getUltimaDeteccionDeMascota(idMascota)
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                fueraDeCasaError = mensajeErrorBackend(
+                                    exception,
+                                    "No se pudo cargar donde la detectaron"
+                                )
+                            }
+                        } catch (exception: IOException) {
+                            fueraDeCasaError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            fueraDeCasaError = "Ocurrio un error inesperado"
+                        } finally {
+                            isLoadingFueraDeCasa = false
+                        }
+                    }
+                }
+
+                fun cerrarFueraDeCasa() {
+                    fueraDeCasaIdMascota = null
+                    fueraDeCasa = null
+                    fueraDeCasaError = null
+                    silenciarAvisosError = null
+                }
+
+                /**
+                 * "Está conmigo" (P1-210): pausa los avisos fuera de casa de la
+                 * mascota por 3 horas y vuelve, porque no hay nada más que hacer.
+                 */
+                fun silenciarAvisosFueraDeCasa(idMascota: Int) {
+                    isSilenciandoAvisos = true
+                    silenciarAvisosError = null
+
+                    lifecycleScope.launch {
+                        try {
+                            tagsBleController.silenciarAvisos(idMascota)
+                            cerrarFueraDeCasa()
+                        } catch (exception: HttpException) {
+                            if (exception.code() == 401) {
+                                logout()
+                                serverError = "La sesion expiro. Inicia sesion nuevamente"
+                            } else {
+                                silenciarAvisosError = mensajeErrorBackend(
+                                    exception,
+                                    "No se pudieron pausar los avisos"
+                                )
+                            }
+                        } catch (exception: IOException) {
+                            silenciarAvisosError = "No se pudo conectar con el servidor"
+                        } catch (exception: Exception) {
+                            silenciarAvisosError = "Ocurrio un error inesperado"
+                        } finally {
+                            isSilenciandoAvisos = false
                         }
                     }
                 }
@@ -1826,11 +1935,25 @@ class MainActivity : ComponentActivity() {
                     ultimaUbicacionIdReporte = idReporte
                 }
 
-                fun irAReportarPerdida(idMascota: Int) {
+                fun irAReportarPerdida(
+                    idMascota: Int,
+                    // Desde el aviso fuera de casa (P1-210): precarga dónde y
+                    // cuándo la detectaron.
+                    deteccion: DeteccionResponse? = null
+                ) {
                     cerrarCampanita()
                     selectedPetId = idMascota
                     loadPetProfile(idMascota)
+                    reporteDesdeDeteccion = deteccion
                     isReportandoPerdidaScreen = true
+                }
+
+                fun irAFueraDeCasa(idMascota: Int) {
+                    cerrarCampanita()
+                    fueraDeCasa = null
+                    fueraDeCasaError = null
+                    silenciarAvisosError = null
+                    fueraDeCasaIdMascota = idMascota
                 }
 
                 fun irASolicitudesCompartir() {
@@ -1897,6 +2020,9 @@ class MainActivity : ComponentActivity() {
 
                         "mascota_separada" ->
                             idReferencia?.let { irAReportarPerdida(it) }
+
+                        "mascota_fuera_de_casa" ->
+                            idReferencia?.let { irAFueraDeCasa(it) }
 
                         "solicitud_compartir_mascota" -> irASolicitudesCompartir()
 
@@ -2669,6 +2795,13 @@ class MainActivity : ComponentActivity() {
                                                 cerradoEnMs = System.currentTimeMillis()
                                                 irAReportarPerdida(it)
                                             },
+                                            // El aviso fuera de casa (P1-210) abre
+                                            // dónde la detectaron, para decidir si
+                                            // reportarla.
+                                            onAbrirFueraDeCasa = {
+                                                cerradoEnMs = System.currentTimeMillis()
+                                                irAFueraDeCasa(it)
+                                            },
                                             // La solicitud para compartir una mascota
                                             // abre las solicitudes pendientes.
                                             onAbrirSolicitudCompartir = {
@@ -3108,6 +3241,11 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     }
+                } else if (loggedUserName != null && isViewingZonaCasa) {
+                    ZonaCasaScreen(
+                        profileController = profileController,
+                        onBack = { isViewingZonaCasa = false }
+                    )
                 } else if (loggedUserName != null && isViewingSettings) {
                     ConfiguracionScreen(
                         isDarkMode = isDarkMode,
@@ -3116,6 +3254,7 @@ class MainActivity : ComponentActivity() {
                             themePreferences.setDarkMode(enabled)
                         },
                         profileController = profileController,
+                        onConfigurarCasa = { isViewingZonaCasa = true },
                         onBack = { isViewingSettings = false }
                     )
                 } else if (loggedUserName != null && isViewingProfile) {
@@ -3302,9 +3441,15 @@ class MainActivity : ComponentActivity() {
                         } else {
                             tagBleDeLaMascota != null
                         },
+                        ubicacionInicial = reporteDesdeDeteccion?.let {
+                            LatLng(it.latitud, it.longitud)
+                        },
+                        fechaPerdidaInicialMillis = reporteDesdeDeteccion?.detectadoEn
+                            ?.let { isoAMillis(it) },
                         onBack = {
                             isReportandoPerdidaScreen = false
                             reportePerdidaError = null
+                            reporteDesdeDeteccion = null
                         },
                         onReportar = { fechaPerdida, latitud, longitud, descripcion, contacto ->
                             isReportandoPerdida = true
@@ -3323,6 +3468,15 @@ class MainActivity : ComponentActivity() {
                                         )
                                     )
                                     isReportandoPerdidaScreen = false
+                                    // Desde el aviso fuera de casa se sigue a la
+                                    // última ubicación: el reporte ya trae la
+                                    // detección que lo originó (P1-210).
+                                    if (reporteDesdeDeteccion != null) {
+                                        reporteDesdeDeteccion = null
+                                        fueraDeCasaIdMascota = null
+                                        fueraDeCasa = null
+                                        reportePerdidaActivo?.let { irAUltimaUbicacion(it.idReporte) }
+                                    }
                                 } catch (exception: HttpException) {
                                     if (exception.code() == 401) {
                                         logout()
@@ -3365,6 +3519,32 @@ class MainActivity : ComponentActivity() {
                             ultimaUbicacion = null
                             ultimaUbicacionError = null
                         }
+                    )
+                } else if (
+                    loggedUserName != null &&
+                    fueraDeCasaIdMascota != null
+                ) {
+                    val idMascota = fueraDeCasaIdMascota!!
+                    // Igual que la última ubicación: la carga la dispara la
+                    // pantalla para que sobreviva a que se recree la Activity.
+                    LaunchedEffect(idMascota) { loadFueraDeCasa(idMascota) }
+                    AvisoFueraDeCasaScreen(
+                        isLoading = isLoadingFueraDeCasa ||
+                            (fueraDeCasa == null && fueraDeCasaError == null),
+                        errorMessage = fueraDeCasaError,
+                        ubicacion = fueraDeCasa,
+                        isSilenciando = isSilenciandoAvisos,
+                        silenciarError = silenciarAvisosError,
+                        onRetry = { loadFueraDeCasa(idMascota) },
+                        onReportarPerdida = { deteccion ->
+                            irAReportarPerdida(idMascota, deteccion)
+                        },
+                        onEstaConmigo = { silenciarAvisosFueraDeCasa(idMascota) },
+                        onVerReporte = { idReporte ->
+                            cerrarFueraDeCasa()
+                            irAUltimaUbicacion(idReporte)
+                        },
+                        onBack = { cerrarFueraDeCasa() }
                     )
                 } else if (
                     loggedUserName != null &&
@@ -3470,6 +3650,7 @@ class MainActivity : ComponentActivity() {
                             // Para prellenar el contacto con el teléfono del
                             // dueño si todavía no se cargó su perfil.
                             if (profile == null) loadProfile()
+                            reporteDesdeDeteccion = null
                             isReportandoPerdidaScreen = true
                         },
                         onMarcarEncontrada = {

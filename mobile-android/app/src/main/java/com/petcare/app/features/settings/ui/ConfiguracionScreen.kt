@@ -35,6 +35,7 @@ fun ConfiguracionScreen(
     isDarkMode: Boolean,
     onDarkModeChange: (Boolean) -> Unit,
     profileController: ProfileController,
+    onConfigurarCasa: () -> Unit,
     onBack: () -> Unit
 ) {
     Column(
@@ -106,6 +107,45 @@ fun ConfiguracionScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         ColaboracionBleCard()
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // P1-209: la zona de casa activa los avisos fuera de casa (P1-210).
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = elevacionTarjeta(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            shape = MaterialTheme.shapes.extraLarge
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Mi casa",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Te avisamos si detectan a tu mascota lejos de casa, " +
+                            "aunque no la hayas reportado como perdida.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+                TextButton(onClick = onConfigurarCasa) {
+                    Text("Configurar")
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 

@@ -37,7 +37,8 @@ data class CreateReportePerdidaRequest(
  * cruzó. La pantalla lo muestra como estado vacío.
  */
 data class UltimaDeteccionResponse(
-    val idReporte: Int,
+    /** Null en una detección preventiva de una mascota sin reporte (P1-210). */
+    val idReporte: Int?,
     val idMascota: Int,
     val nombreMascota: String?,
     val ultimaDeteccion: DeteccionResponse?
@@ -77,5 +78,14 @@ interface ReportesPerdidaApi {
     @GET("detecciones/reporte/{idReporte}/ultima")
     suspend fun getUltimaDeteccion(
         @Path("idReporte") idReporte: Int
+    ): UltimaDeteccionResponse
+
+    /**
+     * Última detección de una mascota, tenga o no reporte (P1-210). La usa el
+     * aviso "fuera de casa", que todavía no tiene reporte al cual apuntar.
+     */
+    @GET("detecciones/mascota/{idMascota}/ultima")
+    suspend fun getUltimaDeteccionDeMascota(
+        @Path("idMascota") idMascota: Int
     ): UltimaDeteccionResponse
 }
